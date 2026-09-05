@@ -83,7 +83,7 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(command, /Create your next ad/);
     assert.match(command, /aria-label="Create a new ad from a reviewed template"/);
     assert.match(command, />Create ad <ArrowRight/);
-    assert.match(command, /Or search templates by goal or format/);
+    assert.doesNotMatch(command, /Or search templates by goal or format|studio-command/);
     assert.doesNotMatch(command, /Find a starting point/);
     assert.match(command, /formatLastEdited\(ad\.updatedAt, timeZone, dateLocale\)/);
     assert.match(home, /timeZone/);

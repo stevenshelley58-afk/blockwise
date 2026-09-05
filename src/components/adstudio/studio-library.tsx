@@ -1,6 +1,6 @@
 "use client";
 
-import { Image, LibraryBig, Megaphone, RefreshCw } from "lucide-react";
+import { Image, Megaphone, RefreshCw } from "lucide-react";
 import { useState } from "react";
 
 import { AdsLibrary } from "@/components/adstudio/ads-library";
@@ -41,17 +41,13 @@ export function StudioLibrary({
 
   return (
     <div className="mx-auto w-full max-w-[1120px] px-4 pb-28 pt-8 md:px-6 md:pb-16 md:pt-10">
-      <header className="flex flex-wrap items-start justify-between gap-4">
+      <header>
         <div>
           <h1 className="font-display text-[27px] font-extrabold tracking-[-.02em]">Library</h1>
           <p className="mt-2 max-w-[62ch] text-sm leading-6 text-muted-foreground">
             Find a saved ad to continue, or choose media to make the next one yours.
           </p>
         </div>
-        <p className="hidden items-center gap-2 rounded-full border border-(--line) bg-(--surface) px-3 py-2 text-xs text-muted-foreground sm:flex">
-          <LibraryBig className="size-4" aria-hidden />
-          One workspace, one source of truth
-        </p>
       </header>
 
       <Tabs value={tab} onValueChange={changeTab} className="mt-7">

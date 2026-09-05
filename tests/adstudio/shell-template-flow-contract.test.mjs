@@ -7,6 +7,8 @@ const home = readFileSync("src/app/(customer)/ad-studio/page.tsx", "utf8");
 const templates = readFileSync("src/app/(customer)/ad-studio/templates/page.tsx", "utf8");
 const gallery = readFileSync("src/components/adstudio/template-gallery.tsx", "utf8");
 const adsLibrary = readFileSync("src/components/adstudio/ads-library.tsx", "utf8");
+const mediaLibrary = readFileSync("src/components/adstudio/media-library.tsx", "utf8");
+const homeCommand = readFileSync("src/components/adstudio/home-command.tsx", "utf8");
 
 test("Ad Studio shell uses the Blockwise symbol as the customer-home link", () => {
   assert.match(shell, /import \{ BlockwiseLogo \} from "@\/components\/blockwise-logo"/);
@@ -34,12 +36,15 @@ test("Ad Studio navigation exposes the simplified Home, Templates, Library, and 
   assert.doesNotMatch(shell, /contextual[\s\S]{0,120}templates/);
 });
 
-test("template search preserves the active guided filter", () => {
-  assert.match(templates, /filter !== "all" \? <input type="hidden" name="filter" value=\{filter\} \/> : null/);
+test("template search preserves the active lead filter", () => {
+  assert.match(templates, /lead !== "all" \? <input type="hidden" name="lead" value=\{lead\} \/> : null/);
+  for (const label of ["All leads", "Seller leads", "Buyer leads", "Appraisal leads", "Open home leads", "Market update leads"]) {
+    assert.match(templates, new RegExp(label));
+  }
 });
 
 test("template and saved-ad empty states stay focused at narrow widths", () => {
-  assert.match(gallery, /const hasActiveFilter = Boolean\(query\) \|\| filter !== "all"/);
+  assert.match(gallery, /const hasActiveFilter = Boolean\(query\) \|\| lead !== "all"/);
   assert.match(gallery, /if \(!hasAvailableTemplates\)/);
   assert.match(gallery, /Templates are in final review/);
   assert.match(gallery, /Your saved ads remain available/);
@@ -47,6 +52,17 @@ test("template and saved-ad empty states stay focused at narrow widths", () => {
   assert.match(templates, /templates\.length > 0 \? <form/);
   assert.doesNotMatch(templates, /No templates have been imported yet/);
   assert.match(adsLibrary, /<li className="min-w-0">/);
+});
+
+test("searches and filters use one two-row Ad Studio control pattern", () => {
+  assert.match(templates, /<SearchField[\s\S]*?<SearchFilterRow>/);
+  assert.match(adsLibrary, /<SearchField[\s\S]*?<SearchFilterRow/);
+  assert.match(mediaLibrary, /<SearchField[\s\S]*?<SearchFilterRow/);
+});
+
+test("Home uses one obvious creation action without a second search", () => {
+  assert.match(homeCommand, /aria-label="Create a new ad from a reviewed template"/);
+  assert.doesNotMatch(homeCommand, /studio-command|role="search"|Or search templates/);
 });
 
 test("template cards create the selected customer ad directly", () => {
@@ -64,6 +80,9 @@ test("template cards create the selected customer ad directly", () => {
   assert.match(gallery, /name="creationKey" value=\{crypto\.randomUUID\(\)\}/);
   assert.match(gallery, /name="templateId" value=\{template\.templateId\}/);
   assert.match(gallery, /Use template/);
+  assert.match(gallery, /Preview template/);
+  const templateCard = gallery.slice(gallery.indexOf("function TemplateCard"));
+  assert.doesNotMatch(templateCard, /Preview Feed \+ Story|Reviewed|image inputs|text inputs|template\.description/);
   assert.match(gallery, /href=\{`\/ad-studio\/templates\/\$\{encodeURIComponent\(template\.templateId\)\}`\}/);
   assert.doesNotMatch(home, /listing|property/i);
 });

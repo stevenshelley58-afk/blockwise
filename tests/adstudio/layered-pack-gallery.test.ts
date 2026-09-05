@@ -13,6 +13,7 @@ import {
   parseTemplateJsonForSavedAdHistory,
   templateAssetProxyUrl,
   templateAssetStoragePath,
+  templateLeadType,
 } from "../../src/lib/adstudio/pack-gallery.ts";
 import { adTemplateSchema } from "../../packages/ad-template-contract/src/schema.ts";
 
@@ -22,6 +23,15 @@ function fixture(): Record<string, unknown> {
 }
 
 describe("Ad Studio direct layered template gallery", () => {
+  it("classifies templates into customer lead types", () => {
+    assert.equal(templateLeadType("Just listed property feature"), "buyer");
+    assert.equal(templateLeadType("Free home appraisal"), "appraisal");
+    assert.equal(templateLeadType("Open home follow-up"), "open_home");
+    assert.equal(templateLeadType("Quarterly suburb market report"), "market_update");
+    assert.equal(templateLeadType("Vendor listing nurture"), "seller");
+    assert.equal(templateLeadType("Agency brand campaign"), "other");
+  });
+
   it("accepts the direct layered template contract", () => {
     const parsed = parseTemplateJson(fixture());
     assert.ok(parsed);

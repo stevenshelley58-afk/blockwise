@@ -1,4 +1,4 @@
-import { ArrowRight, Clock3, FolderOpen, Image as ImageIcon, LayoutGrid, Palette, Plus, Search } from "lucide-react";
+import { ArrowRight, Clock3, FolderOpen, Image as ImageIcon, LayoutGrid, Palette, Plus } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { LibraryAdModel, LibraryAssetModel } from "@/lib/adstudio/library-read-model";
@@ -32,15 +32,6 @@ export function HomeCommand({ ads, assets, adsError, assetsError, timeZone, date
         <span className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-full bg-white px-5 text-[12.5px] font-bold text-primary sm:w-auto">Create ad <ArrowRight className="size-4 transition group-hover:translate-x-0.5" aria-hidden /></span>
       </Link>
 
-      <form action="/ad-studio/templates" method="get" role="search" className="mt-4 max-w-[760px]">
-        <label htmlFor="studio-command" className="sr-only">Search templates or describe what you need</label>
-        <div className="flex min-h-12 items-center gap-3 rounded-(--r-card) border border-(--line-heavy) bg-card px-4 transition focus-within:border-(--ink) focus-within:ring-2 focus-within:ring-(--ink)/10">
-          <Search className="size-[18px] shrink-0 text-muted-foreground" aria-hidden />
-          <input id="studio-command" name="q" type="search" placeholder="Or search templates by goal or format…" className="min-w-0 flex-1 bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground/75" />
-          <button type="submit" className="inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-[12.5px] font-semibold text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Search</button>
-        </div>
-      </form>
-
       <section className="mt-8" aria-labelledby="workspace-shortcuts-heading">
         <div className="flex items-center justify-between gap-4"><h2 id="workspace-shortcuts-heading" className="font-display text-[15.5px] font-extrabold">Workspace shortcuts</h2><span className="font-mono text-[9.5px] uppercase tracking-[.12em] text-muted-foreground">Your workspace</span></div>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
@@ -52,7 +43,7 @@ export function HomeCommand({ ads, assets, adsError, assetsError, timeZone, date
 
       <section className="mt-9" aria-labelledby="recent-work-heading">
         <div className="flex items-end justify-between gap-4"><div><p className="font-mono text-[9.5px] uppercase tracking-[.12em] text-muted-foreground">Recent work</p><h2 id="recent-work-heading" className="mt-1 font-display text-[17px] font-extrabold">Pick up where you left off</h2></div><Link href="/ad-studio/library?view=ads" className="inline-flex min-h-11 items-center gap-1 text-[12px] font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">View all <ArrowRight size={15} aria-hidden /></Link></div>
-        {adsError ? <ReadError label="recent work" /> : ads.length > 0 ? <div className="mt-4 divide-y divide-border overflow-hidden rounded-(--r-card) border border-border bg-card">{ads.slice(0, 3).map((ad) => <RecentAd key={ad.adId} ad={ad} timeZone={timeZone} dateLocale={dateLocale} />)}</div> : <div className="mt-4 rounded-(--r-card) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 p-6 text-center"><h3 className="font-display text-[15.5px] font-extrabold">No saved ads yet</h3><p className="mx-auto mt-1 max-w-[42ch] text-sm text-muted-foreground">Search for a template above to create your first ad. Your progress will appear here.</p></div>}
+        {adsError ? <ReadError label="recent work" /> : ads.length > 0 ? <div className="mt-4 divide-y divide-border overflow-hidden rounded-(--r-card) border border-border bg-card">{ads.slice(0, 3).map((ad) => <RecentAd key={ad.adId} ad={ad} timeZone={timeZone} dateLocale={dateLocale} />)}</div> : <div className="mt-4 rounded-(--r-card) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 p-6 text-center"><h3 className="font-display text-[15.5px] font-extrabold">No saved ads yet</h3><p className="mx-auto mt-1 max-w-[42ch] text-sm text-muted-foreground">Choose a template above to create your first ad. Your progress will appear here.</p></div>}
       </section>
 
       {!assetsError && assets.length > 0 ? <section className="mt-9" aria-labelledby="recent-assets-heading"><div className="flex items-end justify-between gap-4"><div><p className="font-mono text-[9.5px] uppercase tracking-[.12em] text-muted-foreground">Media</p><h2 id="recent-assets-heading" className="mt-1 font-display text-[17px] font-extrabold">Recent assets</h2></div><Link href="/ad-studio/library?view=assets" className="inline-flex min-h-11 items-center gap-1 text-[12px] font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">View library <ArrowRight size={15} aria-hidden /></Link></div><div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">{assets.map((asset) => <Link key={asset.id} href="/ad-studio/library?view=assets" className="group overflow-hidden rounded-(--r-card) border border-border bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><img src={asset.src} alt={asset.label} className="aspect-square w-full object-cover transition group-hover:scale-[1.02] motion-reduce:transform-none" /><span className="block truncate px-3 py-2 text-[11px] font-semibold">{asset.label}</span></Link>)}</div></section> : null}
