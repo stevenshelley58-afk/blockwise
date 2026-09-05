@@ -64,6 +64,7 @@ async function proxyMedia(
     const upstream = await fetchAdDbMedia(adId, mediaId, {
       method,
       range: request.headers.get("range"),
+      ifRange: request.headers.get("if-range"),
     });
     if (upstream.status === 404)
       return NextResponse.json({ error: "Media not found." }, { status: 404 });

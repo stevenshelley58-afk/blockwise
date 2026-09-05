@@ -14,21 +14,16 @@ const routeSource = readFileSync(
   "utf8",
 );
 
-test("ad search route delegates to the canonical Ad DB client and mapper", () => {
-  assert.match(routeSource, /normaliseAdRadarCardSearchQuery/);
-  assert.match(routeSource, /searchAdDbAds\(/);
+test("ad search route delegates canonical filter parsing, fetch, and mapping", () => {
+  assert.match(routeSource, /parseAdDbSearchParams\(request\.nextUrl\.searchParams\)/);
+  assert.match(routeSource, /searchAdDbAds\(\{ \.\.\.parsed\.input, limit: 50 \}\)/);
   assert.match(routeSource, /result\.items\.map\(mapAdDbRowToCustomerMetaCard\)/);
   assert.doesNotMatch(routeSource, /searchCustomerMetaAdLibraryCards\(/);
 });
 
-test("ad search route forwards supported attribution filters and rejects unsupported facets", () => {
-  assert.match(routeSource, /params\.get\("agency"\)/);
-  assert.match(routeSource, /params\.get\("agent"\)/);
-  assert.match(routeSource, /params\.has\("status"\)/);
-  assert.match(routeSource, /params\.has\("adType"\)/);
-  assert.match(routeSource, /params\.has\("format"\)/);
-  assert.match(routeSource, /params\.has\("hook"\)/);
-  assert.match(routeSource, /status: 400/);
+test("ad search route allows filter-only requests and returns parser failures as 400", () => {
+  assert.match(routeSource, /if \(!parsed\.ok\)[\s\S]*status: 400/);
+  assert.match(routeSource, /if \(!parsed\.input\).*cards: \[\]/);
 });
 
 test("ad card search caps returned cards after row overfetch and dedupe", async () => {

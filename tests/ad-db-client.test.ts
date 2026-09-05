@@ -87,7 +87,7 @@ test("media client forwards Range using the scoped read token", async () => {
   const response = await fetchAdDbMedia(
     "a7000000-0000-4000-8000-000000000007",
     "a8000000-0000-4000-8000-000000000008",
-    { method: "GET", range: "bytes=0-99" },
+    { method: "GET", range: "bytes=0-99", ifRange: '"archive-etag"' },
     {
       env: ENV,
       fetcher: async (input, init) => {
@@ -104,6 +104,7 @@ test("media client forwards Range using the scoped read token", async () => {
   );
   const headers = new Headers(calledInit?.headers);
   assert.equal(headers.get("range"), "bytes=0-99");
+  assert.equal(headers.get("if-range"), '"archive-etag"');
   assert.equal(headers.get("x-hermes-ad-db-read-token"), "scoped-read-token");
   assert.equal(response.status, 206);
 });
