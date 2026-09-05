@@ -8,6 +8,7 @@ This index separates current operating guidance from retained history.
 - [Product map](architecture/product-map.md)
 - [Extension guide](architecture/extension-guide.md)
 - [Production readiness](runbooks/production-readiness.md)
+- [6 September release evidence](releases/2026-09-06-template-editor.md)
 - [VPS SSH](runbooks/vps-ssh.md)
 - [Rollback](runbooks/rollback.md)
 

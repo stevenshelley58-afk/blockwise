@@ -1,8 +1,25 @@
 # Blockwise production readiness
 
-## Template font release (5 September 2026)
+## Current release (6 September 2026)
 
-The product app now serves revision
+The public app serves `3b2770eb4dec62217589b074be999ae9fa9fda06` from
+`blockwise-app:3b2770eb4dec62217589b074be999ae9fa9fda06` (image ID
+`sha256:f787e10b3dc8cbf8e4213393a9e96907d3f30c2b8c0fc54c30d436c4b5c0689a`).
+This app-only release combines the focused lead-first usability cleanup with
+the coordinated template-editor fixes. The hero and design system are unchanged.
+
+Integrated checks passed: 924 tests, NUL check, typecheck and production build;
+the final test-only locator correction was rebuilt and passed six canary and
+six public browser tests with no skips. See the [release record](../releases/2026-09-06-template-editor.md)
+for evidence, the retained d39771a9 rollback image/environment, and limitations.
+Provider writes remain disabled and the worker remains omitted. This is not
+acceptance of real Meta publishing, SMTP, billing, or a template's quality.
+
+Earlier records below are historical, not the current deployment identity.
+
+## Historical: template font release (5 September 2026)
+
+That release served revision
 `d39771a94134c28081185bcf93a8d5e1947a39a4`, built with the protected
 environment's public build configuration (not placeholder login keys).
 Template-declared fonts use authenticated asset URLs, template/file-scoped
@@ -15,7 +32,9 @@ five on production, none skipped. Product health verified the exact serving SHA.
 This is editor/runtime acceptance, not visual approval of a generated template.
 Previous app `7af704c66343cd53e580e306b5d7fbf4b6657bc9` remains the rollback.
 
-Status: controlled production is health-ready. Serving application revision
+### Historical cleanup deployment
+
+That cleanup served application revision
 `7af704c66343cd53e580e306b5d7fbf4b6657bc9` (image
 `blockwise-app:7af704c66343cd53e580e306b5d7fbf4b6657bc9`, image ID
 `sha256:16b2c6f5b50d77f47f3cf2d81ab12948d2330e2ba543cbb59e872a942d52ac0b`),
@@ -24,7 +43,7 @@ deployed app-only on 2026-09-05 from the cleanup that started at live revision
 This is not sign-off for provider writes, SMTP, billing, Meta App Review, or
 data migration.
 
-## Release evidence (2026-09-05)
+## Historical cleanup evidence (2026-09-05)
 
 - Repository gates: `npm run check:nul`, `npm run typecheck` exit 0; full
   `npm test` 908 tests, 908 pass, 0 fail (833 root + 54 + 11 + 10 package
