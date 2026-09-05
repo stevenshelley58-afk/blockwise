@@ -1,3 +1,11 @@
+> **Historical migration procedure (2026-08-29), not current deployment status.**
+> The self-hosted stack now serves the controlled public origin. See
+> [production readiness](production-readiness.md) for current release evidence.
+> The compatibility, import ordering, backup and restore commands below remain
+> useful for rehearsals; old blockers/phase descriptions describe their date,
+> not proof that an export is absent or an integration is enabled today.
+> All commands run on the VPS. Never replay imports against the live database.
+
 # OSS Product VPS Migration
 
 Status: target implemented, live cutover gated (2026-08-29). The compose
@@ -201,7 +209,7 @@ provider-write enablement are separate reviewed changes.
 5. **Decommission (later, separately approved):** only after the retention
    window and restore rehearsal are complete may managed services be cancelled.
 
-## Known blockers and hazards
+## Historical blockers and hazards (2026-08-29)
 
 - Read-only VPS inspection is confirmed: the existing `frank-caddy` edge and
   the `/projects/blockwise` checkout are present, while the product env is not

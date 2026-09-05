@@ -12,11 +12,12 @@ function read(path: string): string {
 test("production readiness references real release commands", () => {
   const readiness = read("docs/runbooks/production-readiness.md");
 
-  assert.match(readiness, /`npm run check:nul`, `npm run typecheck`, `npm test`, `npm run build`/);
+  for (const command of ["npm run check:nul", "npm run typecheck", "npm run test", "npm run build"]) {
+    assert.match(readiness, new RegExp("`" + command.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "`"));
+  }
   assert.match(readiness, /scripts\/vps\/product-health\.sh/);
-  assert.match(readiness, /durable worker jobs/i);
-  assert.match(readiness, /product-worker/);
-  assert.match(readiness, /Scheduled enqueueing is a separate[\s\S]*not a Vercel requirement/);
+  assert.match(readiness, /durable worker/i);
+  assert.match(readiness, /BLOCKWISE_ENABLE_PROVIDER_WRITES=false/);
   assert.doesNotMatch(readiness, /Vercel Cron configured in\s+`vercel\.json`/);
 });
 

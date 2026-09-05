@@ -32,20 +32,14 @@ export const blockwise: NicheConfig = {
   },
   nav: {
     items: [
-      { href: "/self-serve", label: "Home" },
-      { href: "/ad-studio", label: "Ad Studio" },
-      { href: "/results", label: "Performance" },
-      { href: "/ad-radar", label: "Ad Radar", feature: "adRadar" },
-      { href: "/property-check", label: "Property Check", feature: "propertyCheck" },
-      { href: "/leads", label: "Leads" },
-      { href: "/ad-studio/brand", label: "Brand Pack", section: "Set up" },
-      { href: "/settings", label: "Settings", section: "Set up" },
-    ],
-    mobileTabs: [
-      { href: "/self-serve", label: "Home" },
-      { href: "/ad-studio", label: "Studio" },
-      { href: "/results", label: "Results" },
-      { href: "/leads", label: "Leads" },
+      { href: "/self-serve", label: "Home", icon: "home", mobileLabel: "Home" },
+      { href: "/ad-studio", label: "Ad Studio", icon: "studio", mobileLabel: "Studio" },
+      { href: "/results", label: "Performance", icon: "performance", mobileLabel: "Results" },
+      { href: "/ad-radar", label: "Ad Radar", icon: "radar", feature: "adRadar" },
+      { href: "/property-check", label: "Property Check", icon: "property", feature: "propertyCheck" },
+      { href: "/leads", label: "Leads", icon: "leads", mobileLabel: "Leads" },
+      { href: "/ad-studio/brand", label: "Brand Pack", icon: "brand", section: "Set up" },
+      { href: "/settings", label: "Settings", icon: "settings", section: "Set up" },
     ],
   },
   features: {

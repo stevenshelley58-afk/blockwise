@@ -153,6 +153,7 @@ services:
       context: ../..
       dockerfile: infra/product/Dockerfile
       args:
+        GIT_SHA: ${BLOCKWISE_GIT_SHA:?BLOCKWISE_GIT_SHA is required}
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?NEXT_PUBLIC_APP_URL is required}
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-${BLOCKWISE_PUBLIC_URL}}
         NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}

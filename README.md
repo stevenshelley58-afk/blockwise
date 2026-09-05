@@ -1,47 +1,23 @@
 # Blockwise
 
-Blockwise is a real estate lead-generation platform with Monitor, Self-Serve, Operator Console, Agent Workforce, and Model Control surfaces.
+Blockwise is the customer product for turning Frank-built template packs into editable real-estate ads. A customer selects a template, supplies brand and property inputs, edits the result, saves Feed and Story renders, reviews the publish setup, and submits a gated Meta campaign workflow. Operator tools cover workspace support, approvals, provider health, leads, and model controls.
 
-## Stack
+Frank owns template generation and layered packs. Blockwise consumes those packs; the old flat-clone system is not part of the product.
 
-- Next.js App Router hosted on Vercel
-- Supabase Auth, Postgres, RLS, and Storage
-- Supabase `job_queue` plus a VPS worker for durable jobs; Vercel Cron for schedules
-- OpenAI direct and OpenRouter-routed model profiles with operator-controlled swapping
+## Product surfaces
 
-## Local Setup
+- Customer routes: `/ad-studio`, `/leads`, `/results`, `/settings`, and `/connect-meta`
+- Restricted operator routes: `/operator`, `/workforce`, and `/model-control`
+- Monitor/reporting: `/results` (`/monitor` redirects there)
 
-1. Install dependencies with `npm install`.
-2. Copy `.env.example` to `.env.local` and fill in local or hosted service credentials.
-3. Run `npm run dev`.
-4. Open `http://localhost:3000`.
+## Stack and runtime
 
-## Fresh Supabase Environment
+Production is the self-hosted VPS Compose stack: Next standalone app, PostgreSQL, PostgREST, GoTrue, Storage API, Caddy, and a separately gated durable worker. Supabase client packages remain protocol clients; they do not mean a managed Supabase runtime is required. Frank generation artifacts and Hermes research runtime remain separate systems.
 
-1. Install and authenticate the Supabase CLI.
-2. Run `supabase db reset` to apply `supabase/migrations` and `supabase/seed.sql`.
-3. Run `npm run seed:test-users` with `BLOCKWISE_DEV_PASSWORD` set to provision local test users.
-4. Confirm `supabase/config.toml` exposes the `public`, `research`, and `graphql_public` schemas before testing app routes.
+Current release evidence belongs in the [production runbook](docs/runbooks/production-readiness.md), rather than being repeated across docs. The main branch currently contains divergent customer-ops work; do not infer that it is the deployed revision or deploy it automatically.
 
-## Verification
+## Development and verification
 
-- `npm test` runs the Node test suite for model resolution, agent permissions, and provider mocks.
-- `npm run typecheck` runs TypeScript checks.
-- `npm run build` verifies the Vercel/Next.js production build.
+All project work runs on the VPS via `ssh vps`, in an isolated Git worktree based on the verified deployed release. Run `npm ci --ignore-scripts` there, not on the laptop. Use `npm run dev` and an ignored VPS-only `.env.local` for development when needed. Production acceptance uses the controlled VPS/Caddy target, not a dev server or Vercel Preview. Before handoff run `npm run check:nul`, `npm run test`, `npm run typecheck`, and `npm run build`.
 
-Production-live paths now use Supabase-backed workspace data, live provider sync helpers, OpenAI/OpenRouter provider adapters, and approval-gated provider publish requests. Keep `BLOCKWISE_ENABLE_PROVIDER_WRITES=false` until Meta/Google app review, provider account IDs, token vault entries, and human approval flows have been verified in production.
-
-Security hardening docs live in `docs/security/agent-safety.md` and `docs/security/client-data-isolation.md`.
-
-## Implemented Product Routes
-
-- `/operator` workspace oversight and agent/approval queues
-- `/monitor` provider reporting and sync health
-- `/self-serve` idea mine and builder workflow
-- `/research` competitor signals and compliance classifier
-- `/campaigns` publishing readiness and blockers
-- `/leads` lead inbox, quality labels, and dedupe state
-- `/approvals` human approval gates
-- `/agents` agent workforce runs and permissions
-- `/model-control` grouped model profile dropdowns, OpenRouter readiness, and AI ledger
-
+`npm test` is the repository test suite; `npm run test:e2e` runs Playwright. The production acceptance path, backup rules, rollback, SSH access, and extension guidance are indexed in [docs/README.md](docs/README.md).

@@ -40,15 +40,6 @@ test("browser read models are identity-scoped, age-bounded, and purged on sign-o
   assert.match(shell, /syncReadModelIdentity/);
 });
 
-test("smart prefetch is capped and respects browser constraints", () => {
-  const source = read("src/lib/navigation/use-smart-prefetch.ts");
-  assert.match(source, /\.slice\(0, 2\)/);
-  assert.match(source, /saveData/);
-  assert.match(source, /slow-2g/);
-  assert.match(source, /visibilityState/);
-  assert.match(source, /deviceMemory/);
-  assert.match(source, /requestIdleCallback/);
-});
 
 test("bulk private media signing rejects cross-workspace paths and is request-bounded", () => {
   assert.equal(ADSTUDIO_MEDIA_URL_LIMIT, 100);

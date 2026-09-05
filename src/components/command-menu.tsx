@@ -10,7 +10,7 @@ import { Plus, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { selfServeIcons } from "@/components/sidebar-nav";
+import { navByVariant } from "@/components/sidebar-nav";
 import {
   CommandDialog,
   CommandEmpty,
@@ -38,9 +38,7 @@ export function CommandMenu() {
   }, []);
 
   const copy = niche.copy.shell.commandMenu;
-  const navItems = niche.nav.items.filter(
-    (item) => !item.feature || niche.features[item.feature],
-  );
+  const navItems = navByVariant.self_serve;
 
   function run(action: () => void) {
     setOpen(false);
@@ -58,7 +56,7 @@ export function CommandMenu() {
         <Search aria-hidden size={14} />
         {niche.copy.shell.searchButton}
         <kbd className="ml-auto rounded-[5px] border border-border bg-(--surface-subtle) px-1.5 py-px font-mono text-[10px] text-muted-foreground">
-          ⌘K
+          ⌘K / Ctrl K
         </kbd>
       </button>
 
@@ -79,7 +77,7 @@ export function CommandMenu() {
           </CommandGroup>
           <CommandGroup heading={copy.navigateGroup}>
             {navItems.map((item) => {
-              const Icon = selfServeIcons[item.href];
+              const Icon = item.icon;
               return (
                 <CommandItem
                   key={item.href}

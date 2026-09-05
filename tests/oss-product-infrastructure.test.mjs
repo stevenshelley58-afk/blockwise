@@ -114,10 +114,11 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   assert.equal(packageJson.scripts["build:packages"], "npm run --workspace @blockwise/ad-template-contract build && npm run --workspace @blockwise/ad-template-renderer build");
   assert.equal(packageJson.scripts.prebuild, "npm run build:packages");
   assert.equal(packageJson.scripts.pretypecheck, "npm run build:packages");
-  const workspaceBuild = dockerfile.search(/^RUN npm run build:packages$/m);
-  const nextBuild = dockerfile.search(/^RUN npm run build$/m);
-  assert.ok(workspaceBuild >= 0, "Docker must build internal workspace packages");
-  assert.ok(nextBuild > workspaceBuild, "Next build must run after internal workspace packages");
+  assert.match(dockerfile, /^RUN npm run build$/m);
+  assert.doesNotMatch(dockerfile, /^RUN npm run build:packages$/m, "npm prebuild already builds the packages");
+  assert.match(dockerfile, /ENV BLOCKWISE_BUILD_REVISION=\$GIT_SHA/);
+  assert.match(dockerfile, /LABEL org\.opencontainers\.image\.revision=\$GIT_SHA/);
+  assert.match(compose, /GIT_SHA: \$\{BLOCKWISE_GIT_SHA:\?/);
 });
 
 test("product readiness is fatal while liveness remains process-only", async () => {

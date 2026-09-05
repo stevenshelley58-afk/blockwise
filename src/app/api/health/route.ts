@@ -25,13 +25,15 @@ export async function GET(request: Request) {
   const supabase = await getSupabaseReadiness();
   const ready = readiness.ok && supabase.ok;
   const status = ready ? 200 : 503;
+  const revision = process.env.BLOCKWISE_BUILD_REVISION || null;
 
   if (!authenticated) {
-    return NextResponse.json({ app: "blockwise", status: ready ? "ready" : "degraded" }, { status });
+    return NextResponse.json({ app: "blockwise", status: ready ? "ready" : "degraded", revision }, { status });
   }
 
   return NextResponse.json({
     app: "blockwise",
+    revision,
     status: ready ? "ready" : "configuration_incomplete",
     readiness: {
       ...readiness,

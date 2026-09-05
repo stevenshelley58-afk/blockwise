@@ -22,7 +22,7 @@ import {
   UsersRound,
 } from "lucide-react";
 
-import { selfServeIcons } from "@/components/sidebar-nav";
+import { navByVariant } from "@/components/sidebar-nav";
 import { AnimatedGroup } from "@/components/ui/animated-group";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { niche } from "@/config/niche";
@@ -252,7 +252,7 @@ export function HomeDashboard({ data }: { data: HomeData }) {
         {/* Quick actions */}
         <AnimatedGroup className="grid gap-3.5 sm:grid-cols-2" itemClassName="h-full">
           {quickActions.map((action) => {
-            const Icon = selfServeIcons[action.href] ?? ArrowRight;
+            const Icon = navByVariant.self_serve.find((item) => item.href === action.href)?.icon ?? ArrowRight;
             return (
               <Link
                 key={action.href}

@@ -142,6 +142,8 @@ export function makeSmtpProvider(env: NodeJS.ProcessEnv): EmailProvider {
         secure: port === 465,
         auth: user && pass ? { user, pass } : undefined,
         requireTLS: true,
+        disableFileAccess: true,
+        disableUrlAccess: true,
       });
       try {
         const info = await transport.sendMail({

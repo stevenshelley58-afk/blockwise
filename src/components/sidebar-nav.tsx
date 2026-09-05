@@ -19,6 +19,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { niche } from "@/config/niche";
+import { activeRouteHref } from "@/lib/navigation/active-nav-item";
 
 export type SidebarVariant = "operator" | "self_serve" | "monitor";
 
@@ -28,6 +29,7 @@ export type NavItem = {
   href: string;
   label: string;
   icon: NavIcon;
+  mobileLabel?: string;
   /** Optional grouping label rendered above the item (starts a new section). */
   section?: string;
 };
@@ -72,26 +74,24 @@ const operatorNavItems: NavItem[] = [
   return true;
 });
 
-// Self-serve labels, order, and feature gating live in the niche config
-// (src/config/niche) — the white-label layer. Icons stay here, keyed by
-// route, because they are structural rather than niche identity.
-export const selfServeIcons: Record<string, NavIcon> = {
-  "/self-serve": LayoutGrid,
-  "/ad-studio": Star,
-  "/results": LineChart,
-  "/ad-radar": RadarIcon,
-  "/property-check": FileSearch,
-  "/leads": UsersRound,
-  "/ad-studio/brand": UserRound,
-  "/settings": Settings,
-};
+const customerToolIcons = {
+  home: LayoutGrid,
+  studio: Star,
+  performance: LineChart,
+  radar: RadarIcon,
+  property: FileSearch,
+  leads: UsersRound,
+  brand: UserRound,
+  settings: Settings,
+} satisfies Record<(typeof niche.nav.items)[number]["icon"], NavIcon>;
 
 const selfServeNavItems: NavItem[] = niche.nav.items
   .filter((item) => !item.feature || niche.features[item.feature])
   .map((item) => ({
     href: item.href,
     label: item.label,
-    icon: selfServeIcons[item.href] ?? LayoutGrid,
+    icon: customerToolIcons[item.icon],
+    mobileLabel: item.mobileLabel,
     section: item.section,
   }));
 
@@ -108,15 +108,8 @@ export const navByVariant: Record<SidebarVariant, NavItem[]> = {
   monitor: monitorNavItems,
 };
 
-export function isItemActive(pathname: string, href: string) {
-  const path = href.split(/[?#]/)[0];
-  if (pathname === path) {
-    return true;
-  }
-  if (path === "/operator" || path === "/settings") {
-    return pathname === path;
-  }
-  return pathname.startsWith(`${path}/`);
+export function isItemActive(pathname: string, href: string, items: readonly NavItem[]) {
+  return activeRouteHref(pathname, items) === href;
 }
 
 export function SidebarNav({ variant }: { variant: SidebarVariant }) {
@@ -129,7 +122,7 @@ export function SidebarNav({ variant }: { variant: SidebarVariant }) {
     <nav className="nav-group">
       {navItems.map((item) => {
         const Icon = item.icon;
-        const active = isItemActive(pathname, item.href);
+        const active = isItemActive(pathname, item.href, navItems);
         const showSection = item.section && item.section !== lastSection;
         lastSection = item.section;
 

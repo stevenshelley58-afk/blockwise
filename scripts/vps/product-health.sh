@@ -39,8 +39,24 @@ if ! curl "${curl_args[@]}" --header 'Accept: application/json' "$PUBLIC_URL/api
   echo "product readiness request failed: $PUBLIC_URL/api/health" >&2
   exit 1
 fi
-grep -Eq '"status"[[:space:]]*:[[:space:]]*"ready"' "$response_file" || {
-  echo "product readiness JSON did not report status=ready" >&2
-  exit 1
-}
-echo "product readiness endpoint: ready"
+# Optionally prove the intended compiled release, not just any healthy app.
+expected_revision="${1:-${BLOCKWISE_EXPECTED_REVISION:-}}"
+python3 - "$response_file" "$expected_revision" <<'PY'
+import json
+import re
+import sys
+
+with open(sys.argv[1]) as response:
+    health = json.load(response)
+if health.get("app") != "blockwise" or health.get("status") != "ready":
+    raise SystemExit("product readiness JSON did not report Blockwise status=ready")
+expected = sys.argv[2]
+if expected:
+    if not re.fullmatch(r"[a-f0-9]{40}", expected):
+        raise SystemExit("Expected revision must be a full lowercase Git SHA")
+    if health.get("revision") != expected:
+        raise SystemExit(f"Release mismatch: expected {expected}, served {health.get('revision')}")
+    print(f"product readiness endpoint: ready, verified release {expected}")
+else:
+    print("product readiness endpoint: ready (release not asserted)")
+PY

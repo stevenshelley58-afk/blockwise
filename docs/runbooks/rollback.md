@@ -1,12 +1,17 @@
 # Rollback Runbook
 
-Status: active for the self-hosted product target. The target is implemented,
-but live cutover remains gated. Until cutover is signed off, the previous
-managed endpoint is retained as a rollback source and must not be decommissioned.
+Status: active for the self-hosted product runtime. See
+[production readiness](production-readiness.md) for current release evidence.
+Application rollback normally selects the previous retained immutable image;
+a data restore or DNS change is a separate operation and needs its own evidence.
+Never assume an old managed endpoint is still available.
 
-Use this runbook to stop provider writes, pause the VPS product worker, restore
-verified data, or return DNS to the previous endpoint. Do not delete product
-volumes or the retained source deployment during an incident.
+Before running these commands, export the actual env/Compose paths:
+
+```bash
+export BLOCKWISE_PRODUCT_ENV_FILE=/srv/blockwise/product/.env
+export COMPOSE_FILE=/path/to/the/verified/release/infra/coolify/docker-compose.product.yml
+```
 
 ## Current runtime posture
 
@@ -30,7 +35,7 @@ delivery.
 
 ```bash
 export BLOCKWISE_PRODUCT_ENV_FILE=/srv/blockwise/product/.env
-export COMPOSE_FILE=/projects/blockwise/infra/coolify/docker-compose.product.yml
+export COMPOSE_FILE=/path/to/the/verified/release/infra/coolify/docker-compose.product.yml
 docker compose --env-file "$BLOCKWISE_PRODUCT_ENV_FILE" -f "$COMPOSE_FILE" --profile worker --profile realtime stop product-worker
 docker compose --env-file "$BLOCKWISE_PRODUCT_ENV_FILE" -f "$COMPOSE_FILE" up -d --no-build --pull never product-app
 ```
@@ -61,10 +66,12 @@ app and edge. Keep the worker omitted while provider writes are false:
 ```bash
 docker compose --env-file "$BLOCKWISE_PRODUCT_ENV_FILE" -f "$COMPOSE_FILE" --profile realtime --profile edge config --quiet
 docker compose --env-file "$BLOCKWISE_PRODUCT_ENV_FILE" -f "$COMPOSE_FILE" --profile edge up -d --no-build --pull never --force-recreate product-app product-caddy
-scripts/vps/product-health.sh
+scripts/vps/product-health.sh <expected-full-git-sha>
 ```
 
-Never build from a moving checkout during rollback. Verify the Caddy `/healthz`
+Releases predating the compiled-revision endpoint need explicit container image-ID
+and retained-source verification instead of the revision argument. A no-argument
+health check only proves readiness. Never build from a moving checkout during rollback. Verify the Caddy `/healthz`
 response, app `/api/health`, and provider-write flag before resuming traffic.
 Only after a separate provider-write approval should the verified worker image
 and revision be selected and started with `--profile worker`.
@@ -91,8 +98,9 @@ object manifest, run tenant/RLS/Auth smoke tests, and only then restart services
 
 ## 5. Return DNS to the previous endpoint
 
-If the VPS target cannot safely serve traffic, disable provider writes and point
-the public DNS or upstream proxy back to the retained previous endpoint. Keep
+Only if a retained previous endpoint has been verified healthy and data-consistent,
+disable provider writes and route public DNS/upstream traffic back to it. If no
+verified endpoint remains, do not change DNS; restore a retained app image first. Keep
 the product Caddy volumes, database dump, Auth receipt, and object manifest
 intact for forensic review and a later retry. DNS, SMTP, OAuth callbacks,
 webhooks, and scheduler changes are separate gates and must be reverted as a

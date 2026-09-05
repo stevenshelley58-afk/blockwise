@@ -12,7 +12,7 @@ test("AI generation stores a proposal without mutating editor copy", () => {
   assert.ok(generateStart >= 0 && applyStart > generateStart);
   assert.match(generateBody, /setProposal\(\{ onImage:/);
   assert.doesNotMatch(generateBody, /applyGeneratedCopy\(/);
-  assert.match(source, /Nothing changes until you apply it\./);
+  assert.match(source, /Nothing changes until you choose Use all or a field\./);
 });
 
 test("copy changes happen only through explicit field or apply-all actions", () => {
