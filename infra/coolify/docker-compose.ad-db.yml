@@ -1,0 +1,40 @@
+# Ad DB access only: reuses the existing database and network.
+services:
+  ad-db-rest:
+    image: postgrest/postgrest:v14.15@sha256:2f8e7b656f09db697a8875177694b417b35cb76c21370de07fc54e711e902326
+    restart: unless-stopped
+    environment:
+      PGRST_DB_URI: postgres://postgres:${HERMES_RESEARCH_DB_PASSWORD:?Required}@blockwise-research-db:5432/blockwise_research
+      PGRST_DB_SCHEMAS: research
+      PGRST_DB_EXTRA_SEARCH_PATH: public,extensions
+      PGRST_JWT_SECRET: ${HERMES_RESEARCH_JWT_SECRET:?Required}
+      # No anonymous role: every data request requires an authenticated JWT.
+      PGRST_DB_POOL: "4"
+      PGRST_DB_POOL_ACQUISITION_TIMEOUT: "10"
+      PGRST_DB_POOL_MAX_IDLETIME: "60"
+    networks: [research]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  ad-db-gateway:
+    image: caddy:2.11.3-alpine
+    restart: unless-stopped
+    depends_on: [ad-db-rest]
+    ports: ["127.0.0.1:8652:3000"]
+    volumes:
+      - ../research-db/AdDb.Caddyfile:/etc/caddy/Caddyfile:ro
+    networks: [research]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp, /data, /config]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+networks:
+  research:
+    external: true
+    name: coolify_research
