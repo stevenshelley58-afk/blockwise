@@ -21,7 +21,7 @@ export const AD_DB_AD_SELECT = [
 /** Only locally verified archive media crosses this contract. */
 export function normaliseAdDbRow(row: AdDbRow, basePath = "/v1/ad-db"): Record<string, unknown> {
   const media = Array.isArray(row.media) ? row.media
-    .filter((asset) => asset?.id && asset.storageBucket && asset.objectKey && /^[a-f0-9]{64}$/u.test(asset.sha256) && asset.byteSize > 0 && asset.mimeType)
+    .filter((asset) => asset?.id && asset.storageBucket && asset.objectKey === `sha256/${asset.sha256}` && /^[a-f0-9]{64}$/u.test(asset.sha256) && asset.byteSize > 0 && asset.mimeType)
     .map((asset) => ({
       id: asset.id, kind: asset.kind, archiveUrl: `${basePath}/ads/${encodeURIComponent(row.id)}/media/${encodeURIComponent(asset.id)}`,
       sha256: asset.sha256, byteSize: asset.byteSize, mimeType: asset.mimeType, width: asset.width, height: asset.height,
@@ -35,8 +35,4 @@ export function normaliseAdDbRow(row: AdDbRow, basePath = "/v1/ad-db"): Record<s
     creative: { id: row.ad_creative_id, format: row.format, headline: row.headline, body: row.body, cta: row.cta, adType: row.ad_type, primaryIntent: row.primary_intent, classification: row.classification || {} },
     media,
   };
-}
-
-export function mediaObjectPath(asset: Pick<AdDbMedia, "storageBucket" | "objectKey">): string {
-  return `/storage/v1/object/public/${encodeURIComponent(asset.storageBucket)}/${asset.objectKey.split("/").map(encodeURIComponent).join("/")}`;
 }
