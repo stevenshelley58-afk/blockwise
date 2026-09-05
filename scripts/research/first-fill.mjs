@@ -194,6 +194,7 @@ const budget = sqlRows(`
 if (budget.length === 0) { console.error("ABORT: no provider_credit_budgets row for scrapingbee."); process.exit(3); }
 if (!Number.isFinite(providerBalanceVerifiedAt) || Date.now() - providerBalanceVerifiedAt > 86400000 || providerBalanceVerifiedAt > Date.now() + 60000) { console.error("ABORT: provider balance is unverified; pass fresh --provider-balance-verified-at."); process.exit(3); }
 const remaining = Number(budget[0][0]); const needed = pages.length * CREDITS_PER_REQUEST; const requiredCeiling = creditCeiling ?? needed;
+if (needed > requiredCeiling) { console.error("ABORT: selected pages exceed the explicit run credit ceiling; reduce --batch."); process.exit(3); }
 if (!Number.isFinite(requiredCeiling) || requiredCeiling <= 0 || remaining < Math.min(needed, requiredCeiling)) { console.error("ABORT: credit budget remaining is below required ceiling."); process.exit(3); }
 if (budget.length > 0 && creditCeiling !== null) {
   const remaining = Number(budget[0][0]);
@@ -235,7 +236,8 @@ for (const [index, page] of pages.entries()) {
           status = 'pending',
           available_at = ${sqlValue(new Date(Date.now() + index * staggerMs).toISOString())},
           claimed_at = null, claimed_by = null, claim_token = null, claim_expires_at = null,
-          attempts = 0, max_attempts = 3, last_error = null, blocked_reason = null,
+          attempts = 0, max_attempts = 1, last_error = null, blocked_reason = null,
+          payload = ${sqlValue({ advertiserPageId: page.id, metaPageId: page.pageId, build_run_id: buildRunId, scanMode: "initial_fill", country: "AU", activeStatus: "all", resultsLimit: 250, creditCeiling: requiredCeiling })},
           result = ${sqlValue({})}, completed_at = null
         where id = ${sqlValue(jobId)};`);
     recycled += 1;
@@ -254,8 +256,9 @@ for (const [index, page] of pages.entries()) {
           country: "AU",
           activeStatus: "all",
           resultsLimit: 250,
+          creditCeiling: requiredCeiling,
         })},
-        'pending', ${sqlValue(new Date(Date.now() + index * staggerMs).toISOString())}, 3
+        'pending', ${sqlValue(new Date(Date.now() + index * staggerMs).toISOString())}, 1
       );`);
   queued += 1;
   if ((index + 1) % 100 === 0) console.log(`  queued ${index + 1}/${pages.length}`);
