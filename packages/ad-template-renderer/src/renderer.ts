@@ -1,8 +1,7 @@
 import { createCanvas, GlobalFonts, loadImage, type SKRSContext2D } from "@napi-rs/canvas";
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { tmpdir } from "node:os";
 import type {
   AdTemplate,
   LayoutLayer,
@@ -188,20 +187,30 @@ async function renderPlate(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { typ
   ctx.restore();
 }
 
-const registeredFontFiles = new Set<string>();
+const registeredFontAliases = new Set<string>();
+
+function templateFontAlias(fontFile: string): string {
+  return basename(fontFile).replace(/\.[^.]+$/, "");
+}
 
 function registerTemplateFonts(template: AdTemplate, fontValues: Record<string, Buffer> = {}): void {
   for (const font of template.fonts) {
     const fileName = basename(font.file);
-    const registrationKey = fileName;
-    if (registeredFontFiles.has(registrationKey)) continue;
+    const alias = templateFontAlias(font.file);
+    if (registeredFontAliases.has(alias)) {
+      if (!GlobalFonts.has(alias)) throw new Error("Declared template font is no longer registered: " + fileName);
+      continue;
+    }
     const imported = fontValues[font.file] ?? fontValues[`font:${font.file}`];
-    const importedPath = imported ? join(tmpdir(), fileName) : null;
-    if (imported && importedPath && !existsSync(importedPath)) writeFileSync(importedPath, imported);
-    const absolute = importedPath ?? join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "public", "fonts", "adstudio", fileName);
-    if (!existsSync(absolute)) throw new Error("Missing declared template font: " + fileName);
-    GlobalFonts.registerFromPath(absolute, fileName.replace(/\.[^.]+$/, ""));
-    registeredFontFiles.add(registrationKey);
+    const absolute = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "public", "fonts", "adstudio", fileName);
+    if (!imported && !existsSync(absolute)) throw new Error("Missing declared template font: " + fileName);
+    const registration = imported
+      ? GlobalFonts.register(imported, alias)
+      : GlobalFonts.registerFromPath(absolute, alias);
+    if (!registration || !GlobalFonts.has(alias)) {
+      throw new Error("Failed to register declared template font: " + fileName);
+    }
+    registeredFontAliases.add(alias);
   }
 }
 
@@ -424,11 +433,11 @@ function prepareText(
 }
 
 function resolveTextFontFamily(layer: RenderTextLayer): string {
-  const registeredFamily = layer.font.file.replace(/\.[^.]+$/, "");
-  // only when this process actually registered it; otherwise a family label
-  // such as "Barlow" would silently select a host fallback face.
-  const requestedFamily = layer.fontFamily?.trim();
-  return requestedFamily && GlobalFonts.has(requestedFamily) ? requestedFamily : registeredFamily;
+  const alias = templateFontAlias(layer.font.file);
+  if (!registeredFontAliases.has(alias) || !GlobalFonts.has(alias)) {
+    throw new Error("Declared template font is not registered: " + basename(layer.font.file));
+  }
+  return alias;
 }
 
 function textPreflightViolation(

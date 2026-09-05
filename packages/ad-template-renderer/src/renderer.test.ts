@@ -316,3 +316,41 @@ test("tracking is one absolute canvas pixel per grapheme gap and c5 REAL ESTATE 
   assert.equal(rendered.height, 1350);
   assert.ok(rendered.png.length > 0, "successful render proves the text remains at or above the 24px floor");
 });
+
+test("font.file stays authoritative for path declarations instead of falling back to a host face", async () => {
+  const renderWithFont = async (fontFile: string, fontFamily?: string) => {
+    const template = templateFixture();
+    template.fonts = [{ file: fontFile }];
+    template.textInputs = [{ key: "headline", label: "Headline", placeholder: "MANROPE WMwm 12345", maxLength: 32 }];
+    template.feedLayout.layers.push({
+      type: "text",
+      layerId: "feed-font-authority",
+      inputKey: "headline",
+      font: { file: fontFile },
+      fontFamily,
+      fontWeight: 400,
+      fontSize: 64,
+      lineHeight: 1,
+      tracking: 0,
+      alignment: "left",
+      maxCharacters: 32,
+      maxLines: 1,
+      colourRole: "mainText",
+      overflowBehaviour: "scale_down",
+      geometry: { x: 64, y: 64, width: 920, height: 96 },
+    });
+    return renderPlacement({
+      template,
+      imageValues: {},
+      textValues: { headline: "MANROPE WMwm 12345" },
+      colourMap: colours,
+    }, "feed");
+  };
+
+  const basenameDeclared = await renderWithFont("manrope-400.woff2");
+  const pathDeclared = await renderWithFont("/fonts/adstudio/manrope-400.woff2");
+  const misleadingHostFamily = await renderWithFont("/fonts/adstudio/manrope-400.woff2", "Times New Roman");
+
+  assert.deepEqual(pathDeclared.png, basenameDeclared.png, "path-style font refs must resolve to the registered Manrope alias");
+  assert.deepEqual(misleadingHostFamily.png, basenameDeclared.png, "font.file must not be replaced by an installed host family");
+});
