@@ -6,12 +6,13 @@ import test from "node:test";
 
 import { collectNodeTestFiles } from "../scripts/test/run-node-tests.mjs";
 
-test("Node test discovery includes nested TypeScript and MJS tests in stable order", async () => {
+test("Node test discovery includes nested TypeScript, TSX and MJS tests in stable order", async () => {
   const directory = await mkdtemp(join(tmpdir(), "blockwise-node-test-discovery-"));
   try {
     await mkdir(join(directory, "nested", "node_modules"), { recursive: true });
     await Promise.all([
       writeFile(join(directory, "z.test.ts"), ""),
+      writeFile(join(directory, "render.test.tsx"), ""),
       writeFile(join(directory, "a.test.mjs"), ""),
       writeFile(join(directory, "nested", "b.test.ts"), ""),
       writeFile(join(directory, "nested", "node_modules", "ignored.test.ts"), ""),
@@ -20,7 +21,7 @@ test("Node test discovery includes nested TypeScript and MJS tests in stable ord
 
     assert.deepEqual(
       (await collectNodeTestFiles(directory)).map((file) => file.slice(directory.length + 1)),
-      ["a.test.mjs", "nested/b.test.ts", "z.test.ts"],
+      ["a.test.mjs", "nested/b.test.ts", "render.test.tsx", "z.test.ts"],
     );
   } finally {
     await rm(directory, { recursive: true, force: true });

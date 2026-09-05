@@ -11,6 +11,7 @@ import {
   ImageOff,
   MousePointerClick,
   Percent,
+  Megaphone,
   Play,
   UserPlus,
   Wallet,
@@ -264,7 +265,7 @@ export function MetaMonitorDashboard({
         range={payload.range}
         rangeKey={rangeKey}
         customRange={customRange}
-        lastSyncedAt={summary?.lastSyncedAt ?? generatedAt}
+        lastSyncedAt={summary?.lastSyncedAt ?? null}
         isRefreshing={isRefreshing}
         isSample={payload.source === "sample"}
         onRangeChange={handleRangeChange}
@@ -351,47 +352,15 @@ function Dashboard({
       {focusCampaignId ? (
         <p className="rounded-(--r-card) border border-(--line) bg-(--surface) px-4 py-3 text-[13px] font-semibold" role="status">
           {focusedCampaignVisible
-            ? "Showing the campaign created by this publish plan."
-            : "This publish is active; its campaign will appear here after Meta reporting refreshes."}
+            ? "Showing the ad created from your publish plan."
+            : "This ad is active. Its details will appear here after reporting refreshes."}
         </p>
       ) : null}
-      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 xl:grid-cols-6">
-        <MetaKpiCard
-          icon={Eye}
-          iconTone="blue"
-          label="Reach"
-          value={summary.reach.toLocaleString("en-AU")}
-          compareText={compare}
-          trend={previous ? calculateTrend(summary.reach, previous.reach) : null}
-        />
-        <MetaKpiCard
-          icon={BarChart3}
-          iconTone="slate"
-          label="Impressions"
-          value={summary.impressions.toLocaleString("en-AU")}
-          compareText={compare}
-          trend={previous ? calculateTrend(summary.impressions, previous.impressions) : null}
-        />
-        <MetaKpiCard
-          icon={MousePointerClick}
-          iconTone="indigo"
-          label="Link clicks"
-          value={summary.clicks.toLocaleString("en-AU")}
-          compareText={compare}
-          trend={previous ? calculateTrend(summary.clicks, previous.clicks) : null}
-        />
-        <MetaKpiCard
-          icon={Percent}
-          iconTone="orange"
-          label="CTR"
-          value={ctr != null ? formatPercent(ctr, 2) : "Unavailable"}
-          compareText={compare}
-          trend={previous ? calculateTrend(ctr, previousCtr) : null}
-        />
+      <div className="grid gap-3.5 sm:grid-cols-3">
         <MetaKpiCard
           icon={UserPlus}
           iconTone="green"
-          label="Leads"
+          label="Enquiries"
           value={summary.leads.toLocaleString("en-AU")}
           compareText={compare}
           trend={previous ? calculateTrend(summary.leads, previous.leads) : null}
@@ -403,6 +372,12 @@ function Dashboard({
           value={formatCurrency(summary.spend)}
           compareText={compare}
           trend={previous ? calculateTrend(summary.spend, previous.spend) : null}
+        />
+        <MetaKpiCard
+          icon={Megaphone}
+          iconTone="slate"
+          label="Running ads"
+          value={String(payload.ads.filter((ad) => ad.status === "ACTIVE").length)}
         />
       </div>
 
@@ -443,8 +418,47 @@ function Dashboard({
               valueFormatter={(value) => formatCurrency(value)}
             />
           </div>
+
         </section>
+
       </div>
+      <details className={panelClass}>
+        <summary className="cursor-pointer text-[13px] font-bold">More reporting details</summary>
+        <div className="mt-4 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
+          <MetaKpiCard
+            icon={Eye}
+            iconTone="blue"
+            label="Reach"
+            value={summary.reach.toLocaleString("en-AU")}
+            compareText={compare}
+            trend={previous ? calculateTrend(summary.reach, previous.reach) : null}
+          />
+          <MetaKpiCard
+            icon={BarChart3}
+            iconTone="slate"
+            label="Impressions"
+            value={summary.impressions.toLocaleString("en-AU")}
+            compareText={compare}
+            trend={previous ? calculateTrend(summary.impressions, previous.impressions) : null}
+          />
+          <MetaKpiCard
+            icon={MousePointerClick}
+            iconTone="indigo"
+            label="Link clicks"
+            value={summary.clicks.toLocaleString("en-AU")}
+            compareText={compare}
+            trend={previous ? calculateTrend(summary.clicks, previous.clicks) : null}
+          />
+          <MetaKpiCard
+            icon={Percent}
+            iconTone="orange"
+            label="CTR"
+            value={ctr != null ? formatPercent(ctr, 2) : "Unavailable"}
+            compareText={compare}
+            trend={previous ? calculateTrend(ctr, previousCtr) : null}
+          />
+        </div>
+      </details>
 
       {payload.ads.length > 0 ? (
         <>
@@ -535,7 +549,9 @@ function CampaignManagementTable({
   }
 
   return (
-    <section className={panelClass}>
+    <details className={panelClass} open={focusCampaignId ? true : undefined}>
+      <summary className="cursor-pointer text-[13px] font-bold">Advanced ad settings</summary>
+      <div className="mt-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <SectionHeading
           title="Campaigns"
@@ -658,7 +674,8 @@ function CampaignManagementTable({
           </TableBody>
         </Table>
       </div>
-    </section>
+      </div>
+    </details>
   );
 }
 

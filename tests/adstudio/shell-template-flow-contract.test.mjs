@@ -10,19 +10,21 @@ const adsLibrary = readFileSync("src/components/adstudio/ads-library.tsx", "utf8
 const mediaLibrary = readFileSync("src/components/adstudio/media-library.tsx", "utf8");
 const homeCommand = readFileSync("src/components/adstudio/home-command.tsx", "utf8");
 
-test("Ad Studio shell uses the Blockwise symbol as the customer-home link", () => {
-  assert.match(shell, /import \{ BlockwiseLogo \} from "@\/components\/blockwise-logo"/);
+test("Ad Studio preserves the desktop symbol and gives mobile an explicit home link", () => {
   assert.match(shell, /href="\/self-serve"[\s\S]*?aria-label="Back to Blockwise"[\s\S]*?<BlockwiseLogo tokens showWordmark=\{false\}/);
-  assert.equal((shell.match(/aria-label="Back to Blockwise"/g) ?? []).length, 2);
-  assert.match(shell, /<p className="font-display text-\[15\.5px\] font-extrabold leading-tight">\s*Ad Studio/);
-  assert.match(shell, /<span className="min-w-0 truncate font-display text-\[15\.5px\] font-extrabold">\s*Ad Studio/);
-  assert.doesNotMatch(shell, /\bA\s*<\//);
+  const mobileHeader = shell.slice(shell.indexOf("<header"), shell.indexOf("</header>"));
+  assert.match(mobileHeader, /href="\/self-serve"/);
+  assert.match(mobileHeader, /<ArrowLeft size=\{16\} aria-hidden/);
+  assert.match(mobileHeader, /<span>Blockwise<\/span>/);
+  assert.match(mobileHeader, /min-h-11/);
+  assert.match(mobileHeader, /focus-visible:ring-white/);
+  assert.match(mobileHeader, /Ad Studio/);
 });
 
-test("Ad Studio keeps the Blockwise mark white without a logo background wrapper", () => {
+test("Ad Studio keeps its white desktop mark and legible mobile exit", () => {
   assert.match(shell, /size-9[^\n]*bg-transparent text-white/);
-  assert.match(shell, /size-8[^\n]*bg-transparent text-white/);
-  assert.equal((shell.match(/bg-transparent/g) ?? []).length, 2);
+  const mobileHeader = shell.slice(shell.indexOf("<header"), shell.indexOf("</header>"));
+  assert.match(mobileHeader, /font-semibold text-white/);
   assert.doesNotMatch(shell, /bg-\(--surface\) text-\(--ink\)/);
 });
 

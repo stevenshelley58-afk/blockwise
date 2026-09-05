@@ -141,7 +141,7 @@ export function MetaMonitorHeader(props: {
             className={`size-[7px] rounded-full ${props.lastSyncedAt ? "bg-success" : "bg-(--faint)"}`}
             aria-hidden
           />
-          {props.lastSyncedAt ? copy.states.staleNotice(timeAgo(props.lastSyncedAt)) : copy.states.notSynced}
+          {props.isSample ? "Example data" : props.lastSyncedAt ? "Last known " + timeAgo(props.lastSyncedAt) : copy.states.notSynced}
         </span>
       </div>
     </header>

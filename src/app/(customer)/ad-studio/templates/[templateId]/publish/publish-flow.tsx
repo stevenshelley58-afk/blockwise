@@ -576,32 +576,38 @@ export function PublishFlow({
 
         <h2 id="publish-stage-2" tabIndex={-1} className="mb-3 scroll-mt-4 text-base font-semibold focus:outline-none">2. Destination & form</h2>
         <div className="mb-6 space-y-3 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
-          <h3 className="text-sm font-semibold">Meta destination</h3>
-          <p className="text-xs text-muted-foreground">Choose where the paused objects belong. Existing campaigns and ad sets are never edited.</p>
-          <Label htmlFor="meta-target-mode">Campaign and ad set</Label>
-          <select
-            id="meta-target-mode"
-            value={targetMode}
-            onChange={(event) => setTargetMode(event.target.value as typeof targetMode)}
-            className="min-h-11 w-full rounded-md border border-border bg-muted/30 px-3 text-sm"
-          >
-            <option value="new_campaign_new_adset">New campaign and new ad set</option>
-            <option value="existing_campaign_new_adset">Existing campaign and new ad set</option>
-            <option value="existing_adset">Existing campaign and one or more existing ad sets</option>
-          </select>
-          {targetMode !== "new_campaign_new_adset" ? (
-            <div>
-              <Label htmlFor="meta-campaign-id">Existing campaign ID</Label>
-              <Input id="meta-campaign-id" value={campaignId} onChange={(event) => setCampaignId(event.target.value)} placeholder="Existing campaign ID" className="mt-1 min-h-11 w-full bg-muted/30" />
+          <h3 className="text-sm font-semibold">Set up this ad</h3>
+          <p className="text-xs text-muted-foreground">Blockwise prepares a new ad for you. You choose your daily spend, area, where it appears and timing below.</p>
+          <details className="rounded-(--r-ctl) border border-border bg-muted/20 p-3" open={targetMode !== "new_campaign_new_adset"}>
+            <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold">Use an existing setup (advanced)</summary>
+            <div className="grid gap-3 pt-3">
+              <p className="text-xs text-muted-foreground">Use this only when you already have the campaign details. Existing campaigns and ad sets are never edited.</p>
+              <Label htmlFor="meta-target-mode">Campaign and ad set</Label>
+              <select
+                id="meta-target-mode"
+                value={targetMode}
+                onChange={(event) => setTargetMode(event.target.value as typeof targetMode)}
+                className="min-h-11 w-full rounded-md border border-border bg-muted/30 px-3 text-sm"
+              >
+                <option value="new_campaign_new_adset">New campaign and new ad set</option>
+                <option value="existing_campaign_new_adset">Existing campaign and new ad set</option>
+                <option value="existing_adset">Existing campaign and one or more existing ad sets</option>
+              </select>
+              {targetMode !== "new_campaign_new_adset" ? (
+                <div>
+                  <Label htmlFor="meta-campaign-id">Existing campaign ID</Label>
+                  <Input id="meta-campaign-id" value={campaignId} onChange={(event) => setCampaignId(event.target.value)} placeholder="Existing campaign ID" className="mt-1 min-h-11 w-full bg-muted/30" />
+                </div>
+              ) : null}
+              {targetMode === "existing_adset" ? (
+                <div>
+                  <Label htmlFor="meta-ad-set-ids">Existing ad set IDs</Label>
+                  <Input id="meta-ad-set-ids" value={adSetIds} onChange={(event) => setAdSetIds(event.target.value)} placeholder="Separate multiple IDs with commas" className="mt-1 min-h-11 w-full bg-muted/30" />
+                </div>
+              ) : null}
+              {!targetReady ? <p className="text-xs text-amber-700">Add the existing campaign and ad set details to continue.</p> : null}
             </div>
-          ) : null}
-          {targetMode === "existing_adset" ? (
-            <div>
-              <Label htmlFor="meta-ad-set-ids">Existing ad set IDs</Label>
-              <Input id="meta-ad-set-ids" value={adSetIds} onChange={(event) => setAdSetIds(event.target.value)} placeholder="Separate multiple IDs with commas" className="mt-1 min-h-11 w-full bg-muted/30" />
-            </div>
-          ) : null}
-          {!targetReady ? <p className="text-xs text-amber-700">Add the existing campaign and ad set details to continue.</p> : null}
+          </details>
         </div>
 
         <div className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
@@ -738,7 +744,7 @@ export function PublishFlow({
           <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold">What happens next</summary>
           <p className="mt-1 text-xs text-muted-foreground">
             {automatedPublishAvailable && providerWritesEnabled
-              ? "Create paused on Meta saves this exact setup as PAUSED campaign, ad sets and ads. Nothing can deliver until you explicitly choose Activate."
+              ? "Create paused on Meta saves these ads without running them. Nothing runs or spends until you explicitly choose Activate."
               : providerWritesEnabled
                 ? "Automated publishing is unavailable for this account. Your saved creative and setup can be sent to an authorised Blockwise operator for manual review."
                 : "Preview only is on — nothing will be created automatically. You can review the complete plan or request manual publishing."}
@@ -778,14 +784,14 @@ export function PublishFlow({
             {requiresForm ? "Add the HTTPS thank-you destination to continue." : "Add the real HTTPS article or website URL to continue."}
           </p>
         ) : !targetReady && issues.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Complete the campaign and ad set destination to continue.</p>
+          <p className="text-sm text-muted-foreground">Add the existing Meta setup details to continue.</p>
         ) : !fulfilmentReady && issues.length === 0 ? (
           <p className="text-sm text-muted-foreground">Complete the offer evidence and delivery details to continue.</p>
         ) : !publishBuild.controls && issues.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             {targetMode === "existing_adset"
               ? "Confirm that the existing ad set settings stay unchanged."
-              : "Complete and confirm the budget, audience, placements and schedule."}
+              : "Choose and confirm the daily spend, area, where the ad appears and timing."}
           </p>
         ) : (
           <span />
@@ -939,18 +945,14 @@ function PublishSetupFields({
   return (
     <div className="mb-6 space-y-5 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
       <div>
-        <h3 className="text-sm font-semibold">New ad set setup</h3>
-        <p className="mt-1 text-xs text-muted-foreground">Nothing is assumed. Set the spend, audience, placements and timing before Blockwise creates anything.</p>
+        <h3 className="text-sm font-semibold">Choose how your ad runs</h3>
+        <p className="mt-1 text-xs text-muted-foreground">Nothing is assumed. Choose the daily spend, area, where the ad appears and timing before Blockwise creates anything.</p>
       </div>
 
       {targetMode === "new_campaign_new_adset" ? (
         <div className="space-y-4 border-t border-border pt-4">
-          <dl className="grid gap-3 rounded-(--r-ctl) bg-muted/60 p-3 text-sm sm:grid-cols-2">
-            <div><dt className="text-xs text-muted-foreground">Campaign objective</dt><dd className="font-medium">{objective}</dd></div>
-            <div><dt className="text-xs text-muted-foreground">Special ad category</dt><dd className="font-medium">{specialAdCategory ?? "None declared"}</dd></div>
-          </dl>
           <div>
-            <Label htmlFor="publish-special-category-country">Special ad category country</Label>
+            <Label htmlFor="publish-special-category-country">Property ad country</Label>
             <Input
               id="publish-special-category-country"
               value={specialAdCategoryCountry}
@@ -960,14 +962,14 @@ function PublishSetupFields({
               autoCapitalize="characters"
               className="mt-1 min-h-11 bg-muted/30 uppercase sm:max-w-32"
             />
-            <p className="mt-1 text-xs text-muted-foreground">Enter the two-letter country code. Blockwise will not assume it.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Enter the two-letter country code, such as AU. Blockwise will not assume it.</p>
           </div>
           <fieldset className="space-y-2">
-            <legend className="text-xs font-medium">Where Meta controls the budget</legend>
+            <legend className="text-xs font-medium">How should the daily spend be used?</legend>
             <div className="grid gap-2 sm:grid-cols-2">
             {([
-              ["campaign", "Campaign budget (CBO)", "One campaign daily budget shared across its ad sets."],
-              ["adset", "Ad set budget (ABO)", "This new ad set gets its own daily budget."],
+              ["campaign", "Share one daily amount", "Meta shares this daily amount across the ad groups in this campaign."],
+              ["adset", "Give this group its own daily amount", "The ad versions in this group use their own daily amount."],
             ] as const).map(([value, label, description]) => (
               <label key={value} className="flex min-h-11 items-start gap-3 rounded-(--r-ctl) border border-border px-3 py-2.5 text-sm">
                 <input
@@ -983,6 +985,14 @@ function PublishSetupFields({
             ))}
             </div>
           </fieldset>
+          <details className="rounded-(--r-ctl) border border-border bg-muted/20 p-3">
+            <summary className="min-h-11 cursor-pointer py-2 text-xs font-semibold">Meta setup details (advanced)</summary>
+            <dl className="grid gap-3 pt-3 text-sm sm:grid-cols-2">
+              <div><dt className="text-xs text-muted-foreground">Campaign objective</dt><dd className="font-medium">{objective}</dd></div>
+              <div><dt className="text-xs text-muted-foreground">Special ad category</dt><dd className="font-medium">{specialAdCategory ?? "None declared"}</dd></div>
+              <div><dt className="text-xs text-muted-foreground">Special ad category country</dt><dd className="font-medium">{specialAdCategoryCountry || "Not entered"}</dd></div>
+            </dl>
+          </details>
           </div>
       ) : (
         <div className="rounded-(--r-ctl) bg-muted/60 px-3 py-2.5">
@@ -1002,7 +1012,7 @@ function PublishSetupFields({
           <Label htmlFor="publish-daily-budget">
             {targetMode === "existing_campaign_new_adset"
               ? "New ad set daily budget if ABO (AUD)"
-              : effectiveBudgetMode === "campaign" ? "Campaign daily budget (AUD)" : "Ad set daily budget (AUD)"}
+              : "Daily spend (AUD)"}
           </Label>
           <Input
             id="publish-daily-budget"
@@ -1019,30 +1029,30 @@ function PublishSetupFields({
             {targetMode === "existing_campaign_new_adset"
               ? "Blockwise re-checks Meta first. This applies only if the campaign is still ABO; live CBO keeps its campaign budget."
               : effectiveBudgetMode === "campaign"
-              ? "Maximum Meta spend for the new campaign each day."
-              : "Maximum Meta spend for this new ad set each day."}
+              ? "Your chosen daily ad budget is shared across the ad groups in this campaign."
+              : "Your chosen daily ad budget applies to this group of ad versions."}
           </p>
         </div>
 
         <div>
-          <Label htmlFor="publish-audience-mode">Audience location</Label>
+          <Label htmlFor="publish-audience-mode">Area</Label>
           <select
             id="publish-audience-mode"
             value={audienceMode}
             onChange={event => setAudienceMode(event.target.value as AudienceMode)}
             className="mt-1 min-h-11 w-full rounded-md border border-border bg-muted/30 px-3 text-base md:text-sm"
           >
-            <option value="">Choose a location method</option>
-            {audienceLocations.length > 0 ? <option value="saved_locations">Saved campaign locations</option> : null}
-            <option value="custom_radius">Custom map radius</option>
+            <option value="">Choose an area</option>
+            {audienceLocations.length > 0 ? <option value="saved_locations">Choose from saved areas</option> : null}
+            <option value="custom_radius">Set a distance around a map point (advanced)</option>
           </select>
-          <p className="mt-1 text-xs text-muted-foreground">Blockwise will not target all of Australia by default.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Blockwise will only use the area you choose. It will not target all of Australia by default.</p>
         </div>
       </div>
 
       {audienceMode === "saved_locations" ? (
         <div className="space-y-2">
-          <p className="text-xs font-medium">Choose saved locations</p>
+          <p className="text-xs font-medium">Choose saved areas</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {audienceLocations.map(location => (
               <label key={location.key} className="flex min-h-11 items-center gap-3 rounded-(--r-ctl) border border-border px-3 py-2 text-sm">
@@ -1072,7 +1082,7 @@ function PublishSetupFields({
       ) : null}
 
       <fieldset className="space-y-2 border-t border-border pt-4">
-        <legend className="text-xs font-medium">Placements</legend>
+        <legend className="text-xs font-medium">Where your ad appears</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {placementOptions.map(([value, label]) => (
             <label key={value} className="flex min-h-11 items-center gap-3 rounded-(--r-ctl) border border-border px-3 py-2 text-sm">
@@ -1114,8 +1124,14 @@ function PublishSetupFields({
       )}
       {!summary && fieldIssues.length > 0 ? <SetupIssues issues={fieldIssues} /> : null}
       <label className="flex min-h-11 items-start gap-3 rounded-(--r-ctl) border border-border px-3 py-2.5 text-sm font-medium">
-        <input type="checkbox" checked={setupConfirmed} onChange={event => setSetupConfirmed(event.target.checked)} disabled={!fieldsReady} className="mt-0.5 size-4 shrink-0 accent-primary" />
-        I confirm this budget mode, spend, audience, placement, schedule, creative matrix and fulfilment setup is correct.
+        <input
+          type="checkbox"
+          checked={setupConfirmed}
+          onChange={event => setSetupConfirmed(event.target.checked)}
+          disabled={!fieldsReady}
+          className="mt-0.5 size-4 shrink-0 accent-primary"
+        />
+        I confirm the daily spend, area, places shown, timing, ad versions and any offer delivery details are correct.
       </label>
     </div>
   );
@@ -1123,15 +1139,15 @@ function PublishSetupFields({
 
 function PublishSetupSummaryCard({ summary }: { summary: PublishSetupSummary }) {
   const rows = [
-    ["Target", summary.target],
-    ["Budget mode", summary.budgetMode],
-    ["Budget", summary.budget],
-    ["Audience", summary.audience],
-    ["Placements", summary.placements],
-    ["Schedule", summary.schedule],
-    ["Destination", summary.destination],
-    ["Creative matrix", summary.variants],
-    ["Offer fulfilment", summary.fulfilment],
+    ["Setup", summary.target],
+    ["How the spend is used", summary.budgetMode],
+    ["Daily spend", summary.budget],
+    ["Area", summary.audience],
+    ["Where shown", summary.placements],
+    ["Timing", summary.schedule],
+    ["Where people go", summary.destination],
+    ["Ad versions", summary.variants],
+    ["Offer delivery", summary.fulfilment],
   ];
   return (
     <div className="rounded-(--r-ctl) bg-muted/60 p-3">
@@ -1187,13 +1203,16 @@ function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
       <div className="mt-6 rounded-(--r-card) border border-amber-200 bg-amber-50 p-4" role="status">
         <h3 className="mb-1 text-sm font-semibold text-amber-900">Preview complete</h3>
         <p className="text-sm text-amber-800">{receipt.message}</p>
-        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-amber-800 sm:grid-cols-5">
-          <ReceiptStat label="Snapshot" value={shortHash(receipt.snapshotId ?? "")} />
-          <ReceiptStat label="Plan" value={shortHash(receipt.planId ?? "")} />
-          <ReceiptStat label="Campaigns" value={String(receipt.plannedObjects?.campaigns ?? 0)} />
-          <ReceiptStat label="Creatives" value={String(receipt.plannedObjects?.creatives ?? 0)} />
-          <ReceiptStat label="Ads" value={String(receipt.plannedObjects?.ads ?? 0)} />
-        </dl>
+        <details className="mt-3 text-xs text-amber-800">
+          <summary className="min-h-11 cursor-pointer py-2 font-semibold">Meta reference details (advanced)</summary>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-5">
+            <ReceiptStat label="Snapshot" value={shortHash(receipt.snapshotId ?? "")} />
+            <ReceiptStat label="Plan" value={shortHash(receipt.planId ?? "")} />
+            <ReceiptStat label="Campaigns" value={String(receipt.plannedObjects?.campaigns ?? 0)} />
+            <ReceiptStat label="Creatives" value={String(receipt.plannedObjects?.creatives ?? 0)} />
+            <ReceiptStat label="Ads" value={String(receipt.plannedObjects?.ads ?? 0)} />
+          </dl>
+        </details>
         <PublishedSourceReceipt receipt={receipt} />
         <p className="mt-3 text-xs font-medium text-amber-800">
           No Meta objects were created.
@@ -1218,12 +1237,7 @@ function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
           <h3 className="mb-1 text-sm font-semibold text-red-900">Created on Meta — state unconfirmed</h3>
           <p className="text-sm text-red-800">{receipt.message} Check Meta Ads Manager before retrying; the state is unconfirmed.</p>
           {receipt.activationError ? <p className="mt-2 text-xs font-medium text-red-900">Activation error: {receipt.activationError}</p> : null}
-          <dl className="mt-3 grid grid-cols-1 gap-1 text-xs text-red-800 sm:grid-cols-2">
-            <ReceiptStat label="Plan" value={shortHash(receipt.planId ?? "")} />
-            <ReceiptStat label="Campaign ID" value={objects?.campaignId ?? "—"} />
-            <ReceiptStat label="Ad set IDs" value={formatIds(objects?.adSetIds)} />
-            <ReceiptStat label="Ad IDs" value={formatIds(objects?.adIds)} />
-          </dl>
+          <MetaReferenceDetails className="text-red-800" receipt={receipt} objects={objects} />
           <PublishedSourceReceipt receipt={receipt} />
         </div>
       );
@@ -1236,15 +1250,10 @@ function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
           <h3 className="mb-1 text-sm font-semibold text-amber-900">Created paused on Meta</h3>
           <p className="text-sm text-amber-800">{receipt.message}</p>
           {receipt.activationError ? <p className="mt-2 text-xs font-medium text-amber-900">Activation error: {receipt.activationError}</p> : null}
-          <dl className="mt-3 grid grid-cols-1 gap-1 text-xs text-amber-800 sm:grid-cols-2">
-            <ReceiptStat label="Plan" value={shortHash(receipt.planId ?? "")} />
-            <ReceiptStat label="Campaign ID" value={objects?.campaignId ?? "—"} />
-            <ReceiptStat label="Ad set IDs" value={formatIds(objects?.adSetIds)} />
-            <ReceiptStat label="Ad IDs" value={formatIds(objects?.adIds)} />
-          </dl>
+          <MetaReferenceDetails className="text-amber-800" receipt={receipt} objects={objects} />
           <PublishedSourceReceipt receipt={receipt} />
           <p className="mt-3 text-xs font-medium text-amber-800">
-            The campaign is paused on Meta — nothing is running or spending. Review the exact setup below, then use the separate Activate action when you are ready.
+            This ad setup is paused on Meta — nothing is running or spending. Review the exact setup below, then use the separate Activate action when you are ready.
           </p>
         </div>
       );
@@ -1254,13 +1263,7 @@ function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
         <h3 className="mb-1 text-sm font-semibold text-green-800">Published — active on Meta</h3>
         <p className="text-sm text-green-700">{receipt.message}</p>
         <a className="mt-3 inline-flex min-h-11 items-center rounded-full border border-green-300 px-4 text-sm font-semibold text-green-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href={`/results?planId=${encodeURIComponent(receipt.planId ?? "")}`}>View results</a>
-        <dl className="mt-3 grid grid-cols-1 gap-1 text-xs text-green-800 sm:grid-cols-2">
-          <ReceiptStat label="Campaign ID" value={objects?.campaignId ?? "—"} />
-          <ReceiptStat label="Ad set IDs" value={formatIds(objects?.adSetIds)} />
-          <ReceiptStat label="Lead form IDs" value={formatIds(objects?.leadFormIds)} />
-          <ReceiptStat label="Creative IDs" value={formatIds(objects?.creativeIds)} />
-          <ReceiptStat label="Ad IDs" value={formatIds(objects?.adIds)} />
-        </dl>
+        <MetaReferenceDetails className="text-green-800" receipt={receipt} objects={objects} />
         <PublishedSourceReceipt receipt={receipt} />
       </div>
     );
@@ -1269,14 +1272,30 @@ function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
   return null;
 }
 
+function MetaReferenceDetails({ receipt, objects, className }: { receipt: PublishReceipt; objects: PublishReceipt["reconciledObjects"]; className: string }) {
+  return (
+    <details className={"mt-3 text-xs " + className}>
+      <summary className="min-h-11 cursor-pointer py-2 font-semibold">Meta reference details (advanced)</summary>
+      <dl className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+        <ReceiptStat label="Plan" value={shortHash(receipt.planId ?? "")} />
+        <ReceiptStat label="Campaign ID" value={objects?.campaignId ?? "—"} />
+        <ReceiptStat label="Ad set IDs" value={formatIds(objects?.adSetIds)} />
+        <ReceiptStat label="Lead form IDs" value={formatIds(objects?.leadFormIds)} />
+        <ReceiptStat label="Creative IDs" value={formatIds(objects?.creativeIds)} />
+        <ReceiptStat label="Ad IDs" value={formatIds(objects?.adIds)} />
+      </dl>
+    </details>
+  );
+}
+
 function PublishedSourceReceipt({ receipt }: { receipt: PublishReceipt }) {
   const source = receipt.source;
   const creative = receipt.publishedCreative;
   if (!source && !creative && !receipt.snapshotId && !receipt.planId) return null;
   return (
-    <div className="mt-4 border-t border-current/15 pt-3">
-      <p className="text-xs font-semibold">Exact saved source</p>
-      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-4">
+    <details className="mt-4 border-t border-current/15 pt-3 text-xs">
+      <summary className="min-h-11 cursor-pointer py-2 font-semibold">Saved source details (advanced)</summary>
+      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
         <ReceiptStat label="Creative revision" value={source?.creativeRevision != null ? `v${source.creativeRevision}` : "—"} />
         <ReceiptStat label="Form revision" value={source?.formRevision != null ? `v${source.formRevision}` : "Not used"} />
         <ReceiptStat label="Snapshot" value={shortHash(receipt.snapshotId ?? source?.snapshotId ?? "")} />
@@ -1298,7 +1317,7 @@ function PublishedSourceReceipt({ receipt }: { receipt: PublishReceipt }) {
           ) : null}
         </div>
       ) : null}
-    </div>
+    </details>
   );
 }
 
@@ -1391,7 +1410,11 @@ function RetryActivationSection({
               <AlertDialogTitle>Activate these paused ads?</AlertDialogTitle>
               <AlertDialogDescription asChild>
                 <div className="space-y-3 text-sm">
-                  <p>This is the explicit approval to make the exact objects from plan <span className="font-mono font-semibold">{shortHash(planId)}</span> ACTIVE on Meta.</p>
+                  <p>This confirms that the reviewed ads can start running on Meta. No new ads are created.</p>
+                  <details className="rounded-(--r-ctl) border border-border px-3 text-xs">
+                    <summary className="min-h-11 cursor-pointer py-3 font-semibold">Meta reference details (advanced)</summary>
+                    <p className="pb-3">Plan {shortHash(planId)} will be made ACTIVE on Meta.</p>
+                  </details>
                   <dl className="grid gap-2 rounded-(--r-ctl) bg-muted/60 p-3 sm:grid-cols-2">
                     <div><dt className="text-xs text-muted-foreground">Budget</dt><dd className="font-medium">{setupSummary?.budget ?? "Reviewed budget"}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">Audience / targeting</dt><dd className="font-medium">{setupSummary?.audience ?? "Reviewed audience"}</dd></div>

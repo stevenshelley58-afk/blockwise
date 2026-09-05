@@ -9,11 +9,12 @@ const canRun = Boolean(baseUrl && workspaceId && storageState && existsSync(stor
 
 test.use({
   storageState,
+  serviceWorkers: "block",
   ignoreHTTPSErrors: controlledCanary,
-  launchOptions: controlledCanary ? {
+  launchOptions: {
     executablePath: process.env.ADSTUDIO_E2E_CHROMIUM,
-    args: ["--host-resolver-rules=MAP blockwise.sale 127.0.0.1,EXCLUDE localhost"],
-  } : undefined,
+    args: controlledCanary ? ["--host-resolver-rules=MAP blockwise.sale 127.0.0.1,EXCLUDE localhost"] : undefined,
+  },
 });
 
 /** Wait for fonts, hydration, entrance and count-up animations to settle. */
@@ -124,6 +125,27 @@ test.describe("customer navigation canary", () => {
     await settle(page);
     await assertNothingClipped(page);
     await page.screenshot({ path: testInfo.outputPath("customer-home-desktop.png"), fullPage: true });
+    await page.goto("/ad-studio?workspaceId=" + encodeURIComponent(workspaceId!));
+    await expect(page).toHaveURL(/\/ad-studio/);
+    await expect(page.getByRole("heading", { name: "Start from a proven layout" })).toBeVisible();
+    await settle(page);
+    await assertNothingClipped(page);
+    await page.screenshot({ path: testInfo.outputPath("customer-studio-desktop.png"), fullPage: true });
+    await page.goto("/results?workspaceId=" + encodeURIComponent(workspaceId!));
+    await expect(page.getByText(/recent sync/i)).toHaveCount(0);
+    await expect(page).toHaveURL(/\/results/);
+    await expect(page.getByText("Enquiries", { exact: true })).toBeVisible();
+    await expect(page.getByText("Example data", { exact: true })).toBeVisible();
+    await expect(page.getByText(/^Last known /)).toHaveCount(0);
+    await settle(page);
+    await assertNothingClipped(page);
+    await page.screenshot({ path: testInfo.outputPath("customer-results-desktop.png"), fullPage: true });
+    await page.goto("/leads?workspaceId=" + encodeURIComponent(workspaceId!));
+    await expect(page).toHaveURL(/\/leads/);
+    await expect(page.getByRole("heading", { name: "Leads", exact: true })).toBeVisible();
+    await settle(page);
+    await assertNothingClipped(page);
+    await page.screenshot({ path: testInfo.outputPath("customer-leads-desktop.png"), fullPage: true });
     await page.goto(`/ad-studio/brand?workspaceId=${encodeURIComponent(workspaceId!)}`);
     await expect(page.locator('[aria-current="page"]:visible')).toHaveCount(1);
     await page.goto(`/settings?workspaceId=${encodeURIComponent(workspaceId!)}`);
@@ -133,16 +155,48 @@ test.describe("customer navigation canary", () => {
     await page.screenshot({ path: testInfo.outputPath("customer-settings-desktop.png"), fullPage: true });
   });
 
+  test("preserves the public hero wording exactly", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator(".hw-ws__title > span")).toHaveText(["Your competitors", "are advertising.", "Are you?"]);
+  });
+
   for (const width of [320, 390]) {
     test(`fits Home and Settings without clipping at ${width}px`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 844 });
       await useEssentialOnlyConsent(page);
       await page.goto(`/self-serve?workspaceId=${encodeURIComponent(workspaceId!)}`);
+      await expect(page.getByText(/recent sync/i)).toHaveCount(0);
       await expect(page).not.toHaveURL(/\/login/);
       await settle(page);
       await assertNothingClipped(page);
       await assertMobileNavUsable(page);
       await page.screenshot({ path: testInfo.outputPath(`customer-home-${width}.png`), fullPage: true });
+      await page.goto("/ad-studio?workspaceId=" + encodeURIComponent(workspaceId!));
+      const backToBlockwise = page.getByRole("link", { name: "Blockwise", exact: true });
+      await expect(backToBlockwise).toBeVisible();
+      await expect(backToBlockwise).toHaveAttribute("href", /\/self-serve/);
+      await expect(page).toHaveURL(/\/ad-studio/);
+      await expect(page.getByRole("heading", { name: "Start from a proven layout" })).toBeVisible();
+      await settle(page);
+      await assertNothingClipped(page);
+      await page.screenshot({ path: testInfo.outputPath("customer-studio-" + width + ".png"), fullPage: true });
+      await backToBlockwise.click();
+      await expect(page).toHaveURL(/\/self-serve/);
+      await page.goto("/results?workspaceId=" + encodeURIComponent(workspaceId!));
+      await expect(page.getByText(/recent sync/i)).toHaveCount(0);
+      await expect(page).toHaveURL(/\/results/);
+      await expect(page.getByText("Enquiries", { exact: true })).toBeVisible();
+      await expect(page.getByText("Example data", { exact: true })).toBeVisible();
+    await expect(page.getByText(/^Last known /)).toHaveCount(0);
+      await settle(page);
+      await assertNothingClipped(page);
+      await page.screenshot({ path: testInfo.outputPath("customer-results-" + width + ".png"), fullPage: true });
+      await page.goto("/leads?workspaceId=" + encodeURIComponent(workspaceId!));
+      await expect(page).toHaveURL(/\/leads/);
+      await expect(page.getByRole("heading", { name: "Leads", exact: true })).toBeVisible();
+      await settle(page);
+      await assertNothingClipped(page);
+      await page.screenshot({ path: testInfo.outputPath("customer-leads-" + width + ".png"), fullPage: true });
       await page.goto(`/settings?workspaceId=${encodeURIComponent(workspaceId!)}`);
       await settle(page);
       await assertNothingClipped(page);

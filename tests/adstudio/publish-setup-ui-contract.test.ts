@@ -188,9 +188,11 @@ describe("explicit Meta publish setup", () => {
 
   it("keeps both customer confirmations and explicit labels visible", () => {
     const source = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/publish-flow.tsx", "utf8");
-    assert.match(source, /daily budget \(AUD\)/);
-    assert.match(source, /Audience location/);
-    assert.match(source, /Placements/);
+    assert.match(source, /htmlFor="publish-daily-budget"[\s\S]*"Daily spend \(AUD\)"/);
+    assert.match(source, /id="publish-daily-budget"/);
+    assert.match(source, /htmlFor="publish-audience-mode">Area<\/Label>/);
+    assert.match(source, /id="publish-audience-mode"/);
+    assert.match(source, /<legend className="text-xs font-medium">Where your ad appears<\/legend>/);
     assert.match(source, /Choose start timing/);
     assert.match(source, /Ad destination/);
     assert.match(source, /Fulfilment delivery URL/);
@@ -199,7 +201,7 @@ describe("explicit Meta publish setup", () => {
     assert.match(source, /Special ad category country/);
     assert.match(source, /Blockwise will not assume it/);
     assert.doesNotMatch(source, /newCampaignSpecialAdCategoryCountry: "AU"/);
-    assert.match(source, /I confirm this budget mode, spend, audience, placement, schedule, creative matrix and fulfilment setup is correct/);
+    assert.match(source, /I confirm the daily spend, area, places shown, timing, ad versions and any offer delivery details are correct/);
     assert.doesNotMatch(source, /Fulfilment asset/);
     assert.match(source, /A typed file name is not accepted/);
     // Creation and activation are separate explicit actions for the exact plan.

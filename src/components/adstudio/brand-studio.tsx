@@ -256,11 +256,23 @@ function normalizedWebsiteUrl(value: string): string {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
-function LogoPreview({ src, alt, className }: { src: string | null | undefined; alt: string; className: string }) {
+export function needsLogoImportRecovery(src: string | null | undefined): boolean {
+  if (!src) return false;
+  try {
+    const parsed = new URL(src, "https://blockwise.invalid");
+    if (parsed.origin === "https://blockwise.invalid") return false;
+    if (parsed.pathname === "/api/adstudio/media") return false;
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+function LogoPreview({ src, alt, className, fallbackText = "Not found" }: { src: string | null | undefined; alt: string; className: string; fallbackText?: string }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
   if (!src || failedSrc === src) {
-    return <span className="text-xs text-muted-foreground">Not found</span>;
+    return <span className="text-xs text-muted-foreground">{fallbackText}</span>;
   }
 
   return <img src={src} alt={alt} className={className} onError={() => setFailedSrc(src)} />;
@@ -541,6 +553,7 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
   const voiceLine = (kit.tone.voice || "").split(".")[0];
   const approved = kit.reviewStatus === "approved";
   const logoDisplayName = logoFile?.name ?? (logoPreviewUrl ? "Primary logo" : undefined);
+  const hasExternalPrimaryLogo = needsLogoImportRecovery(logoPreviewUrl);
   const reversedLogoUrl = kit.logos.lightLogoUrl ?? kit.logos.darkLogoUrl;
   return (
     <div className="tw min-h-full bg-background font-sans text-foreground" aria-label="Brand Pack">
@@ -631,6 +644,12 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
           <div className="grid min-w-0 content-start gap-5">
             <Card className="grid gap-4 rounded-(--r-panel) border-border bg-card p-5 shadow-card md:p-6">
               <h3>Logo</h3>
+              {hasExternalPrimaryLogo ? (
+                <div className="rounded-(--r-card) border border-warning/25 bg-warning-soft p-3 text-sm text-foreground" role="status">
+                  <p className="font-semibold">Your saved website logo needs to be copied into Blockwise.</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Rescan your website above to import it safely, or upload a replacement below. We keep saved logos private to your workspace.</p>
+                </div>
+              ) : null}
               <AssetUploadDropzone
                 className="min-h-28"
                 label="Upload logo"
@@ -859,7 +878,7 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
               <div className="flex flex-wrap justify-center gap-3">
                 <div className="relative aspect-[9/16] w-32 overflow-hidden rounded-(--r-card) bg-muted p-2 text-background">
                   <span className="rounded-full px-2 py-1 text-[9px] font-semibold" style={{ background: kit.colours.primary, color: kit.colours.text }}>
-                    {logoPreviewUrl ? <img src={logoPreviewUrl} alt="" className="max-h-5 max-w-full object-contain" /> : brandName}
+                    <LogoPreview src={logoPreviewUrl} alt="" className="max-h-5 max-w-full object-contain" fallbackText={brandName} />
                   </span>
                   <h5 className="absolute inset-x-2 bottom-9 text-xs font-extrabold">{headlineSample}</h5>
                   <span className="absolute inset-x-2 bottom-2 rounded bg-background py-1 text-center text-[9px] font-bold" style={{ color: kit.colours.primary }}>
@@ -868,7 +887,7 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                 </div>
                 <div className="w-32 overflow-hidden rounded-(--r-card) border border-border bg-background text-foreground">
                   <div className="flex items-center gap-1 p-2 text-[9px]">
-                    {kit.logos.faviconUrl && <img src={kit.logos.faviconUrl} alt="" className="size-3 object-contain" />}
+                    <LogoPreview src={kit.logos.faviconUrl} alt="" className="size-3 object-contain" fallbackText="" />
                     <b>{brandName}</b>
                   </div>
                   <div className="h-20 bg-muted" />

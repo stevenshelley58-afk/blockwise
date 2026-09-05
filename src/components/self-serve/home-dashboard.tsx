@@ -6,8 +6,8 @@
  * plain `HomeData` payload — this component owns layout, motion and copy
  * (all of it from the niche config; customer pages carry zero niche nouns).
  *
- * Data honesty: KPIs render live Meta numbers or honest zeros. Demo/sample
- * data never reaches Home.
+ * Data honesty: KPIs render live Meta numbers only. Demo/sample data never
+ * reaches Home, and unavailable reporting stays visibly unavailable.
  */
 
 import { useEffect, useState } from "react";
@@ -43,12 +43,25 @@ export type HomeData = ActivationCardData & {
     previousLeads: number | null;
     previousCpl: number | null;
     daily: HomeDailyPoint[];
+    lastSyncedAt: string | null;
   } | null;
 };
 
 const COUNT_SPRING = { ...springs.slow, duration: countUpDuration };
 
 const money = (value: number) => `$${value.toFixed(2)}`;
+
+function reportingFoot(lastSyncedAt: string | null): string {
+  if (!lastSyncedAt || !Number.isFinite(Date.parse(lastSyncedAt))) {
+    return "Provider time unavailable";
+  }
+  const formatted = new Intl.DateTimeFormat("en-AU", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }).format(new Date(lastSyncedAt));
+  return `Last known provider data: ${formatted} UTC`;
+}
 
 /** Period-over-period delta badge (mockup pattern). Hidden without a prior period. */
 function DeltaBadge({
@@ -175,6 +188,14 @@ export function HomeDashboard({ data }: { data: HomeData }) {
             <p className="mt-1 text-[13.5px] text-muted-foreground">{data.workspaceName}</p>
           </div>
         </div>
+        <p
+          className="rounded-(--r-card) border border-(--line) bg-(--surface-subtle) px-4 py-3 text-[12.5px] text-muted-foreground"
+          role="status"
+        >
+          {performance
+            ? `Reporting for the last 30 days. ${reportingFoot(performance.lastSyncedAt)}.`
+            : "Reporting for the last 30 days is unavailable."}
+        </p>
 
         {/* KPI row */}
         <AnimatedGroup className="grid grid-cols-2 gap-3.5 xl:grid-cols-4" itemClassName="h-full">
@@ -188,14 +209,18 @@ export function HomeDashboard({ data }: { data: HomeData }) {
               </>
             }
           >
-            <AnimatedNumber value={performance?.leads ?? 0} springOptions={COUNT_SPRING} />
-            <DeltaBadge current={performance?.leads ?? 0} previous={performance?.previousLeads ?? null} />
+            {performance ? (
+              <AnimatedNumber value={performance.leads} springOptions={COUNT_SPRING} />
+            ) : (
+              <span aria-label="Enquiry reporting unavailable">—</span>
+            )}
+            <DeltaBadge current={performance?.leads ?? null} previous={performance?.previousLeads ?? null} />
           </StatCard>
 
           <StatCard
             label={copy.kpis.costPerLead}
             icon={<CircleDollarSign size={15} strokeWidth={1.8} />}
-            foot={<span>{copy.kpis.vsPrior}</span>}
+            foot={<span>Last 30 days</span>}
           >
             {performance?.cpl != null ? (
               <AnimatedNumber value={performance.cpl} format={money} springOptions={COUNT_SPRING} />

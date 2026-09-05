@@ -15,7 +15,10 @@ Start with the smallest owning layer:
    and mobile bottom navigation rather than adding a second metadata source.
 4. Reuse `src/components/ui/` and existing AdStudio components for customer UI.
    Put workspace/provider reads and writes behind `src/lib`; preserve auth,
-   RLS, and provider-token RPC rules.
+   RLS, and provider-token RPC rules. Keep the normal customer flow plain and
+   hide campaign/ad-set/placement jargon behind an optional advanced path, while
+   retaining exact external-provider labels where connection instructions need
+   them and never hiding budget, location, approval, or legal details.
 5. Change template contracts/renderer packages only when the layered pack
    contract changes. Frank remains the pack owner.
 
@@ -26,8 +29,13 @@ product concerns.
 
 For a new niche, add a narrow config module and tests rather than copying the
 product shell. For a new tool, define its input/output contract, workspace
-scope, failure state, and customer/operator audience before adding UI. Keep
-provider writes approval-gated and never make a local mock an acceptance claim.
+scope, failure state, and customer/operator audience before adding UI. Do not
+build a CRM, reprice the product, add integrations, or change Frank templates
+for ordinary product polish. Keep provider writes approval-gated and never make
+a local mock an acceptance claim.
 
 Run `npm run check:nul`, `npm test`, `npm run typecheck`, and `npm run build`.
+The runner discovers `.test.ts`, `.test.tsx`, and `.test.mjs` recursively. Use
+`.test.tsx` for tests importing React components or requiring TypeScript
+transformation; ordinary `.test.ts` tests use native Node stripping.
 For release evidence, follow the production-readiness runbook.

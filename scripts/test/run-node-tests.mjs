@@ -3,7 +3,7 @@ import { readdir } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const TEST_FILE = /\.test\.(?:ts|mjs)$/;
+const TEST_FILE = /\.test\.(?:tsx?|mjs)$/;
 const IGNORED_DIRECTORIES = new Set([".git", "dist", "node_modules"]);
 
 /**
@@ -42,8 +42,9 @@ function runNodeTests(root, files, useTsx = false) {
 export async function runNodeTestScope(root, scope) {
   if (scope === "root" || scope === "all") {
     const files = await collectNodeTestFiles(resolve(root, "tests"));
+    // Native-strip-compatible tests use .test.ts; JSX/transformed imports use .test.tsx.
     const tsStatus = runNodeTests(root, files.filter((file) => file.endsWith(".ts")));
-    const status = tsStatus === 0 ? runNodeTests(root, files.filter((file) => file.endsWith(".mjs")), true) : tsStatus;
+    const status = tsStatus === 0 ? runNodeTests(root, files.filter((file) => !file.endsWith(".ts")), true) : tsStatus;
     if (scope === "root" || status !== 0) return status;
   }
 
