@@ -40,6 +40,10 @@ left join lateral (
     select ag.primary_location_id as location_id, 'office'::text as relation where ag.primary_location_id is not null
     union all select ay.primary_location_id, 'office'::text where ay.primary_location_id is not null
     union all select li.location_id, 'property'::text from research.listings li where li.id = oa.listing_id and li.location_id is not null
+    union all select service_location.id, 'service_area'::text
+      from research.agent_service_areas asa
+      join research.locations service_location on service_location.postcode = asa.postcode and service_location.suburb = asa.suburb and service_location.state = asa.state
+      where asa.agent_id = ag.id or asa.agency_id = ay.id
     union all select ll.location_id, 'ad_explicit'::text from research.location_links ll where ll.subject_type = 'observed_ad' and ll.subject_id = oa.id and ll.relation_type in ('meta_targeting', 'copy_mention') and ll.location_id is not null
   ) x join research.locations l on l.id = x.location_id
 ) loc on true
