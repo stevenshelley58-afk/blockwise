@@ -57,7 +57,7 @@ create table if not exists public.ad_video_assets (
   validated_at timestamptz,
   unique (workspace_id, id),
   unique (workspace_id, object_path),
-  unique (workspace_id, sha256, mime_type),
+  constraint ad_video_assets_workspace_project_sha256_mime_key unique (workspace_id, project_id, sha256, mime_type),
   check ((validation_status = 'validated' and validated_at is not null) or validation_status <> 'validated'),
   check (object_path !~ '(^|/)\.\.(?:/|$)')
   ,foreign key (workspace_id, project_id) references public.ad_video_projects(workspace_id, id) on delete cascade
@@ -65,6 +65,63 @@ create table if not exists public.ad_video_assets (
 
 create index if not exists ad_video_assets_workspace_project_idx
   on public.ad_video_assets (workspace_id, project_id, asset_role, created_at desc);
+
+-- Upgrade databases created from the first draft of this migration, where
+-- content dedupe was workspace-wide and therefore blocked the same media in a
+-- second project. The project-scoped key is the actual reservation boundary.
+alter table public.ad_video_assets
+  drop constraint if exists ad_video_assets_workspace_id_sha256_mime_type_key,
+  drop constraint if exists ad_video_assets_workspace_sha256_mime_type_key;
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+     where conrelid = 'public.ad_video_assets'::regclass
+       and conname = 'ad_video_assets_workspace_project_sha256_mime_key'
+  ) then
+    alter table public.ad_video_assets
+      add constraint ad_video_assets_workspace_project_sha256_mime_key
+      unique (workspace_id, project_id, sha256, mime_type);
+  end if;
+end;
+$$;
+
+-- Keep upload reservations bounded per workspace. This is deliberately a
+-- security-definer read so the API can make one bounded check without
+-- downloading the workspace ledger into a request function.
+create or replace function public.adstudio_check_video_workspace_quota(
+  p_workspace_id uuid,
+  p_byte_size bigint
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public, private
+as $$
+declare
+  current_count bigint;
+  current_bytes bigint;
+begin
+  if p_byte_size is null or p_byte_size <= 0 or p_byte_size > 524288000
+     or not private.adstudio_has_workspace_access(p_workspace_id) then
+    return jsonb_build_object('ok', false, 'code', 'workspace_video_quota');
+  end if;
+
+  select count(*)::bigint, coalesce(sum(byte_size), 0)::bigint
+    into current_count, current_bytes
+    from public.ad_video_assets
+   where workspace_id = p_workspace_id
+     and validation_status <> 'rejected';
+
+  return jsonb_build_object(
+    'ok', current_count < 1000 and current_bytes + p_byte_size <= 1073741824,
+    'asset_count', current_count,
+    'byte_size', current_bytes
+  );
+end;
+$$;
+
+revoke all on function public.adstudio_check_video_workspace_quota(uuid, bigint) from public, anon;
+grant execute on function public.adstudio_check_video_workspace_quota(uuid, bigint) to authenticated, service_role;
 
 create table if not exists public.ad_video_render_jobs (
   id uuid primary key default gen_random_uuid(),

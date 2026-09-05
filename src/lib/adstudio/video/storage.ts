@@ -4,6 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export const VIDEO_BUCKET = "adstudio-videos";
 export const VIDEO_MAX_BYTES = 500 * 1024 * 1024;
 export const VIDEO_MAX_DURATION_MS = 90_000;
+export const VIDEO_WORKSPACE_MAX_BYTES = 1_073_741_824;
+export const VIDEO_WORKSPACE_MAX_ASSETS = 1_000;
 export const VIDEO_MIME_TYPES = ["video/mp4", "video/webm"] as const;
 export type VideoMime = (typeof VIDEO_MIME_TYPES)[number];
 export type VideoValidationStatus = "pending" | "validated" | "rejected";
@@ -46,7 +48,7 @@ export type FinalizedVideoAsset = {
 };
 
 export class VideoStorageError extends Error {
-  readonly code: "video_invalid_metadata" | "video_magic_mismatch" | "video_hash_mismatch" | "video_missing" | "video_storage";
+  readonly code: "video_invalid_metadata" | "video_magic_mismatch" | "video_hash_mismatch" | "video_missing" | "video_quota" | "video_storage";
   constructor(code: VideoStorageError["code"], message: string) { super(message); this.name = "VideoStorageError"; this.code = code; }
 }
 
@@ -62,6 +64,14 @@ export async function prepareVideoUpload(ctx: VideoStorageContext, metadata: Vid
     const token = existing.data.validation_status === "pending" ? await createUploadToken(ctx, path) : null;
     return { assetId: existing.data.id, path, token, reused: true, validationStatus: existing.data.validation_status };
   }
+
+  const quota = await ctx.supabase.rpc("adstudio_check_video_workspace_quota", {
+    p_workspace_id: ctx.workspaceId,
+    p_byte_size: metadata.byteSize,
+  });
+  if (quota.error) throw new VideoStorageError("video_storage", quota.error.message);
+  const quotaResult = quota.data && typeof quota.data === "object" ? quota.data as Record<string, unknown> : {};
+  if (quotaResult.ok !== true) throw new VideoStorageError("video_quota", "This workspace has reached its video storage limit.");
 
   const inserted = await ctx.supabase.from("ad_video_assets").insert({
     workspace_id: ctx.workspaceId, project_id: ctx.projectId, asset_role: "source", object_path: path,
@@ -108,21 +118,19 @@ export async function finalizeVideoUpload(ctx: VideoStorageContext, assetId: str
   const info = await bucket.info(expectedPath);
   const infoSize = info.data?.size;
   const infoMime = typeof info.data?.contentType === "string" ? info.data.contentType.toLowerCase() : null;
-  if (info.error || typeof infoSize !== "number" || infoSize !== metadata.byteSize || infoSize > VIDEO_MAX_BYTES || (infoMime && infoMime !== metadata.mimeType)) {
+  if (info.error || typeof infoSize !== "number" || infoSize !== metadata.byteSize || infoSize > VIDEO_MAX_BYTES || infoMime !== metadata.mimeType) {
     throw new VideoStorageError("video_invalid_metadata", "Uploaded video metadata did not match the declared file.");
   }
-  const downloaded = await bucket.download(expectedPath);
-  if (downloaded.error || !downloaded.data) throw new VideoStorageError("video_missing", downloaded.error?.message ?? "Uploaded video is missing.");
-  const bytes = Buffer.from(await downloaded.data.arrayBuffer());
-  if (bytes.length !== metadata.byteSize || hashVideoBytes(bytes) !== metadata.sha256) throw new VideoStorageError("video_hash_mismatch", "Uploaded video content hash did not match.");
-  if (!hasVideoMagic(bytes, metadata.mimeType)) throw new VideoStorageError("video_magic_mismatch", "Uploaded video does not match MP4/WebM magic bytes.");
+  // Do not download or hash user bytes in a request handler. The trusted
+  // render worker streams this object once and attests SHA-256, magic bytes,
+  // codec, dimensions, and duration before it can be used for rendering.
 
   // Browser/Vercel metadata is not a codec/duration attestation. Keep the
   // asset pending until a render/validation worker records an attestation.
   const update = await ctx.supabase.from("ad_video_assets").update({
-    byte_size: bytes.length, duration_ms: metadata.durationMs ?? null, width: metadata.width ?? null,
+    byte_size: infoSize, duration_ms: metadata.durationMs ?? null, width: metadata.width ?? null,
     height: metadata.height ?? null, validation_status: "pending", validation_attestation_json: {
-      source: "upload_finalize", magicChecked: true, pendingReason: "worker_codec_duration_attestation_required",
+      source: "upload_finalize", storageInfoChecked: true, pendingReason: "worker_sha256_magic_codec_duration_attestation_required",
     },
   }).eq("id", assetId).eq("workspace_id", ctx.workspaceId).select("id, workspace_id, project_id, object_path, sha256, mime_type, byte_size, duration_ms, width, height, validation_status").single();
   if (update.error || !update.data) throw new VideoStorageError("video_storage", update.error?.message ?? "Video upload could not be finalized.");

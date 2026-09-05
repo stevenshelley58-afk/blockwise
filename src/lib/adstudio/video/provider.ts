@@ -37,7 +37,29 @@ export async function generateProviderVideoScript(
         role: "user",
         content: JSON.stringify({
           task: "Create exactly three hook variants and one fixed body for a video script.",
-          project: input,
+           project: {
+             recipeId: input.recipeId,
+             audience: input.audience,
+             objective: input.objective,
+             brief: {
+               serviceArea: input.brief.serviceArea,
+               offer: input.brief.offer,
+               creativeBrief: input.brief.creativeBrief,
+               verifiedProof: input.brief.verifiedProof,
+               cta: input.brief.cta,
+               tone: input.brief.tone,
+             },
+             productionRoute: input.productionRoute,
+             hookStyle: input.hookStyle,
+             durationSeconds: input.durationSeconds,
+             brandSnapshot: {
+               businessName: input.brandSnapshot.businessName,
+               primaryColour: input.brandSnapshot.primaryColour,
+               secondaryColour: input.brandSnapshot.secondaryColour,
+               voice: input.brandSnapshot.voice,
+             },
+             assetSummary: Object.fromEntries([...new Set(input.assets.map((asset) => asset.kind))].map((kind) => [kind, input.assets.filter((asset) => asset.kind === kind).length])),
+           },
           requirements: {
             words: input.durationSeconds === 15 ? "30-40 spoken words including CTA" : "60-75 spoken words including CTA",
             overlays: "Each overlay must be seven words or fewer",

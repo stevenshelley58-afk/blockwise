@@ -53,6 +53,9 @@ export type VideoRecipe = z.infer<typeof videoRecipeSchema>;
 
 export const videoBriefSchema = z.object({
   serviceArea: z.string().trim().min(2).max(120), offer: z.string().trim().min(2).max(240),
+  // The guided flow's free-form brief is retained with the canonical project
+  // so provider and deterministic generation can use the user's actual brief.
+  creativeBrief: z.string().trim().max(600).optional(),
   verifiedProof: z.string().trim().max(500).optional(), proofSource: z.string().trim().max(240).optional(),
   proofDate: z.string().trim().max(40).optional(), cta: z.string().trim().min(2).max(80).optional(),
   tone: z.string().trim().min(2).max(80).default("clear and local"),

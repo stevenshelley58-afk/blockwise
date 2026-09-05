@@ -27,6 +27,10 @@ test("video routes authenticate and use workspace-scoped repository context", ()
   assert.match(script, /status: "script_ready"/u);
   assert.match(render, /adstudio-video-render/u);
   assert.match(create, /requireReadiness: false/u);
+  const media = route("[id]", "media");
+  assert.match(media, /checkRateLimit/u);
+  assert.match(media, /adstudio-video-upload/u);
+  assert.match(media, /video_quota/u);
 });
 
 test("video routes return safe customer errors instead of provider details", () => {
@@ -47,4 +51,14 @@ test("video integration seams keep media uploads and outputs workspace-fenced", 
   assert.match(migration, /image\/jpeg.*image\/png.*text\/vtt/su);
   assert.match(migration, /foreign key \(workspace_id, output_mp4_asset_id\)/u);
   assert.match(migration, /foreign key \(workspace_id, output_poster_asset_id\)/u);
+  assert.match(migration, /workspace_project_sha256_mime_key/u);
+  assert.match(migration, /adstudio_check_video_workspace_quota/u);
+});
+
+test("video finalize is metadata-only and leaves byte attestation to the worker", () => {
+  const storage = fs.readFileSync(path.join(root, "src", "lib", "adstudio", "video", "storage.ts"), "utf8");
+  const finalize = storage.slice(storage.indexOf("export async function finalizeVideoUpload"));
+  assert.doesNotMatch(finalize, /bucket\.download/u);
+  assert.match(finalize, /bucket\.info/u);
+  assert.match(finalize, /worker_sha256_magic_codec_duration_attestation_required/u);
 });

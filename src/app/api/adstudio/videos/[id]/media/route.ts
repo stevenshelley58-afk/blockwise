@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
 import { getVideoProject } from "@/lib/adstudio/video/repository";
 import { finalizeVideoUpload, prepareVideoUpload, VIDEO_MAX_BYTES, VIDEO_MIME_TYPES, type VideoMime } from "@/lib/adstudio/video/storage";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +21,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
     await getVideoProject({ supabase: access.supabase, workspaceId: access.access.workspaceId, userId: access.access.userId }, id);
     const ctx = { supabase: access.supabase, workspaceId: access.access.workspaceId, projectId: id };
     if (operation === "prepare") {
+      const rateLimit = await checkRateLimit(access.supabase, access.access.workspaceId, access.access.userId, {
+        windowSeconds: 60 * 60,
+        maxRequests: 30,
+        bucket: "adstudio-video-upload",
+      });
+      if (!rateLimit.ok) {
+        return NextResponse.json({ error: "Video upload limit reached. Try again later." }, { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } });
+      }
       const result = await prepareVideoUpload(ctx, metadata.value);
       return NextResponse.json(result, { headers: { "cache-control": "private, no-store" } });
     }
@@ -28,7 +37,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json(result, { headers: { "cache-control": "private, no-store" } });
   } catch (error) {
     const code = error && typeof error === "object" && "code" in error ? String((error as { code?: string }).code) : "video_storage";
-    const status = code === "video_project_not_found" || code === "video_missing" ? 404 : code.startsWith("video_invalid") || code.includes("mismatch") ? 400 : 500;
+    const status = code === "video_project_not_found" || code === "video_missing" ? 404 : code === "video_quota" ? 413 : code.startsWith("video_invalid") || code.includes("mismatch") ? 400 : 500;
     return NextResponse.json({ error: error instanceof Error ? error.message : "Video upload failed.", code }, { status });
   }
 }

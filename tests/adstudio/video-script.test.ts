@@ -29,6 +29,15 @@ test("deterministic script has three hooks, four scenes, bounded words and overl
   }
 });
 
+test("free-form creative brief is persisted and shapes deterministic copy", () => {
+  const project = parseVideoProjectInput({
+    ...inputPayload(),
+    brief: { serviceArea: "Scarborough", offer: "a practical seller checklist", creativeBrief: "Show how local school timing affects a move." },
+  });
+  assert.equal(project.brief.creativeBrief, "Show how local school timing affects a move.");
+  assert.match(generateDeterministicVideoScript(project).body, /Show how local school/u);
+});
+
 test("deterministic scene plan carries selected media into distinct beats", () => {
   const project = parseVideoProjectInput({
     ...inputPayload(),
@@ -52,6 +61,14 @@ test("brief rejects unsupported claims and listing-sale copy", () => {
   assert.throws(() => parseVideoProjectInput({
     ...inputPayload(),
     brief: { serviceArea: "Scarborough", offer: "Open home this Saturday" },
+  }), VideoValidationError);
+  assert.doesNotThrow(() => parseVideoProjectInput({
+    ...inputPayload(),
+    brief: { serviceArea: "Scarborough", offer: "Request a property valuation" },
+  }));
+  assert.throws(() => parseVideoProjectInput({
+    ...inputPayload(),
+    brief: { serviceArea: "Scarborough", offer: "Request a property valuation of $1.2m" },
   }), VideoValidationError);
 });
 

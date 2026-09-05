@@ -26,18 +26,19 @@ export function generateDeterministicVideoScript(input: VideoProjectInput): Vide
   const area = input.brief.serviceArea;
   const cta = input.brief.cta ?? recipe.cta;
   const promise = "a clear local next step";
+  const briefContext = input.brief.creativeBrief ? briefHint(input.brief.creativeBrief) : "";
   const proof = input.brief.verifiedProof ? `Using verified local proof from ${input.brief.proofSource}.` : "We keep the conversation grounded in your situation.";
   const sceneAssets = buildSceneAssetIds(input);
   const scenes: ScenePlan[] = input.durationSeconds === 15
     ? [
       { index: 1, beat: recipe.sceneBeats[0].beat, narration: `In ${area}, what is your next property move?`, overlay: area, assetIds: sceneAssets[0] },
-      { index: 2, beat: recipe.sceneBeats[1].beat, narration: "We explain local options clearly, without pressure.", overlay: "Practical local guidance", assetIds: sceneAssets[1] },
+      { index: 2, beat: recipe.sceneBeats[1].beat, narration: `${briefContext}${briefContext ? " " : ""}We explain local options clearly, without pressure.`, overlay: "Practical local guidance", assetIds: sceneAssets[1] },
       { index: 3, beat: recipe.sceneBeats[2].beat, narration: "Grounded advice gives you a clear local next step.", overlay: input.brief.verifiedProof ? "Verified local insight" : "Grounded advice", assetIds: sceneAssets[2] },
       { index: 4, beat: recipe.sceneBeats[3].beat, narration: "Start a practical conversation for your goals.", overlay: cta, assetIds: sceneAssets[3] },
     ]
     : [
       { index: 1, beat: recipe.sceneBeats[0].beat, narration: `In ${area}, wondering what your next property move could look like?`, overlay: area, assetIds: sceneAssets[0] },
-      { index: 2, beat: recipe.sceneBeats[1].beat, narration: "We explain the practical local signals and options in plain language, without pressure.", overlay: "Practical local guidance", assetIds: sceneAssets[1] },
+      { index: 2, beat: recipe.sceneBeats[1].beat, narration: `${briefContext}${briefContext ? " " : ""}We explain the practical local signals and options in plain language, without pressure.`, overlay: "Practical local guidance", assetIds: sceneAssets[1] },
       { index: 3, beat: recipe.sceneBeats[2].beat, narration: `${proof} You will leave with ${promise}.`, overlay: input.brief.verifiedProof ? "Verified local insight" : "Grounded advice", assetIds: sceneAssets[2] },
       { index: 4, beat: recipe.sceneBeats[3].beat, narration: "Start with one useful conversation tailored to your timing and goals.", overlay: cta, assetIds: sceneAssets[3] },
     ];
@@ -124,4 +125,11 @@ function fitWords(text: string, desired: number): string {
   let cursor = 0;
   while (output.length < desired) output.push(PAD_WORDS[cursor++ % PAD_WORDS.length]);
   return output.join(" ").replace(/[,:;]$/u, "") + ".";
+}
+
+function briefHint(value: string): string {
+  // Keep the deterministic 15-second word budget viable while carrying a
+  // small, user-authored cue into the fixed copy.
+  const words = value.trim().split(/\s+/u).slice(0, 4);
+  return words.length ? `${words.join(" ").replace(/[,:;]$/u, "")}.` : "";
 }

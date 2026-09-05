@@ -21,7 +21,9 @@ export class VideoValidationError extends Error {
   }
 }
 
-const UNSUPPORTED_CLAIM = /(?:^|\b)(?:#\s*1|number\s+one|guarantee(?:d|s)?|valuation(?:s)?|buyer\s*count|\d[\d,.]*\s+buyers?)(?:\b|$)/iu;
+// A valuation/appraisal is a valid service CTA. Reject only unsupported
+// precision (a stated amount/value) and the prohibited guarantees/rankings.
+const UNSUPPORTED_CLAIM = /(?:^|\b)(?:#\s*1|number\s+one|guarantee(?:d|s)?|buyer\s*count|\d[\d,.]*\s+buyers?|(?:valuation|appraisal|property\s+value|home\s+value|worth|valued\s+at)\b[^.\n]{0,32}(?:[$€£]\s?\d[\d,.]*|\d[\d,.]*\s?(?:k|m|million|billion|thousand|dollars?))|(?:[$€£]\s?\d[\d,.]*|\d[\d,.]*\s?(?:k|m|million|billion|thousand|dollars?))[^.\n]{0,32}\b(?:valuation|appraisal|property\s+value|home\s+value|worth)\b)(?:\b|$)/iu;
 const LISTING_SALE_COPY = /(?:\bfor\s+sale\b|open\s+home|inspection\s+today|auction\s+this|offers?\s+over|buy\s+now|bedrooms?\s*\d)/iu;
 
 export function parseVideoProjectInput(value: unknown, options: { requireReadiness?: boolean; workspaceId?: string } = {}): VideoProjectInput {
@@ -75,7 +77,7 @@ export function parseVideoProjectInput(value: unknown, options: { requireReadine
   if (requireReadiness && input.brief.verifiedProof && (!input.brief.proofSource || !input.brief.proofDate)) {
     issues.push("Verified proof must include its source and date.");
   }
-  const allText = [input.objective, input.brief.offer, input.brief.verifiedProof, ...input.claimRecords.map((claim) => claim.text)].filter(Boolean).join(" ");
+  const allText = [input.objective, input.brief.offer, input.brief.creativeBrief, input.brief.verifiedProof, ...input.claimRecords.map((claim) => claim.text)].filter(Boolean).join(" ");
   if (UNSUPPORTED_CLAIM.test(allText) && !hasVerifiedMatchingClaim(input)) issues.push("Unsupported number-one, guarantee, valuation, or buyer-count claims are not allowed.");
   if (input.claimRecords.some((claim) => claim.status !== "verified" && UNSUPPORTED_CLAIM.test(claim.text))) issues.push("Claims used in video copy must have a verified source.");
   if (LISTING_SALE_COPY.test(allText)) issues.push("Listing-sale copy is not allowed in lead-generation video briefs.");
