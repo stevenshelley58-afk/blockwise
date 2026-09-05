@@ -49,7 +49,7 @@ insert into public.ops_action_capabilities (action_type, capability_state, descr
   ('booking_reschedule', 'capability_required', 'operator booking reschedule executor is not registered'),
   ('billing_reconcile', 'available', 'existing billing reconciliation path'),
   ('billing_cancel_at_period_end', 'capability_required', 'operator cancellation executor is not registered'),
-  ('billing_portal_link', 'available', 'existing billing portal capability; URL is never persisted')
+  ('billing_portal_link', 'capability_required', 'operator billing portal-link executor is not registered')
 on conflict (action_type) do update set capability_state = excluded.capability_state,
   description = excluded.description, updated_at = now();
 

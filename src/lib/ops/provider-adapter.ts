@@ -38,7 +38,7 @@ export async function enqueueMarketingMessage(input: {
   }
   const decision = await assertMarketingSendAtAdapterBoundary(input);
   if (!decision.allowed) throw new Error(`marketing_send_denied:${decision.reason}`);
-  return enqueueEmail(input.serviceSupabase, input.message);
+  return enqueueEmail(input.serviceSupabase, { ...input.message, workspaceId: input.workspaceId });
 }
 
 export { buildProjectionEnvelope };

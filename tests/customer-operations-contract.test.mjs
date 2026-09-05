@@ -15,6 +15,11 @@ test("product allowlist and rollback procedure cover the ops contract", () => {
   assert.match(allowlist, /202609040006_customer_operations_action_outbox\.sql/);
   assert.match(allowlist, /202609040007_customer_operations_action_payload_fix\.sql/);
   assert.match(allowlist, /202609040008_customer_operations_action_fencing\.sql/);
+  assert.match(allowlist, /202609040009_customer_operations_enquiry_assignment\.sql/);
+  assert.match(allowlist, /202609040010_customer_operations_runtime_resolution\.sql/);
+  assert.match(allowlist, /202609040011_customer_operations_provider_ledger\.sql/);
+  assert.match(allowlist, /202609040012_customer_operations_contract_completion\.sql/);
+  assert.match(allowlist, /202609040013_customer_operations_action_versions\.sql/);
   const rollback = text("scripts/ops/rollback-customer-operations.sql");
   assert.match(rollback, /ROLLBACK_CUSTOMER_OPERATIONS/);
   assert.match(rollback, /customer_operations_tables_archive/);
@@ -30,6 +35,31 @@ test("product allowlist and rollback procedure cover the ops contract", () => {
   assert.match(rollback, /ops_action_target_binding/);
   assert.match(rollback, /lock table public\.audit_logs/);
   assert.match(rollback, /in access exclusive mode/);
+  assert.match(rollback, /ops_global_projection_outbox/);
+  assert.match(rollback, /ops_provider_operation_ledger/);
+  assert.match(rollback, /provider_id_ciphertext/);
+  assert.match(rollback, /ops_provider_correlations/);
+});
+
+test("Frank action targets have authoritative positive source-row versions", () => {
+  const migration = text("supabase/migrations/202609040013_customer_operations_action_versions.sql");
+  for (const table of ["workspaces", "workspace_members", "workspace_invitations", "billing_offer_acceptances", "audit_logs", "ops_enquiry_associations"]) {
+    assert.match(migration, new RegExp(`alter table public\\.${table}[\\s\\S]*ops_version bigint not null default 1`, "i"));
+  }
+  assert.match(migration, /create or replace function public\.ops_bump_target_version/i);
+  assert.match(migration, /new\.ops_version := old\.ops_version \+ 1/i);
+  assert.match(migration, /'ops_version',s\.ops_version/);
+  assert.match(migration, /'ops_version',wm\.ops_version/);
+  assert.match(migration, /'ops_version',i\.ops_version/);
+  assert.match(migration, /'ops_version',a\.ops_version/);
+  assert.match(migration, /'ops_version',e\.ops_version/);
+  assert.match(migration, /'ops_version',a\.ops_version/);
+  assert.match(migration, /where i\.workspace_id=any\(v_workspace_ids::uuid\[\]\) and i\.status='pending'/i);
+  assert.match(migration, /create or replace function public\.ops_action_target_binding/i);
+  assert.match(migration, /new\.expected_version <> v_current/);
+  assert.match(migration, /workspace_members wm[\s\S]*wm\.profile_id=new\.target_id/);
+  assert.match(migration, /new\.action_type = 'billing_reconcile'[\s\S]*new\.target_id <> new\.workspace_id/);
+  assert.match(migration, /e\.workspace_id=new\.workspace_id or e\.workspace_id is null/);
 });
 
 test("ops surface is service-only and provider-free", () => {
@@ -58,6 +88,33 @@ test("projection adapter and database enforce the provider aggregate matrix", ()
   assert.match(migration, /chatwoot.*enquiry.*support/s);
   assert.match(migration, /revoke insert, update, delete on public\.ops_projection_outbox from service_role/i);
   assert.match(migration, /grant select on public\.ops_projection_outbox to service_role/i);
+});
+
+test("worker deployment mounts OSS provider secrets read-only and binds image provenance", () => {
+  const compose = text("infra/coolify/docker-compose.product.yml");
+  assert.match(compose, /MAUTIC_TOKEN_HOST_FILE[\s\S]*:\/run\/secrets\/mautic_token:ro/);
+  assert.match(compose, /CHATWOOT_API_TOKEN_HOST_FILE[\s\S]*:\/run\/secrets\/chatwoot_api_token:ro/);
+  assert.match(compose, /BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE[\s\S]*:\/run\/secrets\/ops_correlation_key:ro/);
+  assert.match(compose, /MAUTIC_TOKEN_FILE: \/run\/secrets\/mautic_token/);
+  assert.match(compose, /CHATWOOT_API_TOKEN_FILE: \/run\/secrets\/chatwoot_api_token/);
+  assert.match(compose, /BLOCKWISE_WORKER_REVISION: \$\{BLOCKWISE_GIT_SHA\}/);
+  const worker = text("worker/ops-projection.ts");
+  assert.match(worker, /api_access_token/);
+  assert.match(worker, /BLOCKWISE_WORKER_REVISION must be the full deployed Git SHA/);
+  assert.match(worker, /CHATWOOT_ENQUIRY_SOURCE_ID/);
+  assert.match(worker, /record_ops_provider_step/);
+  const executor = text("src/app/api/internal/customer-ops/actions/route.ts");
+  assert.match(executor, /begin_ops_invitation_delivery/);
+  assert.match(executor, /reconcile_ops_invitation_delivery/);
+  assert.match(executor, /quarantine_ops_invitation_delivery/);
+  assert.match(executor, /invitation_delivery_needs_reconciliation/);
+});
+
+test("Frank integrity handoff is explicit about current consumer boundary", () => {
+  const handoff = text("docs/runbooks/frank-ops-integrity-followup.md");
+  assert.match(handoff, /manifest\.json/);
+  assert.match(handoff, /does not consume this sidecar/);
+  assert.match(handoff, /active Frank consumer must add/);
 });
 
 test("operator action contract is capability-gated and RPC-only", () => {

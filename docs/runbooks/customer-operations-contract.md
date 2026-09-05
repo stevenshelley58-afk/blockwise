@@ -110,6 +110,17 @@ plus activation stage and booking status/subject; Chatwoot envelopes carry
 safe enquiry/support subject/status fields. The outbox is the durable handoff;
 there are no provider calls in customer request paths.
 
+Every action-capable row also carries a positive `ops_version`: workspace rows
+for invite/billing actions, member and pending-invitation rows for access
+actions, audit activity rows for session actions, and enquiry-association rows
+for assignment. These are source-row versions (initial value `1`, incremented
+by a protected BEFORE UPDATE trigger), not timestamps, provider IDs, or a
+worker-generated fallback. Frank sends the exact row version as
+`expectedVersion`; the action executor must reject a stale value under its
+target lock (the enquiry-assignment RPC already uses this CAS contract).
+Rows without an authoritative source target are omitted, leaving the related
+control disabled rather than inventing a usable-looking version.
+
 ## Rollback
 
 Run only against the intended database, after confirming the archive has
@@ -136,3 +147,41 @@ Consent normalization keeps the newest case-normalized preference row while
 carrying forward any restrictive withdrawn/denied, unsubscribe, or suppressed
 state. Discarded legacy rows are archived in
 `legacy_archive.customer_operations_consent_reconciliation_202609040003`.
+
+## Provider adapter contract
+
+Hermes uses Mautic's documented REST endpoints: contact create/edit under
+`/api/contacts/new` and `/api/contacts/{id}/edit`, segment membership under
+`/api/segments/{segment}/contact/{contact}/add`, and campaign membership under
+`/api/campaigns/{campaign}/contact/{contact}/add`. Contact tags are applied via
+the documented contact edit `tags` field. See the [Mautic Contacts API](https://devdocs.mautic.org/en/7.2/rest_api/contacts.html),
+[Segments API](https://devdocs.mautic.org/en/5.x/rest_api/segments.html), and
+[Campaigns API](https://devdocs.mautic.org/en/7.1/rest_api/campaigns.html).
+
+Chatwoot uses its account-scoped contact, conversation, messages, status, and
+assignment endpoints with only the official `api_access_token` header. Contact
+search uses the documented email query and then exact deterministic attributes;
+the configured inbox-specific `source_id` is supplied when creating a
+conversation. Every contact and
+conversation carries a deterministic Blockwise custom attribute; every message
+carries the operation key so a crash after a remote write is reconciled before
+a retry. Contact and conversation identifiers are stored in separate encrypted
+ledger columns and reduced to masked suffixes in snapshots. Website leads with
+no workspace use only the fixed global account/inbox and are published to
+Frank after the global queue settles; they are never associated by email.
+Deployment must set `CHATWOOT_ENQUIRY_SOURCE_ID`,
+`CHATWOOT_SUPPORT_SOURCE_ID`, and `CHATWOOT_GLOBAL_SOURCE_ID` to the source IDs
+belonging to their respective configured inboxes; the worker refuses to create
+a conversation when the binding is absent.
+
+The Hermes publisher writes Frank's exact PR #121 receipt and pointer shape,
+plus a generation `manifest.json` containing SHA-256 checksums for every
+projection, receipt, and pointer. The active Frank #121 reader does not yet
+consume that sidecar; the required consumer change and verification procedure
+are documented in `frank-ops-integrity-followup.md`, so the manifest is not
+represented as a consumer-enforced integrity boundary. The deployed `BLOCKWISE_WORKER_REVISION`
+(full image Git SHA) is the bundle source revision; provider/source row and
+queue identifiers form the durable source receipt set. Mautic lifecycle
+snapshots also materialize configured segment/campaign flow status, while the
+Frank email projection is sourced from Blockwise `email_outbox` delivery,
+failure, and suppression state rather than Mautic contact snapshots.

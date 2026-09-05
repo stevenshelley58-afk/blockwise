@@ -19,6 +19,8 @@ export type EmailDeliveryProjection =
   | { kind: "report_email"; id: string };
 
 export type OutboxEnqueueInput = {
+  /** Authoritative tenant; omitted only for intentionally global/operator mail. */
+  workspaceId?: string;
   messageType: string;
   templateId: string;
   templateVersion: number;
@@ -68,6 +70,7 @@ export async function enqueueEmail(
     .from("email_outbox")
     .upsert(
       {
+        ...(input.workspaceId ? { workspace_id: input.workspaceId } : {}),
         message_type: input.messageType,
         template_id: input.templateId,
         template_version: input.templateVersion,

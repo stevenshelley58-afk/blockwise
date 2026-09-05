@@ -255,14 +255,14 @@ returns trigger language plpgsql security definer set search_path = '' as $$
 declare v_version bigint := nextval('public.ops_projection_source_version_seq'); v_workspace_id uuid; v_profile_id uuid; v_email text; v_name text; v_stage text;
 begin
   if tg_table_name = 'workspaces' then
-    -- Workspace is the lifecycle aggregate, never a synthetic Mautic contact.
-    -- Contacts are keyed only by a real profile below.
+    -- A workspace has no provider contact identity. Lifecycle operations are
+    -- emitted only for explicit workspace members below.
     return new;
   elsif tg_table_name = 'customer_activations' then
     v_stage := case when new.activation_completed_at is not null then 'active' when new.checkout_completed_at is not null then 'activated' when new.email_verified_at is not null then 'trial' else 'lead' end;
-    perform public.enqueue_ops_projection(new.workspace_id, 'mautic', 'lifecycle', new.workspace_id::text, 'upsert', 'activation:' || new.workspace_id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'sourceEventId', 'activation', 'stage', v_stage));
     for v_profile_id, v_email, v_name in select p.id, p.email, p.full_name from public.workspace_members wm join public.profiles p on p.id = wm.profile_id where wm.workspace_id = new.workspace_id loop
       perform public.enqueue_ops_projection(new.workspace_id, 'mautic', 'contact', v_profile_id::text, 'upsert', 'activation-contact:' || v_profile_id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'sourceEventId', 'activation', 'email', left(lower(btrim(v_email)), 320), 'name', left(coalesce(v_name, ''), 512), 'activationStage', v_stage));
+      perform public.enqueue_ops_projection(new.workspace_id, 'mautic', 'lifecycle', v_profile_id::text, 'upsert', 'activation-lifecycle:' || v_profile_id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'profileId', v_profile_id::text, 'sourceEventId', 'activation', 'stage', v_stage));
     end loop;
   elsif tg_table_name = 'workspace_onboarding_bookings' then
     perform public.enqueue_ops_projection(new.workspace_id, 'chatwoot', 'support', new.id::text, 'upsert', 'booking:' || new.id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'sourceEventId', 'booking', 'subject', 'Onboarding booking', 'status', new.status));
@@ -281,9 +281,13 @@ begin
   elsif tg_table_name = 'lead_events' then
     perform public.enqueue_ops_projection(new.workspace_id, 'chatwoot', 'support', new.lead_id::text, 'upsert', 'lead-event:' || new.id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'sourceEventId', 'lead-event', 'eventType', left(new.event_type, 128)));
   elsif tg_table_name = 'billing_offer_acceptances' then
-    perform public.enqueue_ops_projection(new.workspace_id, 'mautic', 'lifecycle', new.workspace_id::text, 'upsert', 'billing:' || new.id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'sourceEventId', 'billing', 'stage', 'customer'));
+    for v_profile_id in select wm.profile_id from public.workspace_members wm where wm.workspace_id = new.workspace_id loop
+      perform public.enqueue_ops_projection(new.workspace_id, 'mautic', 'lifecycle', v_profile_id::text, 'upsert', 'billing:' || new.id::text || ':' || v_profile_id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'profileId', v_profile_id::text, 'sourceEventId', 'billing', 'stage', 'customer'));
+    end loop;
   elsif tg_table_name = 'customer_communication_preferences' then
-    perform public.enqueue_ops_projection(new.workspace_id, 'mautic', 'lifecycle', new.workspace_id::text, 'upsert', 'preference:' || new.id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'sourceEventId', 'preference', 'stage', case when new.marketing_consent = 'granted' then 'active' else 'unknown' end));
+    for v_profile_id in select wm.profile_id from public.workspace_members wm where wm.workspace_id = new.workspace_id loop
+      perform public.enqueue_ops_projection(new.workspace_id, 'mautic', 'lifecycle', v_profile_id::text, 'upsert', 'preference:' || new.id::text || ':' || v_profile_id::text || ':' || v_version::text, v_version, jsonb_build_object('workspaceId', new.workspace_id::text, 'profileId', v_profile_id::text, 'sourceEventId', 'preference', 'stage', case when new.marketing_consent = 'granted' then 'active' else 'unknown' end));
+    end loop;
   end if;
   return new;
 end;
