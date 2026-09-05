@@ -22,6 +22,8 @@ left join research.advertiser_pages ap on ap.agency_id = ay.id
 left join research.observed_ads oa on oa.advertiser_page_id = ap.id
 group by ay.id, ap.id;
 
+grant select on research.v_ad_db_prospects to service_role;
+
 -- Index the predicates used by the internal adapter's stable cursor queries.
 create index if not exists observed_ads_last_seen_id_idx
   on research.observed_ads (last_seen_at desc, id desc);

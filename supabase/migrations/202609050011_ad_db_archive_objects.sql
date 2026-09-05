@@ -1,12 +1,16 @@
 -- Canonical, content-addressed metadata for Hermes research-media. This is
--- metadata only: bytes remain in the existing research Storage API volume.
+-- metadata only: bytes remain in the Hermes filesystem archive rooted at
+-- /srv/hermes/ad-db/assets.
 create table if not exists research.media_archive_objects (
   id uuid primary key default gen_random_uuid(),
   content_hash text not null check (content_hash ~ '^[a-f0-9]{64}$'),
-  storage_bucket text not null,
-  object_key text not null,
+  storage_bucket text not null check (btrim(storage_bucket) <> ''),
+  object_key text not null check (
+    object_key ~ '^sha256/[a-f0-9]{64}$'
+    and object_key = 'sha256/' || content_hash
+  ),
   byte_size bigint not null check (byte_size > 0),
-  mime_type text not null check (btrim(mime_type) <> ''),
+  mime_type text not null check (btrim(mime_type) <> '' and mime_type = btrim(mime_type)),
   verified_at timestamptz not null,
   created_at timestamptz not null default now(),
   unique (content_hash),
@@ -14,7 +18,7 @@ create table if not exists research.media_archive_objects (
 );
 
 comment on table research.media_archive_objects is
-  'Verified content-addressed objects in existing Hermes Storage; distinct ads may reference one object.';
+  'Verified content-addressed objects in the Hermes filesystem archive; distinct ads may reference one object.';
 
 alter table research.media_assets
   add column if not exists archive_object_id uuid references research.media_archive_objects(id) on delete restrict,

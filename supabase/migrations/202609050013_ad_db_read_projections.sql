@@ -25,14 +25,14 @@ select
   ac.display_state,
   jsonb_build_object(
     'agent', case when ag.id is null then null else jsonb_build_object('id', ag.id, 'name', ag.full_name, 'relationship', case when ap.owner_type = 'agent' then 'owner' else 'ad_page_association' end) end,
-    'agency', case when ay.id is null then null else jsonb_build_object('id', ay.id, 'name', ay.name, 'relationship', case when ap.owner_type = 'agency' then 'owner' when ag.agency_id = ay.id then 'member_agency' else 'ad_page_association' end) end
+    'agency', case when ay.id is null then null else jsonb_build_object('id', ay.id, 'name', ay.name, 'relationship', case when ap.agency_id is null and ag.agency_id = ay.id then 'member_agency' when ap.owner_type = 'agency' then 'owner' else 'ad_page_association' end) end
   ) as ownership,
   coalesce(loc.locations, '[]'::jsonb) as locations,
   coalesce(media.media, '[]'::jsonb) as media
 from research.observed_ads oa
 join research.advertiser_pages ap on ap.id = oa.advertiser_page_id
 left join research.agents ag on ag.id = ap.agent_id
-left join research.agencies ay on ay.id = ap.agency_id
+left join research.agencies ay on ay.id = coalesce(ap.agency_id, ag.agency_id)
 left join research.ad_creatives ac on ac.observed_ad_id = oa.id
 left join lateral (
   select jsonb_agg(distinct jsonb_build_object('id', l.id, 'suburb', l.suburb, 'state', l.state, 'postcode', l.postcode, 'relation', x.relation)) as locations
@@ -44,7 +44,7 @@ left join lateral (
       from research.agent_service_areas asa
       join research.locations service_location on service_location.postcode = asa.postcode and service_location.suburb = asa.suburb and service_location.state = asa.state
       where asa.agent_id = ag.id or asa.agency_id = ay.id
-    union all select ll.location_id, 'ad_explicit'::text from research.location_links ll where ll.subject_type = 'observed_ad' and ll.subject_id = oa.id and ll.relation_type in ('meta_targeting', 'copy_mention') and ll.location_id is not null
+    union all select ll.location_id, ll.relation_type from research.location_links ll where ll.subject_type = 'observed_ad' and ll.subject_id = oa.id and ll.relation_type in ('meta_targeting', 'copy_mention') and ll.location_id is not null
   ) x join research.locations l on l.id = x.location_id
 ) loc on true
 left join lateral (
