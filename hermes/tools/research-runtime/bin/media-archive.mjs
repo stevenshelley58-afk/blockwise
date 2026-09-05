@@ -1,66 +1,18 @@
 #!/usr/bin/env node
-import { createHash } from "node:crypto";
-import { statfs } from "node:fs/promises";
-import { assertHermesOwnedStorageUrl, hermesSupabaseHeaders, resolveHermesResearchStorageCredential, resolveHermesSupabaseCredential } from "./supabase-credentials.mjs";
-
-const MAX_BYTES = Math.max(1_024, Number(process.env.HERMES_MEDIA_ARCHIVE_MAX_BYTES || 52_428_800));
-const MIN_FREE_BYTES = Math.max(0, Number(process.env.HERMES_MEDIA_ARCHIVE_MIN_FREE_BYTES || 2_147_483_648));
-const bucket = process.env.HERMES_RESEARCH_AD_CREATIVES_BUCKET || "research-ad-creatives";
-const researchUrl = String(process.env.HERMES_SUPABASE_URL || "").replace(/\/+$/u, "");
-const storageUrl = assertHermesOwnedStorageUrl(process.env.HERMES_RESEARCH_STORAGE_URL || "");
-const researchCredential = resolveHermesSupabaseCredential();
-const storageCredential = resolveHermesResearchStorageCredential();
-const assetId = process.argv[process.argv.indexOf("--asset-id") + 1];
-
-if (!assetId || !researchUrl || !researchCredential || !storageCredential) {
-  throw new Error("usage: media-archive.mjs --asset-id <uuid>; Hermes DB and Storage credentials are required");
-}
-await assertDiskHeadroom();
-const [asset] = await researchRest(`media_assets?select=id,source_url,capture_status,kind& id=eq.${encodeURIComponent(assetId)}`.replace("& id", "&id"));
-if (!asset?.source_url) throw new Error("media asset has no provenance source URL");
-const captured = await downloadAndVerify(asset.source_url, MAX_BYTES);
-const objectKey = `sha256/${captured.sha256}`;
-await uploadOrVerify(objectKey, captured);
-await researchRest("rpc/link_verified_media_archive", {
-  method: "POST",
-  body: JSON.stringify({ p_media_asset_id: asset.id, p_content_hash: captured.sha256, p_storage_bucket: bucket, p_object_key: objectKey, p_byte_size: captured.bytes.length, p_mime_type: captured.mimeType }),
-});
-console.log(JSON.stringify({ assetId: asset.id, status: "captured", objectKey, sha256: captured.sha256, byteSize: captured.bytes.length, mimeType: captured.mimeType }));
-
-async function assertDiskHeadroom() {
-  const stats = await statfs("/opt").catch(() => null);
-  if (stats && Number(stats.bavail) * Number(stats.bsize) < MIN_FREE_BYTES) throw new Error("research media archive blocked: insufficient VPS disk headroom");
-}
-
-export async function downloadAndVerify(url, maxBytes, fetchImpl = fetch) {
-  const parsed = new URL(url);
-  if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("media source must be HTTP(S)");
-  const response = await fetchImpl(parsed, { redirect: "follow", signal: AbortSignal.timeout(30_000), headers: { "user-agent": "BlockwiseHermesArchive/1.0" } });
-  if (!response.ok || !response.body) throw new Error(`media source fetch failed: ${response.status}`);
-  const announced = Number(response.headers.get("content-length") || 0);
-  if (announced > maxBytes) throw new Error("media source exceeds archive size limit");
-  const reader = response.body.getReader(); const chunks = []; let total = 0;
-  for (;;) { const { value, done } = await reader.read(); if (done) break; total += value.byteLength; if (total > maxBytes) { await reader.cancel(); throw new Error("media source exceeds archive size limit"); } chunks.push(value); }
-  const bytes = Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)));
-  if (!bytes.length) throw new Error("media source is empty");
-  const mimeType = response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() || "application/octet-stream";
-  if (!/^image\//u.test(mimeType) && !/^video\//u.test(mimeType)) throw new Error(`unsupported archived media MIME: ${mimeType}`);
-  return { bytes, mimeType, sha256: createHash("sha256").update(bytes).digest("hex") };
-}
-
-async function uploadOrVerify(objectKey, captured) {
-  const path = `storage/v1/object/${encodeURIComponent(bucket)}/${objectKey.split("/").map(encodeURIComponent).join("/")}`;
-  let response = await fetch(`${storageUrl}/${path}`, { method: "PUT", body: captured.bytes, headers: hermesSupabaseHeaders(storageCredential, { "content-type": captured.mimeType, "x-upsert": "false" }) });
-  if (!response.ok && response.status !== 409) throw new Error(`archive upload failed: ${response.status}`);
-  response = await fetch(`${storageUrl}/storage/v1/object/authenticated/${encodeURIComponent(bucket)}/${objectKey.split("/").map(encodeURIComponent).join("/")}`, { headers: hermesSupabaseHeaders(storageCredential) });
-  if (!response.ok) throw new Error(`archive verification download failed: ${response.status}`);
-  const stored = Buffer.from(await response.arrayBuffer());
-  if (stored.length !== captured.bytes.length || createHash("sha256").update(stored).digest("hex") !== captured.sha256) {
-    throw new Error("stored archive byte/hash mismatch");
-  }
-}
-
-async function researchRest(path, init = {}) {
-  const response = await fetch(`${researchUrl}/rest/v1/${path}`, { ...init, headers: hermesSupabaseHeaders(researchCredential, { "Accept-Profile": "research", "Content-Profile": "research", "Content-Type": "application/json", ...(init.headers || {}) }) });
-  const text = await response.text(); if (!response.ok) throw new Error(`research API failed ${response.status}: ${text.slice(0, 300)}`); return text ? JSON.parse(text) : null;
-}
+import { createHash, randomUUID } from "node:crypto";
+import { lookup } from "node:dns/promises";
+import { mkdir, open, readFile, rename, statfs } from "node:fs/promises";
+import { join, relative, resolve } from "node:path";
+import { hermesSupabaseHeaders, resolveHermesSupabaseCredential } from "./supabase-credentials.mjs";
+export const DEFAULT_ARCHIVE_ROOT = "/srv/hermes/ad-db/assets";
+export const DEFAULT_MAX_BYTES = 52428800;
+export const DEFAULT_MIN_FREE_BYTES = 2147483648;
+export function isPublicAddress(address) { if (address.includes(":")) { const v=address.toLowerCase(); return v!=="::1"&&!v.startsWith("fc")&&!v.startsWith("fd")&&!v.startsWith("fe80:"); } const [a,b]=address.split(".").map(Number); return !(a===0||a===10||a===127||(a===169&&b===254)||(a===172&&b>=16&&b<=31)||(a===192&&b===168)); }
+export async function assertSafeSourceUrl(value, lookupImpl=lookup) { const url=new URL(value); if (!["http:","https:"].includes(url.protocol)||!["80","443",""].includes(url.port)) throw new Error("unsafe media source URL"); const addresses=await lookupImpl(url.hostname,{all:true}); if (!addresses.length||addresses.some((x)=>!isPublicAddress(x.address))) throw new Error("media source resolves to private/internal address"); return url; }
+export function sniffMedia(bytes) { if(bytes.length>=8&&bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])))return "image/png";if(bytes.length>=3&&bytes.subarray(0,3).equals(Buffer.from([255,216,255])))return "image/jpeg";if(bytes.length>=6&&(bytes.subarray(0,6).toString("ascii")==="GIF87a"||bytes.subarray(0,6).toString("ascii")==="GIF89a"))return "image/gif";if(bytes.length>=12&&bytes.subarray(4,8).toString("ascii")==="ftyp")return "video/mp4";if(bytes.length>=12&&bytes.subarray(0,4).toString("ascii")==="RIFF"&&bytes.subarray(8,12).toString("ascii")==="WEBP")return "image/webp";return null; }
+export async function assertMediaMatches(bytes, declaredMime) { const magic=sniffMedia(bytes);const declared=String(declaredMime||"").split(";")[0].trim().toLowerCase();if(!magic||!declared||declared.split("/")[0]!==magic.split("/")[0])throw new Error("declared MIME disagrees with media bytes");if(magic.startsWith("image/")) { const sharp=(await import("sharp")).default; await sharp(bytes,{failOn:"error"}).metadata(); } return magic; }
+export async function downloadVerifiedMedia(sourceUrl,{maxBytes=DEFAULT_MAX_BYTES,fetchImpl=fetch,lookupImpl=lookup}={}) { let url=await assertSafeSourceUrl(sourceUrl,lookupImpl);for(let hop=0;hop<4;hop+=1){const response=await fetchImpl(url,{redirect:"manual",signal:AbortSignal.timeout(30000),headers:{"user-agent":"BlockwiseHermesArchive/1.0"}});if([301,302,303,307,308].includes(response.status)){const location=response.headers.get("location");if(!location)throw new Error("redirect missing location");url=await assertSafeSourceUrl(new URL(location,url).toString(),lookupImpl);continue;}if(!response.ok||!response.body)throw new Error("media source fetch failed: "+response.status);if(Number(response.headers.get("content-length")||0)>maxBytes)throw new Error("media source exceeds archive size limit");const reader=response.body.getReader(),chunks=[];let total=0;for(;;){const part=await reader.read();if(part.done)break;total+=part.value.byteLength;if(total>maxBytes){await reader.cancel();throw new Error("media source exceeds archive size limit");}chunks.push(part.value);}const bytes=Buffer.concat(chunks.map((x)=>Buffer.from(x)));return {bytes,mimeType:await assertMediaMatches(bytes,response.headers.get("content-type")),sha256:createHash("sha256").update(bytes).digest("hex")};}throw new Error("media redirect limit reached"); }
+export async function assertArchiveHeadroom(root,minFreeBytes=DEFAULT_MIN_FREE_BYTES){await mkdir(root,{recursive:true});const info=await statfs(root);if(Number(info.bavail)*Number(info.bsize)<minFreeBytes)throw new Error("archive blocked: insufficient VPS disk headroom");}
+export async function writeVerifiedArchive(root,captured){const base=resolve(root),objectKey="sha256/"+captured.sha256,target=resolve(base,objectKey);if(relative(base,target).startsWith(".."))throw new Error("unsafe archive path");await mkdir(join(base,"sha256"),{recursive:true});try{const temp=target+"."+randomUUID()+".partial",h=await open(temp,"wx",0o640);try{await h.writeFile(captured.bytes);await h.sync();}finally{await h.close();}try{await rename(temp,target);}catch(error){if(error?.code!=="EEXIST")throw error;}}catch(error){if(error?.code!=="EEXIST")throw error;}const stored=await readFile(target);if(stored.length!==captured.bytes.length||createHash("sha256").update(stored).digest("hex")!==captured.sha256)throw new Error("archive write verification failed");return {objectKey,byteSize:stored.length,path:target};}
+async function main(){const i=process.argv.indexOf("--asset-id"),assetId=i<0?"":process.argv[i+1],root=process.env.HERMES_AD_DB_ARCHIVE_ROOT||DEFAULT_ARCHIVE_ROOT,url=String(process.env.HERMES_SUPABASE_URL||"").replace(/\/+$/u,""),credential=resolveHermesSupabaseCredential();if(!assetId||!url||!credential)throw new Error("usage: media-archive.mjs --asset-id <uuid>; Hermes DB credential required");await assertArchiveHeadroom(root);const rest=async(path,init={})=>{const response=await fetch(url+"/rest/v1/"+path,{...init,headers:hermesSupabaseHeaders(credential,{"Accept-Profile":"research","Content-Profile":"research","Content-Type":"application/json",...(init.headers||{})})});const text=await response.text();if(!response.ok)throw new Error("research API failed "+response.status);return text?JSON.parse(text):null;};const asset=(await rest("media_assets?select=id,source_url&id=eq."+encodeURIComponent(assetId)))?.[0];if(!asset?.source_url)throw new Error("media asset has no provenance source URL");const captured=await downloadVerifiedMedia(asset.source_url),written=await writeVerifiedArchive(root,captured);await rest("rpc/link_verified_media_archive",{method:"POST",body:JSON.stringify({p_media_asset_id:asset.id,p_content_hash:captured.sha256,p_storage_bucket:"ad-db-archive",p_object_key:written.objectKey,p_byte_size:written.byteSize,p_mime_type:captured.mimeType})});}
+if(process.argv[1]&&process.argv[1].endsWith("media-archive.mjs"))await main();
