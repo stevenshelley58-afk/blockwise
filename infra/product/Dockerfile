@@ -39,10 +39,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Next's standalone server must listen on the container interface, not only
 # loopback, so the Compose healthcheck and Caddy can reach it.
 ENV HOSTNAME=0.0.0.0
-RUN groupadd --system --gid 1001 nodejs && useradd --system --uid 1001 nextjs
+RUN apt-get update && apt-get install -y --no-install-recommends gosu \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system --gid 1001 nodejs && useradd --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --chown=root:root infra/product/runtime-entrypoint.sh /usr/local/bin/blockwise-product-entrypoint
+RUN chmod 0755 /usr/local/bin/blockwise-product-entrypoint
 USER nextjs
 EXPOSE 3000
 CMD ["node", "server.js"]

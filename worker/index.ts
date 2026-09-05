@@ -599,7 +599,7 @@ export async function preflightWorker(expectedRevision?: string): Promise<Worker
   const missing: string[] = [];
   if (!providerWritesEnabled) missing.push("BLOCKWISE_ENABLE_PROVIDER_WRITES=true");
   if (!supabaseUrlPresent) missing.push("SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL");
-  if (!supabaseCredentialPresent) missing.push("SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseCredentialPresent) missing.push("SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY_FILE");
   if (!tokenEncryptionKeyPresent) missing.push("TOKEN_ENCRYPTION_KEY");
   if (missing.length > 0) {
     throw new Error(`Worker preflight failed; missing: ${missing.join(", ")}.`);
