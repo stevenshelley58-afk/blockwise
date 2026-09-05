@@ -125,7 +125,7 @@ create table if not exists private.ops_chatwoot_webhook_events (
   event_id text primary key check (char_length(event_id) between 1 and 256),
   payload_hash text not null check (payload_hash ~ '^[0-9a-f]{64}$'),
   provider_conversation_id text not null check (provider_conversation_id ~ '^[0-9]+$'),
-  event_type text not null check (event_type in ('message_created','message_updated','conversation_status_changed','conversation_updated')),
+  event_type text not null check (event_type in ('conversation_created','message_created','message_updated','conversation_status_changed','conversation_updated')),
   status text not null default 'received' check (status in ('received','processed','ignored')),
   created_at timestamptz not null default now(), processed_at timestamptz
 );
@@ -137,6 +137,9 @@ create table if not exists private.ops_enquiry_messages (
   direction text not null check (direction in ('incoming','outgoing')),
   created_at timestamptz not null default now()
 );
+alter table private.ops_chatwoot_webhook_events drop constraint if exists ops_chatwoot_webhook_events_event_type_check;
+alter table private.ops_chatwoot_webhook_events add constraint ops_chatwoot_webhook_events_event_type_check
+  check (event_type in ('conversation_created','message_created','message_updated','conversation_status_changed','conversation_updated'));
 alter table private.ops_chatwoot_webhook_events enable row level security;
 alter table private.ops_enquiry_messages enable row level security;
 alter table private.ops_enquiry_messages drop constraint if exists ops_enquiry_messages_provider_message_id_check;
