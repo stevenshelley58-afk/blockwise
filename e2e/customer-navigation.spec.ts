@@ -23,8 +23,14 @@ async function settle(page: Page) {
   await page.waitForTimeout(1200);
 }
 
-/** Dismiss the cookie banner so screenshots and hit-testing are unobstructed. */
-async function dismissCookieConsent(page: Page) {
+/**
+ * Choose "Essential only" for an unobstructed page. The banner mounts after
+ * hydration, so clicking it races the mount; seed the same localStorage value
+ * the button writes before any navigation, and still click the real button
+ * if the banner is up.
+ */
+async function useEssentialOnlyConsent(page: Page) {
+  await page.addInitScript(() => localStorage.setItem("bw-consent", "essential"));
   const banner = page.getByRole("region", { name: "Cookie consent" });
   if (await banner.isVisible().catch(() => false)) {
     await banner.getByRole("button", { name: "Essential only" }).click();
@@ -36,12 +42,21 @@ async function dismissCookieConsent(page: Page) {
  * Real clipping check: <main> has `overflow-x: clip`, so
  * documentElement.scrollWidth stays correct while content is visibly
  * cropped. Assert main's own scroll box AND every visible card/control
- * rectangle stay inside main's box.
+ * rectangle stay inside main's box. Elements inside a designed horizontal
+ * scroll container (overflow-x: auto/scroll) are exempt — they scroll by
+ * intent.
  */
 async function assertNothingClipped(page: Page) {
   const result = await page.evaluate(() => {
     const main = document.querySelector("main");
     if (!main) return null;
+    const insideScrollableX = (el: Element) => {
+      for (let p = el.parentElement; p && p !== main; p = p.parentElement) {
+        const overflowX = getComputedStyle(p).overflowX;
+        if (overflowX === "auto" || overflowX === "scroll") return true;
+      }
+      return false;
+    };
     const mainRect = main.getBoundingClientRect();
     const offenders: string[] = [];
     for (const el of main.querySelectorAll("a, button, input, select, section, h1, h2, table, svg[role], p, span")) {
@@ -50,6 +65,7 @@ async function assertNothingClipped(page: Page) {
       const style = getComputedStyle(el);
       if (style.display === "none" || style.visibility === "hidden") continue;
       if (rect.right > mainRect.right + 0.5 || rect.left < mainRect.left - 0.5) {
+        if (insideScrollableX(el)) continue;
         offenders.push(`${el.tagName.toLowerCase()}:${String(el.className).slice(0, 60)}`);
       }
     }
@@ -97,9 +113,9 @@ test.describe("customer navigation canary", () => {
 
   test("keeps one active destination, hides disabled tools, and supports the command shortcut", async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1440, height: 900 });
+    await useEssentialOnlyConsent(page);
     await page.goto(`/self-serve?workspaceId=${encodeURIComponent(workspaceId!)}`);
     await expect(page).not.toHaveURL(/\/login/);
-    await dismissCookieConsent(page);
     await expect(page.getByRole("link", { name: "Ad Radar" })).toHaveCount(0);
     await page.keyboard.press("Control+K");
     await expect(page.getByRole("dialog")).toBeVisible();
@@ -112,7 +128,6 @@ test.describe("customer navigation canary", () => {
     await expect(page.locator('[aria-current="page"]:visible')).toHaveCount(1);
     await page.goto(`/settings?workspaceId=${encodeURIComponent(workspaceId!)}`);
     await expect(page.locator('[aria-current="page"]:visible')).toHaveCount(1);
-    await dismissCookieConsent(page);
     await settle(page);
     await assertNothingClipped(page);
     await page.screenshot({ path: testInfo.outputPath("customer-settings-desktop.png"), fullPage: true });
@@ -121,15 +136,14 @@ test.describe("customer navigation canary", () => {
   for (const width of [320, 390]) {
     test(`fits Home and Settings without clipping at ${width}px`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 844 });
+      await useEssentialOnlyConsent(page);
       await page.goto(`/self-serve?workspaceId=${encodeURIComponent(workspaceId!)}`);
       await expect(page).not.toHaveURL(/\/login/);
-      await dismissCookieConsent(page);
       await settle(page);
       await assertNothingClipped(page);
       await assertMobileNavUsable(page);
       await page.screenshot({ path: testInfo.outputPath(`customer-home-${width}.png`), fullPage: true });
       await page.goto(`/settings?workspaceId=${encodeURIComponent(workspaceId!)}`);
-      await dismissCookieConsent(page);
       await settle(page);
       await assertNothingClipped(page);
       await page.screenshot({ path: testInfo.outputPath(`customer-settings-${width}.png`), fullPage: true });
