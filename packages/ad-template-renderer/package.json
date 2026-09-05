@@ -11,6 +11,10 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./text-layout": {
+      "import": "./dist/text-layout.js",
+      "types": "./dist/text-layout.d.ts"
     }
   },
   "scripts": {

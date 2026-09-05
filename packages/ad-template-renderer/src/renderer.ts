@@ -16,6 +16,11 @@ import {
   MINIMUM_TEXT_SIZE_PX,
   MINIMUM_VECTOR_LINE_LENGTH_PX,
 } from "@blockwise/ad-template-contract";
+import {
+  measureTrackedTextWidth as measureSharedTrackedTextWidth,
+  prepareTextLayout,
+  segmentGraphemes,
+} from "./text-layout.js";
 
 export interface RenderInput {
   template: AdTemplate;
@@ -295,6 +300,7 @@ type PreparedText = {
   fontSize: number;
   lines: string[];
   trackingPixels: number;
+  ascent: number;
 };
 
 type TextPreparation = PreparedText | { kind: "skip" } | { kind: "violation"; violation: TextPreflightViolation };
@@ -327,12 +333,7 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, pl
   const x = layer.alignment === "center" ? geometry.x + geometry.width / 2
     : layer.alignment === "right" ? geometry.x + geometry.width
     : geometry.x;
-  // Fabric's textbox reserves the line box from the largest ascent/descent
-  // in the text. Using the first line's ascent alone clips serif descenders
-  // when a later line has different font metrics.
-  const lineMetrics = lines.map((line) => textMetrics(ctx, line, fontSize));
-  const maxAscent = Math.max(0, ...lineMetrics.map((metrics) => metrics.ascent));
-  const baseline = geometry.y + maxAscent;
+  const baseline = geometry.y + prepared.ascent;
   lines.forEach((line, index) => drawTrackedText(
     ctx,
     line,
@@ -390,49 +391,29 @@ function prepareText(
       violation: textPreflightViolation(placement, layer.layerId, "below_readability_floor", readabilityFloor),
     };
   }
-  // A shrink floor must also be bounded by the box's line budget. The old
-  // unconditional 8px floor could exceed short authored boxes and clip
-  // descenders; truncation gets the same geometry guard while refusal remains
-  // strict at the explicit authored size.
-  const boxFloor = geometry.height / Math.max(1, layer.maxLines * layer.lineHeight);
-  const minimumSize = overflowBehaviour === "scale_down"
-    ? readabilityFloor
-    : overflowBehaviour === "truncate"
-      ? Math.max(readabilityFloor, Math.min(baseFontSize, boxFloor))
-      : baseFontSize;
-  let fontSize = Math.max(1, baseFontSize);
-  let lines: string[] = [];
-  let fits = false;
-  const trackingPixels = layer.tracking;
-  for (; fontSize >= minimumSize - 0.001; fontSize -= 0.5) {
-    ctx.font = fontDeclaration(textLayer, family, fontSize);
-    lines = wrapText(ctx, text, geometry.width, trackingPixels);
-    const widest = Math.max(0, ...lines.map((line) => measureTrackedTextWidth(ctx, line, trackingPixels)));
-    const height = paintedHeight(ctx, lines, fontSize, layer.lineHeight);
-    fits = lines.length <= layer.maxLines && widest <= geometry.width && height <= geometry.height;
-    if (fits) break;
-  }
-  if (!fits && overflowBehaviour === "refuse") {
-    return { kind: "skip" };
-  }
-  if (!fits && overflowBehaviour === "scale_down") {
+  const prepared = prepareTextLayout({
+    text,
+    width: geometry.width,
+    height: geometry.height,
+    baseFontSize,
+    readabilityFloor,
+    maxLines: layer.maxLines,
+    lineHeight: layer.lineHeight,
+    trackingPixels: layer.tracking,
+    overflowBehaviour,
+    measure: (value, fontSize) => {
+      ctx.font = fontDeclaration(textLayer, family, fontSize);
+      return textMetrics(ctx, value, fontSize);
+    },
+  });
+  if (prepared.kind === "skip") return prepared;
+  if (prepared.kind === "unfit") {
     return {
       kind: "violation",
       violation: textPreflightViolation(placement, layer.layerId, "cannot_fit_readability_floor", readabilityFloor),
     };
   }
-  if (!fits) {
-    fontSize = Math.max(1, minimumSize);
-    ctx.font = fontDeclaration(textLayer, family, fontSize);
-    lines = wrapText(ctx, text, geometry.width, trackingPixels).slice(0, layer.maxLines);
-    if (overflowBehaviour === "truncate" && lines.length > 0) {
-      let last = lines[lines.length - 1] ?? "";
-      const suffix = "…";
-      while (last && measureTrackedTextWidth(ctx, `${last}${suffix}`, trackingPixels) > geometry.width) last = last.slice(0, -1);
-      lines[lines.length - 1] = `${last.trimEnd()}${suffix}`;
-    }
-  }
-  return { kind: "paint", textLayer, geometry, fontSize, lines, trackingPixels };
+  return { ...prepared, textLayer, geometry };
 }
 
 function resolveTextFontFamily(layer: RenderTextLayer): string {
@@ -517,31 +498,18 @@ function fontDeclaration(layer: RenderTextLayer, family: string, size: number): 
   return `${style}${weight}${size}px "${family}"`;
 }
 
-function graphemes(text: string): string[] {
-  if (typeof Intl.Segmenter === "function") {
-    return Array.from(new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text), ({ segment }) => segment);
-  }
-  return Array.from(text);
-}
-
 /** Internal parity helper: tracking is absolute placement-canvas pixels per inter-grapheme gap. */
 export function measureTrackedTextWidth(ctx: SKRSContext2D, text: string, trackingPixels: number): number {
-  return text.length === 0 ? 0 : ctx.measureText(text).width + trackingPixels * Math.max(0, graphemes(text).length - 1);
+  return measureSharedTrackedTextWidth(
+    (value) => textMetrics(ctx, value, 1), text, 1, trackingPixels,
+  );
 }
 
-function textMetrics(ctx: SKRSContext2D, text: string, fontSize: number): { ascent: number; descent: number; ink: number } {
+function textMetrics(ctx: SKRSContext2D, text: string, fontSize: number): { width: number; ascent: number; descent: number; ink: number } {
   const metrics = ctx.measureText(text || "M");
   const ascent = Number.isFinite(metrics.actualBoundingBoxAscent) ? metrics.actualBoundingBoxAscent : fontSize * 0.8;
   const descent = Number.isFinite(metrics.actualBoundingBoxDescent) ? metrics.actualBoundingBoxDescent : fontSize * 0.2;
-  return { ascent, descent, ink: Math.max(1, ascent + descent) };
-}
-
-function paintedHeight(ctx: SKRSContext2D, lines: string[], fontSize: number, lineHeight: number): number {
-  if (lines.length === 0) return 0;
-  const metrics = lines.map((line) => textMetrics(ctx, line, fontSize));
-  const ascent = Math.max(...metrics.map((line) => line.ascent));
-  const descent = Math.max(...metrics.map((line) => line.descent));
-  return ascent + descent + Math.max(0, lines.length - 1) * fontSize * lineHeight;
+  return { width: text.length === 0 ? 0 : metrics.width, ascent, descent, ink: Math.max(1, ascent + descent) };
 }
 
 function drawTrackedText(ctx: SKRSContext2D, text: string, x: number, y: number, trackingPixels: number, align: TextLayer["alignment"], stroke = false): void {
@@ -551,7 +519,7 @@ function drawTrackedText(ctx: SKRSContext2D, text: string, x: number, y: number,
     else ctx.fillText(text, x, y);
     return;
   }
-  const glyphs = graphemes(text);
+  const glyphs = segmentGraphemes(text);
   const total = measureTrackedTextWidth(ctx, text, trackingPixels);
   let cursor = align === "left" ? x : align === "right" ? x - total : x - total / 2;
   const previousAlign = ctx.textAlign;
@@ -562,40 +530,6 @@ function drawTrackedText(ctx: SKRSContext2D, text: string, x: number, y: number,
     cursor += ctx.measureText(glyph).width + trackingPixels;
   }
   ctx.textAlign = previousAlign;
-}
-
-function wrapText(ctx: SKRSContext2D, text: string, maxWidth: number, trackingPixels = 0): string[] {
-  const output: string[] = [];
-  for (const paragraph of text.split(/\r?\n/)) {
-    const words = paragraph.trim().split(/\s+/).filter(Boolean);
-    if (words.length === 0) {
-      output.push("");
-      continue;
-    }
-    let line = "";
-    for (const word of words) {
-      if (measureTrackedTextWidth(ctx, word, trackingPixels) > maxWidth) {
-        if (line) output.push(line);
-        line = "";
-        for (const glyph of graphemes(word)) {
-          const candidate = `${line}${glyph}`;
-          if (line && measureTrackedTextWidth(ctx, candidate, trackingPixels) > maxWidth) {
-            output.push(line);
-            line = glyph;
-          } else line = candidate;
-        }
-        continue;
-      }
-      const candidate = `${line} ${word}`;
-      if (!line || measureTrackedTextWidth(ctx, candidate.trim(), trackingPixels) <= maxWidth) line = line ? candidate : word;
-      else {
-        output.push(line);
-        line = word;
-      }
-    }
-    output.push(line);
-  }
-  return output;
 }
 
 async function renderLogo(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "logo" }>, input: RenderInput, dims: CanvasDimensions): Promise<void> {

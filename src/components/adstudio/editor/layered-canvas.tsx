@@ -10,12 +10,20 @@ import type {
   Rect,
   AdTemplate,
 } from "../../../../packages/ad-template-contract/src/types";
-import { PLACEMENT_DIMENSIONS } from "../../../../packages/ad-template-contract/src/types";
+import {
+  MINIMUM_MULTILINE_LINE_HEIGHT,
+  MINIMUM_TEXT_SIZE_PX,
+  PLACEMENT_DIMENSIONS,
+} from "../../../../packages/ad-template-contract/src/types";
+import {
+  measureTrackedTextWidth,
+  prepareTextLayout,
+  segmentGraphemes,
+} from "@blockwise/ad-template-renderer/text-layout";
 import { templateAssetProxyUrl } from "@/lib/adstudio/pack-gallery";
 import { cn } from "@/lib/utils";
 import {
   effectiveTextFontSize,
-  fabricCharSpacing,
   fabricCircleGeometry,
   fabricLinePathData,
   fabricIconPathData,
@@ -299,32 +307,81 @@ async function createLayerObject({
 
   if (layer.type === "text") {
     const rawSource = textValues[layer.inputKey] ?? "";
+    if (!rawSource) return null;
+    if (layer.maxLines > 1 && layer.lineHeight < MINIMUM_MULTILINE_LINE_HEIGHT) {
+      throw new Error(`${placement} text layer ${layer.layerId} must use lineHeight at least ${MINIMUM_MULTILINE_LINE_HEIGHT}`);
+    }
     const source = layer.case === "upper" ? rawSource.toUpperCase() : layer.case === "lower" ? rawSource.toLowerCase() : rawSource;
     if (layer.overflowBehaviour === "refuse" && source.length > layer.maxCharacters) return null;
     const text = source.slice(0, layer.maxCharacters);
     await ensureTemplateFont(templateId, existingAdId, assets, layer.font);
-    const fontSize = effectiveTextFontSize(layer, geometry);
-    const textbox = new fabric.Textbox(text, {
+    const baseFontSize = effectiveTextFontSize(layer, geometry);
+    const readabilityFloor = MINIMUM_TEXT_SIZE_PX[placement];
+    if (baseFontSize < readabilityFloor) {
+      throw new Error(`${placement} text layer ${layer.layerId} is below the ${readabilityFloor}px readability floor`);
+    }
+    const textCanvas = document.createElement("canvas");
+    textCanvas.width = Math.max(1, Math.ceil(geometry.width));
+    textCanvas.height = Math.max(1, Math.ceil(geometry.height));
+    const context = textCanvas.getContext("2d");
+    if (!context) throw new Error("The browser could not create a text preview canvas.");
+    const family = templateFontFamily(templateId, layer.font.file);
+    const fontDeclaration = (fontSize: number) =>
+      `${layer.italic ? "italic " : ""}${layer.fontWeight ? `${layer.fontWeight} ` : ""}${fontSize}px "${family}"`;
+    const measure = (value: string, fontSize: number) => {
+      context.font = fontDeclaration(fontSize);
+      const metrics = context.measureText(value || "M");
+      return {
+        width: metrics.width,
+        ascent: Number.isFinite(metrics.actualBoundingBoxAscent) ? metrics.actualBoundingBoxAscent : fontSize * 0.8,
+        descent: Number.isFinite(metrics.actualBoundingBoxDescent) ? metrics.actualBoundingBoxDescent : fontSize * 0.2,
+      };
+    };
+    const overflowBehaviour = (layer.overflowBehaviour as string) === "shrink"
+      ? "scale_down"
+      : layer.overflowBehaviour;
+    const prepared = prepareTextLayout({
+      text, width: geometry.width, height: geometry.height, baseFontSize,
+      readabilityFloor, maxLines: layer.maxLines, lineHeight: layer.lineHeight,
+      trackingPixels: layer.tracking, overflowBehaviour, measure,
+    });
+    if (prepared.kind === "skip") return null;
+    if (prepared.kind === "unfit") {
+      throw new Error(`${placement} text layer ${layer.layerId} cannot fit at the ${readabilityFloor}px readability floor`);
+    }
+    context.font = fontDeclaration(prepared.fontSize);
+    context.fillStyle = fill(layer.colourRole);
+    context.textAlign = layer.alignment;
+    context.textBaseline = "alphabetic";
+    if (layer.effects?.shadow) {
+      const shadow = layer.effects.shadow;
+      context.shadowColor = colourWithOpacity(colours[shadow.colourRole] ?? "#000000", shadow.opacity);
+      context.shadowBlur = shadow.blur;
+      context.shadowOffsetX = shadow.offsetX;
+      context.shadowOffsetY = shadow.offsetY;
+    }
+    const x = layer.alignment === "center" ? geometry.width / 2 : layer.alignment === "right" ? geometry.width : 0;
+    prepared.lines.forEach((line, index) => drawBrowserTrackedText(
+      context, line, x, prepared.ascent + index * prepared.fontSize * layer.lineHeight,
+      prepared.fontSize, prepared.trackingPixels, layer.alignment,
+    ));
+    if (layer.effects?.stroke) {
+      context.strokeStyle = colourWithOpacity(colours[layer.effects.stroke.colourRole] ?? "#000000", layer.effects.stroke.opacity);
+      context.lineWidth = layer.effects.stroke.width;
+      prepared.lines.forEach((line, index) => drawBrowserTrackedText(
+        context, line, x, prepared.ascent + index * prepared.fontSize * layer.lineHeight,
+        prepared.fontSize, prepared.trackingPixels, layer.alignment, true,
+      ));
+    }
+    return new fabric.FabricImage(textCanvas, {
       left: geometry.x,
       top: geometry.y,
       originX: "left",
       originY: "top",
-      width: geometry.width,
-      height: geometry.height,
-      fontFamily: templateFontFamily(templateId, layer.font.file),
-      fontWeight: layer.fontWeight ?? "normal",
-      fontStyle: layer.italic ? "italic" : "normal",
-      fontSize,
-      lineHeight: layer.lineHeight,
-      charSpacing: fabricCharSpacing(layer.tracking, fontSize),
-      textAlign: layer.alignment,
-      fill: fill(layer.colourRole),
-      splitByGrapheme: true,
-      editable: false,
+      scaleX: geometry.width / textCanvas.width,
+      scaleY: geometry.height / textCanvas.height,
       ...interactive,
     });
-    textbox.clipPath = new fabric.Rect({ ...fabricRectGeometry(geometry), absolutePositioned: true });
-    return textbox;
   }
 
   if (layer.type === "vector") {
@@ -429,6 +486,39 @@ function fitImageToGeometry(image: import("fabric").FabricImage, geometry: Rect)
   });
 }
 
+function drawBrowserTrackedText(
+  context: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  fontSize: number,
+  trackingPixels: number,
+  alignment: CanvasTextAlign,
+  stroke = false,
+) {
+  if (!text) return;
+  if (trackingPixels === 0) {
+    if (stroke) context.strokeText(text, x, y);
+    else context.fillText(text, x, y);
+    return;
+  }
+  const glyphs = segmentGraphemes(text);
+  const measure = (value: string) => {
+    const metrics = context.measureText(value || "M");
+    return { width: metrics.width, ascent: 0, descent: 0 };
+  };
+  const width = measureTrackedTextWidth(measure, text, fontSize, trackingPixels);
+  let cursor = alignment === "left" ? x : alignment === "right" ? x - width : x - width / 2;
+  const previousAlignment = context.textAlign;
+  context.textAlign = "left";
+  for (const glyph of glyphs) {
+    if (stroke) context.strokeText(glyph, cursor, y);
+    else context.fillText(glyph, cursor, y);
+    cursor += context.measureText(glyph).width + trackingPixels;
+  }
+  context.textAlign = previousAlignment;
+}
+
 function applyFabricAppearance(
   object: FabricObject,
   layer: LayoutLayer,
@@ -448,7 +538,7 @@ function applyFabricAppearance(
   } else {
     object.set("angle", 0);
   }
-  if (effects?.shadow) {
+  if (effects?.shadow && layer.type !== "text") {
     object.set("shadow", new fabric.Shadow({
       color: colourWithOpacity(colours[effects.shadow.colourRole] ?? "#000000", effects.shadow.opacity),
       blur: effects.shadow.blur,
@@ -456,7 +546,7 @@ function applyFabricAppearance(
       offsetY: effects.shadow.offsetY,
     }));
   }
-  if (effects?.stroke) object.set({
+  if (effects?.stroke && layer.type !== "text") object.set({
     stroke: colourWithOpacity(colours[effects.stroke.colourRole] ?? "#000000", effects.stroke.opacity),
     strokeWidth: effects.stroke.width,
   });
