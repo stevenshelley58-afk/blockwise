@@ -1,5 +1,6 @@
 -- Corrected prospect projection: all agents/agencies remain searchable even
 -- with no advertiser page. No contact fields appear in this read surface.
+drop view if exists research.v_ad_db_prospects;
 create or replace view research.v_ad_db_prospects as
 select 'agent'::text as prospect_type, ag.id as subject_id, ag.full_name as name,
        ag.state, ag.primary_suburb as suburb, ag.primary_postcode as postcode,
