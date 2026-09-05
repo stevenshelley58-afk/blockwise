@@ -57,6 +57,7 @@ export type IngestTemplateArtifactResult = {
   templateId: string;
   assetCount: number;
   replayed: boolean;
+  libraryStatus: "quarantined";
 };
 
 function storagePath(templateId: string, assetKey: string, fileName: string) {
@@ -185,6 +186,22 @@ async function finalizeMetadata(
   return { replayed: row.replayed, assetCount: row.asset_count };
 }
 
+async function verifyQuarantinedLibraryStatus(
+  supabase: SupabaseClient,
+  templateId: string,
+): Promise<"quarantined"> {
+  const { data, error } = await supabase
+    .from("ad_templates")
+    .select("library_status")
+    .eq("template_id", templateId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data || (data as { library_status?: unknown }).library_status !== "quarantined") {
+    throw new Error("template_artifact_not_quarantined");
+  }
+  return "quarantined";
+}
+
 async function removeNewUploads(supabase: SupabaseClient, paths: string[]): Promise<void> {
   if (paths.length === 0) return;
   await supabase.storage.from(ARTIFACT_BUCKET).remove(paths);
@@ -222,10 +239,17 @@ export async function ingestTemplateArtifact(
     );
     const finalized = await finalizeMetadata(supabase, template, metadata);
     if (!finalized.replayed) failConflict();
-    return { templateId: template.templateId, assetCount: finalized.assetCount, replayed: true };
+    const libraryStatus = await verifyQuarantinedLibraryStatus(supabase, template.templateId);
+    return {
+      templateId: template.templateId,
+      assetCount: finalized.assetCount,
+      replayed: true,
+      libraryStatus,
+    };
   }
 
   const uploadedByThisCall: string[] = [];
+  let metadataFinalized = false;
   try {
     for (const asset of assets) {
       const path = storagePath(template.templateId, asset.assetKey, asset.fileName);
@@ -246,13 +270,16 @@ export async function ingestTemplateArtifact(
     }
 
     const finalized = await finalizeMetadata(supabase, template, metadata);
+    metadataFinalized = true;
+    const libraryStatus = await verifyQuarantinedLibraryStatus(supabase, template.templateId);
     return {
       templateId: template.templateId,
       assetCount: finalized.assetCount,
       replayed: finalized.replayed,
+      libraryStatus,
     };
   } catch (error) {
-    await removeNewUploads(supabase, uploadedByThisCall);
+    if (!metadataFinalized) await removeNewUploads(supabase, uploadedByThisCall);
     throw error;
   }
 }

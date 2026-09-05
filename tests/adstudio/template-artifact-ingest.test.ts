@@ -90,6 +90,7 @@ type StoredAsset = {
 
 class FakeSupabase {
   templateJson: unknown = null;
+  libraryStatus = "quarantined";
   assetRows: StoredAsset[] = [];
   objects = new Map<string, Buffer>();
   uploadOptions: Array<{ contentType?: string; upsert?: boolean }> = [];
@@ -108,7 +109,7 @@ class FakeSupabase {
           async maybeSingle() {
             return {
               data: table === "ad_templates" && self.templateJson
-                ? { template_json: self.templateJson }
+                ? { template_json: self.templateJson, library_status: self.libraryStatus }
                 : null,
               error: null,
             };
@@ -178,6 +179,7 @@ describe("direct template artifact ingest", () => {
       templateId: "direct-template",
       assetCount: 1,
       replayed: false,
+      libraryStatus: "quarantined",
     });
     assert.deepEqual(db.uploadOptions, [{ contentType: "image/webp", upsert: false }]);
     assert.equal(db.rpcCalls, 1);
@@ -186,9 +188,36 @@ describe("direct template artifact ingest", () => {
       templateId: "direct-template",
       assetCount: 1,
       replayed: true,
+      libraryStatus: "quarantined",
     });
     assert.equal(db.uploadOptions.length, 1, "an exact replay must not upload again");
     assert.equal(db.rpcCalls, 2, "metadata replay is serialized by the finalizer RPC");
+  });
+
+  it("reads and verifies the quarantined library status for new imports and replays", async () => {
+    const activeAfterCreate = new FakeSupabase();
+    activeAfterCreate.libraryStatus = "active";
+    await assert.rejects(
+      ingestTemplateArtifact(activeAfterCreate as never, artifact()),
+      /template_artifact_not_quarantined/,
+    );
+    assert.equal(activeAfterCreate.removed.length, 0, "committed artifact assets must be retained");
+
+    const activeReplay = new FakeSupabase();
+    const input = artifact();
+    activeReplay.templateJson = input.template;
+    activeReplay.assetRows = input.assets.map((asset) => ({
+      asset_key: asset.assetKey,
+      file_name: asset.fileName,
+      mime_type: asset.mimeType,
+      storage_path: `templates/direct-template/${asset.assetKey}-${asset.fileName}`,
+    }));
+    activeReplay.objects.set("templates/direct-template/hero-hero.webp", Buffer.from("hero-one"));
+    activeReplay.libraryStatus = "active";
+    await assert.rejects(
+      ingestTemplateArtifact(activeReplay as never, input),
+      /template_artifact_not_quarantined/,
+    );
   });
 
   it("rejects changed template JSON, declaration metadata, and stored bytes", async () => {
