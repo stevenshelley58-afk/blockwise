@@ -34,17 +34,26 @@ data migration.
   Screenshots (authenticated Home + Settings at 320px, 390px, desktop) are
   under `/srv/blockwise/e2e-runs/cleanup-20260905/canary-qa/`; pixel-edge
   analysis shows content ending exactly at the 16px page padding on mobile.
-  Note: the agent-side image viewer was unavailable (WASM defect), so
-  screenshots were verified by DOM-rectangle assertions, pixel-edge analysis,
-  and OCR text checks rather than human-style visual review.
+  Note: the agent-side image viewer was unavailable (WASM defect) during the
+  release, so screenshots were verified by DOM-rectangle assertions,
+  pixel-edge analysis, and OCR text checks; the reviewing agent subsequently
+  inspected all six screenshots directly and confirmed the previous mobile
+  clipping is resolved.
 - Public verification: `BLOCKWISE_PRODUCT_ENV_FILE=/srv/blockwise/product/.env
   scripts/vps/product-health.sh 7af704c66343cd53e580e306b5d7fbf4b6657bc9`
   passed, and `https://blockwise.sale/api/health` serves that revision.
-- Rollback reference: previous image `blockwise-app:6f2f92ea`
-  (`sha256:46747c11fa666df18af2794df464c68b67bccbe666b9bda9a21353ca5bd86e6b`),
-  retained source `/projects/blockwise-release-6f2f92ea`, protected-env backup
-  `release/product.env.before-7af704c66343` in
-  `/srv/blockwise/e2e-runs/cleanup-20260905/`. See [rollback](rollback.md).
+- Rollback reference, in order:
+  - Immediate previous release `1b50a52f74a7c31ece3cdc02e6a066aae751ccf5`
+    (image `blockwise-app:1b50a52f74a7c31ece3cdc02e6a066aae751ccf5`,
+    `sha256:4d28b9c5bd10ac343bb48744a77818969e9a86456e500c2ea9b7374df9a90281`);
+    its protected-env backup is `release/product.env.before-7af704c66343` in
+    `/srv/blockwise/e2e-runs/cleanup-20260905/`.
+  - Older baseline fallback `6f2f92eadc9d7d3b502917d0f59c11c1ed01b1e7`
+    (image `blockwise-app:6f2f92ea`,
+    `sha256:46747c11fa666df18af2794df464c68b67bccbe666b9bda9a21353ca5bd86e6b`),
+    retained source `/projects/blockwise-release-6f2f92ea`; its protected-env
+    backup is `release/product.env.before-1b50a52f74a7`.
+  See [rollback](rollback.md).
 - The serving checkout `/projects/blockwise-cleanup-20260905` is committed and
   clean; its HEAD is a docs-only evidence commit directly after the serving
   SHA, not a new application build. `main` remains deliberately divergent from
