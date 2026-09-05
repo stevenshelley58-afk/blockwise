@@ -30,16 +30,12 @@ type LayerTarget = { layer: LayoutLayer; object: FabricObject };
 
 const loadedFontFaces = new Map<string, Promise<void>>();
 
-function fontStem(file: string): string {
-  return file.split("/").pop()?.replace(/\.[^.]+$/u, "") || "BlockwiseAdFont";
+export function templateFontFamily(templateId: string, file: string): string {
+  return `Blockwise_${encodeURIComponent(templateId)}_${encodeURIComponent(file)}`;
 }
 
-function fontFamily(templateId: string, file: string): string {
-  return `Blockwise_${templateId}_${fontStem(file)}`;
-}
-
-function ensureTemplateFont(templateId: string, existingAdId: string, assets: AdTemplate["assets"], font: { file: string }): Promise<void> {
-  const family = fontFamily(templateId, font.file);
+export function ensureTemplateFont(templateId: string, existingAdId: string, assets: AdTemplate["assets"], font: { file: string }): Promise<void> {
+  const family = templateFontFamily(templateId, font.file);
   const declaration = Object.entries(assets).find(([, asset]) => asset.fileName === font.file);
   const assetKey = declaration?.[0] ?? null;
   const fontUrl = assetKey
@@ -315,7 +311,7 @@ async function createLayerObject({
       originY: "top",
       width: geometry.width,
       height: geometry.height,
-      fontFamily: fontFamily(templateId, layer.font.file),
+      fontFamily: templateFontFamily(templateId, layer.font.file),
       fontWeight: layer.fontWeight ?? "normal",
       fontStyle: layer.italic ? "italic" : "normal",
       fontSize,

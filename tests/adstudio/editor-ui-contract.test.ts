@@ -57,9 +57,9 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(canvas, /ensureTemplateFont/);
     assert.match(canvas, /templateAssetProxyUrl\(templateId, assetKey, existingAdId\)/);
     assert.match(canvas, /could not be loaded from the template asset/);
-    assert.match(canvas, /fontFamily\(templateId, layer\.font\.file\)/);
+    assert.match(canvas, /templateFontFamily\(templateId, layer\.font\.file\)/);
     assert.match(canvas, /loadedFontFaces.delete\(cacheKey\)/);
-    assert.match(canvas, /Blockwise_\$\{templateId\}/);
+    // Font identity and failed-load recovery are exercised in template-font-loader.test.ts.
     assert.match(canvas, /layer\.shape === "notched"/);
     assert.match(canvas, /layer\.shape === "wave"/);
     assert.match(canvas, /layer\.shape === "ring"/);
