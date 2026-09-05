@@ -54,7 +54,9 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(canvas, /const w = geometry\.width, h = geometry\.height/);
     assert.match(geometry, /values\.every\(\(value\) => Math\.abs\(value\) <= 1\.001\)/);
     assert.doesNotMatch(canvas, /new fabric\.Rect\(\{ \.\.\.geometry/);
-    assert.match(canvas, /ensureLocalFont/);
+    assert.match(canvas, /ensureTemplateFont/);
+    assert.match(canvas, /templateAssetProxyUrl\(templateId, assetKey, existingAdId\)/);
+    assert.match(canvas, /could not be loaded from the template asset/);
     assert.match(canvas, /fontStem\(layer\.font\.file\)/);
     assert.match(canvas, /layer\.shape === "notched"/);
     assert.match(canvas, /layer\.shape === "wave"/);

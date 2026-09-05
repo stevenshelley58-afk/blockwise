@@ -67,6 +67,7 @@ export interface LayeredCanvasProps {
   selectedLayerId?: string | null;
   onSelect?: (layerId: string) => void;
   onCropImage?: (layer: ImageSlotLayer) => void;
+  onError?: (message: string) => void;
   className?: string;
 }
 
@@ -86,6 +87,7 @@ export function LayeredCanvas({
   selectedLayerId,
   onSelect,
   onCropImage,
+  onError,
   className,
 }: LayeredCanvasProps) {
   const elementRef = useRef<HTMLCanvasElement | null>(null);
@@ -191,11 +193,11 @@ export function LayeredCanvas({
       if (selected?.selectable) canvas.setActiveObject(selected);
       canvas.requestRenderAll();
     };
-    void render();
+    void render().catch(error => { onError?.(error instanceof Error ? error.message : "The template preview could not be rendered."); });
     return () => {
       renderVersionRef.current += 1;
     };
-  }, [colours, cropOverrides, existingAdId, imageValues, layout, templateId, ready, selectedLayerId, textValues]);
+  }, [colours, cropOverrides, existingAdId, imageValues, layout, templateId, ready, selectedLayerId, textValues, onError]);
 
   useEffect(() => {
     const canvas = fabricRef.current;

@@ -573,6 +573,7 @@ type DesignCanvasProps = {
   selectedLayerId?: string | null;
   onSelect?: (layerId: string | null) => void;
   onCropImage?: (slot: ImageSlotLayer) => void;
+  onError?: (message: string) => void;
   zoom?: "fit" | 0.8 | 1 | 1.25;
 };
 
@@ -584,7 +585,7 @@ function DesignCanvas({ templateId, existingAdId, layout, placement, colours, im
   const fit = Math.min((size.width - 24) / dims.width, (size.height - 24) / dims.height, 1);
   const scale = zoom === "fit" ? Math.max(0.05, Math.min(1, fit)) : zoom;
   const width = Math.round(dims.width * scale), height = Math.round(dims.height * scale);
-  return <div ref={viewport} className="flex min-h-0 min-w-0 flex-1 items-start justify-start overflow-auto p-3"><div className="m-auto" style={{ width, height, minWidth: width, minHeight: height }}><LayeredCanvas templateId={templateId} existingAdId={existingAdId} assets={pack.assets} layout={layout} colours={colours} imageValues={imageValues} textValues={textValues} cropOverrides={cropOverrides} selectedLayerId={selectedLayerId} onSelect={onSelect} onCropImage={onCropImage} className="h-full w-full" /></div></div>;
+  return <div ref={viewport} className="flex min-h-0 min-w-0 flex-1 items-start justify-start overflow-auto p-3"><div className="m-auto" style={{ width, height, minWidth: width, minHeight: height }}><LayeredCanvas templateId={templateId} existingAdId={existingAdId} assets={pack.assets} layout={layout} colours={colours} imageValues={imageValues} textValues={textValues} cropOverrides={cropOverrides} selectedLayerId={selectedLayerId} onSelect={onSelect} onCropImage={onCropImage} onError={setError} className="h-full w-full" /></div></div>;
 }
 
 function InspectorTabs({ value, onChange }: { value: InspectorTab; onChange: (value: InspectorTab) => void }) {
