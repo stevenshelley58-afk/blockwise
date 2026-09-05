@@ -1,28 +1,26 @@
 {
   "name": "@blockwise/ad-deterministic-renderer",
   "version": "1.0.0",
-  "private": false,
-  "description": "Canonical deterministic renderer for AdStudio TemplatePacks. Exact 1080×1350 (Feed) and 1080×1920 (Story) PNG output. Same inputs → byte-identical PNG hashes. Used by Frank QA and Blockwise Save/Publish.",
+  "private": true,
+  "description": "Canonical deterministic renderer for AdStudio TemplatePacks. Exact 1080×1350 (Feed) and 1080×1920 (Story) PNG output. Same inputs → byte-identical PNG hashes. Used by Frank QA and Blockwise Save/Publish. Source-only package: consumers compile src/ directly.",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
     }
   },
   "scripts": {
-    "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/**/*.test.ts"
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test src/renderer.test.ts"
   },
   "dependencies": {
     "@blockwise/ad-template-pack-contract": "file:../ad-template-pack-contract",
     "@napi-rs/canvas": "^1.0.3"
   },
   "devDependencies": {
-    "typescript": "^5.8.0",
-    "tsx": "^4.19.0"
+    "typescript": "^5.8.0"
   }
 }

@@ -1,4 +1,4 @@
 // Barrel export — everything Frank and Blockwise consume.
-export * from "./types.js";
-export * from "./schema.js";
-export * from "./hash.js";
+export * from "./types.ts";
+export * from "./schema.ts";
+export * from "./hash.ts";

@@ -1,9 +1,9 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { sha256Hex, canonicalJson, computeManifestHash, verifyManifestHash } from "./hash.js";
-import { templatePackSchema, adDocumentSchema } from "./schema.js";
-import type { TemplatePack } from "./types.js";
+import { sha256Hex, canonicalJson, computeManifestHash, verifyManifestHash } from "./hash.ts";
+import { templatePackSchema, adDocumentSchema } from "./schema.ts";
+import type { TemplatePack } from "./types.ts";
 
 // ---------------------------------------------------------------------------
 // Golden fixture: a minimal valid Feed + Story pack
@@ -25,8 +25,8 @@ const goldenPack: TemplatePack = {
     layers: [
       { type: "plate", layerId: "bg", colourRole: "background", geometry: { x: 0, y: 0, width: 1080, height: 1350 }, protected: false },
       { type: "image_slot", layerId: "hero", inputKey: "propertyPhoto", geometry: { x: 40, y: 40, width: 1000, height: 700 }, mask: "rounded_rect", minSourceWidth: 800, minSourceHeight: 600, defaultCrop: { x: 0, y: 0, width: 1, height: 1 }, allowedPlacementOverrides: ["crop"] },
-      { type: "text", layerId: "headline", inputKey: "headline", font: { file: "Inter-Bold.woff2", sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" }, fontSize: 48, lineHeight: 1.2, tracking: -0.02, alignment: "left", maxCharacters: 60, maxLines: 2, colourRole: "mainText", overflowBehaviour: "refuse" },
-      { type: "text", layerId: "body", inputKey: "bodyText", font: { file: "Inter-Regular.woff2", sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" }, fontSize: 24, lineHeight: 1.4, tracking: 0, alignment: "left", maxCharacters: 200, maxLines: 3, colourRole: "secondary", overflowBehaviour: "truncate" },
+      { type: "text", layerId: "headline", inputKey: "headline", font: { file: "Inter-Bold.woff2", sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" }, fontSize: 48, lineHeight: 1.2, tracking: -0.02, alignment: "left", maxCharacters: 60, maxLines: 2, colourRole: "mainText", overflowBehaviour: "refuse", geometry: { x: 40, y: 760, width: 1000, height: 130 } },
+      { type: "text", layerId: "body", inputKey: "bodyText", font: { file: "Inter-Regular.woff2", sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" }, fontSize: 24, lineHeight: 1.4, tracking: 0, alignment: "left", maxCharacters: 200, maxLines: 3, colourRole: "secondary", overflowBehaviour: "truncate", geometry: { x: 40, y: 920, width: 1000, height: 110 } },
     ],
     safeZones: [{ x: 40, y: 40, width: 1000, height: 1270 }],
   },
@@ -35,9 +35,9 @@ const goldenPack: TemplatePack = {
     layers: [
       { type: "plate", layerId: "bg", colourRole: "background", geometry: { x: 0, y: 0, width: 1080, height: 1920 }, protected: false },
       { type: "image_slot", layerId: "hero", inputKey: "propertyPhoto", geometry: { x: 0, y: 0, width: 1080, height: 1080 }, mask: "none", minSourceWidth: 800, minSourceHeight: 800, defaultCrop: { x: 0, y: 0, width: 1, height: 1 }, allowedPlacementOverrides: ["crop", "position"] },
-      { type: "text", layerId: "headline", inputKey: "headline", font: { file: "Inter-Bold.woff2", sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" }, fontSize: 40, lineHeight: 1.2, tracking: -0.02, alignment: "center", maxCharacters: 50, maxLines: 2, colourRole: "mainText", overflowBehaviour: "refuse" },
+      { type: "text", layerId: "headline", inputKey: "headline", font: { file: "Inter-Bold.woff2", sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" }, fontSize: 40, lineHeight: 1.2, tracking: -0.02, alignment: "center", maxCharacters: 50, maxLines: 2, colourRole: "mainText", overflowBehaviour: "refuse", geometry: { x: 40, y: 1300, width: 1000, height: 110 } },
       { type: "overlay_patch", layerId: "gradient", geometry: { x: 0, y: 1080, width: 1080, height: 200 }, colourRole: "primary", opacity: 0.6 },
-      { type: "text", layerId: "cta", inputKey: "ctaText", font: { file: "Inter-SemiBold.woff2", sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" }, fontSize: 28, lineHeight: 1.3, tracking: 0, alignment: "center", maxCharacters: 30, maxLines: 1, colourRole: "inverseText", overflowBehaviour: "truncate" },
+      { type: "text", layerId: "cta", inputKey: "ctaText", font: { file: "Inter-SemiBold.woff2", sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" }, fontSize: 28, lineHeight: 1.3, tracking: 0, alignment: "center", maxCharacters: 30, maxLines: 1, colourRole: "inverseText", overflowBehaviour: "truncate", geometry: { x: 40, y: 1260, width: 1000, height: 36 } },
     ],
     safeZones: [{ x: 40, y: 200, width: 1000, height: 1520 }],
   },
@@ -113,6 +113,7 @@ describe("TemplatePack schema", () => {
       font: { file: "X.woff2", sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" },
       fontSize: 20, lineHeight: 1.3, tracking: 0, alignment: "left",
       maxCharacters: 10, maxLines: 1, colourRole: "mainText", overflowBehaviour: "refuse",
+      geometry: { x: 40, y: 1400, width: 1000, height: 30 },
     });
     // The consumer must validate that every inputKey in every layer
     // exists in imageInputs + textInputs. This test verifies that

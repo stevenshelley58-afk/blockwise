@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback } from "react";
-import type { TemplatePack, Placement, LayoutLayer } from "../../../../packages/ad-template-pack-contract/src/types.js";
-import { useEditorState } from "./use-editor-state.js";
+import type { TemplatePack, Placement, LayoutLayer } from "../../../../packages/ad-template-pack-contract/src/types.ts";
+import { useEditorState } from "./use-editor-state.ts";
 
 // ---------------------------------------------------------------------------
 // Editor Shell — Phase 6 foundation

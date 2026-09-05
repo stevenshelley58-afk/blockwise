@@ -1,4 +1,4 @@
-import type { InstantForm, FormGenerationInput } from "./instant-form-types.js";
+import type { InstantForm, FormGenerationInput } from "./instant-form-types.ts";
 
 // ---------------------------------------------------------------------------
 // AI Instant Form generator — Phase 7.1

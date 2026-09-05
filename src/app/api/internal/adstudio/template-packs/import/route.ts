@@ -36,6 +36,11 @@ export async function POST(request: Request) {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  const frankPublicKey = process.env.FRANK_PUBLIC_KEY ?? "";
+  if (!frankPublicKey) {
+    return NextResponse.json({ error: "signature_config_missing", message: "FRANK_PUBLIC_KEY is not configured" }, { status: 503 });
+  }
+
   try {
     const receipt = await importTemplatePack(supabase, {
       packUrl: String(input.packUrl),
@@ -46,6 +51,18 @@ export async function POST(request: Request) {
       nonce: String(input.nonce),
       signature: String(input.signature),
       idempotencyKey: String(input.idempotencyKey ?? input.packSha256),
+    }, {
+      frankPublicKey,
+      uploadAsset: async (path, bytes, mimeType) => {
+        const storagePath = `template-packs/${path}`;
+        const { error } = await supabase.storage
+          .from("workspace-artifacts")
+          .upload(storagePath, bytes, { contentType: mimeType, upsert: false });
+        if (error && !/already exists|duplicate/i.test(error.message)) {
+          throw new Error(`template asset upload failed: ${error.message}`);
+        }
+        return storagePath;
+      },
     });
 
     const status = receipt.status === "replayed" ? 200 : 201;
@@ -54,11 +71,20 @@ export async function POST(request: Request) {
     const err = error as { code?: string; message?: string; detail?: unknown };
     const code = err.code ?? "import_failed";
     const status = code === "pack_id_conflict" ? 409
+      : code === "pack_version_conflict" ? 409
       : code === "nonce_replay" ? 409
       : code === "timestamp_expired" ? 400
       : code === "hash_mismatch" ? 400
+      : code === "manifest_hash_mismatch" ? 400
       : code === "schema_invalid" ? 422
       : code === "origin_not_allowed" ? 403
+      : code === "signature_rejected" ? 403
+      : code === "signature_invalid" ? 400
+      : code === "signature_config_missing" ? 503
+      : code === "size_exceeded" ? 413
+      : code.startsWith("preview_mismatch") ? 422
+      : code.startsWith("zip_") ? 422
+      : code.endsWith("_hash_mismatch") ? 422
       : 500;
 
     return NextResponse.json({ error: code, message: err.message, detail: err.detail }, { status });
