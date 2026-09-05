@@ -1,10 +1,38 @@
 # Blockwise production readiness
 
-Status: controlled production is health-ready. The cleanup starts from deployed
-revision `6f2f92eadc9d7d3b502917d0f59c11c1ed01b1e7`; see release evidence for
-the subsequently deployed revision.
+Status: controlled production is health-ready. Serving application revision
+`1b50a52f74a7c31ece3cdc02e6a066aae751ccf5` (image `blockwise-app:1b50a52f74a7c31ece3cdc02e6a066aae751ccf5`,
+image ID `sha256:4d28b9c5bd10...`), deployed app-only on 2026-09-05 from the
+cleanup that started at live revision `6f2f92eadc9d7d3b502917d0f59c11c1ed01b1e7`.
 This is not sign-off for provider writes, SMTP, billing, Meta App Review, or
 data migration.
+
+## Release evidence (2026-09-05)
+
+- Repository gates: `npm run check:nul`, `npm run typecheck` exit 0; full
+  `npm test` 908 tests, 908 pass, 0 fail (833 root + 54 + 11 + 10 package
+  suites), 0 skips. Logs under `/srv/blockwise/e2e-runs/cleanup-20260905/`.
+- Canary: `blockwise-app:1b50a52f...` built from the exact committed SHA,
+  served at the loopback-only `https://blockwise.sale:19443` with an internal
+  certificate; `/api/health` reported the compiled revision.
+- Authenticated Playwright QA (`e2e/customer-navigation.spec.ts`, chromium):
+  5 tests passed, 0 failed, 0 skipped, on the canary (controlled-certificate
+  exceptions) and again on the public route with normal TLS. Workspace PATCH
+  and country-change requests remained mocked; no real data was mutated.
+  Desktop, 390px, and 320px screenshots inspected under
+  `/srv/blockwise/e2e-runs/cleanup-20260905/canary-qa/`.
+- Public verification: `BLOCKWISE_PRODUCT_ENV_FILE=/srv/blockwise/product/.env
+  scripts/vps/product-health.sh 1b50a52f74a7c31ece3cdc02e6a066aae751ccf5`
+  passed, and `https://blockwise.sale/api/health` serves that revision.
+- Rollback reference: previous image `blockwise-app:6f2f92ea`
+  (`sha256:46747c11fa666df18af2794df464c68b67bccbe666b9bda9a21353ca5bd86e6b`),
+  retained source `/projects/blockwise-release-6f2f92ea`, protected-env backup
+  `release/product.env.before-1b50a52f74a7` in
+  `/srv/blockwise/e2e-runs/cleanup-20260905/`. See [rollback](rollback.md).
+- The serving checkout `/projects/blockwise-cleanup-20260905` is committed and
+  clean at the serving SHA. `main` remains deliberately divergent from live
+  (customer-ops work and migrations on main; newer AdStudio changes on live);
+  reconciliation is not part of this release.
 
 ## Current runtime
 
