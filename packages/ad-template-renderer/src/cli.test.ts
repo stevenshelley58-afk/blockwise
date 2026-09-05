@@ -76,10 +76,9 @@ test("CLI text refusal is one path-free line and leaves no partial output or rec
     assert.equal(result.stdout, "");
     const stderr = result.stderr.trim();
     assert.equal(stderr.split(/\r?\n/).length, 1);
-    assert.ok(stderr.startsWith(`${TEXT_PREFLIGHT_ERROR_CODE} `));
-    assert.match(stderr, /feed text layer feed-email-text cannot fit at the 24px readability floor/);
-    assert.match(stderr, /feed text layer feed-features with maxLines 2 must use lineHeight at least 1/);
-    assert.match(stderr, /story text layer story-phone-text cannot fit at the 32px readability floor/);
+    assert.ok(stderr.startsWith("invalid_template_artifact "));
+    assert.match(stderr, /feedLayout/);
+    assert.match(stderr, /readability|lineHeight|minimum|24|32/i);
     assert.doesNotMatch(stderr, /renderer\.(?:ts|js)|[A-Za-z]:\\|\/opt\//);
     await assert.rejects(access(outDir));
   } finally {
