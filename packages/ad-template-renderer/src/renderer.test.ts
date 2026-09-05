@@ -84,8 +84,65 @@ test("scale-down fails instead of emitting unreadable text", async () => {
   assert.ok(failure instanceof TextPreflightError);
   assert.equal(failure.message.startsWith(`${TEXT_PREFLIGHT_ERROR_CODE} `), true);
   assert.equal(failure.violations.length, 1);
-  assert.equal(failure.violations[0]?.reason, "feed text layer feed-impossible cannot fit at the 24px readability floor");
+  const violation = failure.violations[0]!;
+  assert.equal(violation.reason, "feed text layer feed-impossible cannot fit at the 24px readability floor");
+  assert.equal(violation.suggestedGeometry.x, 40);
+  assert.equal(violation.suggestedGeometry.y, 40);
+  assert.ok(violation.suggestedGeometry.width > 8);
+  assert.ok(violation.suggestedGeometry.height > 8);
+  assert.ok(violation.suggestedGeometry.x + violation.suggestedGeometry.width <= 1080);
+  assert.ok(violation.suggestedGeometry.y + violation.suggestedGeometry.height <= 1350);
   assert.match(failure.message, /cannot fit at the 24px readability floor/);
+  assert.doesNotMatch(failure.message, /IMPOSSIBLE|manrope-800\.woff2/);
+
+  template.feedLayout.layers[1]!.geometry = violation.suggestedGeometry;
+  await assert.doesNotReject(renderPlacement(
+    { template, imageValues: {}, textValues: { headline: "IMPOSSIBLE" }, colourMap: colours },
+    "feed",
+  ));
+});
+
+test("height-clipped text gets a normalized, safe-bounded geometry that renders at the same floor", async () => {
+  const template = templateFixture();
+  const text = "Clipped descenders gyqp";
+  template.textInputs = [{ key: "caption", label: "Caption", placeholder: text, maxLength: 32 }];
+  template.fonts = [{ file: "/private/template/fonts/manrope-500.woff2" }];
+  template.feedLayout.safeZones = [{ x: 0.05, y: 0.05, width: 0.9, height: 0.9 }];
+  template.feedLayout.layers.push({
+    type: "text",
+    layerId: "feed-clipped-caption",
+    inputKey: "caption",
+    font: { file: "/private/template/fonts/manrope-500.woff2" },
+    fontSize: 64,
+    lineHeight: 1,
+    tracking: 0,
+    alignment: "left",
+    maxCharacters: 32,
+    maxLines: 1,
+    colourRole: "mainText",
+    overflowBehaviour: "scale_down",
+    geometry: { x: 0.1, y: 0.1, width: 0.7, height: 0.002 },
+  });
+
+  const failure = await renderPlacement(
+    { template, imageValues: {}, textValues: { caption: text }, colourMap: colours },
+    "feed",
+  ).then(() => null, (error: unknown) => error);
+  assert.ok(failure instanceof TextPreflightError);
+  const suggestion = failure.violations[0]!.suggestedGeometry;
+  assert.equal(suggestion.x, 0.1);
+  assert.equal(suggestion.y, 0.1);
+  assert.equal(suggestion.width, 0.7);
+  assert.ok(suggestion.height > 0.002);
+  assert.ok(suggestion.x >= 0.05 && suggestion.x + suggestion.width <= 0.95);
+  assert.ok(suggestion.y >= 0.05 && suggestion.y + suggestion.height <= 0.95);
+  assert.doesNotMatch(failure.message, /Clipped descenders|private|template\/fonts/);
+
+  template.feedLayout.layers[1]!.geometry = suggestion;
+  await assert.doesNotReject(renderPlacement(
+    { template, imageValues: {}, textValues: { caption: text }, colourMap: colours },
+    "feed",
+  ));
 });
 
 test("c6-shaped failures report every feed and story layer in one ordered preflight", async () => {
@@ -356,6 +413,70 @@ test("shrink is the exact scale-down alias for a 52-character single-line addres
       && error.violations.some(({ layerId, kind }) => layerId === "feed-address" && kind === "cannot_fit_readability_floor"),
     "shrink must fail instead of wrapping or slicing a one-line address below the readability floor",
   );
+});
+
+test("the live 52-character, 11-layer refusal returns applicable geometry without moving text anchors", async () => {
+  const address = "123 Anywhere Street, Any City, State 12345 Australia";
+  assert.equal(address.length, 52);
+  const template = templateFixture();
+  template.textInputs = [{ key: "address", label: "Address", placeholder: address, maxLength: 52 }];
+  template.fonts = [{ file: "/private/source/manrope-500.woff2" }];
+  template.feedLayout.safeZones = [{ x: 40, y: 20, width: 1000, height: 1310 }];
+  const alignments = Array.from({ length: 11 }, (_, index) => (["left", "center", "right"] as const)[index % 3]!);
+  for (const [index, alignment] of alignments.entries()) {
+    const x = alignment === "left" ? 40 : alignment === "center" ? 400 : 760;
+    template.feedLayout.layers.push({
+      type: "text",
+      layerId: `feed-address-${index + 1}`,
+      inputKey: "address",
+      font: { file: "/private/source/manrope-500.woff2" },
+      fontSize: 64,
+      lineHeight: 1,
+      tracking: 0,
+      alignment,
+      maxCharacters: 52,
+      maxLines: 1,
+      colourRole: "mainText",
+      overflowBehaviour: "scale_down",
+      geometry: { x, y: 30 + index * 110, width: 280, height: 50 },
+    });
+  }
+
+  const failure = await renderPlacement(
+    { template, imageValues: {}, textValues: { address }, colourMap: colours },
+    "feed",
+  ).then(() => null, (error: unknown) => error);
+  assert.ok(failure instanceof TextPreflightError);
+  assert.equal(failure.violations.length, 11);
+  assert.doesNotMatch(failure.message, /123 Anywhere|private|source\/manrope/);
+
+  for (const [index, violation] of failure.violations.entries()) {
+    const layer = template.feedLayout.layers[index + 1]!;
+    assert.equal(layer.type, "text");
+    const authored = layer.geometry;
+    const suggested = violation.suggestedGeometry;
+    const authoredAnchor = layer.alignment === "left"
+      ? authored.x
+      : layer.alignment === "right"
+        ? authored.x + authored.width
+        : authored.x + authored.width / 2;
+    const suggestedAnchor = layer.alignment === "left"
+      ? suggested.x
+      : layer.alignment === "right"
+        ? suggested.x + suggested.width
+        : suggested.x + suggested.width / 2;
+    assert.ok(Math.abs(suggestedAnchor - authoredAnchor) < 0.0001, `${layer.alignment} anchor must not move`);
+    assert.equal(suggested.y, authored.y);
+    assert.ok(suggested.width > authored.width);
+    assert.ok(suggested.x >= 40 && suggested.x + suggested.width <= 1040);
+    assert.ok(suggested.y >= 20 && suggested.y + suggested.height <= 1330);
+    layer.geometry = suggested;
+  }
+
+  await assert.doesNotReject(renderPlacement(
+    { template, imageValues: {}, textValues: { address }, colourMap: colours },
+    "feed",
+  ));
 });
 
 test("font.file stays authoritative for path declarations instead of falling back to a host face", async () => {
