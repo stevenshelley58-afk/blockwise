@@ -6,7 +6,9 @@ export interface TemplateSummary {
   templateId: string; name: string; importedAt: string;
   imageInputs: number; textInputs: number; feedLayout: Layout; storyLayout: Layout;
   semanticColours: Record<string, string>; gallerySampleUrl: string; description: string;
+  leadType: TemplateLeadType;
 }
+export type TemplateLeadType = "seller" | "buyer" | "appraisal" | "open_home" | "market_update" | "other";
 export type GallerySamplePlacement = "feed" | "story";
 type TemplateRow = { template_id: unknown; template_json: unknown; created_at: unknown };
 function record(value: unknown): Record<string, unknown> | null {
@@ -100,16 +102,29 @@ export async function getTemplateForExistingCustomerAd(input: {
 function summaryFromTemplate(template: AdTemplate, row: TemplateRow): TemplateSummary {
   const metadata = record(template.metadata);
   const templateId = String(row.template_id ?? template.templateId);
+  const name = typeof metadata?.title === "string" ? metadata.title : template.templateId;
+  const description = typeof metadata?.description === "string" ? metadata.description : "Editable Feed and Story ad";
   return {
     templateId,
-    name: typeof metadata?.title === "string" ? metadata.title : template.templateId,
-    description: typeof metadata?.description === "string" ? metadata.description : "Editable Feed and Story ad",
+    name,
+    description,
+    leadType: templateLeadType([name, description, template.metadata.publishRequirements.objective, template.metadata.aiWritingGuidance.summary].join(" ")),
     importedAt: typeof row.created_at === "string" ? row.created_at : template.createdAt,
     imageInputs: template.imageInputs.length, textInputs: template.textInputs.length,
     feedLayout: template.feedLayout as Layout, storyLayout: template.storyLayout as Layout,
     semanticColours: { ...template.semanticColours },
     gallerySampleUrl: gallerySampleProxyUrl(templateId)!,
   };
+}
+
+export function templateLeadType(value: string): TemplateLeadType {
+  const text = value.toLocaleLowerCase();
+  if (/appraisal|valuation|price estimate|property estimate/u.test(text)) return "appraisal";
+  if (/open[ -]?home|inspection|auction/u.test(text)) return "open_home";
+  if (/market update|market report|suburb report/u.test(text)) return "market_update";
+  if (/seller|vendor|just sold|listing nurture|listing presentation/u.test(text)) return "seller";
+  if (/buyer|just listed|new listing|property feature/u.test(text)) return "buyer";
+  return "other";
 }
 export function parseTemplateJson(value: unknown): AdTemplate | null {
   const parsed = adTemplateSchema.safeParse(value);

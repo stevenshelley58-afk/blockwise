@@ -1,14 +1,14 @@
 "use client";
 
-import { Clock3, Download, FilePenLine, Plus, Search } from "lucide-react";
+import { Clock3, Download, FilePenLine, Plus } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchField, SearchFilterPanel, SearchFilterRow, filterChipClassName, sortControlClassName } from "@/components/adstudio/search-filter-controls";
 import {
   AD_LIBRARY_STATUS_LABEL,
   filterAndSortAds,
@@ -54,22 +54,11 @@ export function AdsLibrary({ ads, embedded = false }: AdsLibraryProps) {
         </Button>
       </header> : null}
 
-      <section className={`${embedded ? "mt-0" : "mt-8"} rounded-(--r-panel) border border-(--line) bg-(--surface) p-3 shadow-card`} aria-label="Ad library controls">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <label className="relative min-w-0 flex-1">
-            <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search ads" aria-label="Search ads" className="h-11 rounded-(--r-card) pl-9" />
-          </label>
-          <div className="flex min-w-0 flex-wrap items-center gap-1" role="group" aria-label="Filter ads by status">
-            <FilterButton active={status === "all"} count={ads.length} onClick={() => setStatus("all")}>All</FilterButton>
-            {STATUS_ORDER.map((item) => (
-              <FilterButton key={item} active={status === item} count={counts[item]} onClick={() => setStatus(item)}>
-                {AD_LIBRARY_STATUS_LABEL[item]}
-              </FilterButton>
-            ))}
-          </div>
+      <SearchFilterPanel className={embedded ? "mt-0" : "mt-8"} label="Ad library controls">
+        <SearchField id="ad-library-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search ads" label="Search ads" />
+        <SearchFilterRow action={
           <Select value={sort} onValueChange={(value) => setSort(value as SortMode)}>
-            <SelectTrigger aria-label="Sort ads" className="h-11 w-full shrink-0 rounded-(--r-card) border-(--line-heavy) bg-(--surface) text-sm font-semibold text-foreground lg:w-auto">
+            <SelectTrigger aria-label="Sort ads" className={sortControlClassName}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -78,8 +67,17 @@ export function AdsLibrary({ ads, embedded = false }: AdsLibraryProps) {
               <SelectItem value="status">Status</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-      </section>
+        }>
+          <div className="flex min-w-0 flex-wrap items-center gap-1" role="group" aria-label="Filter ads by status">
+            <FilterButton active={status === "all"} count={ads.length} onClick={() => setStatus("all")}>All</FilterButton>
+            {STATUS_ORDER.map((item) => (
+              <FilterButton key={item} active={status === item} count={counts[item]} onClick={() => setStatus(item)}>
+                {AD_LIBRARY_STATUS_LABEL[item]}
+              </FilterButton>
+            ))}
+          </div>
+        </SearchFilterRow>
+      </SearchFilterPanel>
 
       <div className="mt-5 flex items-center justify-between gap-3 text-xs text-muted-foreground">
         <p aria-live="polite">{visibleAds.length} {visibleAds.length === 1 ? "ad" : "ads"}</p>
@@ -142,7 +140,7 @@ function StatusBadge({ status }: { status: AdLibraryStatus }) {
 }
 
 function FilterButton({ active, count, children, onClick }: { active: boolean; count: number; children: React.ReactNode; onClick: () => void }) {
-  return <button type="button" aria-pressed={active} onClick={onClick} className={`min-h-11 rounded-full px-3 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-(--surface-subtle)"}`}>{children}<span className={active ? "ml-1 opacity-70" : "ml-1 text-muted-foreground"}>{count}</span></button>;
+  return <button type="button" aria-pressed={active} onClick={onClick} className={filterChipClassName(active)}>{children}<span className={active ? "ml-1 opacity-70" : "ml-1 text-muted-foreground"}>{count}</span></button>;
 }
 
 function EmptyAds() {
