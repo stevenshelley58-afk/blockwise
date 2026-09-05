@@ -4878,15 +4878,6 @@ async function handleMediaCollector(job) {
   return { status: "complete", result: { handler: "blockwise-media-collector", ad_creative_id: payload.adCreativeId, seeded, captured, failed, model_calls: 0 } };
 }
 
-async function findCapturedMediaAssetByStorage({ creativeId, storagePath, excludeId }) {
-  if (!creativeId || !storagePath) return null;
-  const rows = await rest(
-    "research",
-    `media_assets?select=id&ad_creative_id=eq.${encode(creativeId)}&storage_bucket=eq.${encode(mediaBucket)}&storage_path=eq.${encode(storagePath)}&capture_status=eq.captured&id=neq.${encode(excludeId)}&limit=1`,
-  );
-  return rows?.[0] || null;
-}
-
 async function loadCreativeForMediaCapture(adCreativeId) {
   const rows = await rest("research", `ad_creatives?select=id,observed_ad_id,ad_snapshot_id,primary_image_url,image_urls,video_url,video_thumbnail_url&id=eq.${adCreativeId}&limit=1`);
   return rows?.[0] || null;
@@ -5037,83 +5028,7 @@ async function captureMediaAsset(asset, buildRunId) {
   return archived;
 }
 
-async function findMediaBlob(contentHash) {
-  try {
-    const rows = await rest("research", `media_blobs?select=content_hash,storage_bucket,storage_path,content_type,byte_size&content_hash=eq.${encode(contentHash)}&limit=1`);
-    return rows?.[0] || null;
-  } catch (error) {
-    if (missingSchemaRelation(error, "media_blobs")) return null;
-    throw error;
-  }
-}
-
-async function touchMediaBlob(contentHash) {
-  try {
-    await rest("research", `media_blobs?content_hash=eq.${encode(contentHash)}`, {
-      method: "PATCH",
-      body: json({
-        last_seen_at: now(),
-      }),
-    });
-  } catch (error) {
-    if (!missingSchemaRelation(error, "media_blobs")) throw error;
-  }
-}
-
-async function insertMediaBlob({ contentHash, storagePath, contentType, byteSize, asset, buildRunId }) {
-  try {
-    await rest("research", "media_blobs?on_conflict=content_hash", {
-      method: "POST",
-      headers: { Prefer: "resolution=merge-duplicates" },
-      body: json({
-        content_hash: contentHash,
-        storage_bucket: mediaBucket,
-        storage_path: storagePath,
-        content_type: contentType,
-        byte_size: byteSize,
-        first_captured_at: now(),
-        last_seen_at: now(),
-        metadata: {
-          first_media_asset_id: asset.id,
-          first_ad_creative_id: asset.ad_creative_id,
-          first_observed_ad_id: asset.observed_ad_id,
-          source_url: asset.source_url,
-          build_run_id: buildRunId,
-        },
-      }),
-    });
-  } catch (error) {
-    if (!missingSchemaRelation(error, "media_blobs")) throw error;
-  }
-}
-
-let mediaBucketEnsured = false;
 let rawEvidenceBucketEnsured = false;
-
-async function ensureMediaBucket() {
-  if (mediaBucketEnsured) return;
-  try {
-    await storage(`bucket/${encode(mediaBucket)}`);
-    try {
-      await storage(`bucket/${encode(mediaBucket)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: json({ public: true, file_size_limit: 104_857_600 }),
-      });
-    } catch {
-      // Existing bucket policy may be managed outside this worker.
-    }
-    mediaBucketEnsured = true;
-    return;
-  } catch {
-    await storage("bucket", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: json({ id: mediaBucket, name: mediaBucket, public: true, file_size_limit: 104_857_600 }),
-    });
-    mediaBucketEnsured = true;
-  }
-}
 
 async function ensureRawEvidenceBucket() {
   if (rawEvidenceBucketEnsured) return;
