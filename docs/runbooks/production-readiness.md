@@ -1,5 +1,20 @@
 # Blockwise production readiness
 
+## Template font release (5 September 2026)
+
+The product app now serves revision
+`d39771a94134c28081185bcf93a8d5e1947a39a4`, built with the protected
+environment's public build configuration (not placeholder login keys).
+Template-declared fonts use authenticated asset URLs, template/file-scoped
+font families, and retryable loading. Every Design/Feed/Story/detail canvas
+receives the same asset declarations. Blockwise's existing styling is unchanged.
+
+Checks: typecheck passed; nine focused editor/font tests passed; authenticated
+customer-navigation Playwright passed five tests on the isolated canary and
+five on production, none skipped. Product health verified the exact serving SHA.
+This is editor/runtime acceptance, not visual approval of a generated template.
+Previous app `7af704c66343cd53e580e306b5d7fbf4b6657bc9` remains the rollback.
+
 Status: controlled production is health-ready. Serving application revision
 `7af704c66343cd53e580e306b5d7fbf4b6657bc9` (image
 `blockwise-app:7af704c66343cd53e580e306b5d7fbf4b6657bc9`, image ID
