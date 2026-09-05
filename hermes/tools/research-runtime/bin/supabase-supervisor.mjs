@@ -4152,8 +4152,9 @@ async function upsertMediaAssets({ creativeId, observedAdId, snapshotId, mediaSo
   let count = 0;
   for (const source of mediaSources) {
     if (!source.source_url || !/^https?:\/\//iu.test(source.source_url)) continue;
-    const existing = await rest("research", `media_assets?select=id&ad_creative_id=eq.${creativeId}&source_url=eq.${encode(source.source_url)}&limit=1`);
+    const existing = await rest("research", `media_assets?select=id,capture_status,archive_object_id,archive_verified_at&ad_creative_id=eq.${creativeId}&source_url=eq.${encode(source.source_url)}&limit=1`);
     if (existing?.[0]?.id) {
+      if (existing[0].capture_status === "captured" && existing[0].archive_object_id && existing[0].archive_verified_at) { count += 1; continue; }
       await patchMediaAsset(existing[0].id, { kind: source.kind, capture_status: "pending", last_error: null });
     } else {
       try {
@@ -4170,8 +4171,9 @@ async function upsertMediaAssets({ creativeId, observedAdId, snapshotId, mediaSo
         });
       } catch (error) {
         if (!isMediaAssetUniqueConflict(error)) throw error;
-        const raced = await rest("research", `media_assets?select=id&ad_creative_id=eq.${creativeId}&source_url=eq.${encode(source.source_url)}&limit=1`);
+        const raced = await rest("research", `media_assets?select=id,capture_status,archive_object_id,archive_verified_at&ad_creative_id=eq.${creativeId}&source_url=eq.${encode(source.source_url)}&limit=1`);
         if (!raced?.[0]?.id) throw error;
+        if (raced[0].capture_status === "captured" && raced[0].archive_object_id && raced[0].archive_verified_at) { count += 1; continue; }
         await patchMediaAsset(raced[0].id, { kind: source.kind, capture_status: "pending", last_error: null });
       }
     }
@@ -4847,122 +4849,33 @@ async function handleAdCollector(job) {
 
 async function handleMediaCollector(job) {
   const payload = job.payload || {};
-  if (!payload.adCreativeId || !payload.observedAdId) {
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuid.test(payload.adCreativeId || "") || !uuid.test(payload.observedAdId || "")) {
     return { status: "blocked", blocked_reason: "media_collector_missing_creative", result: { handler: "blockwise-media-collector" } };
   }
-  let assets = await rest("research", `media_assets?select=*&ad_creative_id=eq.${payload.adCreativeId}&capture_status=in.(pending,failed)&order=created_at.asc&limit=20`);
+  const load = () => rest("research", "media_assets?select=*&ad_creative_id=eq." + payload.adCreativeId + "&observed_ad_id=eq." + payload.observedAdId + "&capture_status=in.(pending,failed)&order=created_at.asc&limit=20");
+  let assets = await load();
   let seeded = 0;
   if (!assets.length) {
     const creative = await loadCreativeForMediaCapture(payload.adCreativeId);
-    if (creative) {
-      seeded = await upsertMediaAssets({
-        creativeId: creative.id,
-        observedAdId: creative.observed_ad_id || payload.observedAdId,
-        snapshotId: creative.ad_snapshot_id || null,
-        mediaSources: mediaSourcesFromCreative(creative),
-      });
-      assets = await rest("research", `media_assets?select=*&ad_creative_id=eq.${payload.adCreativeId}&capture_status=in.(pending,failed)&order=created_at.asc&limit=20`);
+    if (creative && creative.observed_ad_id === payload.observedAdId) {
+      seeded = await upsertMediaAssets({ creativeId: creative.id, observedAdId: payload.observedAdId, snapshotId: creative.ad_snapshot_id || null, mediaSources: mediaSourcesFromCreative(creative) });
+      assets = await load();
     }
   }
-  let captured = 0;
-  let failed = 0;
-  let deduped = 0;
-  let refreshed = 0;
-  let qualityBlocked = 0;
-  const buildRunId = await resolveBuildRunId(payload.build_run_id, payload.buildRunId);
+  let captured = 0, failed = 0;
   for (const asset of assets) {
     try {
-      const stored = await captureMediaAsset(asset, buildRunId);
-      if (stored.rejected) {
-        await patchMediaAsset(asset.id, {
-          storage_bucket: null,
-          storage_path: null,
-          content_type: stored.contentType,
-          byte_size: stored.byteSize,
-          width: stored.width,
-          height: stored.height,
-          capture_status: "blocked",
-          captured_at: now(),
-          last_error: `Media quality rejected: ${stored.rejectionReason}`,
-          metadata: {
-            ...(asset.metadata && typeof asset.metadata === "object" ? asset.metadata : {}),
-            media_quality_rejection: stored.rejectionReason,
-          },
-        });
-        qualityBlocked += 1;
-        continue;
-      }
-      const existingStoredAsset = await findCapturedMediaAssetByStorage({
-        creativeId: payload.adCreativeId,
-        storagePath: stored.storagePath,
-        excludeId: asset.id,
-      });
-      if (existingStoredAsset) {
-        await patchMediaAsset(asset.id, {
-          storage_bucket: null,
-          storage_path: null,
-          content_type: stored.contentType,
-          byte_size: stored.byteSize,
-          width: stored.width,
-          height: stored.height,
-          checksum: stored.checksum,
-          content_hash: stored.contentHash,
-          capture_status: "blocked",
-          captured_at: now(),
-          last_error: `Deduped to media asset ${existingStoredAsset.id}`,
-          metadata: {
-            ...(asset.metadata && typeof asset.metadata === "object" ? asset.metadata : {}),
-            deduped_to_media_asset_id: existingStoredAsset.id,
-            deduped_storage_path: stored.storagePath,
-          },
-        });
-        deduped += 1;
-        continue;
-      }
-      await patchMediaAsset(asset.id, {
-        storage_bucket: mediaBucket,
-        storage_path: stored.storagePath,
-        content_type: stored.contentType,
-        byte_size: stored.byteSize,
-        width: stored.width,
-        height: stored.height,
-        checksum: stored.checksum,
-        content_hash: stored.contentHash,
-        capture_status: "captured",
-        captured_at: now(),
-        last_error: null,
-      });
+      // The archive RPC owns capture status and object metadata atomically.
+      // Do not overwrite it with legacy public-bucket paths or enqueue AI.
+      await captureMediaAsset(asset, payload.build_run_id || payload.buildRunId);
       captured += 1;
-      if (stored.deduped) deduped += 1;
     } catch (error) {
-      if (isDeadMediaSourceError(error)) {
-        const freshUrl = await freshMediaUrlForAsset(asset).catch(() => null);
-        if (freshUrl) {
-          await patchMediaAsset(asset.id, {
-            source_url: freshUrl,
-            capture_status: "pending",
-            last_error: `URL refreshed from saved ad payload after: ${error.message}`,
-          });
-          refreshed += 1;
-          continue;
-        }
-      }
       await patchMediaAsset(asset.id, { capture_status: "failed", last_error: error.message });
       failed += 1;
     }
   }
-  await refreshCreativeStoredMedia(payload.adCreativeId);
-  await enqueueFollowUp({
-    queue_name: "research",
-    job_type: "blockwise-ad-classifier",
-    dedupe_key: `classifier:${payload.adCreativeId}:media:${CLASSIFIER_VERSION}:${Date.now()}`,
-    advertiser_page_id: job.advertiser_page_id || null,
-    priority: 5,
-    payload: { adCreativeId: payload.adCreativeId, observedAdId: payload.observedAdId, build_run_id: buildRunId, classifier_version: CLASSIFIER_VERSION },
-    status: "pending",
-    max_attempts: 3,
-  }, job);
-  return { status: "complete", result: { handler: "blockwise-media-collector", ad_creative_id: payload.adCreativeId, seeded, captured, deduped, refreshed, quality_blocked: qualityBlocked, failed } };
+  return { status: "complete", result: { handler: "blockwise-media-collector", ad_creative_id: payload.adCreativeId, seeded, captured, failed, model_calls: 0 } };
 }
 
 async function findCapturedMediaAssetByStorage({ creativeId, storagePath, excludeId }) {
@@ -5110,92 +5023,18 @@ async function handleAdClassifier(job) {
 }
 
 async function captureMediaAsset(asset, buildRunId) {
-  // The archive worker is the only path allowed to mark an asset captured.
-  if (!asset.source_url || !/^https?:\/\//iu.test(asset.source_url)) throw new Error("media asset has no downloadable source_url");
-  await ensureMediaBucket();
-async function runVerifiedMediaArchive(assetId) {
   const cliPath = env.HERMES_MEDIA_ARCHIVE_CLI_PATH || join(dirname(new URL(import.meta.url).pathname), "media-archive.mjs");
   await new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [cliPath, "--asset-id", String(assetId)], { stdio: ["ignore", "pipe", "pipe"] });
-    let stderr = "";
-    child.stderr.on("data", (chunk) => { stderr += String(chunk); });
+    const child = spawn(process.execPath, [cliPath, "--asset-id", String(asset.id)], { stdio: ["ignore", "ignore", "ignore"] });
     child.once("error", reject);
-    child.once("close", (code) => code === 0 ? resolve() : reject(new Error(`media archive failed (${code}): ${stderr.slice(-500)}`)));
+    child.once("close", (code) => code === 0 ? resolve() : reject(new Error("media archive failed: " + code)));
   });
-  const rows = await rest("research", `media_assets?select=storage_path,storage_bucket,content_type,byte_size,checksum,content_hash,width,height,capture_status&id=eq.${encode(assetId)}&limit=1`);
-  const asset = rows?.[0];
-  if (asset?.capture_status !== "captured" || !asset.storage_path || !(asset.checksum || asset.content_hash) || !Number(asset.byte_size)) {
-    throw new Error("media archive did not produce a verified captured asset");
+  const rows = await rest("research", "v_ad_db_archived_media?select=id,observed_ad_id,content_hash,byte_size,object_key&id=eq." + encode(asset.id) + "&observed_ad_id=eq." + encode(asset.observed_ad_id) + "&limit=1");
+  const archived = rows?.[0];
+  if (!archived || !/^[a-f0-9]{64}$/.test(archived.content_hash) || archived.object_key !== "sha256/" + archived.content_hash || !(Number(archived.byte_size) > 0)) {
+    throw new Error("archive worker did not produce a verified object for this ad");
   }
-  return { rejected: false, storagePath: asset.storage_path, contentType: asset.content_type, byteSize: asset.byte_size, checksum: asset.checksum, contentHash: asset.content_hash || asset.checksum, width: asset.width, height: asset.height, deduped: false };
-}
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), metaCaptureTimeoutMs);
-  try {
-    const response = await fetch(asset.source_url, {
-      signal: controller.signal,
-      headers: {
-        "user-agent": "Mozilla/5.0 (compatible; BlockwiseHermesResearch/1.0)",
-        accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,video/*,*/*;q=0.8",
-      },
-    });
-    if (!response.ok) throw new Error(`media fetch failed ${response.status}`);
-    const contentType = response.headers.get("content-type")?.split(";")[0]?.trim() || "application/octet-stream";
-    const buffer = Buffer.from(await response.arrayBuffer());
-    if (!buffer.length) throw new Error("media fetch returned an empty body");
-    const imageDimensions = asset.kind === "image" ? readImageDimensions(buffer, contentType) : null;
-    const imageQuality = asset.kind === "image"
-      ? assessCapturedImageQuality({ byteSize: buffer.length, ...imageDimensions })
-      : { displayable: true, reason: null };
-    if (!imageQuality.displayable) {
-      return {
-        rejected: true,
-        rejectionReason: imageQuality.reason,
-        contentType,
-        byteSize: buffer.length,
-        width: imageDimensions?.width ?? null,
-        height: imageDimensions?.height ?? null,
-      };
-    }
-    const checksum = hash(buffer);
-    const existingBlob = await findMediaBlob(checksum);
-    if (existingBlob) {
-      await touchMediaBlob(checksum);
-      return {
-        storagePath: existingBlob.storage_path,
-        contentType: existingBlob.content_type || contentType,
-        byteSize: existingBlob.byte_size || buffer.length,
-        width: imageDimensions?.width ?? null,
-        height: imageDimensions?.height ?? null,
-        checksum,
-        contentHash: checksum,
-        deduped: true,
-      };
-    }
-    const storagePath = `media-blobs/${checksum}${extensionForContentType(contentType, asset.kind)}`;
-    await uploadStorageObject(mediaBucket, storagePath, buffer, contentType);
-    await insertMediaBlob({
-      contentHash: checksum,
-      storagePath,
-      contentType,
-      byteSize: buffer.length,
-      asset,
-      buildRunId,
-    });
-    return {
-      storagePath,
-      contentType,
-      byteSize: buffer.length,
-      width: imageDimensions?.width ?? null,
-      height: imageDimensions?.height ?? null,
-      checksum,
-      contentHash: checksum,
-      deduped: false,
-      rejected: false,
-    };
-  } finally {
-    clearTimeout(timeout);
-  }
+  return archived;
 }
 
 async function findMediaBlob(contentHash) {
