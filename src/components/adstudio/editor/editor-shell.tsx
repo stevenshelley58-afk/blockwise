@@ -67,9 +67,9 @@ export interface EditorShellProps {
 
 type InspectorTab = "creative" | "copy" | "colours";
 const INSPECTOR_TABS: Array<{ value: InspectorTab; label: string; icon: typeof PencilLine }> = [
-  { value: "creative", label: "Visual", icon: PencilLine },
-  { value: "copy", label: "Ad copy", icon: AlignLeft },
-  { value: "colours", label: "Colours", icon: Palette },
+  { value: "creative", label: "Media", icon: PencilLine },
+  { value: "copy", label: "Content", icon: AlignLeft },
+  { value: "colours", label: "Appearance", icon: Palette },
 ];
 
 export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColours = null, brandBusinessName = "", libraryAssets, brandLogoUrl = null, initialDocument, initialRevision, adName = "Untitled ad" }: EditorShellProps) {
@@ -89,6 +89,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     updateCustomColour,
     setTemplateCopyApplied,
     updateBusinessName,
+    updateDestinationUrl,
     undo,
     redo,
     markSaved,
@@ -105,7 +106,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   const [proposalBusy, setProposalBusy] = useState(false);
   const [pendingImageUploads, setPendingImageUploads] = useState(0);
   const [saveConflict, setSaveConflict] = useState(false);
-  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("creative");
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("copy");
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
   const imageUploadTokens = useRef(new Map<string, number>());
   const [pendingCropKey, setPendingCropKey] = useState<string | null>(null);
@@ -375,6 +376,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     openCropForInput={openCropForInput}
     updateTextValue={updateTextValue}
     updateMetaCopy={updateMetaCopy}
+    updateDestinationUrl={updateDestinationUrl}
     updateCrop={updateCrop}
     setError={setError}
     cropTarget={cropTarget}
@@ -391,10 +393,10 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   />;
 }
 
-function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandColours, brandBusinessName, brandLogoUrl, libraryAssets, canSave, canUndo, canRedo, saveConflict, pendingImageUploads, inspectorTab, setInspectorTab, mobileInspectorOpen, setMobileInspectorOpen, handleSave, handlePublish, handleKeyDown, undo, redo, setActivePlacement, selectLayer, handleColourModeChange, handleCustomColourChange, handleTemplateCopyChange, handleBusinessNameChange, handleLibraryPick, handleImageChange, openCrop, openCropForInput, updateTextValue, updateMetaCopy, updateCrop, setError, cropTarget, setCropTarget, proposalBrief, setProposalBrief, proposal, proposalBusy, proposeCopy, useAllProposal, name, setName, persistName }: {
+function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandColours, brandBusinessName, brandLogoUrl, libraryAssets, canSave, canUndo, canRedo, saveConflict, pendingImageUploads, inspectorTab, setInspectorTab, mobileInspectorOpen, setMobileInspectorOpen, handleSave, handlePublish, handleKeyDown, undo, redo, setActivePlacement, selectLayer, handleColourModeChange, handleCustomColourChange, handleTemplateCopyChange, handleBusinessNameChange, handleLibraryPick, handleImageChange, openCrop, openCropForInput, updateTextValue, updateMetaCopy, updateDestinationUrl, updateCrop, setError, cropTarget, setCropTarget, proposalBrief, setProposalBrief, proposal, proposalBusy, proposeCopy, useAllProposal, name, setName, persistName }: {
   pack: AdTemplate; adId: string; templateId: string; state: EditorState; activeLayout: AdTemplate["feedLayout"]; brandColours: BrandPackColours | null; brandBusinessName: string; brandLogoUrl: string | null; libraryAssets?: Array<{ id: string; url: string; label: string }>; canSave: boolean; canUndo: boolean; canRedo: boolean; saveConflict: boolean; pendingImageUploads: number;
   inspectorTab: InspectorTab; setInspectorTab: (value: InspectorTab) => void; mobileInspectorOpen: boolean; setMobileInspectorOpen: (value: boolean) => void; handleSave: () => Promise<boolean>; handlePublish: () => Promise<void>; handleKeyDown: (event: KeyboardEvent) => void; undo: () => void; redo: () => void; setActivePlacement: (value: Placement) => void; selectLayer: (value: string | null) => void;
-  handleColourModeChange: (mode: ColourMode) => void; handleCustomColourChange: (role: ColourRole, hex: string) => void; handleTemplateCopyChange: (enabled: boolean) => void; handleBusinessNameChange: (value: string) => void; handleLibraryPick: (key: string, sourceAssetId: string) => Promise<void>; handleImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; openCrop: (slot: ImageSlotLayer) => void; openCropForInput: (key: string) => void; updateTextValue: (key: string, value: string) => void; updateMetaCopy: (field: keyof MetaCopy, value: string) => void; updateCrop: (key: string, placement: Placement, crop: Rect) => void; setError: (value: string | null) => void;
+  handleColourModeChange: (mode: ColourMode) => void; handleCustomColourChange: (role: ColourRole, hex: string) => void; handleTemplateCopyChange: (enabled: boolean) => void; handleBusinessNameChange: (value: string) => void; handleLibraryPick: (key: string, sourceAssetId: string) => Promise<void>; handleImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; openCrop: (slot: ImageSlotLayer) => void; openCropForInput: (key: string) => void; updateTextValue: (key: string, value: string) => void; updateMetaCopy: (field: keyof MetaCopy, value: string) => void; updateDestinationUrl: (value: string) => void; updateCrop: (key: string, placement: Placement, crop: Rect) => void; setError: (value: string | null) => void;
   cropTarget: { slot: ImageSlotLayer; placement: Placement } | null; setCropTarget: (value: { slot: ImageSlotLayer; placement: Placement } | null) => void; proposalBrief: string; setProposalBrief: (value: string) => void; proposal: { onImage: Record<string, string>; copy: Partial<MetaCopy>; source: string } | null; proposalBusy: boolean; proposeCopy: () => Promise<void>; useAllProposal: () => void;
   name: string; setName: (value: string) => void; persistName: () => Promise<void>;
 }) {
@@ -407,7 +409,7 @@ function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandCo
   }));
   const previewImages = { ...defaultImageValues, ...customerImageValues };
   const previewCopy = previewTextValues(pack, state.textValues);
-  const [previewMode, setPreviewMode] = useState<"design" | "meta" | "split">("design");
+  const [previewMode, setPreviewMode] = useState<"design" | "meta" | "split">("meta");
   const [zoom, setZoom] = useState<"fit" | 1 | 1.25 | 0.8>("fit");
   const [placementView, setPlacementView] = useState<Placement | "both">(state.activePlacement);
   const [inspectorOpen, setInspectorOpen] = useState(true);
@@ -422,6 +424,7 @@ function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandCo
     copy: state.metaCopy,
     businessName: state.brandBusinessName.trim() || brandBusinessName,
     logoUrl: brandLogoUrl,
+    destinationUrl: state.destinationUrl,
   } as const;
   const feedMetaPreview = (
     <FeedPreview
@@ -440,7 +443,7 @@ function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandCo
     />
   );
   const metaPreview = state.activePlacement === "feed" ? feedMetaPreview : storyMetaPreview;
-  const inspector = <InspectorContent tab={inspectorTab} pack={pack} state={state} defaultImageValues={defaultImageValues} brandColours={brandColours} brandBusinessName={brandBusinessName} libraryAssets={libraryAssets} onTextChange={updateTextValue} onImageChange={handleImageChange} onCropClick={openCropForInput} onMetaChange={updateMetaCopy} onColourModeChange={handleColourModeChange} onCustomColourChange={handleCustomColourChange} onTemplateCopyChange={handleTemplateCopyChange} onBusinessNameChange={handleBusinessNameChange} onLibraryPick={handleLibraryPick} proposalBrief={proposalBrief} proposal={proposal} proposalBusy={proposalBusy} onBriefChange={setProposalBrief} onPropose={proposeCopy} onUseAllProposal={useAllProposal} />;
+  const inspector = <InspectorContent tab={inspectorTab} pack={pack} state={state} defaultImageValues={defaultImageValues} brandColours={brandColours} brandBusinessName={brandBusinessName} libraryAssets={libraryAssets} onTextChange={updateTextValue} onImageChange={handleImageChange} onCropClick={openCropForInput} onMetaChange={updateMetaCopy} onDestinationChange={updateDestinationUrl} onColourModeChange={handleColourModeChange} onCustomColourChange={handleCustomColourChange} onTemplateCopyChange={handleTemplateCopyChange} onBusinessNameChange={handleBusinessNameChange} onLibraryPick={handleLibraryPick} proposalBrief={proposalBrief} proposal={proposal} proposalBusy={proposalBusy} onBriefChange={setProposalBrief} onPropose={proposeCopy} onUseAllProposal={useAllProposal} />;
   const saveStatus = pendingImageUploads > 0 ? "Uploading…" : state.isSaving ? "Saving…" : state.isDirty ? "Unsaved changes" : state.lastSavedRevision !== null ? "Saved" : "Not saved yet";
   const workingLayout = state.activePlacement === "feed" ? pack.feedLayout : pack.storyLayout;
   const selectedLayer = workingLayout.layers.find(layer => layer.layerId === state.selectedLayerId) ?? null;
@@ -454,6 +457,18 @@ function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandCo
     setInspectorOpen(true);
     setLayersOpen(false);
   };
+  const editLayer = (placement: Placement, layerId: string) => {
+    setActivePlacement(placement);
+    selectLayer(layerId);
+    const layout = placement === "feed" ? pack.feedLayout : pack.storyLayout;
+    const layer = layout.layers.find((candidate) => candidate.layerId === layerId);
+    const tab: InspectorTab = layer?.type === "text" ? "copy" : layer?.type === "image_slot" || layer?.type === "logo" ? "creative" : "colours";
+    openInspector(tab);
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 1279px)").matches) setMobileInspectorOpen(true);
+    if (layer && "inputKey" in layer) {
+      window.setTimeout(() => document.getElementById(`creative-${layer.inputKey}`)?.focus(), 80);
+    }
+  };
   const canvasFor = (placement: Placement, canvasZoom: "fit" | 0.8 | 1 | 1.25 = zoom, interactive = true) => (
     <DesignCanvas
       templateId={templateId}
@@ -465,8 +480,7 @@ function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandCo
       textValues={previewCopy}
       cropOverrides={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.crops[placement]]))}
       selectedLayerId={interactive && placement === state.activePlacement ? state.selectedLayerId : null}
-      onSelect={interactive ? layerId => { setActivePlacement(placement); selectLayer(layerId); } : undefined}
-      onCropImage={interactive && placement === state.activePlacement ? openCrop : undefined}
+      onSelect={interactive ? layerId => { if (layerId) editLayer(placement, layerId); } : undefined}
       zoom={canvasZoom}
     />
   );
@@ -482,12 +496,12 @@ function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandCo
       <nav className="hidden w-16 shrink-0 flex-col items-center gap-1 border-r border-white/10 bg-(--ink) py-3 text-white xl:flex" aria-label="Canvas tools">
         <EditorToolButton label="Select" icon={MousePointer2} active={!layersOpen && !inspectorOpen} onClick={() => { selectLayer(null); setLayersOpen(false); setInspectorOpen(false); }} />
         <EditorToolButton label="Media" icon={ImageIcon} active={!layersOpen && inspectorOpen && inspectorTab === "creative"} onClick={() => openInspector("creative")} />
-        <EditorToolButton label="Copy" icon={Type} active={!layersOpen && inspectorOpen && inspectorTab === "copy"} onClick={() => openInspector("copy")} />
-        <EditorToolButton label="Colours" icon={Palette} active={!layersOpen && inspectorOpen && inspectorTab === "colours"} onClick={() => openInspector("colours")} />
+        <EditorToolButton label="Content" icon={Type} active={!layersOpen && inspectorOpen && inspectorTab === "copy"} onClick={() => openInspector("copy")} />
+        <EditorToolButton label="Appearance" icon={Palette} active={!layersOpen && inspectorOpen && inspectorTab === "colours"} onClick={() => openInspector("colours")} />
         <div className="my-1 h-px w-7 bg-white/10" />
         <EditorToolButton label="Layers" icon={Layers3} active={layersOpen} onClick={() => { setLayersOpen(value => !value); setInspectorOpen(false); }} />
       </nav>
-      {layersOpen ? <LayersPanel pack={pack} layout={workingLayout} selectedLayerId={state.selectedLayerId} onSelect={selectLayer} onClose={() => setLayersOpen(false)} /> : null}
+      {layersOpen ? <LayersPanel pack={pack} layout={workingLayout} selectedLayerId={state.selectedLayerId} onSelect={(layerId) => { if (layerId) editLayer(state.activePlacement, layerId); }} onClose={() => setLayersOpen(false)} /> : null}
       <section aria-label="Ad canvas" className="relative order-first flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center bg-(--ink) p-3 md:p-4 xl:order-none">
         <div className="z-10 flex shrink-0 flex-wrap items-center justify-center gap-1 rounded-full border border-white/10 bg-(--surface) p-1 shadow-float" role="radiogroup" aria-label="Preview mode">
           {([["design", "Design"], ["meta", "Meta preview"], ["split", "Split"]] as const).map(([value, label]) => (
@@ -506,7 +520,7 @@ function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandCo
             </button>
           ))}
         </div>
-        {previewMode === "design" && selectedLayer ? <div className="absolute left-1/2 top-16 z-10 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-(--surface) p-1 pl-3 shadow-float"><span className="max-w-40 truncate text-xs font-semibold">{layerLabel(selectedLayer, pack)}</span><Button type="button" variant="ghost" size="sm" className="h-9 rounded-full" onClick={() => openInspector("creative")}>Edit</Button>{selectedLayer.type === "image_slot" ? <Button type="button" variant="ghost" size="sm" className="h-9 rounded-full" onClick={() => openCrop(selectedLayer)}><Crop className="size-3.5" /> Crop</Button> : null}</div> : null}
+        {previewMode === "design" && selectedLayer ? <div className="absolute left-1/2 top-16 z-10 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-(--surface) p-1 pl-3 shadow-float"><span className="max-w-40 truncate text-xs font-semibold">{layerLabel(selectedLayer, pack)}</span><Button type="button" variant="ghost" size="sm" className="h-9 rounded-full" onClick={() => editLayer(state.activePlacement, selectedLayer.layerId)}>Edit</Button>{selectedLayer.type === "image_slot" ? <Button type="button" variant="ghost" size="sm" className="h-9 rounded-full" onClick={() => openCrop(selectedLayer)}><Crop className="size-3.5" /> Crop</Button> : null}</div> : null}
         {previewMode === "design" ? (
           placementView === "both" ? <div className="grid min-h-0 w-full flex-1 grid-cols-1 gap-3 overflow-auto md:grid-cols-2 md:overflow-hidden"><PlacementCanvas label="Feed" active={state.activePlacement === "feed"}>{canvasFor("feed", "fit")}</PlacementCanvas><PlacementCanvas label="Story" active={state.activePlacement === "story"}>{canvasFor("story", "fit")}</PlacementCanvas></div> : canvasFor(placementView)
         ) : previewMode === "meta" ? (
@@ -516,9 +530,9 @@ function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandCo
       </section>
       {inspectorOpen ? <aside aria-label="Editor inspector" className="hidden w-[22rem] shrink-0 overflow-y-auto border-l border-border bg-card xl:block"><InspectorTabs value={inspectorTab} onChange={setInspectorTab} />{inspector}</aside> : null}
     </div>
-    <nav className="z-20 grid shrink-0 grid-cols-5 border-t border-border bg-card p-1.5 xl:hidden" aria-label="Editor tools">{INSPECTOR_TABS.map(({ value, label, icon: Icon }) => <button key={value} type="button" aria-pressed={inspectorTab === value && mobileInspectorOpen} onClick={() => { setInspectorTab(value); setMobileLayersOpen(false); setMobileInspectorOpen(true); }} className={cn("flex min-h-11 items-center justify-center gap-1 rounded-full px-1 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", inspectorTab === value && mobileInspectorOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>{<Icon className="size-4" />}{label === "Ad copy" ? "Copy" : label}</button>)}<button type="button" aria-pressed={mobileLayersOpen} onClick={() => { setMobileInspectorOpen(false); setMobileLayersOpen(true); }} className={cn("flex min-h-11 items-center justify-center gap-1 rounded-full px-1 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", mobileLayersOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}><Layers3 className="size-4" />Layers</button><button type="button" aria-pressed={previewMode === "meta" && !mobileInspectorOpen && !mobileLayersOpen} onClick={() => { setPreviewMode("meta"); setMobileInspectorOpen(false); setMobileLayersOpen(false); }} className={cn("flex min-h-11 items-center justify-center gap-1 rounded-full px-1 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", previewMode === "meta" && !mobileInspectorOpen && !mobileLayersOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}><Eye className="size-4" />Preview</button></nav>
+    <nav className="z-20 grid shrink-0 grid-cols-5 border-t border-border bg-card p-1.5 xl:hidden" aria-label="Editor tools">{INSPECTOR_TABS.map(({ value, label, icon: Icon }) => <button key={value} type="button" aria-pressed={inspectorTab === value && mobileInspectorOpen} onClick={() => { setInspectorTab(value); setMobileLayersOpen(false); setMobileInspectorOpen(true); }} className={cn("flex min-h-11 items-center justify-center gap-1 rounded-full px-1 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", inspectorTab === value && mobileInspectorOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>{<Icon className="size-4" />}{label}</button>)}<button type="button" aria-pressed={mobileLayersOpen} onClick={() => { setMobileInspectorOpen(false); setMobileLayersOpen(true); }} className={cn("flex min-h-11 items-center justify-center gap-1 rounded-full px-1 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", mobileLayersOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}><Layers3 className="size-4" />Layers</button><button type="button" aria-pressed={previewMode === "meta" && !mobileInspectorOpen && !mobileLayersOpen} onClick={() => { setPreviewMode("meta"); setMobileInspectorOpen(false); setMobileLayersOpen(false); }} className={cn("flex min-h-11 items-center justify-center gap-1 rounded-full px-1 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", previewMode === "meta" && !mobileInspectorOpen && !mobileLayersOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}><Eye className="size-4" />Preview</button></nav>
     <Sheet open={mobileInspectorOpen} onOpenChange={setMobileInspectorOpen}><SheetContent side="bottom" className="max-h-[82dvh] overflow-y-auto rounded-t-(--r-card) p-0 xl:hidden"><SheetHeader><SheetTitle>{INSPECTOR_TABS.find(tab => tab.value === inspectorTab)?.label}</SheetTitle><SheetDescription>Make one change at a time; your preview updates as you work.</SheetDescription></SheetHeader>{inspector}</SheetContent></Sheet>
-    <Sheet open={mobileLayersOpen} onOpenChange={setMobileLayersOpen}><SheetContent side="bottom" className="max-h-[70dvh] overflow-y-auto rounded-t-(--r-card) p-0 xl:hidden"><SheetHeader><SheetTitle>Layers</SheetTitle><SheetDescription>Select an element to edit it on the canvas.</SheetDescription></SheetHeader><LayersPanel pack={pack} layout={workingLayout} selectedLayerId={state.selectedLayerId} onSelect={layerId => { selectLayer(layerId); setMobileLayersOpen(false); }} /></SheetContent></Sheet>
+    <Sheet open={mobileLayersOpen} onOpenChange={setMobileLayersOpen}><SheetContent side="bottom" className="max-h-[70dvh] overflow-y-auto rounded-t-(--r-card) p-0 xl:hidden"><SheetHeader><SheetTitle>Layers</SheetTitle><SheetDescription>Select an element to edit it on the canvas.</SheetDescription></SheetHeader><LayersPanel pack={pack} layout={workingLayout} selectedLayerId={state.selectedLayerId} onSelect={layerId => { if (layerId) editLayer(state.activePlacement, layerId); setMobileLayersOpen(false); }} /></SheetContent></Sheet>
     {cropTarget && <CropDialogHost cropTarget={cropTarget} state={state} pack={pack} onApply={updateCrop} onClose={() => setCropTarget(null)} />}
     {state.error && <Alert variant="destructive" role="alert" className="m-3"><AlertTitle>Check this before continuing</AlertTitle><AlertDescription className="flex items-center justify-between gap-3"><span>{state.error}</span><Button variant="outline" size="sm" onClick={() => saveConflict ? window.location.reload() : setError(null)} className="min-h-11 shrink-0">{saveConflict ? "Reload latest" : "Dismiss"}</Button></AlertDescription></Alert>}
   </div>;
@@ -575,10 +589,10 @@ function InspectorTabs({ value, onChange }: { value: InspectorTab; onChange: (va
   return <Tabs value={value} onValueChange={next => onChange(next as InspectorTab)} className="border-b border-border p-3"><TabsList aria-label="Editor sections" className="grid h-auto w-full grid-cols-3 gap-1 bg-muted/50 p-1">{INSPECTOR_TABS.map(({ value: tab, label, icon: Icon }) => <TabsTrigger key={tab} value={tab} className="min-h-11 justify-center gap-2 px-2 text-xs"><Icon className="size-4" />{label}</TabsTrigger>)}</TabsList></Tabs>;
 }
 
-function InspectorContent({ tab, pack, state, defaultImageValues, brandColours, brandBusinessName, libraryAssets, onTextChange, onImageChange, onCropClick, onMetaChange, onColourModeChange, onCustomColourChange, onTemplateCopyChange, onBusinessNameChange, onLibraryPick, proposalBrief, proposal, proposalBusy, onBriefChange, onPropose, onUseAllProposal }: { tab: InspectorTab; pack: AdTemplate; state: EditorState; defaultImageValues: Record<string, string>; brandColours: BrandPackColours | null; brandBusinessName: string; libraryAssets?: Array<{ id: string; url: string; label: string }>; onTextChange: (key: string, value: string) => void; onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; onCropClick: (key: string) => void; onMetaChange: (field: keyof MetaCopy, value: string) => void; onColourModeChange: (mode: ColourMode) => void; onCustomColourChange: (role: ColourRole, hex: string) => void; onTemplateCopyChange: (enabled: boolean) => void; onBusinessNameChange: (value: string) => void; onLibraryPick: (key: string, sourceAssetId: string) => Promise<void>; proposalBrief: string; proposal: { onImage: Record<string, string>; copy: Partial<MetaCopy>; source: string } | null; proposalBusy: boolean; onBriefChange: (value: string) => void; onPropose: () => Promise<void>; onUseAllProposal: () => void }) {
-  if (tab === "copy") return <div><ProposalPanel brief={proposalBrief} proposal={proposal} textLabels={Object.fromEntries(pack.textInputs.map(input => [input.key, input.label]))} busy={proposalBusy} onBriefChange={onBriefChange} onPropose={onPropose} onUseAll={onUseAllProposal} onUseText={onTextChange} onUseMeta={onMetaChange} /><MetaCopyPanel values={state.metaCopy} onChange={onMetaChange} /></div>;
+function InspectorContent({ tab, pack, state, defaultImageValues, brandColours, brandBusinessName, libraryAssets, onTextChange, onImageChange, onCropClick, onMetaChange, onDestinationChange, onColourModeChange, onCustomColourChange, onTemplateCopyChange, onBusinessNameChange, onLibraryPick, proposalBrief, proposal, proposalBusy, onBriefChange, onPropose, onUseAllProposal }: { tab: InspectorTab; pack: AdTemplate; state: EditorState; defaultImageValues: Record<string, string>; brandColours: BrandPackColours | null; brandBusinessName: string; libraryAssets?: Array<{ id: string; url: string; label: string }>; onTextChange: (key: string, value: string) => void; onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; onCropClick: (key: string) => void; onMetaChange: (field: keyof MetaCopy, value: string) => void; onDestinationChange: (value: string) => void; onColourModeChange: (mode: ColourMode) => void; onCustomColourChange: (role: ColourRole, hex: string) => void; onTemplateCopyChange: (enabled: boolean) => void; onBusinessNameChange: (value: string) => void; onLibraryPick: (key: string, sourceAssetId: string) => Promise<void>; proposalBrief: string; proposal: { onImage: Record<string, string>; copy: Partial<MetaCopy>; source: string } | null; proposalBusy: boolean; onBriefChange: (value: string) => void; onPropose: () => Promise<void>; onUseAllProposal: () => void }) {
+  if (tab === "copy") return <div><ProposalPanel brief={proposalBrief} proposal={proposal} textLabels={Object.fromEntries(pack.textInputs.map(input => [input.key, input.label]))} busy={proposalBusy} onBriefChange={onBriefChange} onPropose={onPropose} onUseAll={onUseAllProposal} onUseText={onTextChange} onUseMeta={onMetaChange} /><InputsPanel textInputs={pack.textInputs} imageInputs={[]} textValues={state.textValues} imageValues={{}} defaultImageValues={{}} onTextChange={onTextChange} onImageChange={onImageChange} onCropClick={onCropClick} templateCopyApplied={state.templateCopyApplied} templateCopyAvailable={hasTemplateCopy(pack)} onTemplateCopyChange={onTemplateCopyChange} businessName={state.brandBusinessName} businessNameDefault={brandBusinessName} onBusinessNameChange={onBusinessNameChange} showImageInputs={false} /><MetaCopyPanel values={state.metaCopy} onChange={onMetaChange} destinationUrl={state.destinationUrl} onDestinationChange={onDestinationChange} /></div>;
   if (tab === "colours") return <aside aria-label="Colours" className="space-y-4 border-t border-border p-4"><div><h3 className="text-sm font-semibold">Colours</h3><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Choose the colours that feel right for this ad.</p></div><ColourToggle mode={state.colourMode} brandPackAvailable={!!brandColours} resolvedColourMap={state.resolvedColourMap} onModeChange={onColourModeChange} onCustomColourChange={onCustomColourChange} /></aside>;
-  return <InputsPanel textInputs={pack.textInputs} imageInputs={pack.imageInputs} textValues={state.textValues} imageValues={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.previewUrl ?? iv.dataUrl]))} defaultImageValues={defaultImageValues} onTextChange={onTextChange} onImageChange={onImageChange} onCropClick={onCropClick} templateCopyApplied={state.templateCopyApplied} templateCopyAvailable={hasTemplateCopy(pack)} onTemplateCopyChange={onTemplateCopyChange} businessName={state.brandBusinessName} businessNameDefault={brandBusinessName} onBusinessNameChange={onBusinessNameChange} libraryAssets={libraryAssets} onLibraryPick={onLibraryPick} />;
+  return <InputsPanel textInputs={[]} imageInputs={pack.imageInputs} textValues={{}} imageValues={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.previewUrl ?? iv.dataUrl]))} defaultImageValues={defaultImageValues} onTextChange={onTextChange} onImageChange={onImageChange} onCropClick={onCropClick} libraryAssets={libraryAssets} onLibraryPick={onLibraryPick} showTextInputs={false} showTemplateControls={false} showBusinessName={false} />;
 }
 
 function ProposalPanel({
@@ -611,11 +625,11 @@ function ProposalPanel({
     cta: "Call to action",
   };
   return (
-    <section aria-label="Copy suggestions" className={cn("mt-6 border-t border-border pt-4", className)}>
+    <section aria-label="Copy suggestions" className={cn("p-4", className)}>
       <div>
-        <h3 className="mb-2 px-2 text-sm font-semibold text-foreground">AI brief</h3>
+        <h3 className="mb-2 text-sm font-semibold text-foreground">AI Copy Assist</h3>
         <div className="mt-3">
-      <p className="mb-3 text-xs leading-relaxed text-muted-foreground">Generate a draft to review. Nothing changes until you apply it. Limits: primary {META_COPY_CONSTRAINTS.primaryText}, headline {META_COPY_CONSTRAINTS.headline}, description {META_COPY_CONSTRAINTS.description}, CTA {META_COPY_CONSTRAINTS.cta} characters.</p>
+      <p className="mb-3 text-xs leading-relaxed text-muted-foreground">Describe the ad once. AI uses this brief, your Brand Pack and the template guidance to propose every on-image and Meta field. Nothing changes until you choose Use all or a field.</p>
       <label htmlFor="copy-suggestion-brief" className="mb-1 block text-sm font-medium text-foreground">What should the ad say?</label>
       <textarea id="copy-suggestion-brief" value={brief} onChange={event => onBriefChange(event.target.value)} rows={4} placeholder="Describe the property, offer or audience…" className="min-h-24 w-full rounded-(--r-card) border border-input bg-muted/30 px-3 py-2 text-base shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50" />
       <button type="button" onClick={onPropose} disabled={busy} className="mt-2 min-h-11 h-auto w-full justify-start rounded-full bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{busy ? "Generating…" : "Generate copy"}</button>

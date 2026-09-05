@@ -182,6 +182,7 @@ export async function loadAdStudioLibraryPage(input: {
         status: deriveAdLibraryStatus({
           publishStatus: metaPlan?.status,
           mutationActions: metaPlan ? mutationsByPlan.get(String(metaPlan.id)) : [],
+          hasSavedRevision: Boolean(revision),
         }),
       });
     }

@@ -16,7 +16,7 @@ import {
 } from "@/lib/adstudio/library-contract";
 import type { LibraryAdModel } from "@/lib/adstudio/library-read-model";
 
-const STATUS_ORDER: AdLibraryStatus[] = ["saved", "created_on_meta_paused", "active", "ended"];
+const STATUS_ORDER: AdLibraryStatus[] = ["draft", "saved", "created_on_meta_paused", "active", "ended"];
 type SortMode = "recent" | "name" | "status";
 
 type AdsLibraryProps = {

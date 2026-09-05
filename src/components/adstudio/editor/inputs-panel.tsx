@@ -52,6 +52,10 @@ export interface InputsPanelProps {
   libraryAssets?: Array<{ id?: string; url: string; label: string }>;
   /** Picks a library asset for an image slot. */
   onLibraryPick?: (key: string, sourceAssetId: string) => void | Promise<void>;
+  showTextInputs?: boolean;
+  showImageInputs?: boolean;
+  showTemplateControls?: boolean;
+  showBusinessName?: boolean;
 }
 
 export function InputsPanel({
@@ -72,6 +76,10 @@ export function InputsPanel({
   onBusinessNameChange,
   libraryAssets,
   onLibraryPick,
+  showTextInputs = true,
+  showImageInputs = true,
+  showTemplateControls = true,
+  showBusinessName = true,
 }: InputsPanelProps) {
   const requiredImageInputs = imageInputs.filter(input => input.required !== false);
   const optionalImageInputs = imageInputs.filter(input => input.required === false);
@@ -80,13 +88,13 @@ export function InputsPanel({
   return (
     <aside aria-label="Creative" className={cn("w-full shrink-0 overflow-y-auto bg-card p-4 xl:w-auto", className)}>
       <h3 className="mb-3 text-sm font-semibold text-foreground">
-        Creative
+        {showImageInputs && !showTextInputs ? "Images" : "Content"}
       </h3>
       <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
         These values fill both the Feed and Story designs — edit once, both update.
       </p>
 
-      {templateCopyAvailable && onTemplateCopyChange ? (
+      {showTemplateControls && templateCopyAvailable && onTemplateCopyChange ? (
         <div className="mb-4 flex min-h-11 items-start gap-2.5 rounded-(--r-card) border border-border px-3 py-2.5">
           <Checkbox
             id="use-template-copy"
@@ -108,7 +116,7 @@ export function InputsPanel({
         </div>
       ) : null}
 
-      {onBusinessNameChange ? (
+      {showBusinessName && onBusinessNameChange ? (
         <div className="mb-5">
           <Label htmlFor="creative-business-name" className="mb-1 block text-sm font-medium">
             Business name
@@ -130,7 +138,7 @@ export function InputsPanel({
         </div>
       ) : null}
 
-      <section aria-label="Text">
+      {showTextInputs ? <section aria-label="Text">
         <h4 className="mb-2 text-xs font-semibold text-foreground">Text</h4>
         {textInputs.length === 0 ? (
           <p className="mb-4 text-xs text-muted-foreground">This template has no text inputs.</p>
@@ -159,9 +167,9 @@ export function InputsPanel({
             })}
           </div>
         )}
-      </section>
+      </section> : null}
 
-      <section aria-label="Images">
+      {showImageInputs ? <section aria-label="Images">
         <h4 className="mb-2 text-xs font-semibold text-foreground">Images</h4>
         {imageInputs.length === 0 ? (
           <p className="mb-4 text-xs text-muted-foreground">This template has no image slots.</p>
@@ -211,7 +219,7 @@ export function InputsPanel({
           Images are stored privately in your workspace and reused when you
           reopen this ad. They are never added to the public gallery.
         </p>
-      </section>
+      </section> : null}
     </aside>
   );
 }
@@ -286,7 +294,7 @@ function ImageSlotControl({
   ) : null;
 
   return (
-    <div>
+    <div id={`creative-${input.key}`} tabIndex={-1}>
       <span className="mb-1 flex items-center justify-between gap-2 text-sm font-medium text-foreground">
         <span>{input.label}</span>
         <span className="text-[11px] font-normal text-muted-foreground">{input.required === false ? "Optional" : "Required"}</span>

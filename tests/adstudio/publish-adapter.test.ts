@@ -367,6 +367,7 @@ function publishState(): PublishLoadResult {
       metaHeadline: "Free seller guide",
       metaDescription: "Practical Perth seller guide",
       metaCta: "LEARN_MORE",
+      destinationUrl: "https://example.com/guide",
     },
     revision: {
       id: "revision_123",

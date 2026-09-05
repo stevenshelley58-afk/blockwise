@@ -174,6 +174,7 @@ export function LayeredCanvas({
           cropOverrides,
         });
         if (!object || renderVersionRef.current !== version) continue;
+        applyFabricAppearance(object, layer, fabric, colours, resolveGeometry(layer.geometry, PLACEMENT_DIMENSIONS[layout.placement]));
         canvas.add(object);
         layerTargetsRef.current.set(layer.layerId, { layer, object });
         targetIdsRef.current.set(object, layer.layerId);
@@ -280,7 +281,8 @@ async function createLayerObject({
   }
 
   if (layer.type === "text") {
-    const source = textValues[layer.inputKey] ?? "";
+    const rawSource = textValues[layer.inputKey] ?? "";
+    const source = layer.case === "upper" ? rawSource.toUpperCase() : layer.case === "lower" ? rawSource.toLowerCase() : rawSource;
     if (layer.overflowBehaviour === "refuse" && source.length > layer.maxCharacters) return null;
     const text = source.slice(0, layer.maxCharacters);
     await ensureLocalFont(layer.font);
@@ -293,6 +295,8 @@ async function createLayerObject({
       width: geometry.width,
       height: geometry.height,
       fontFamily: fontStem(layer.font.file),
+      fontWeight: layer.fontWeight ?? "normal",
+      fontStyle: layer.italic ? "italic" : "normal",
       fontSize,
       lineHeight: layer.lineHeight,
       charSpacing: fabricCharSpacing(layer.tracking, fontSize),
@@ -325,7 +329,7 @@ async function createLayerObject({
       return polygon;
     }
     if (layer.shape === "ring") return new fabric.Circle({ left: geometry.x + geometry.width / 2, top: geometry.y + geometry.height / 2, originX: "center", originY: "center", radius: Math.min(geometry.width, geometry.height) / 2, fill: "", stroke: colour, strokeWidth: Math.max(2, Math.min(geometry.width, geometry.height) * .08), opacity: layer.opacity ?? 1, ...interactive });
-    const radius = layer.shape === "pill" ? Math.min(geometry.width, geometry.height) / 2 : layer.shape === "rounded" ? Math.min(16, geometry.width / 4, geometry.height / 4) : 0;
+    const radius = layer.shape === "pill" ? Math.min(geometry.width, geometry.height) / 2 : layer.cornerRadius ?? (layer.shape === "rounded" ? Math.min(16, geometry.width / 4, geometry.height / 4) : 0);
     if (layer.shape === "circle") {
       return new fabric.Circle({ ...fabricCircleGeometry(geometry), fill: colour, opacity: layer.opacity ?? 1, ...interactive });
     }
@@ -365,7 +369,7 @@ async function createLayerObject({
     if (layer.type === "logo") {
       return new fabric.Rect({ ...fabricRectGeometry(geometry), rx: Math.min(12, geometry.height / 3), ry: Math.min(12, geometry.height / 3), fill: "#f1f2f4", stroke: "#d3d7df", strokeWidth: 2, ...interactive });
     }
-    const radius = layer.mask === "rounded_rect" ? imageMaskRadius(geometry) : 0;
+    const radius = layer.mask === "rounded_rect" ? layer.cornerRadius ?? imageMaskRadius(geometry) : 0;
     if (layer.mask === "circle") {
       return new fabric.Circle({
         ...fabricCircleGeometry(geometry),
@@ -408,6 +412,60 @@ function fitImageToGeometry(image: import("fabric").FabricImage, geometry: Rect)
   });
 }
 
+function applyFabricAppearance(
+  object: FabricObject,
+  layer: LayoutLayer,
+  fabric: typeof import("fabric"),
+  colours: AdTemplate["semanticColours"],
+  geometry: Rect,
+) {
+  const effects = layer.effects;
+  const opacity = "opacity" in layer && typeof layer.opacity === "number" ? layer.opacity : 1;
+  object.set({
+    opacity,
+    globalCompositeOperation: effects?.blendMode ?? "source-over",
+  });
+  if (effects?.rotationDegrees) {
+    const centre = object.getCenterPoint();
+    object.set({ originX: "center", originY: "center", left: centre.x, top: centre.y, angle: effects.rotationDegrees });
+  } else {
+    object.set("angle", 0);
+  }
+  if (effects?.shadow) {
+    object.set("shadow", new fabric.Shadow({
+      color: colourWithOpacity(colours[effects.shadow.colourRole] ?? "#000000", effects.shadow.opacity),
+      blur: effects.shadow.blur,
+      offsetX: effects.shadow.offsetX,
+      offsetY: effects.shadow.offsetY,
+    }));
+  }
+  if (effects?.stroke) object.set({
+    stroke: colourWithOpacity(colours[effects.stroke.colourRole] ?? "#000000", effects.stroke.opacity),
+    strokeWidth: effects.stroke.width,
+  });
+  if ("fill" in layer && layer.fill && !(object instanceof fabric.FabricImage)) {
+    const radians = layer.fill.angleDegrees * Math.PI / 180;
+    const length = Math.abs(geometry.width * Math.cos(radians)) + Math.abs(geometry.height * Math.sin(radians));
+    const cx = geometry.width / 2;
+    const cy = geometry.height / 2;
+    const dx = Math.cos(radians) * length / 2;
+    const dy = Math.sin(radians) * length / 2;
+    object.set("fill", new fabric.Gradient({
+      type: "linear",
+      gradientUnits: "pixels",
+      coords: { x1: cx - dx, y1: cy - dy, x2: cx + dx, y2: cy + dy },
+      colorStops: layer.fill.stops.map((stop) => ({ offset: stop.offset, color: colourWithOpacity(colours[stop.colourRole] ?? "#000000", stop.opacity) })),
+    }));
+  }
+}
+
+function colourWithOpacity(colour: string, opacity: number): string {
+  const match = /^#([0-9a-f]{6})$/i.exec(colour.trim());
+  if (!match) return colour;
+  const value = Number.parseInt(match[1]!, 16);
+  return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${Math.min(1, Math.max(0, opacity))})`;
+}
+
 function cropImageToGeometry(image: import("fabric").FabricImage, geometry: Rect, rawCrop: Rect) {
   const element = image.getElement() as HTMLImageElement;
   const sourceWidth = Math.max(1, element.naturalWidth || image.width);
@@ -447,6 +505,6 @@ function maskForSlot(fabric: typeof import("fabric"), layer: ImageSlotLayer, geo
       absolutePositioned: true,
     });
   }
-  const radius = layer.mask === "rounded_rect" ? imageMaskRadius(geometry) : 0;
+  const radius = layer.mask === "rounded_rect" ? layer.cornerRadius ?? imageMaskRadius(geometry) : 0;
   return new fabric.Rect({ ...fabricRectGeometry(geometry), rx: radius, ry: radius, absolutePositioned: true });
 }

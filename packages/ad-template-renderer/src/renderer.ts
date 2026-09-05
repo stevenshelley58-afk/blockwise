@@ -171,15 +171,21 @@ export function resolveRenderGeometry(geometry: Rect, dims: CanvasDimensions): R
 
 async function renderPlate(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "plate" }>, input: RenderInput, dims: CanvasDimensions): Promise<void> {
   const geometry = resolveRenderGeometry(layer.geometry, dims);
+  ctx.save();
+  applyLayerEffects(ctx, layer, input, geometry);
   if (layer.assetKey) {
     const bytes = input.imageValues[layer.assetKey];
     if (!bytes) throw new Error(`Missing immutable plate asset: ${layer.assetKey}`);
     const image = await loadImage(bytes);
     ctx.drawImage(image, geometry.x, geometry.y, geometry.width, geometry.height);
+    strokeLayerRect(ctx, layer, input, geometry, layer.cornerRadius ?? 0);
+    ctx.restore();
     return;
   }
-  ctx.fillStyle = input.colourMap[layer.colourRole] ?? "#FFFFFF";
-  ctx.fillRect(geometry.x, geometry.y, geometry.width, geometry.height);
+  ctx.fillStyle = resolveLayerFill(ctx, layer, input, geometry, input.colourMap[layer.colourRole] ?? "#FFFFFF");
+  fillLayerRect(ctx, geometry, layer.cornerRadius ?? 0);
+  strokeLayerRect(ctx, layer, input, geometry, layer.cornerRadius ?? 0);
+  ctx.restore();
 }
 
 const registeredFontFiles = new Set<string>();
@@ -201,20 +207,22 @@ function registerTemplateFonts(template: AdTemplate, fontValues: Record<string, 
 
 async function renderOverlay(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "overlay_patch" }>, input: RenderInput, dims: CanvasDimensions): Promise<void> {
   const geometry = resolveRenderGeometry(layer.geometry, dims);
+  ctx.save();
+  applyLayerEffects(ctx, layer, input, geometry);
+  ctx.globalAlpha = Math.min(1, Math.max(0, layer.opacity));
   if (layer.assetKey) {
     const bytes = input.imageValues[layer.assetKey];
     if (!bytes) throw new Error(`Missing immutable overlay asset: ${layer.assetKey}`);
     const image = await loadImage(bytes);
-    ctx.save();
-    ctx.globalAlpha = Math.min(1, Math.max(0, layer.opacity));
     ctx.drawImage(image, geometry.x, geometry.y, geometry.width, geometry.height);
+    strokeLayerRect(ctx, layer, input, geometry, layer.cornerRadius ?? 0);
     ctx.restore();
     return;
   }
-  ctx.globalAlpha = Math.min(1, Math.max(0, layer.opacity));
-  ctx.fillStyle = input.colourMap[layer.colourRole] ?? "#000000";
-  ctx.fillRect(geometry.x, geometry.y, geometry.width, geometry.height);
-  ctx.globalAlpha = 1;
+  ctx.fillStyle = resolveLayerFill(ctx, layer, input, geometry, input.colourMap[layer.colourRole] ?? "#000000");
+  fillLayerRect(ctx, geometry, layer.cornerRadius ?? 0);
+  strokeLayerRect(ctx, layer, input, geometry, layer.cornerRadius ?? 0);
+  ctx.restore();
 }
 
 async function renderImageSlot(ctx: SKRSContext2D, layer: ImageSlotLayer, input: RenderInput, dims: CanvasDimensions): Promise<void> {
@@ -229,8 +237,10 @@ async function renderImageSlot(ctx: SKRSContext2D, layer: ImageSlotLayer, input:
   const sh = crop.height * img.height;
 
   ctx.save();
+  applyLayerEffects(ctx, layer, input, geometry);
+  ctx.globalAlpha = Math.min(1, Math.max(0, layer.opacity ?? 1));
   if (layer.mask === "rounded_rect") {
-    roundRect(ctx, geometry.x, geometry.y, geometry.width, geometry.height, imageMaskRadius(geometry));
+    roundRect(ctx, geometry.x, geometry.y, geometry.width, geometry.height, layer.cornerRadius ?? imageMaskRadius(geometry));
     ctx.clip();
   } else if (layer.mask === "circle") {
     ctx.beginPath();
@@ -240,6 +250,7 @@ async function renderImageSlot(ctx: SKRSContext2D, layer: ImageSlotLayer, input:
     ctx.clip();
   }
   ctx.drawImage(img, sx, sy, sw, sh, geometry.x, geometry.y, geometry.width, geometry.height);
+  strokeLayerRect(ctx, layer, input, geometry, layer.cornerRadius ?? (layer.mask === "rounded_rect" ? imageMaskRadius(geometry) : 0), layer.mask === "circle");
   ctx.restore();
 }
 
@@ -295,6 +306,8 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, pl
 
   const { textLayer, geometry, fontSize, lines, trackingPixels } = prepared;
   ctx.save();
+  applyLayerEffects(ctx, layer, input, geometry);
+  ctx.globalAlpha = Math.min(1, Math.max(0, layer.opacity ?? 1));
   ctx.fillStyle = input.colourMap[layer.colourRole] ?? "#000000";
   ctx.textAlign = layer.alignment;
   ctx.textBaseline = "alphabetic";
@@ -317,6 +330,12 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, pl
     trackingPixels,
     layer.alignment,
   ));
+  if (layer.effects?.stroke) {
+    const stroke = layer.effects.stroke;
+    ctx.strokeStyle = colourWithOpacity(input.colourMap[stroke.colourRole] ?? "#000000", stroke.opacity);
+    ctx.lineWidth = stroke.width;
+    lines.forEach((line, index) => drawTrackedText(ctx, line, x, baseline + index * fontSize * layer.lineHeight, trackingPixels, layer.alignment, true));
+  }
   ctx.restore();
 }
 
@@ -500,10 +519,11 @@ function paintedHeight(ctx: SKRSContext2D, lines: string[], fontSize: number, li
   return ascent + descent + Math.max(0, lines.length - 1) * fontSize * lineHeight;
 }
 
-function drawTrackedText(ctx: SKRSContext2D, text: string, x: number, y: number, trackingPixels: number, align: TextLayer["alignment"]): void {
+function drawTrackedText(ctx: SKRSContext2D, text: string, x: number, y: number, trackingPixels: number, align: TextLayer["alignment"], stroke = false): void {
   if (text.length === 0) return;
   if (trackingPixels === 0) {
-    ctx.fillText(text, x, y);
+    if (stroke) ctx.strokeText(text, x, y);
+    else ctx.fillText(text, x, y);
     return;
   }
   const glyphs = graphemes(text);
@@ -512,7 +532,8 @@ function drawTrackedText(ctx: SKRSContext2D, text: string, x: number, y: number,
   const previousAlign = ctx.textAlign;
   ctx.textAlign = "left";
   for (const glyph of glyphs) {
-    ctx.fillText(glyph, cursor, y);
+    if (stroke) ctx.strokeText(glyph, cursor, y);
+    else ctx.fillText(glyph, cursor, y);
     cursor += ctx.measureText(glyph).width + trackingPixels;
   }
   ctx.textAlign = previousAlign;
@@ -557,14 +578,82 @@ async function renderLogo(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type
   if (!imageBuf) return;
   const img = await loadImage(imageBuf);
   const geometry = resolveRenderGeometry(layer.geometry, dims);
+  ctx.save();
+  applyLayerEffects(ctx, layer, input, geometry);
+  ctx.globalAlpha = Math.min(1, Math.max(0, layer.opacity ?? 1));
+  if ((layer.cornerRadius ?? 0) > 0) { roundRect(ctx, geometry.x, geometry.y, geometry.width, geometry.height, layer.cornerRadius!); ctx.clip(); }
   ctx.drawImage(img, geometry.x, geometry.y, geometry.width, geometry.height);
+  strokeLayerRect(ctx, layer, input, geometry, layer.cornerRadius ?? 0);
+  ctx.restore();
+}
+
+function applyLayerEffects(ctx: SKRSContext2D, layer: LayoutLayer, input: RenderInput, geometry: Rect): void {
+  const effects = layer.effects;
+  if (!effects) return;
+  if (effects.blendMode) ctx.globalCompositeOperation = effects.blendMode;
+  if (effects.rotationDegrees) {
+    const cx = geometry.x + geometry.width / 2;
+    const cy = geometry.y + geometry.height / 2;
+    ctx.translate(cx, cy);
+    ctx.rotate(effects.rotationDegrees * Math.PI / 180);
+    ctx.translate(-cx, -cy);
+  }
+  if (effects.shadow) {
+    const shadow = effects.shadow;
+    ctx.shadowColor = colourWithOpacity(input.colourMap[shadow.colourRole] ?? "#000000", shadow.opacity);
+    ctx.shadowBlur = shadow.blur;
+    ctx.shadowOffsetX = shadow.offsetX;
+    ctx.shadowOffsetY = shadow.offsetY;
+  }
+}
+
+function resolveLayerFill(ctx: SKRSContext2D, layer: LayoutLayer, input: RenderInput, geometry: Rect, fallback: string): string | CanvasGradient {
+  if (!("fill" in layer) || !layer.fill) return fallback;
+  const radians = layer.fill.angleDegrees * Math.PI / 180;
+  const cx = geometry.x + geometry.width / 2;
+  const cy = geometry.y + geometry.height / 2;
+  const length = Math.abs(geometry.width * Math.cos(radians)) + Math.abs(geometry.height * Math.sin(radians));
+  const dx = Math.cos(radians) * length / 2;
+  const dy = Math.sin(radians) * length / 2;
+  const gradient = ctx.createLinearGradient(cx - dx, cy - dy, cx + dx, cy + dy);
+  for (const stop of layer.fill.stops) gradient.addColorStop(stop.offset, colourWithOpacity(input.colourMap[stop.colourRole] ?? fallback, stop.opacity));
+  return gradient;
+}
+
+function colourWithOpacity(colour: string, opacity: number): string {
+  const match = /^#([0-9a-f]{6})$/i.exec(colour.trim());
+  if (!match) return colour;
+  const value = Number.parseInt(match[1]!, 16);
+  return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${Math.min(1, Math.max(0, opacity))})`;
+}
+
+function fillLayerRect(ctx: SKRSContext2D, geometry: Rect, radius: number): void {
+  if (radius > 0) { roundRect(ctx, geometry.x, geometry.y, geometry.width, geometry.height, Math.min(radius, geometry.width / 2, geometry.height / 2)); ctx.fill(); }
+  else ctx.fillRect(geometry.x, geometry.y, geometry.width, geometry.height);
+}
+
+function strokeLayerRect(ctx: SKRSContext2D, layer: LayoutLayer, input: RenderInput, geometry: Rect, radius: number, circle = false): void {
+  const stroke = layer.effects?.stroke;
+  if (!stroke) return;
+  ctx.save();
+  ctx.shadowColor = "transparent";
+  ctx.strokeStyle = colourWithOpacity(input.colourMap[stroke.colourRole] ?? "#000000", stroke.opacity);
+  ctx.lineWidth = stroke.width;
+  if (circle) {
+    ctx.beginPath();
+    ctx.arc(geometry.x + geometry.width / 2, geometry.y + geometry.height / 2, Math.min(geometry.width, geometry.height) / 2, 0, Math.PI * 2);
+  } else roundRect(ctx, geometry.x, geometry.y, geometry.width, geometry.height, Math.min(radius, geometry.width / 2, geometry.height / 2));
+  ctx.stroke();
+  ctx.restore();
 }
 
 function renderVector(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "vector" }>, input: RenderInput, dims: CanvasDimensions): void {
   ctx.save();
+  const geometry = resolveRenderGeometry(layer.geometry, dims);
+  applyLayerEffects(ctx, layer, input, geometry);
   ctx.globalAlpha = Math.min(1, Math.max(0, layer.opacity));
-  ctx.fillStyle = input.colourMap[layer.colourRole] ?? "#000000";
-  const { x, y, width, height } = resolveRenderGeometry(layer.geometry, dims);
+  ctx.fillStyle = resolveLayerFill(ctx, layer, input, geometry, input.colourMap[layer.colourRole] ?? "#000000");
+  const { x, y, width, height } = geometry;
   if (layer.shape === "ring") {
     const squareTolerance = Math.max(1, Math.min(width, height) * 0.01);
     if (Math.abs(width - height) > squareTolerance) {
@@ -576,13 +665,22 @@ function renderVector(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "v
     ctx.beginPath();
     ctx.arc(x + width / 2, y + height / 2, Math.min(width, height) / 2, 0, Math.PI * 2);
     if (layer.shape === "ring") {
-      ctx.strokeStyle = ctx.fillStyle as string;
-      ctx.lineWidth = Math.max(2, Math.min(width, height) * .08);
+      const authoredStroke = layer.effects?.stroke;
+      ctx.strokeStyle = authoredStroke ? colourWithOpacity(input.colourMap[authoredStroke.colourRole] ?? "#000000", authoredStroke.opacity) : ctx.fillStyle;
+      ctx.lineWidth = authoredStroke?.width ?? Math.max(2, Math.min(width, height) * .08);
       ctx.stroke();
-    } else ctx.fill();
+    } else {
+      ctx.fill();
+      if (layer.effects?.stroke) {
+        ctx.strokeStyle = colourWithOpacity(input.colourMap[layer.effects.stroke.colourRole] ?? "#000000", layer.effects.stroke.opacity);
+        ctx.lineWidth = layer.effects.stroke.width;
+        ctx.stroke();
+      }
+    }
   } else if (layer.shape === "line" || layer.shape === "wave") {
-    ctx.strokeStyle = ctx.fillStyle as string;
-    ctx.lineWidth = 2;
+    const authoredStroke = layer.effects?.stroke;
+    ctx.strokeStyle = authoredStroke ? colourWithOpacity(input.colourMap[authoredStroke.colourRole] ?? "#000000", authoredStroke.opacity) : ctx.fillStyle;
+    ctx.lineWidth = authoredStroke?.width ?? 2;
     ctx.beginPath();
     if (layer.shape === "wave") {
       ctx.moveTo(x, y + height / 2);
@@ -605,9 +703,12 @@ function renderVector(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "v
   } else if (layer.shape === "notched") {
     const notch = Math.min(width, height) * .2;
     ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + width - notch, y); ctx.lineTo(x + width, y + notch); ctx.lineTo(x + width, y + height); ctx.lineTo(x + notch, y + height); ctx.lineTo(x, y + height - notch); ctx.closePath(); ctx.fill();
+    if (layer.effects?.stroke) { ctx.strokeStyle = colourWithOpacity(input.colourMap[layer.effects.stroke.colourRole] ?? "#000000", layer.effects.stroke.opacity); ctx.lineWidth = layer.effects.stroke.width; ctx.stroke(); }
   } else {
-    roundRect(ctx, x, y, width, height, layer.shape === "pill" ? Math.min(width, height) / 2 : layer.shape === "rounded" ? Math.min(16, width / 4, height / 4) : 0);
+    const radius = layer.shape === "pill" ? Math.min(width, height) / 2 : layer.cornerRadius ?? (layer.shape === "rounded" ? Math.min(16, width / 4, height / 4) : 0);
+    roundRect(ctx, x, y, width, height, radius);
     ctx.fill();
+    strokeLayerRect(ctx, layer, input, geometry, radius);
   }
   ctx.restore();
 }
@@ -617,8 +718,11 @@ function renderIcon(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "ico
   const cx = x + width / 2;
   const cy = y + height / 2;
   ctx.save();
-  ctx.strokeStyle = input.colourMap[layer.colourRole] ?? "#000000";
-  ctx.lineWidth = Math.max(2, Math.min(width, height) * 0.1);
+  applyLayerEffects(ctx, layer, input, { x, y, width, height });
+  ctx.globalAlpha = Math.min(1, Math.max(0, layer.opacity ?? 1));
+  const authoredStroke = layer.effects?.stroke;
+  ctx.strokeStyle = authoredStroke ? colourWithOpacity(input.colourMap[authoredStroke.colourRole] ?? "#000000", authoredStroke.opacity) : input.colourMap[layer.colourRole] ?? "#000000";
+  ctx.lineWidth = authoredStroke?.width ?? Math.max(2, Math.min(width, height) * 0.1);
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   ctx.beginPath();

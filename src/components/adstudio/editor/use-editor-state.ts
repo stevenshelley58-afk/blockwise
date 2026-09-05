@@ -132,6 +132,8 @@ export interface EditorState {
    * fallback (or a generic placeholder).
    */
   brandBusinessName: string;
+  /** Website destination displayed in the Meta preview and reused at publish. */
+  destinationUrl: string;
 }
 
 /** True when a save response still covers the editor's current edit snapshot. */
@@ -167,6 +169,7 @@ export const initialEditorState = (pack: AdTemplate): EditorState => {
   templateCopyApplied: false,
   templateFilled: { text: [], meta: [] },
   brandBusinessName: "",
+  destinationUrl: "",
   };
 };
 
@@ -200,6 +203,7 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
       templateCopyApplied: false,
       templateFilled: { text: [], meta: [] },
       brandBusinessName: initialDocument.brandBusinessName ?? "",
+      destinationUrl: initialDocument.destinationUrl ?? "",
     };
   });
   const undoStack = useRef<EditorState[]>([]);
@@ -322,6 +326,16 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
       if (!coalesce) pushUndo(prev);
       lastTextEdit.current = { key: "brandBusinessName", at: now };
       return { ...prev, brandBusinessName: value, isDirty: true, editVersion: (prev.editVersion ?? 0) + 1 };
+    });
+  }, [pushUndo]);
+
+  const updateDestinationUrl = useCallback((value: string) => {
+    setState(prev => {
+      const now = Date.now();
+      const coalesce = lastTextEdit.current?.key === "destinationUrl" && now - lastTextEdit.current.at < 900;
+      if (!coalesce) pushUndo(prev);
+      lastTextEdit.current = { key: "destinationUrl", at: now };
+      return { ...prev, destinationUrl: value, isDirty: true, editVersion: (prev.editVersion ?? 0) + 1 };
     });
   }, [pushUndo]);
 
@@ -453,6 +467,7 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
     updateCustomColour,
     setTemplateCopyApplied,
     updateBusinessName,
+    updateDestinationUrl,
     undo,
     redo,
     markSaved,
@@ -641,6 +656,7 @@ export async function buildAdDocument(state: EditorState): Promise<AdDocumentPar
     metaHeadline: state.metaCopy.headline,
     metaDescription: state.metaCopy.description,
     metaCta: state.metaCopy.cta,
+    ...(state.destinationUrl.trim() ? { destinationUrl: state.destinationUrl.trim() } : {}),
     // Optional override — omitted entirely when empty so old documents and
     // new documents serialize identically when the name is not overridden.
     ...(state.brandBusinessName.trim() ? { brandBusinessName: state.brandBusinessName.trim() } : {}),

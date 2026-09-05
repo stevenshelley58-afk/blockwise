@@ -198,6 +198,10 @@ export async function ingestTemplateArtifact(
   if (!parsed.success) throw new Error("invalid_template_artifact");
 
   const { template, assets } = parsed.data;
+  // The only production import path is the exact-clone generator. Historical
+  // rows remain readable, but every newly imported artifact must arrive with
+  // its completed comparator + two final-review decisions attached.
+  if (!template.metadata.generationReview) throw new Error("template_artifact_review_required");
   const bytesByKey = validateAssetSet(template, assets);
   const metadata = assets.map((asset) => metadataFor(template.templateId, asset));
 

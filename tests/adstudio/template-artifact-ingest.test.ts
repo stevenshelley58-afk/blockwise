@@ -61,6 +61,15 @@ function artifact(assetValues: Array<[string, string, string]> = [["hero", "hero
         publishRequirements: { objective: "OUTCOME_LEADS", specialAdCategory: null, instantForm: { required: false, dependency: null }, destination: { required: false, kind: "none", dependency: null }, requiredCtaTypes: [] },
         replacementAssets: [],
         realAssetRefs: [],
+        generationReview: {
+          process: "exact-clone", sourcePlacement: "feed", targetPlacement: "feed", likenessThreshold: 9.8,
+          comparator: { overall: 9.8, geometry: 9.8, colourEffects: 9.8, compositionCrop: 9.8, typography: 9.8, decision: "ready" },
+          finalReviewers: [
+            { id: "reviewer-one", route: "vision/one", overall: 9.6, minimum: 9.5, decision: "pass" },
+            { id: "reviewer-two", route: "vision/two", overall: 9.7, minimum: 9.5, decision: "pass" },
+          ],
+          warnings: [], fontSubstitution: null,
+        },
       },
     },
     assets: assetValues.map(([assetKey, fileName, value]) => ({

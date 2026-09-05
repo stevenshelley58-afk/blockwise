@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result, { status: result.replayed ? 200 : 201 });
   } catch (error) {
     const code = error instanceof Error ? error.message : "template_artifact_failed";
-    const status = code === "invalid_template_artifact" || code === "template_artifact_assets_mismatch" ? 422
+    const status = code === "invalid_template_artifact" || code === "template_artifact_assets_mismatch" || code === "template_artifact_review_required" ? 422
       : code === "template_artifact_conflict" ? 409 : 500;
     return NextResponse.json({ error: code }, { status });
   }

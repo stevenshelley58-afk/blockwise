@@ -106,7 +106,7 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(inputs, /rounded-\(--r-card\)/);
     assert.match(copy, /id="meta-copy-cta"/);
     assert.match(copy, /border border-input/);
-    assert.match(shell, /AI brief/);
+    assert.match(shell, /AI Copy Assist/);
     assert.match(shell, /Generate copy/);
     assert.match(shell, /Review generated copy/);
     assert.match(shell, /Use all/);

@@ -48,7 +48,7 @@ export interface PublishFlowProps {
   /** True when the ad has no saved revision yet. */
   notSaved: boolean;
   initialState: {
-    ad: { metaPrimaryText: string; metaHeadline: string; metaDescription: string; metaCta: string };
+    ad: { metaPrimaryText: string; metaHeadline: string; metaDescription: string; metaCta: string; destinationUrl: string };
     revision: { id: string; revisionNumber: number; documentHash: string; feedPngHash: string; feedPngPath: string; storyPngHash: string; storyPngPath: string; createdAt?: string };
     form: {
       name: string;
@@ -167,7 +167,7 @@ export function PublishFlow({
   // edits and pins right here. The editor reports when a pin lands.
   const [formPinned, setFormPinned] = useState(() => Boolean(initialState?.form));
   const [formRevision, setFormRevision] = useState<number | null>(() => initialState?.formRevision ?? null);
-  const [destinationUrl, setDestinationUrl] = useState("");
+  const [destinationUrl, setDestinationUrl] = useState(() => initialState?.ad.destinationUrl ?? "");
   const [targetMode, setTargetMode] = useState<PublishTargetMode>("new_campaign_new_adset");
   const [campaignId, setCampaignId] = useState("");
   const [adSetIds, setAdSetIds] = useState("");

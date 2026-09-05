@@ -55,6 +55,7 @@ export interface PublishLoadResult {
     metaHeadline: string;
     metaDescription: string;
     metaCta: string;
+    destinationUrl: string;
   };
   revision: {
     id: string;
@@ -173,7 +174,7 @@ export async function loadPublishState(
   // 2. Load active revision
   const { data: revision, error: revError } = await supabase
     .from("ad_revisions")
-    .select("id, revision_number, document_hash, feed_png_hash, feed_png_path, story_png_hash, story_png_path, created_at")
+    .select("id, revision_number, document_hash, document_json, feed_png_hash, feed_png_path, story_png_hash, story_png_path, created_at")
     .eq("id", ad.active_revision_id)
     .single();
 
@@ -201,6 +202,12 @@ export async function loadPublishState(
     .maybeSingle();
 
   const form = formRow ? (formRow.form_json as InstantForm) : null;
+  const savedDocument = revision.document_json && typeof revision.document_json === "object"
+    ? revision.document_json as Record<string, unknown>
+    : null;
+  const destinationUrl = typeof savedDocument?.destinationUrl === "string"
+    ? savedDocument.destinationUrl
+    : "";
 
   return {
     ad: {
@@ -211,6 +218,7 @@ export async function loadPublishState(
       metaHeadline: ad.meta_headline,
       metaDescription: ad.meta_description,
       metaCta: ad.meta_cta,
+      destinationUrl,
     },
     revision: {
       id: revision.id,

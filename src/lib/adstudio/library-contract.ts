@@ -5,9 +5,10 @@ export function adFormatLabel(hasFeed: boolean, hasStory: boolean): "Feed" | "St
   return "Feed + Story";
 }
 
-export type AdLibraryStatus = "saved" | "created_on_meta_paused" | "active" | "ended";
+export type AdLibraryStatus = "draft" | "saved" | "created_on_meta_paused" | "active" | "ended";
 
 export const AD_LIBRARY_STATUS_LABEL: Record<AdLibraryStatus, string> = {
+  draft: "Draft",
   saved: "Saved",
   created_on_meta_paused: "Created on Meta · Paused",
   active: "Active",
@@ -26,6 +27,7 @@ export function deriveAdLibraryStatus(input: {
   metaConfiguredStatus?: unknown;
   metaEffectiveStatus?: unknown;
   endedAt?: unknown;
+  hasSavedRevision?: boolean;
   mutationActions?: readonly {
     action?: unknown;
     status?: unknown;
@@ -66,6 +68,7 @@ export function deriveAdLibraryStatus(input: {
   if (values.some((value) => ["paused", "paused_live", "created_on_meta_paused", "created_paused"].includes(value))) {
     return "created_on_meta_paused";
   }
+  if (input.hasSavedRevision === false) return "draft";
   return "saved";
 }
 
@@ -98,7 +101,7 @@ export function filterAndSortAds<T extends LibraryAdFilterItem>(
     });
 }
 
-const STATUS_ORDER: AdLibraryStatus[] = ["saved", "created_on_meta_paused", "active", "ended"];
+const STATUS_ORDER: AdLibraryStatus[] = ["draft", "saved", "created_on_meta_paused", "active", "ended"];
 function normalizeStatusValue(value: unknown): string {
   return typeof value === "string" ? value.trim().toLowerCase().replace(/[\s-]+/g, "_") : "";
 }
