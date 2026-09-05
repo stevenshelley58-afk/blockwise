@@ -1,7 +1,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(58);
+select plan(62);
 
 select has_table('public', 'ops_action_capabilities', 'action capability registry exists');
 select has_table('public', 'ops_action_outbox', 'action outbox exists');
@@ -161,6 +161,29 @@ select lives_ok($$ select public.enqueue_ops_action(
 ) $$, 'unsupported action is recorded without execution');
 select is((select status from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888884'), 'rejected', 'unsupported action is rejected explicitly');
 select is((select last_error from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888884'), 'unsupported', 'unsupported reason is persisted safely');
+
+-- The three Mautic flow actions are enqueuable with a safe flowId alias and
+-- remain capability-gated until a verified provider executor registers them.
+update public.workspace_members set role=role
+  where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777';
+select lives_ok($$ select public.enqueue_ops_action(
+  '88888888-8888-4888-8888-8888888888a1', 'ops:test:flow:enroll:gated',
+  '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
+  'flow_enroll', 'profile', '87777777-7777-4777-8777-777777777777',
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', (select ops_version from public.workspace_members where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777'),
+  'Mautic flow executor is not yet verified', now() - interval '1 hour', now() + interval '2 hours',
+  '{"flowId":"welcome-series-v1"}'::jsonb
+) $$, 'flow actions are enqueuable with safe aliases');
+select is((select status from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-8888888888a1'), 'rejected', 'flow action is capability-gated until provider verification');
+select is((select last_error from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-8888888888a1'), 'capability_required', 'flow gating reason is persisted safely');
+select throws_ok($$ select public.enqueue_ops_action(
+  '88888888-8888-4888-8888-8888888888b1', 'ops:test:flow:unsafe',
+  '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
+  'flow_enroll', 'profile', '87777777-7777-4777-8777-777777777777',
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', (select ops_version from public.workspace_members where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777'),
+  'unsafe flow alias test', now() - interval '1 hour', now() + interval '2 hours',
+  '{"flowId":"bad id!"}'::jsonb
+) $$, '22023', 'operations action payload is invalid', 'unsafe flow alias is rejected');
 
 select throws_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888888', 'ops:test:cross-workspace',
