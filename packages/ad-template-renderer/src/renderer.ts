@@ -20,7 +20,7 @@ import {
   measureTrackedTextWidth as measureSharedTrackedTextWidth,
   prepareTextLayout,
   segmentGraphemes,
-} from "./text-layout.js";
+} from "./text-layout.ts";
 
 export interface RenderInput {
   template: AdTemplate;

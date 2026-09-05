@@ -320,9 +320,17 @@ async function createLayerObject({
     if (baseFontSize < readabilityFloor) {
       throw new Error(`${placement} text layer ${layer.layerId} is below the ${readabilityFloor}px readability floor`);
     }
+    const strokePadding = (layer.effects?.stroke?.width ?? 0) / 2;
+    const shadow = layer.effects?.shadow;
+    const shadowPadding = shadow
+      ? shadow.blur + Math.max(Math.abs(shadow.offsetX), Math.abs(shadow.offsetY))
+      : 0;
+    const effectPadding = Math.ceil(Math.max(strokePadding, shadowPadding));
     const textCanvas = document.createElement("canvas");
-    textCanvas.width = Math.max(1, Math.ceil(geometry.width));
-    textCanvas.height = Math.max(1, Math.ceil(geometry.height));
+    textCanvas.width = Math.max(1, Math.ceil(geometry.width + effectPadding * 2));
+    textCanvas.height = Math.max(1, Math.ceil(geometry.height + effectPadding * 2));
+    const insetX = (textCanvas.width - geometry.width) / 2;
+    const insetY = (textCanvas.height - geometry.height) / 2;
     const context = textCanvas.getContext("2d");
     if (!context) throw new Error("The browser could not create a text preview canvas.");
     const family = templateFontFamily(templateId, layer.font.file);
@@ -360,26 +368,25 @@ async function createLayerObject({
       context.shadowOffsetX = shadow.offsetX;
       context.shadowOffsetY = shadow.offsetY;
     }
-    const x = layer.alignment === "center" ? geometry.width / 2 : layer.alignment === "right" ? geometry.width : 0;
+    const x = insetX + (layer.alignment === "center" ? geometry.width / 2
+      : layer.alignment === "right" ? geometry.width : 0);
     prepared.lines.forEach((line, index) => drawBrowserTrackedText(
-      context, line, x, prepared.ascent + index * prepared.fontSize * layer.lineHeight,
+      context, line, x, insetY + prepared.ascent + index * prepared.fontSize * layer.lineHeight,
       prepared.fontSize, prepared.trackingPixels, layer.alignment,
     ));
     if (layer.effects?.stroke) {
       context.strokeStyle = colourWithOpacity(colours[layer.effects.stroke.colourRole] ?? "#000000", layer.effects.stroke.opacity);
       context.lineWidth = layer.effects.stroke.width;
       prepared.lines.forEach((line, index) => drawBrowserTrackedText(
-        context, line, x, prepared.ascent + index * prepared.fontSize * layer.lineHeight,
+        context, line, x, insetY + prepared.ascent + index * prepared.fontSize * layer.lineHeight,
         prepared.fontSize, prepared.trackingPixels, layer.alignment, true,
       ));
     }
     return new fabric.FabricImage(textCanvas, {
-      left: geometry.x,
-      top: geometry.y,
+      left: geometry.x - insetX,
+      top: geometry.y - insetY,
       originX: "left",
       originY: "top",
-      scaleX: geometry.width / textCanvas.width,
-      scaleY: geometry.height / textCanvas.height,
       ...interactive,
     });
   }
