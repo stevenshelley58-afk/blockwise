@@ -1,9 +1,11 @@
 # Blockwise production readiness
 
 Status: controlled production is health-ready. Serving application revision
-`1b50a52f74a7c31ece3cdc02e6a066aae751ccf5` (image `blockwise-app:1b50a52f74a7c31ece3cdc02e6a066aae751ccf5`,
-image ID `sha256:4d28b9c5bd10...`), deployed app-only on 2026-09-05 from the
-cleanup that started at live revision `6f2f92eadc9d7d3b502917d0f59c11c1ed01b1e7`.
+`7af704c66343cd53e580e306b5d7fbf4b6657bc9` (image
+`blockwise-app:7af704c66343cd53e580e306b5d7fbf4b6657bc9`, image ID
+`sha256:16b2c6f5b50d77f47f3cf2d81ab12948d2330e2ba543cbb59e872a942d52ac0b`),
+deployed app-only on 2026-09-05 from the cleanup that started at live revision
+`6f2f92eadc9d7d3b502917d0f59c11c1ed01b1e7`.
 This is not sign-off for provider writes, SMTP, billing, Meta App Review, or
 data migration.
 
@@ -12,22 +14,36 @@ data migration.
 - Repository gates: `npm run check:nul`, `npm run typecheck` exit 0; full
   `npm test` 908 tests, 908 pass, 0 fail (833 root + 54 + 11 + 10 package
   suites), 0 skips. Logs under `/srv/blockwise/e2e-runs/cleanup-20260905/`.
-- Canary: `blockwise-app:1b50a52f...` built from the exact committed SHA,
+- Mobile layout fix: `/self-serve` clipped cards/text at 320–390px because a
+  truncated quick-action subtitle inflated template-less auto grid tracks to
+  418px inside `<main>` (`overflow-x: clip` hid it from
+  `documentElement.scrollWidth`). Fixed with explicit `minmax(0, 1fr)` tracks
+  and a shrinkable quick-action link.
+- Canary: `blockwise-app:7af704c6...` built from the exact committed SHA,
   served at the loopback-only `https://blockwise.sale:19443` with an internal
   certificate; `/api/health` reported the compiled revision.
 - Authenticated Playwright QA (`e2e/customer-navigation.spec.ts`, chromium):
   5 tests passed, 0 failed, 0 skipped, on the canary (controlled-certificate
   exceptions) and again on the public route with normal TLS. Workspace PATCH
   and country-change requests remained mocked; no real data was mutated.
-  Desktop, 390px, and 320px screenshots inspected under
-  `/srv/blockwise/e2e-runs/cleanup-20260905/canary-qa/`.
+- Mobile layout regression evidence: at 320px and 390px the spec asserts
+  `main.scrollWidth <= main.clientWidth` and that every visible card/control
+  rectangle fits inside `main` (elements in designed horizontal scroll
+  containers exempt), with fonts/hydration/count-up settled, consent chosen
+  via "Essential only", and the bottom mobile nav visible and tappable.
+  Screenshots (authenticated Home + Settings at 320px, 390px, desktop) are
+  under `/srv/blockwise/e2e-runs/cleanup-20260905/canary-qa/`; pixel-edge
+  analysis shows content ending exactly at the 16px page padding on mobile.
+  Note: the agent-side image viewer was unavailable (WASM defect), so
+  screenshots were verified by DOM-rectangle assertions, pixel-edge analysis,
+  and OCR text checks rather than human-style visual review.
 - Public verification: `BLOCKWISE_PRODUCT_ENV_FILE=/srv/blockwise/product/.env
-  scripts/vps/product-health.sh 1b50a52f74a7c31ece3cdc02e6a066aae751ccf5`
+  scripts/vps/product-health.sh 7af704c66343cd53e580e306b5d7fbf4b6657bc9`
   passed, and `https://blockwise.sale/api/health` serves that revision.
 - Rollback reference: previous image `blockwise-app:6f2f92ea`
   (`sha256:46747c11fa666df18af2794df464c68b67bccbe666b9bda9a21353ca5bd86e6b`),
   retained source `/projects/blockwise-release-6f2f92ea`, protected-env backup
-  `release/product.env.before-1b50a52f74a7` in
+  `release/product.env.before-7af704c66343` in
   `/srv/blockwise/e2e-runs/cleanup-20260905/`. See [rollback](rollback.md).
 - The serving checkout `/projects/blockwise-cleanup-20260905` is committed and
   clean; its HEAD is a docs-only evidence commit directly after the serving
