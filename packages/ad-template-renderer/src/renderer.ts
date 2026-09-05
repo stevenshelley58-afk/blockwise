@@ -286,6 +286,8 @@ type RenderTextLayer = TextLayer & {
   case?: "upper" | "lower" | "none";
 };
 
+type RuntimeOverflowBehaviour = TextLayer["overflowBehaviour"] | "shrink";
+
 type PreparedText = {
   kind: "paint";
   textLayer: RenderTextLayer;
@@ -374,7 +376,8 @@ function prepareText(
 ): TextPreparation {
   const source = input.textValues[layer.inputKey];
   if (!source) return { kind: "skip" };
-  if (layer.overflowBehaviour === "refuse" && source.length > layer.maxCharacters) return { kind: "skip" };
+  const overflowBehaviour = normalizeOverflowBehaviour(layer);
+  if (overflowBehaviour === "refuse" && source.length > layer.maxCharacters) return { kind: "skip" };
   const textLayer = layer as RenderTextLayer;
   const text = applyTextCase(source.slice(0, layer.maxCharacters), textLayer.case);
   const geometry = resolveRenderGeometry(layer.geometry, dims);
@@ -392,9 +395,9 @@ function prepareText(
   // descenders; truncation gets the same geometry guard while refusal remains
   // strict at the explicit authored size.
   const boxFloor = geometry.height / Math.max(1, layer.maxLines * layer.lineHeight);
-  const minimumSize = layer.overflowBehaviour === "scale_down"
+  const minimumSize = overflowBehaviour === "scale_down"
     ? readabilityFloor
-    : layer.overflowBehaviour === "truncate"
+    : overflowBehaviour === "truncate"
       ? Math.max(readabilityFloor, Math.min(baseFontSize, boxFloor))
       : baseFontSize;
   let fontSize = Math.max(1, baseFontSize);
@@ -409,10 +412,10 @@ function prepareText(
     fits = lines.length <= layer.maxLines && widest <= geometry.width && height <= geometry.height;
     if (fits) break;
   }
-  if (!fits && layer.overflowBehaviour === "refuse") {
+  if (!fits && overflowBehaviour === "refuse") {
     return { kind: "skip" };
   }
-  if (!fits && layer.overflowBehaviour === "scale_down") {
+  if (!fits && overflowBehaviour === "scale_down") {
     return {
       kind: "violation",
       violation: textPreflightViolation(placement, layer.layerId, "cannot_fit_readability_floor", readabilityFloor),
@@ -422,7 +425,7 @@ function prepareText(
     fontSize = Math.max(1, minimumSize);
     ctx.font = fontDeclaration(textLayer, family, fontSize);
     lines = wrapText(ctx, text, geometry.width, trackingPixels).slice(0, layer.maxLines);
-    if (layer.overflowBehaviour === "truncate" && lines.length > 0) {
+    if (overflowBehaviour === "truncate" && lines.length > 0) {
       let last = lines[lines.length - 1] ?? "";
       const suffix = "…";
       while (last && measureTrackedTextWidth(ctx, `${last}${suffix}`, trackingPixels) > geometry.width) last = last.slice(0, -1);
@@ -438,6 +441,19 @@ function resolveTextFontFamily(layer: RenderTextLayer): string {
     throw new Error("Declared template font is not registered: " + basename(layer.font.file));
   }
   return alias;
+}
+
+/**
+ * Hermes' exact-clone contract historically called scale-down overflow
+ * `shrink`. Treat the two spellings identically at the renderer boundary so
+ * a one-line layer can never fall into the truncation fallback merely because
+ * of that wire-format alias. Unknown values fail closed.
+ */
+function normalizeOverflowBehaviour(layer: TextLayer): TextLayer["overflowBehaviour"] {
+  const behaviour = (layer as unknown as { overflowBehaviour: RuntimeOverflowBehaviour }).overflowBehaviour;
+  if (behaviour === "shrink") return "scale_down";
+  if (behaviour === "refuse" || behaviour === "truncate" || behaviour === "scale_down") return behaviour;
+  throw new Error(`Unsupported text overflow behaviour on ${normalizeLayerId(layer.layerId)}`);
 }
 
 function textPreflightViolation(

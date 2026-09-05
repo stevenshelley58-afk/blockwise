@@ -317,6 +317,47 @@ test("tracking is one absolute canvas pixel per grapheme gap and c5 REAL ESTATE 
   assert.ok(rendered.png.length > 0, "successful render proves the text remains at or above the 24px floor");
 });
 
+test("shrink is the exact scale-down alias for a 52-character single-line address and fails closed at the floor", async () => {
+  const address = "123 Anywhere Street, Any City, State 12345 Australia";
+  assert.equal(address.length, 52);
+
+  const renderAddress = async (overflowBehaviour: "scale_down" | "shrink", width: number) => {
+    const template = templateFixture();
+    template.textInputs = [{ key: "address", label: "Address", placeholder: address, maxLength: 52 }];
+    template.fonts = [{ file: "manrope-500.woff2" }];
+    template.feedLayout.layers.push({
+      type: "text",
+      layerId: "feed-address",
+      inputKey: "address",
+      font: { file: "manrope-500.woff2" },
+      fontSize: 64,
+      lineHeight: 1,
+      tracking: 0,
+      alignment: "left",
+      maxCharacters: 52,
+      maxLines: 1,
+      colourRole: "mainText",
+      overflowBehaviour: overflowBehaviour as "scale_down",
+      geometry: { x: 40, y: 40, width, height: 80 },
+    });
+    return renderPlacement(
+      { template, imageValues: {}, textValues: { address }, colourMap: colours },
+      "feed",
+    );
+  };
+
+  const scaleDown = await renderAddress("scale_down", 700);
+  const shrink = await renderAddress("shrink", 700);
+  assert.deepEqual(shrink.png, scaleDown.png, "shrink must preserve the complete address exactly like scale_down");
+
+  await assert.rejects(
+    renderAddress("shrink", 300),
+    (error: unknown) => error instanceof TextPreflightError
+      && error.violations.some(({ layerId, kind }) => layerId === "feed-address" && kind === "cannot_fit_readability_floor"),
+    "shrink must fail instead of wrapping or slicing a one-line address below the readability floor",
+  );
+});
+
 test("font.file stays authoritative for path declarations instead of falling back to a host face", async () => {
   const renderWithFont = async (fontFile: string, fontFamily?: string) => {
     const template = templateFixture();
