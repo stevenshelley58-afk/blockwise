@@ -116,6 +116,10 @@ const adPageRefreshBatchSize = positiveInt("HERMES_AD_PAGE_REFRESH_BATCH_SIZE", 
 const adPageRefreshMaxActive = positiveInt("HERMES_AD_PAGE_REFRESH_MAX_ACTIVE", mode === "build" ? 200 : 80);
 const adPageRefreshScanLimit = Math.max(adPageRefreshBatchSize * 16, adPageRefreshMaxActive + adPageRefreshBatchSize * 4);
 const adPageRefreshMaxConsecutiveFailures = 3;
+// Lifecycle reconciliation (active→inactive flips) is gated on coverage-
+// complete runs via research.mark_missing_ads_inactive. Disable only for
+// forensic audits.
+const adPageRefreshLifecycleEnabled = env.HERMES_AD_PAGE_LIFECYCLE_RECONCILIATION !== "false";
 // Location ad search (Path 2) has been removed. The census → page-resolver →
 // ad-collector pipeline (Path 1) is the sole discovery mechanism.
 const locationAdSearchEnabled = false;
@@ -149,6 +153,15 @@ const META_OFFICIAL_SOURCE_PROVIDER = "official_meta_archive";
 const META_BROWSER_SOURCE_PROVIDER = "hermes_meta_page_capture";
 const META_STRUCTURED_SOURCE_PROVIDER = "structured_meta_page_provider";
 const META_LOCATION_SEARCH_SOURCE_PROVIDER = "hermes_meta_location_search";
+const META_SCRAPINGBEE_SOURCE_PROVIDER = "scrapingbee_meta_ad_library";
+// ScrapingBee (Ad Radar v2 capture provider). Auto-Mode picks the cheapest
+// working configuration; Spb-* response headers carry the actual credit cost.
+const scrapingBeeApiKey = env.SCRAPINGBEE_API_KEY || env.HERMES_SCRAPINGBEE_API_KEY || "";
+const scrapingBeeEnabled = env.HERMES_SCRAPINGBEE_ENABLED === "true" && Boolean(scrapingBeeApiKey.trim());
+const scrapingBeeOrder = String(env.HERMES_SCRAPINGBEE_ORDER || "fallback").toLowerCase(); // primary|fallback
+const scrapingBeeMaxCostPerCapture = Math.min(positiveInt("HERMES_SCRAPINGBEE_MAX_CREDITS_PER_CAPTURE", 25), 100);
+const scrapingBeeMonthlyCreditCap = positiveInt("HERMES_SCRAPINGBEE_MONTHLY_CREDIT_CAP", 200_000);
+const scrapingBeeTimeoutMs = positiveInt("HERMES_SCRAPINGBEE_TIMEOUT_MS", 120_000);
 const RAW_EVIDENCE_BUCKET = env.HERMES_RESEARCH_RAW_EVIDENCE_BUCKET || "research-raw-evidence";
 const META_BROWSER_CHALLENGE_DISABLED_UNTIL_SETTING = "meta_browser_challenge_disabled_until";
 const META_BROWSER_CHALLENGE_RESUME_SPREAD_MS = 15 * 60 * 1000;
@@ -599,43 +612,36 @@ async function enqueueDueAdPageRefreshJobs(buildRunId) {
     return { adRefreshCandidates: 0, adRefreshEnqueued: 0, adRefreshSkippedActive: blockingCollectors.length, adRefreshBacklog: activeCollectors.length };
   }
   const activePageIds = new Set(activeCollectors.map((job) => job.advertiser_page_id).filter(Boolean));
+  // Ad Radar v2 scheduling: read durable scan state straight off the page
+  // registry. Cadence and backoff live in next_scan_at/backoff_until
+  // (maintained by research.schedule_page_after_scan / the collector); a
+  // never-scanned page is immediately due (first-fill queue). Postcode
+  // refresh policies are no longer a scheduler input.
   const pages = await rest(
     "research",
-    `advertiser_pages?select=id,page_id,page_name,status,resolution_decision_id,last_checked_at,consecutive_failed_checks&status=in.(resolved_collectable,no_ads_confirmed)&page_id=not.is.null&order=last_checked_at.asc.nullsfirst&limit=${adPageRefreshScanLimit}`,
+    `advertiser_pages?select=id,page_id,page_name,status,scan_state,next_scan_at,backoff_until,consecutive_failures,has_ever_run_ads&scan_enabled=eq.true&status=neq.rejected_non_real_estate&page_id=not.is.null&next_scan_at=lte.${now()}&order=next_scan_at.asc&limit=${adPageRefreshScanLimit}`,
   );
-  const cutoff = Date.now() - adPageRefreshIntervalMinutes * 60_000;
   const capacity = Math.max(0, Math.min(adPageRefreshMaxActive - blockingCollectors.length, adPageRefreshBatchSize));
   const candidates = pages.filter((page) => {
     if (!page.page_id || String(page.page_id).startsWith("slug:")) return false;
     if (activePageIds.has(page.id)) return false;
-    if ((page.consecutive_failed_checks || 0) >= adPageRefreshMaxConsecutiveFailures) return false;
-    if (!page.last_checked_at) return true;
-    return Date.parse(page.last_checked_at) < cutoff;
-  }).sort((left, right) =>
-    adRefreshPriorityForPage(left) - adRefreshPriorityForPage(right)
-    || Date.parse(left.last_checked_at || "1970-01-01T00:00:00.000Z") - Date.parse(right.last_checked_at || "1970-01-01T00:00:00.000Z")
-  ).slice(0, capacity);
+    if ((page.consecutive_failures || 0) >= adPageRefreshMaxConsecutiveFailures && page.backoff_until && Date.parse(page.backoff_until) > Date.now()) return false;
+    return true;
+  }).slice(0, capacity);
   let enqueued = 0;
-  const bucket = Math.floor(Date.now() / Math.max(60_000, adPageRefreshIntervalMinutes * 60_000));
   for (const [index, page] of candidates.entries()) {
+    const scanMode = page.scan_state === "needs_first_fill" || !page.has_ever_run_ads ? "initial_fill" : "refresh";
     const queued = await enqueueFollowUp({
       queue_name: "research",
       job_type: "blockwise-ad-collector",
-      dedupe_key: `ad-refresh:${page.id}:${bucket}`,
+      dedupe_key: `ad-scan:${page.id}:${scanMode}:${Math.floor(Date.now() / 60_000)}`,
       advertiser_page_id: page.id,
       priority: adRefreshPriorityForPage(page),
       payload: {
         advertiserPageId: page.id,
         metaPageId: String(page.page_id),
         build_run_id: buildRunId,
-        resolverDecisionId: page.resolution_decision_id || null,
-        realEstateGate: {
-          verified: true,
-          verifiedBySkill: "blockwise-auto-page-refresh",
-          decisionId: page.resolution_decision_id || null,
-          sourceDocumentIds: [],
-          verifiedAt: now(),
-        },
+        scanMode,
         country: "AU",
         activeStatus: "all",
         resultsLimit: metaCaptureResultsLimit,
@@ -1292,13 +1298,25 @@ function metaSearchAdPayloadCount(html) {
   }
 }
 
+// Facebook renders the Ad Library payload with plain quotes inside JSON, but
+// variants embedded in JS strings escape the quotes (\"search_results_connection\").
+// Accept both, plus optional unicode-escaped whitespace.
+const META_SEARCH_CONNECTION_PATTERN = /\\?"search_results_connection\\?"\s*:\s*\{\\?"count\\?"\s*:\s*(\d+)/giu;
+
 function metaSearchHasConfirmedNoAds(html) {
-  return /search_results_connection"\s*:\s*\{"count"\s*:\s*0\b/iu.test(String(html || "")) && /\bNo ads\b/iu.test(String(html || ""));
+  const text = String(html || "");
+  // Absence is confirmed when the search connection reports count 0 with no
+  // edges. The marketing "No ads" banner is often absent, so edges decide.
+  const match = /\\?"search_results_connection\\?"\s*:\s*\{\\?"count\\?"\s*:\s*0\s*,\\?"edges\\?"\s*:\s*\[\s*\]/iu.exec(text);
+  return match !== null;
 }
 
 function metaAdLibraryChallengeDetected(html) {
   const text = String(html || "");
-  return /\/__rd_verify_[^"'\s<]+/iu.test(text) || /\bexecuteChallenge\s*\(/iu.test(text) || /\bchallenge=3\b/iu.test(text);
+  return /\/__rd_verify_[^"'\s<]+/iu.test(text)
+    || /\bexecuteChallenge\s*\(/iu.test(text)
+    || /\bchallenge=3\b/iu.test(text)
+    || /ad_library_is_captcha_required\\?"\s*:\s*true/iu.test(text);
 }
 
 function metaBrowserChallengeCooldownRemaining() {
@@ -2792,8 +2810,168 @@ async function runFallbackMetaPageCapture(input, sourceProvider = configuredMeta
   return runHermesBrowserCapture(input);
 }
 
+function captureModeForSourceProvider(sourceProvider, suffix = "") {
+  const modeName = sourceProvider === META_OFFICIAL_SOURCE_PROVIDER
+    ? "official_api"
+    : sourceProvider === META_STRUCTURED_SOURCE_PROVIDER
+      ? "http_json"
+      : sourceProvider === META_SCRAPINGBEE_SOURCE_PROVIDER
+        ? "scrapingbee_auto"
+        : "browser";
+  return suffix ? `${modeName}_${suffix}` : modeName;
+}
+
+// --- ScrapingBee capture (Ad Radar v2) -------------------------------------
+// One Auto-Mode request per page capture. Never uses ScrapingBee AI
+// extraction and never proxies video bytes through ScrapingBee; media bytes
+// are still captured by the existing media collector directly from source.
+
+async function scrapingBeeUsage() {
+  const response = await fetch(`https://app.scrapingbee.com/api/v1/usage?api_key=${encodeURIComponent(scrapingBeeApiKey)}`, {
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) throw new Error(`scrapingbee usage failed ${response.status}`);
+  return response.json().catch(() => null);
+}
+
+async function scrapingBeeCreditsRemaining() {
+  try {
+    const usage = await scrapingBeeUsage();
+    const used = Number(usage?.totalRequestUsed ?? usage?.monthlyRequestUsed ?? usage?.credit?.used ?? 0);
+    const max = Number(usage?.totalRequestLimit ?? usage?.monthlyRequestLimit ?? usage?.credit?.limit ?? 0);
+    if (!Number.isFinite(max) || max <= 0) return null;
+    return Math.max(0, max - used);
+  } catch (error) {
+    log("ScrapingBee usage check failed; refusing to spend credits unbounded", { error: error.message }, "warn");
+    return 0;
+  }
+}
+
+async function runScrapingBeePageCapture(input) {
+  const startedAt = now();
+  if (!scrapingBeeApiKey) {
+    return skippedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt, "scrapingbee_api_key_missing");
+  }
+  const remaining = await scrapingBeeCreditsRemaining();
+  if (remaining !== null && remaining < scrapingBeeMaxCostPerCapture) {
+    return failedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt,
+      `scrapingbee_credit_cap_reached (remaining=${remaining}, max_per_capture=${scrapingBeeMaxCostPerCapture})`,
+      { credits_remaining: remaining }, 0);
+  }
+
+  const url = metaAdLibraryPageUrl(input);
+  const params = new URLSearchParams({
+    api_key: scrapingBeeApiKey,
+    url,
+    mode: "auto",
+    max_cost: String(scrapingBeeMaxCostPerCapture),
+  });
+  const telemetry = {
+    provider_request_count: 1,
+    provider_credits: null,
+    provider_cost_usd: null,
+    scrapingbee_tier: "auto_mode",
+    scraper_run_id: null,
+    request_ids: [],
+    url_without_key: url,
+  };
+
+  try {
+    const response = await fetch(`https://app.scrapingbee.com/api/v1/?${params.toString()}`, {
+      signal: AbortSignal.timeout(scrapingBeeTimeoutMs),
+    });
+    const html = await response.text();
+    const header = (name) => response.headers.get(name);
+    telemetry.provider_credits = Number(header("spb-cost") ?? header("spb-auto-cost") ?? 0);
+    if (!Number.isFinite(telemetry.provider_credits)) telemetry.provider_credits = 0;
+    telemetry.scraper_run_id = header("spb-request-id") || null;
+    if (telemetry.scraper_run_id) telemetry.request_ids.push(telemetry.scraper_run_id);
+
+    const spbInitialStatus = Number(header("spb-initial-status-code") || NaN);
+    const blocked = response.status === 401 || response.status === 429
+      || (!Number.isNaN(spbInitialStatus) && [403, 429].includes(spbInitialStatus));
+    if (!response.ok || blocked) {
+      return failedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt,
+        `scrapingbee request failed ${response.status}${Number.isNaN(spbInitialStatus) ? "" : ` (initial ${spbInitialStatus})`}`,
+        { ...telemetry, http_status: response.status, spb_initial_status_code: spbInitialStatus },
+        scrapingBeeCostUsd(telemetry.provider_credits));
+    }
+
+    const parsed = normaliseMetaAdLibraryHtml({
+      html,
+      pageId: input.metaPageId,
+      limit: input.resultsLimit,
+    });
+    // A parse failure or challenge is an operational failure, never a
+    // zero-ad result. Keep head/tail snippets so the payload variant can be
+    // diagnosed offline without re-spending credits.
+    if (!parsed.items.length && !parsed.confirmedAbsence) {
+      const debugHtml = html.length <= 10_000 ? { head: html } : { head: html.slice(0, 5_000), tail: html.slice(-5_000) };
+      return failedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt,
+        parsed.warnings[0] || "scrapingbee payload could not be parsed",
+        {
+          ...telemetry,
+          challenge_detected: parsed.challengeDetected,
+          html_bytes: html.length,
+          debug_html: debugHtml,
+        },
+        scrapingBeeCostUsd(telemetry.provider_credits));
+    }
+
+    const paginationExhausted = parsed.items.length < input.resultsLimit;
+    return {
+      runId: `scrapingbee-${input.metaPageId}-${Date.now()}`,
+      provider: META_SCRAPINGBEE_SOURCE_PROVIDER,
+      status: "SUCCEEDED",
+      startedAt,
+      finishedAt: now(),
+      costUsd: scrapingBeeCostUsd(telemetry.provider_credits),
+      itemCount: parsed.items.length,
+      items: parsed.items,
+      rawDatasetId: null,
+      errorMessage: parsed.warnings.join("; ") || null,
+      coverageComplete: parsed.confirmedAbsence || paginationExhausted,
+      paginationExhausted,
+      stopReason: parsed.confirmedAbsence ? "confirmed_absence" : paginationExhausted ? "page_exhausted" : "results_limit_reached",
+      metadata: {
+        advertiserPageId: input.advertiserPageId,
+        resolverDecisionId: input.resolverDecisionId,
+        confirmed_absence: parsed.confirmedAbsence,
+        challenge_detected: parsed.challengeDetected,
+        connection_count: parsed.connectionCount,
+        warnings: parsed.warnings,
+        provider_telemetry: telemetry,
+      },
+    };
+  } catch (error) {
+    return failedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt,
+      `scrapingbee request error: ${error.message}`,
+      { ...telemetry, error: error.message }, 0);
+  }
+}
+
+function scrapingBeeCostUsd(credits) {
+  // Auto-Mode credit price is account-specific; kept configurable and only
+  // used for indicative cost reporting. Credits are the source of truth.
+  const creditPriceUsd = Number(env.HERMES_SCRAPINGBEE_CREDIT_PRICE_USD || 0);
+  return Number.isFinite(creditPriceUsd) && creditPriceUsd > 0 ? credits * creditPriceUsd : 0;
+}
+
 async function runMetaPageCapture(input) {
   const fallbackSourceProvider = configuredMetaFallbackSourceProvider();
+
+  if (scrapingBeeEnabled && scrapingBeeOrder === "primary") {
+    const spb = await runScrapingBeePageCapture(input);
+    if (spb.status === "SUCCEEDED") {
+      return { outcome: spb, sourceProvider: META_SCRAPINGBEE_SOURCE_PROVIDER, captureMode: captureModeForSourceProvider(META_SCRAPINGBEE_SOURCE_PROVIDER) };
+    }
+    log("ScrapingBee primary capture failed; falling back", {
+      advertiser_page_id: input.advertiserPageId,
+      meta_page_id: input.metaPageId,
+      error: spb.errorMessage,
+    }, "warn");
+  }
+
   if (metaOfficialApiEnabled) {
     const official = await runOfficialMetaPageApiCapture(input);
     if (official.status === "SUCCEEDED") {
@@ -2805,6 +2983,23 @@ async function runMetaPageCapture(input) {
       meta_page_id: input.metaPageId,
       error: official.errorMessage,
     }, "warn");
+    if (scrapingBeeEnabled) {
+      const spb = await runScrapingBeePageCapture(input);
+      if (spb.status === "SUCCEEDED") {
+        return {
+          outcome: {
+            ...spb,
+            metadata: {
+              ...(spb.metadata || {}),
+              official_api_failed: true,
+              official_api_error: official.errorMessage,
+            },
+          },
+          sourceProvider: META_SCRAPINGBEE_SOURCE_PROVIDER,
+          captureMode: captureModeForSourceProvider(META_SCRAPINGBEE_SOURCE_PROVIDER, "after_official_api_failure"),
+        };
+      }
+    }
     const fallback = await runFallbackMetaPageCapture(input, fallbackSourceProvider);
     const sourceProvider = fallback.provider || fallbackSourceProvider;
     return {
@@ -2821,6 +3016,13 @@ async function runMetaPageCapture(input) {
     };
   }
 
+  if (scrapingBeeEnabled) {
+    const spb = await runScrapingBeePageCapture(input);
+    if (spb.status === "SUCCEEDED") {
+      return { outcome: spb, sourceProvider: META_SCRAPINGBEE_SOURCE_PROVIDER, captureMode: captureModeForSourceProvider(META_SCRAPINGBEE_SOURCE_PROVIDER) };
+    }
+  }
+
   const fallback = await runFallbackMetaPageCapture(input, fallbackSourceProvider);
   const sourceProvider = fallback.provider || fallbackSourceProvider;
   return {
@@ -2828,15 +3030,6 @@ async function runMetaPageCapture(input) {
     sourceProvider,
     captureMode: captureModeForSourceProvider(sourceProvider),
   };
-}
-
-function captureModeForSourceProvider(sourceProvider, suffix = "") {
-  const modeName = sourceProvider === META_OFFICIAL_SOURCE_PROVIDER
-    ? "official_api"
-    : sourceProvider === META_STRUCTURED_SOURCE_PROVIDER
-      ? "http_json"
-      : "browser";
-  return suffix ? `${modeName}_${suffix}` : modeName;
 }
 
 function failedCaptureOutcome(provider, input, startedAt, errorMessage, metadata = {}, costUsd = 0) {
@@ -3138,7 +3331,8 @@ function normaliseMetaAdLibraryHtml({ html, pageId, limit }) {
 function extractJsonObjectsAfterKey(text, key) {
   const out = [];
   let cursor = 0;
-  const marker = `"${key}"`;
+  // Search the bare key so escaped-quote variants (\"key\":...) also match.
+  const marker = key;
   while (cursor < text.length) {
     const keyIndex = text.indexOf(marker, cursor);
     if (keyIndex === -1) break;
@@ -3440,12 +3634,18 @@ function creativeFromMetaAd(ad) {
 }
 
 async function insertFetchRun(job, buildRunId, input, provider) {
+  const scanMode = ["initial_fill", "refresh", "manual"].includes(payloadString(job.payload?.scanMode))
+    ? payloadString(job.payload.scanMode)
+    : job.payload?.initialFill === true ? "initial_fill" : "refresh";
   const row = {
     build_run_id: buildRunId,
     work_queue_id: job.id,
+    advertiser_page_id: input.advertiserPageId || null,
+    scan_mode: scanMode,
+    idempotency_key: `ad-collector:${job.id}:${input.advertiserPageId || "unknown"}`,
     source_provider: provider,
     role: "primary",
-    trigger: "scheduled",
+    trigger: scanMode === "manual" ? "manual" : "scheduled",
     target_kind: "advertiser_page",
     target_value: input.advertiserPageId,
     input_payload: input,
@@ -3458,6 +3658,34 @@ async function insertFetchRun(job, buildRunId, input, provider) {
     headers: { Prefer: "return=representation" },
   }, row);
   return created?.[0]?.id;
+}
+
+function payloadString(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+// Lift provider telemetry (ScrapingBee Spb-* headers, request counts,
+// coverage flags) out of a capture outcome into ad_fetch_runs columns.
+function runTelemetryPatch(outcome) {
+  const metadata = outcome?.metadata || {};
+  const telemetry = metadata.provider_telemetry || {};
+  const numericOrNull = (value) => (Number.isFinite(Number(value)) ? Number(value) : null);
+  const patch = {};
+  if (telemetry.scraper_run_id) patch.scraper_run_id = String(telemetry.scraper_run_id).slice(0, 200);
+  const requestCount = numericOrNull(telemetry.provider_request_count);
+  if (requestCount !== null) patch.provider_request_count = Math.round(requestCount);
+  const credits = numericOrNull(telemetry.provider_credits);
+  if (credits !== null) patch.provider_credits = credits;
+  const costUsd = numericOrNull(telemetry.provider_cost_usd);
+  if (costUsd !== null) patch.provider_cost_usd = costUsd;
+  if (telemetry.scrapingbee_tier) patch.scrapingbee_tier = String(telemetry.scrapingbee_tier);
+  if (typeof outcome.coverageComplete === "boolean") patch.coverage_complete = outcome.coverageComplete;
+  if (typeof outcome.paginationExhausted === "boolean") patch.pagination_exhausted = outcome.paginationExhausted;
+  if (outcome.stopReason) patch.stop_reason = String(outcome.stopReason).slice(0, 200);
+  if (outcome.items && Array.isArray(outcome.items)) {
+    patch.dataset_checksum = hash(json(outcome.items.map((item) => item.adArchiveID || item.id || null)));
+  }
+  return patch;
 }
 
 async function insertLocationSearchFetchRun(job, buildRunId, input) {
@@ -3489,11 +3717,73 @@ async function updateFetchRun(id, patch) {
 
 async function markAdvertiserPageCheckFailed(advertiserPageId) {
   if (!advertiserPageId) return;
-  const page = await rest("research", `advertiser_pages?select=consecutive_failed_checks&id=eq.${advertiserPageId}&limit=1`);
+  const page = await rest("research", `advertiser_pages?select=consecutive_failed_checks,consecutive_failures&id=eq.${advertiserPageId}&limit=1`);
   const consecutiveFailedChecks = Math.min(99, Number(page?.[0]?.consecutive_failed_checks || 0) + 1);
+  const consecutiveFailures = Math.min(99, Number(page?.[0]?.consecutive_failures || 0) + 1);
+  // Exponential backoff: 1h * 2^n capped at 7 days (mirrors
+  // research.schedule_page_after_scan on the failure path).
+  const backoffHours = Math.min(168, 1 * 2 ** Math.min(consecutiveFailures, 10));
+  const backoffUntil = new Date(Date.now() + backoffHours * 3_600_000).toISOString();
   await rest("research", `advertiser_pages?id=eq.${advertiserPageId}`, {
     method: "PATCH",
-    body: json({ last_checked_at: now(), consecutive_failed_checks: consecutiveFailedChecks }),
+    body: json({
+      last_checked_at: now(),
+      last_scan_completed_at: now(),
+      consecutive_failed_checks: consecutiveFailedChecks,
+      consecutive_failures: consecutiveFailures,
+      backoff_until: backoffUntil,
+      next_scan_at: backoffUntil,
+      scan_state: "failing",
+    }),
+  });
+}
+
+async function markAdvertiserPageScanStarted(advertiserPageId) {
+  if (!advertiserPageId) return;
+  await rest("research", `advertiser_pages?id=eq.${advertiserPageId}`, {
+    method: "PATCH",
+    body: json({ last_scan_started_at: now(), scan_state: "scanning" }),
+  });
+}
+
+// Success-path scheduling (24h active / 72h historical / 7d no ads). Mirrors
+// research.schedule_page_after_scan; the DB function remains the authority
+// when invoked through RPC.
+function pageScheduleAfterSuccess({ activeCount, everRanAds }) {
+  const hours = activeCount > 0 ? 24 : everRanAds ? 72 : 168;
+  return new Date(Date.now() + hours * 3_600_000).toISOString();
+}
+
+async function markAdvertiserPageScanSucceeded(advertiserPageId, { activeCount = 0, lastActiveSeenAt = null } = {}) {
+  if (!advertiserPageId) return;
+  const page = await rest(
+    "research",
+    `advertiser_pages?select=has_ever_run_ads,scan_state,initial_fill_completed_at&id=eq.${advertiserPageId}&limit=1`,
+  );
+  const current = page?.[0] || {};
+  const everRanAds = current.has_ever_run_ads === true || activeCount > 0;
+  const nextScanAt = pageScheduleAfterSuccess({ activeCount, everRanAds });
+  const checkedAt = now();
+  const scanState = current.scan_state === "paused"
+    ? "paused"
+    : activeCount > 0 || everRanAds ? "healthy" : "zero_ads";
+  await rest("research", `advertiser_pages?id=eq.${advertiserPageId}`, {
+    method: "PATCH",
+    body: json({
+      last_checked_at: checkedAt,
+      last_scan_completed_at: checkedAt,
+      last_successful_check_at: checkedAt,
+      last_successful_scan_at: checkedAt,
+      consecutive_failed_checks: 0,
+      consecutive_failures: 0,
+      backoff_until: null,
+      next_scan_at: nextScanAt,
+      has_ever_run_ads: everRanAds,
+      current_active_ad_count: activeCount,
+      ...(lastActiveSeenAt ? { last_active_ad_seen_at: lastActiveSeenAt } : {}),
+      initial_fill_completed_at: current.initial_fill_completed_at || checkedAt,
+      scan_state: scanState,
+    }),
   });
 }
 
@@ -3622,42 +3912,35 @@ async function isTrustedConfirmedZeroAdCapture({ advertiserPageId, sourceProvide
   return rows.length === 0;
 }
 
-async function reconcileMissingObservedAds({ advertiserPageId, seenExternalAdIds, checkedAt = now() }) {
-  if (!advertiserPageId) return { activeAdsChecked: 0, missingAdsUpdated: 0, adsMarkedInactive: 0 };
-  const seen = new Set(seenExternalAdIds.map((id) => String(id || "")).filter(Boolean));
-  const activeRows = await rest(
-    "research",
-    `observed_ads?select=id,external_ad_id,missing_successive_checks,ad_delivery_stopped_at&advertiser_page_id=eq.${encode(advertiserPageId)}&active_status=eq.active&limit=5000`,
-  );
-  let missingAdsUpdated = 0;
-  let adsMarkedInactive = 0;
-
-  for (const row of activeRows) {
-    if (seen.has(String(row.external_ad_id || ""))) continue;
-    const missingSuccessiveChecks = Math.min(99, Number(row.missing_successive_checks || 0) + 1);
-    const patch = {
-      missing_successive_checks: missingSuccessiveChecks,
-      last_checked_at: checkedAt,
-      ...(missingSuccessiveChecks >= 2
-        ? {
-            active_status: "inactive",
-            ad_delivery_stopped_at: row.ad_delivery_stopped_at || checkedAt,
-          }
-        : {}),
-    };
-    await rest("research", `observed_ads?id=eq.${row.id}`, {
-      method: "PATCH",
-      body: json(patch),
-    });
-    missingAdsUpdated += 1;
-    if (missingSuccessiveChecks >= 2) adsMarkedInactive += 1;
+// Lifecycle reconciliation is DB-authoritative: only a successful run recorded
+// as coverage_complete + pagination_exhausted may flip ads inactive or
+// reactivate them (research.mark_missing_ads_inactive). Anything else is
+// absence-of-evidence only.
+async function reconcileMissingObservedAds({ advertiserPageId, seenExternalAdIds, adFetchRunId, coverageComplete = false }) {
+  if (!adPageRefreshLifecycleEnabled) {
+    return { activeAdsChecked: 0, missingAdsUpdated: 0, adsMarkedInactive: 0, skipped: "lifecycle_reconciliation_disabled" };
   }
-
-  return {
-    activeAdsChecked: activeRows.length,
-    missingAdsUpdated,
-    adsMarkedInactive,
-  };
+  if (!adFetchRunId || !coverageComplete) {
+    return { activeAdsChecked: 0, missingAdsUpdated: 0, adsMarkedInactive: 0, skipped: "run_not_coverage_complete" };
+  }
+  const seenIds = seenExternalAdIds.map((id) => String(id || "")).filter(Boolean);
+  try {
+    const result = await rpc("mark_missing_ads_inactive", { p_run_id: adFetchRunId, p_seen_external_ad_ids: seenIds });
+    return {
+      activeAdsChecked: Number(result?.active_ads_checked || 0),
+      missingAdsUpdated: Number(result?.missing_seen || 0),
+      adsMarkedInactive: Number(result?.marked_inactive || 0),
+      reactivated: Number(result?.reactivated || 0),
+      allowed: result?.allowed !== false,
+    };
+  } catch (error) {
+    log("Lifecycle reconciliation via DB function failed", {
+      advertiser_page_id: advertiserPageId,
+      ad_fetch_run_id: adFetchRunId,
+      error: error.message,
+    }, "warn");
+    return { activeAdsChecked: 0, missingAdsUpdated: 0, adsMarkedInactive: 0, error: error.message };
+  }
 }
 
 async function upsertAdCreative(row) {
@@ -4168,14 +4451,36 @@ async function openCircuitIfPaidSpendWithoutIngest({ sourceProvider, input, cost
 
 async function handleAdCollector(job) {
   const payload = job.payload || {};
-  if (!payload.advertiserPageId || !payload.metaPageId || payload.realEstateGate?.verified !== true) {
-    return { status: "blocked", blocked_reason: "collector_missing_verified_page_gate", result: { handler: "blockwise-ad-collector", collection_started: false } };
+  if (!payload.advertiserPageId || !payload.metaPageId) {
+    return { status: "blocked", blocked_reason: "collector_missing_page", result: { handler: "blockwise-ad-collector", collection_started: false } };
   }
+  // Ad Radar v2: a scan only needs a real Page row with scanning enabled.
+  // Agent/agency resolution, real-estate gates and approvals are optional
+  // descriptive metadata, never a scan precondition.
+  const pageOrParts = [];
+  if (uuidPattern.test(String(payload.advertiserPageId))) pageOrParts.push(`id.eq.${encode(String(payload.advertiserPageId))}`);
+  pageOrParts.push(`page_id.eq.${encode(String(payload.metaPageId))}`);
+  const pageRows = await rest(
+    "research",
+    `advertiser_pages?select=id,page_id,page_name,status,scan_enabled,scan_state&or=(${pageOrParts.join(",")})&limit=1`,
+  );
+  const pageRow = pageRows?.[0];
+  if (!pageRow?.id) {
+    return { status: "blocked", blocked_reason: "collector_unknown_advertiser_page", result: { handler: "blockwise-ad-collector", advertiser_page_id: payload.advertiserPageId, collection_started: false } };
+  }
+  if (pageRow.scan_enabled === false) {
+    return { status: "blocked", blocked_reason: "collector_scan_disabled", result: { handler: "blockwise-ad-collector", advertiser_page_id: pageRow.id, collection_started: false } };
+  }
+  payload.advertiserPageId = pageRow.id;
   const ingestTables = ["ad_fetch_runs", "observed_ads", "ad_snapshots", "ad_creatives", "media_assets"];
   const input = captureInput(payload);
   const buildRunId = await resolveBuildRunId(payload.build_run_id, payload.buildRunId);
-  const initialSourceProvider = metaOfficialApiEnabled ? META_OFFICIAL_SOURCE_PROVIDER : configuredMetaFallbackSourceProvider();
+  const initialSourceProvider = scrapingBeeEnabled && scrapingBeeOrder === "primary"
+    ? META_SCRAPINGBEE_SOURCE_PROVIDER
+    : metaOfficialApiEnabled ? META_OFFICIAL_SOURCE_PROVIDER : configuredMetaFallbackSourceProvider();
   const adFetchRunId = await insertFetchRun(job, buildRunId, input, initialSourceProvider);
+  if (!adFetchRunId) throw new Error("ad_fetch_run insert did not return an id");
+  await markAdvertiserPageScanStarted(pageRow.id);
   const capture = await runMetaPageCapture(input);
   const { outcome, sourceProvider, captureMode: capture_mode } = capture;
   if (outcome.status === "SKIPPED") {
@@ -4207,7 +4512,7 @@ async function handleAdCollector(job) {
     };
   }
   if (outcome.status !== "SUCCEEDED") {
-    await updateFetchRun(adFetchRunId, { source_provider: sourceProvider, status: "failed", result_summary: { provider: sourceProvider, metadata: outcome.metadata || {} }, error: outcome.errorMessage || "capture failed", cost_usd: outcome.costUsd || 0 });
+    await updateFetchRun(adFetchRunId, { source_provider: sourceProvider, status: "failed", result_summary: { provider: sourceProvider, metadata: outcome.metadata || {} }, error: outcome.errorMessage || "capture failed", cost_usd: outcome.costUsd || 0, ...runTelemetryPatch(outcome) });
     await markAdvertiserPageCheckFailed(payload.advertiserPageId);
     await insertCoverageDefect({
       platform: "facebook",
@@ -4222,6 +4527,12 @@ async function handleAdCollector(job) {
     throw new Error(outcome.errorMessage || "Meta capture failed");
   }
   const checkedAt = now();
+  // Coverage contract: a run is complete/comparable only when pagination ran
+  // to exhaustion (or absence was explicitly confirmed). Truncated captures
+  // never drive lifecycle.
+  const metadataTruncated = outcome.metadata?.truncated === true;
+  const paginationExhausted = outcome.paginationExhausted ?? (!metadataTruncated && outcome.itemCount < input.resultsLimit);
+  const coverageComplete = outcome.coverageComplete ?? paginationExhausted;
   if (outcome.itemCount === 0 && outcome.metadata?.confirmed_absence) {
     const zeroCaptureTrusted = await isTrustedConfirmedZeroAdCapture({
       advertiserPageId: payload.advertiserPageId,
@@ -4241,6 +4552,7 @@ async function handleAdCollector(job) {
         },
         error: "confirmed zero-ad capture ignored after prior observed ads",
         cost_usd: outcome.costUsd || 0,
+        ...runTelemetryPatch(outcome),
       });
       await markAdvertiserPageCheckFailed(payload.advertiserPageId);
       await insertCoverageDefect({
@@ -4273,16 +4585,30 @@ async function handleAdCollector(job) {
         },
       };
     }
+    // Finalize the run (with coverage flags) BEFORE reconciliation so the
+    // DB function sees the authoritative coverage columns. A confirmed
+    // zero-ad result is a valid observation, never a fake.
+    await updateFetchRun(adFetchRunId, {
+      source_provider: sourceProvider,
+      status: "success",
+      result_summary: { provider: sourceProvider, item_count: 0, confirmed_absence: true, metadata: outcome.metadata || {} },
+      cost_usd: outcome.costUsd || 0,
+      ...runTelemetryPatch(outcome),
+      coverage_complete: coverageComplete,
+      pagination_exhausted: paginationExhausted,
+      stop_reason: outcome.stopReason || "confirmed_absence",
+    });
     const reconciliation = await reconcileMissingObservedAds({
       advertiserPageId: payload.advertiserPageId,
       seenExternalAdIds: [],
-      checkedAt,
+      adFetchRunId,
+      coverageComplete,
     });
-    await updateFetchRun(adFetchRunId, { source_provider: sourceProvider, status: "success", result_summary: { provider: sourceProvider, item_count: 0, confirmed_absence: true, metadata: outcome.metadata || {}, reconciliation }, cost_usd: outcome.costUsd || 0 });
     await openCircuitIfPaidSpendWithoutIngest({ sourceProvider, input, costUsd: outcome.costUsd || 0, ingestedCount: 0, reason: "confirmed_absence", scope: "page_capture_confirmed_absence" });
+    await markAdvertiserPageScanSucceeded(payload.advertiserPageId, { activeCount: 0 });
     await rest("research", `advertiser_pages?id=eq.${payload.advertiserPageId}`, {
       method: "PATCH",
-      body: json({ status: "no_ads_confirmed", last_checked_at: checkedAt, last_successful_check_at: checkedAt, consecutive_failed_checks: 0 }),
+      body: json({ status: "no_ads_confirmed" }),
     });
     await resolveCoverageDefects({
       subject_type: "advertiser_page",
@@ -4313,18 +4639,35 @@ async function handleAdCollector(job) {
       },
       error: `ingest failed after capture: ${error.message}`,
       cost_usd: outcome.costUsd || 0,
+      ...runTelemetryPatch(outcome),
+      coverage_complete: false,
+      pagination_exhausted: paginationExhausted,
+      stop_reason: "ingest_failed",
     });
     await openCircuitIfPaidSpendWithoutIngest({ sourceProvider, input, costUsd: outcome.costUsd || 0, ingestedCount: ingested.length, reason: error.message, scope: "page_ingest_failure" });
     throw error;
   }
+  const activeCount = outcome.items.filter((ad) => activeStatusForMetaAd(ad) === "active").length;
+  // Finalize the run (with coverage flags) BEFORE reconciliation so the DB
+  // function sees the authoritative coverage columns.
+  await updateFetchRun(adFetchRunId, {
+    source_provider: sourceProvider,
+    status: "success",
+    result_summary: { provider: sourceProvider, item_count: outcome.itemCount, ingested_count: ingested.length, raw_dataset_id: outcome.rawDatasetId, metadata: outcome.metadata || {} },
+    cost_usd: outcome.costUsd || 0,
+    ...runTelemetryPatch(outcome),
+    coverage_complete: coverageComplete,
+    pagination_exhausted: paginationExhausted,
+    stop_reason: outcome.stopReason || (coverageComplete ? "page_exhausted" : "results_limit_reached"),
+  });
   const reconciliation = await reconcileMissingObservedAds({
     advertiserPageId: payload.advertiserPageId,
     seenExternalAdIds: ingested.map((item) => item.external_ad_id),
-    checkedAt,
+    adFetchRunId,
+    coverageComplete,
   });
-  await updateFetchRun(adFetchRunId, { source_provider: sourceProvider, status: "success", result_summary: { provider: sourceProvider, item_count: outcome.itemCount, ingested_count: ingested.length, raw_dataset_id: outcome.rawDatasetId, metadata: outcome.metadata || {}, reconciliation }, cost_usd: outcome.costUsd || 0 });
   await openCircuitIfPaidSpendWithoutIngest({ sourceProvider, input, costUsd: outcome.costUsd || 0, ingestedCount: ingested.length, reason: "zero_ingested_after_successful_capture", scope: "page_capture_success" });
-  const captureTruncated = outcome.metadata?.truncated || (sourceProvider !== META_OFFICIAL_SOURCE_PROVIDER && outcome.itemCount >= input.resultsLimit);
+  const captureTruncated = !paginationExhausted;
   await resolveCoverageDefects({
     subject_type: "advertiser_page",
     subject_key: payload.advertiserPageId,
@@ -4368,11 +4711,15 @@ async function handleAdCollector(job) {
       resolved_advertiser_page_id: payload.advertiserPageId,
     });
   }
+  await markAdvertiserPageScanSucceeded(payload.advertiserPageId, {
+    activeCount,
+    lastActiveSeenAt: activeCount > 0 ? now() : null,
+  });
   await rest("research", `advertiser_pages?id=eq.${payload.advertiserPageId}`, {
     method: "PATCH",
-    body: json({ status: "resolved_collectable", last_checked_at: checkedAt, last_successful_check_at: checkedAt, consecutive_failed_checks: 0 }),
+    body: json({ status: "resolved_collectable" }),
   });
-  return { status: "complete", result: { handler: "blockwise-ad-collector", advertiser_page_id: payload.advertiserPageId, meta_page_id: payload.metaPageId, provider: sourceProvider, capture_mode, ads_seen: outcome.itemCount, ingested_count: ingested.length, reconciliation, ingest_tables: ingestTables } };
+  return { status: "complete", result: { handler: "blockwise-ad-collector", advertiser_page_id: payload.advertiserPageId, meta_page_id: payload.metaPageId, provider: sourceProvider, capture_mode, ads_seen: outcome.itemCount, ingested_count: ingested.length, active_ads: activeCount, coverage_complete: coverageComplete, reconciliation, ingest_tables: ingestTables } };
 }
 
 async function handleMediaCollector(job) {
