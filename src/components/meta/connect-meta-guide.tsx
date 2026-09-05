@@ -347,7 +347,7 @@ export function ConnectMetaGuide({
 
 function Panel({ children }: { children: ReactNode }) {
   return (
-    <section className="rounded-(--r-panel) border border-(--line) bg-(--surface) p-5 shadow-card sm:p-6">
+    <section className="mx-auto w-full max-w-[760px] rounded-(--r-panel) border border-(--line) bg-(--surface) p-4 shadow-card sm:p-5">
       {children}
     </section>
   );
@@ -358,7 +358,7 @@ function Progress({ phase }: { phase: Phase }) {
     phase === "intro" ? 0 : phase === "guide" ? 1 : phase === "details" ? 2 : 3;
   return (
     <ol
-      className="grid grid-cols-4 gap-2"
+      className="mx-auto grid w-full max-w-[760px] grid-cols-4 gap-2"
       aria-label="Meta partner-access progress"
     >
       {["Get ready", "Share in Meta", "Send IDs", "Verify"].map(
@@ -400,7 +400,7 @@ function Intro({
         You stay signed in to Meta and choose exactly what Blockwise can access.
         We never see your Meta password.
       </p>
-      <ul className="mt-5 grid gap-3">
+      <ul className="mt-4 grid gap-3">
         <Ready title="Meta Business Portfolio admin access">
           You must be able to add a partner and assign assets.
         </Ready>
@@ -411,11 +411,11 @@ function Intro({
           Share it only if ads should use your Instagram identity.
         </Ready>
       </ul>
-      <p className="mt-5 rounded-(--r-card) bg-(--surface-subtle) px-4 py-3 text-[12.5px] text-muted-foreground">
+      <p className="mt-4 rounded-(--r-card) bg-(--surface-subtle) px-4 py-3 text-[12.5px] text-muted-foreground">
         You can remove Blockwise at any time. Until direct Meta app access is
         approved, an authorised Blockwise operator publishes for you manually.
       </p>
-      <Button className="mt-5 min-h-11" onClick={onNext}>
+      <Button className="mt-4 min-h-11" onClick={onNext}>
         Show me what to do <ArrowRight />
       </Button>
     </Panel>
@@ -456,8 +456,8 @@ function Guide({
   const item = STEPS[step];
   return (
     <section className="overflow-hidden rounded-(--r-panel) border border-(--line) bg-(--surface) shadow-card">
-      <div className="p-5 sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="p-4 sm:p-5 [@media(max-height:920px)]:p-3.5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="font-mono text-[9.5px] tracking-[0.12em] text-(--faint) uppercase">
               Meta step {step + 1} of 4
@@ -483,76 +483,78 @@ function Guide({
             </a>
           </Button>
         </div>
-        {"showId" in item && item.showId ? (
-          <div className="mt-5 flex flex-col gap-3 rounded-(--r-card) border border-(--line-heavy) bg-(--surface-subtle) p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <span className="block text-[11.5px] font-semibold text-muted-foreground">
-                Blockwise Business ID
-              </span>
-              <code className="mt-1 block break-all text-[15.5px] font-bold tracking-[0.04em]">
-                {businessId ?? "Not configured"}
-              </code>
-            </div>
-            <Button
-              variant="outline"
-              className="min-h-11"
-              disabled={!businessId}
-              onClick={onCopy}
-            >
-              {copied ? <Check /> : <Copy />}
-              {copied ? "Copied" : "Copy ID"}
-            </Button>
-          </div>
-        ) : null}
-        {"permissions" in item && item.permissions ? (
-          <div className="mt-5 rounded-(--r-card) border border-(--line-heavy) p-4 text-[12.5px]">
-            <strong>
-              For the ad account, turn on both partial-access permissions:
-            </strong>
-            <ul className="mt-2 grid gap-1.5 text-muted-foreground">
-              <li>
-                <strong className="text-foreground">
-                  Manage campaigns (ads)
-                </strong>{" "}
-                — create and edit ads.
-              </li>
-              <li>
-                <strong className="text-foreground">View performance</strong> —
-                view reports and results.
-              </li>
-            </ul>
-            <p className="mt-2 font-semibold text-(--ui-warning)">
-              Leave Full control off.
+        <div className="mt-4 grid items-start gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-4 [@media(max-height:920px)]:mt-3">
+          <div className="flex flex-col gap-3">
+            {"showId" in item && item.showId ? (
+              <div className="flex flex-col gap-3 rounded-(--r-card) border border-(--line-heavy) bg-(--surface-subtle) p-3.5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <span className="block text-[11.5px] font-semibold text-muted-foreground">
+                    Blockwise Business ID
+                  </span>
+                  <code className="mt-1 block break-all text-[15.5px] font-bold tracking-[0.04em]">
+                    {businessId ?? "Not configured"}
+                  </code>
+                </div>
+                <Button
+                  variant="outline"
+                  className="min-h-11"
+                  disabled={!businessId}
+                  onClick={onCopy}
+                >
+                  {copied ? <Check /> : <Copy />}
+                  {copied ? "Copied" : "Copy ID"}
+                </Button>
+              </div>
+            ) : null}
+            {"permissions" in item && item.permissions ? (
+              <div className="rounded-(--r-card) border border-(--line-heavy) p-3.5 text-[12.5px]">
+                <strong>
+                  For the ad account, turn on both partial-access permissions:
+                </strong>
+                <ul className="mt-2 grid gap-1.5 text-muted-foreground">
+                  <li>
+                    <strong className="text-foreground">
+                      Manage campaigns (ads)
+                    </strong>{" "}
+                    — create and edit ads.
+                  </li>
+                  <li>
+                    <strong className="text-foreground">View performance</strong>{" "}
+                    — view reports and results.
+                  </li>
+                </ul>
+                <p className="mt-2 font-semibold text-(--ui-warning)">
+                  Leave Full control off.
+                </p>
+              </div>
+            ) : null}
+            <p className="text-[12.5px] text-muted-foreground lg:mt-auto lg:pt-3">
+              <strong className="text-foreground">Tip:</strong> {item.tip}
             </p>
           </div>
-        ) : null}
-      </div>
-      <div className="border-y border-(--line) bg-(--surface-subtle) p-3 sm:p-5">
-        <a
-          href={item.image}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block overflow-hidden rounded-(--r-card) border border-(--line-heavy) bg-white focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Image
-            className="mx-auto h-auto max-h-[520px] w-auto max-w-full object-contain"
-            src={item.image}
-            width={item.width}
-            height={item.height}
-            alt={item.alt}
-            priority={step === 0}
-          />
-        </a>
-        <p className="mt-2 text-center text-[11.5px] text-muted-foreground">
-          Real Meta Business Settings screen. Meta may change labels. Select the
-          image to open it full size.
-        </p>
-      </div>
-      <div className="p-5 sm:p-6">
-        <p className="text-[12.5px] text-muted-foreground">
-          <strong className="text-foreground">Tip:</strong> {item.tip}
-        </p>
-        <div className="mt-4 flex flex-wrap justify-between gap-2">
+          <div className="overflow-hidden rounded-(--r-card) border border-(--line-heavy) bg-white p-2 sm:p-3">
+            <a
+              href={item.image}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block overflow-hidden rounded-(--r-card) focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Image
+                className="mx-auto h-auto max-h-[min(520px,52vh)] w-auto max-w-full object-contain lg:max-h-[max(200px,calc(100vh-575px))]"
+                src={item.image}
+                width={item.width}
+                height={item.height}
+                alt={item.alt}
+                priority={step === 0}
+              />
+            </a>
+            <p className="mt-2 text-center text-[11.5px] text-muted-foreground">
+              Real Meta Business Settings screen. Meta may change labels. Select
+              the image to open it full size.
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap justify-between gap-2 border-t border-(--line) pt-4 [@media(max-height:920px)]:mt-2.5 [@media(max-height:920px)]:pt-2.5">
           <Button variant="outline" className="min-h-11" onClick={onBack}>
             <ArrowLeft />
             {step === 0 ? "Back to start" : "Previous"}
@@ -602,7 +604,7 @@ function Details({
         These IDs let the operator verify the exact assets. They do not give
         Blockwise access by themselves.
       </p>
-      <form className="mt-5 grid gap-4" onSubmit={onSubmit}>
+      <form className="mt-4 grid gap-3.5" onSubmit={onSubmit}>
         <Field
           id="meta-ad-account-id"
           label="Ad account ID"
@@ -721,7 +723,7 @@ function StatusCard({
           </p>
         </div>
       </div>
-      <dl className="mt-5 divide-y divide-(--line) rounded-(--r-card) border border-(--line) px-4">
+      <dl className="mt-4 divide-y divide-(--line) rounded-(--r-card) border border-(--line) px-4">
         <Asset
           icon={<Megaphone size={15} />}
           label="Ad account"
