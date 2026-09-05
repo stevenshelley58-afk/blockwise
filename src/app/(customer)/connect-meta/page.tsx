@@ -32,13 +32,13 @@ export default async function ConnectMetaPage() {
   return (
     <main
       aria-label="Share Meta assets"
-      className="mx-auto w-full max-w-[1080px] px-4 pt-4 pb-24 [@media(max-height:920px)]:pb-6 md:px-6 md:pt-5 md:pb-10 [@media(max-height:920px)]:md:pb-4"
+      className="mx-auto w-full max-w-[1080px] px-4 pt-4 pb-24 [@media(min-width:768px)_and_(max-height:920px)]:pb-6 md:px-6 md:pt-5 md:pb-10 [@media(min-width:768px)_and_(max-height:920px)]:md:pb-4"
     >
-      <header className="mx-auto mb-4 w-full max-w-[760px] [@media(max-height:920px)]:mb-2 md:mb-5 [@media(max-height:920px)]:md:mb-3">
+      <header className="mx-auto mb-4 w-full max-w-[760px] [@media(min-width:768px)_and_(max-height:920px)]:mb-2 md:mb-5 [@media(min-width:768px)_and_(max-height:920px)]:md:mb-3">
         <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
           Meta partner access
         </p>
-        <h1 className="mt-1 font-display text-[22px] font-extrabold tracking-[-0.02em] [@media(max-height:920px)]:text-[19px] md:text-[26px] [@media(max-height:920px)]:md:text-[22px]">
+        <h1 className="mt-1 font-display text-[22px] font-extrabold tracking-[-0.02em] [@media(min-width:768px)_and_(max-height:920px)]:text-[19px] md:text-[26px] [@media(min-width:768px)_and_(max-height:920px)]:md:text-[22px]">
           Share your Meta assets with Blockwise
         </h1>
         <p className="mt-1 text-[13px] text-muted-foreground">

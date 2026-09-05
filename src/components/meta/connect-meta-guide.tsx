@@ -11,6 +11,7 @@ import {
   Megaphone,
   RefreshCw,
   ShieldCheck,
+  ZoomIn,
 } from "lucide-react";
 import {
   useCallback,
@@ -23,6 +24,13 @@ import {
 } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -45,6 +53,7 @@ type PartnerAccessRequest = {
 type Phase = "intro" | "guide" | "details" | "status";
 
 const META_PARTNERS_URL = "https://business.facebook.com/settings/partners";
+const DRAFT_STORAGE_KEY = "blockwise.meta-partner-draft";
 const STEPS = [
   {
     title: "Open Partners in Meta Business Settings",
@@ -54,15 +63,20 @@ const STEPS = [
     height: 580,
     alt: "Meta Business Settings with Partners selected under Users",
     tip: "If you cannot see Partners, ask the owner of your Meta Business Portfolio to complete this guide.",
+    action: "I found Partners",
   },
   {
     title: "Choose Give a partner access",
     copy: "Select Add, then choose “Give a partner access to your assets”.",
-    image: "/help/meta/partner-access/02-give-access.webp",
-    width: 1830,
-    height: 204,
+    image: "/help/meta/partner-access/02-give-access-crop.webp",
+    fullImage: "/help/meta/partner-access/02-give-access.webp",
+    fullWidth: 1831,
+    fullHeight: 237,
+    width: 541,
+    height: 237,
     alt: "Meta Partners screen with Give a partner access to your assets selected",
     tip: "Do not choose “Ask a partner to assign you their assets”.",
+    action: "I added Blockwise",
   },
   {
     title: "Enter the Blockwise Business ID",
@@ -73,6 +87,7 @@ const STEPS = [
     alt: "Meta Add a new partner dialog with the Partner business ID field",
     tip: "This identifies Blockwise. It does not grant access until you choose the assets on the next screen.",
     showId: true,
+    action: "I selected the assets",
   },
   {
     title: "Choose assets and permissions",
@@ -83,6 +98,7 @@ const STEPS = [
     alt: "Meta Assign assets and permissions screen showing ad account partial-access controls",
     tip: "Select Assign assets only when the Page, ad account, permissions, and optional Instagram account are correct.",
     permissions: true,
+    action: "I’ve assigned the assets",
   },
 ] as const;
 
@@ -184,6 +200,32 @@ export function ConnectMetaGuide({
     else setLoading(false);
   }, [canManage, loadRequest]);
   useEffect(() => {
+    if (!canManage) return;
+    try {
+      const raw = sessionStorage.getItem(`${DRAFT_STORAGE_KEY}.${workspaceId}`);
+      if (!raw) return;
+      const draft = JSON.parse(raw) as {
+        adAccountId?: string;
+        pageId?: string;
+        instagramAccountId?: string;
+      };
+      if (draft.adAccountId) setAdAccountId(draft.adAccountId);
+      if (draft.pageId) setPageId(draft.pageId);
+      if (draft.instagramAccountId)
+        setInstagramAccountId(draft.instagramAccountId);
+    } catch {}
+  }, [canManage, workspaceId]);
+  useEffect(() => {
+    if (!canManage) return;
+    if (!adAccountId && !pageId && !instagramAccountId) return;
+    try {
+      sessionStorage.setItem(
+        `${DRAFT_STORAGE_KEY}.${workspaceId}`,
+        JSON.stringify({ adAccountId, pageId, instagramAccountId }),
+      );
+    } catch {}
+  }, [adAccountId, canManage, instagramAccountId, pageId, workspaceId]);
+  useEffect(() => {
     if (!request || !["requested", "verifying"].includes(request.status))
       return;
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -248,6 +290,9 @@ export function ConnectMetaGuide({
         error: false,
         text: "Your partner-access request was sent.",
       });
+      try {
+        sessionStorage.removeItem(`${DRAFT_STORAGE_KEY}.${workspaceId}`);
+      } catch {}
     } catch (error) {
       setMessage({
         error: true,
@@ -456,7 +501,7 @@ function Guide({
   const item = STEPS[step];
   return (
     <section className="overflow-hidden rounded-(--r-panel) border border-(--line) bg-(--surface) shadow-card">
-      <div className="p-4 sm:p-5 [@media(max-height:920px)]:p-3.5">
+      <div className="p-4 sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="font-mono text-[9.5px] tracking-[0.12em] text-(--faint) uppercase">
@@ -483,7 +528,11 @@ function Guide({
             </a>
           </Button>
         </div>
-        <div className="mt-4 grid items-start gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-4 [@media(max-height:920px)]:mt-3">
+        <p className="mt-2 rounded-(--r-card) bg-(--surface-subtle) px-3.5 py-2.5 text-[12px] text-muted-foreground">
+          Meta opens in a separate browser tab. Keep this Blockwise page open so
+          you can continue to the next step.
+        </p>
+        <div className="mt-4 grid items-start gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-4">
           <div className="flex flex-col gap-3">
             {"showId" in item && item.showId ? (
               <div className="flex flex-col gap-3 rounded-(--r-card) border border-(--line-heavy) bg-(--surface-subtle) p-3.5 sm:flex-row sm:items-center sm:justify-between">
@@ -533,34 +582,70 @@ function Guide({
             </p>
           </div>
           <div className="overflow-hidden rounded-(--r-card) border border-(--line-heavy) bg-white p-2 sm:p-3">
-            <a
-              href={item.image}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block overflow-hidden rounded-(--r-card) focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <Image
-                className="mx-auto h-auto max-h-[min(520px,52vh)] w-auto max-w-full object-contain lg:max-h-[max(200px,calc(100vh-575px))]"
-                src={item.image}
-                width={item.width}
-                height={item.height}
-                alt={item.alt}
-                priority={step === 0}
-              />
-            </a>
-            <p className="mt-2 text-center text-[11.5px] text-muted-foreground">
-              Real Meta Business Settings screen. Meta may change labels. Select
-              the image to open it full size.
+            <Image
+              className="mx-auto h-auto w-auto max-w-full"
+              src={item.image}
+              width={item.width}
+              height={item.height}
+              alt={item.alt}
+              priority={step === 0}
+              sizes="(min-width: 1024px) 620px, 100vw"
+            />
+            <div className="mt-2 flex justify-center">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="min-h-11"
+                    aria-label={`View full-size Meta step ${step + 1} screenshot`}
+                  >
+                    <ZoomIn />
+                    View full-size screenshot
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-[min(1100px,92vw)]">
+                  <DialogHeader>
+                    <DialogTitle>
+                      Step {step + 1}: {item.title} — full-size Meta screenshot
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="max-h-[70vh] overflow-auto rounded-(--r-card) border border-(--line-heavy) bg-white p-2">
+                    <Image
+                      className="mx-auto h-auto w-auto max-w-full"
+                      src={"fullImage" in item ? item.fullImage : item.image}
+                      width={"fullImage" in item ? item.fullWidth : item.width}
+                      height={"fullImage" in item ? item.fullHeight : item.height}
+                      alt={item.alt}
+                      sizes="(min-width: 1100px) 1050px, 92vw"
+                    />
+                  </div>
+                  <p className="text-[11.5px] text-muted-foreground">
+                    Press Escape to close.{" "}
+                    <a
+                      className="underline"
+                      href={item.image}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Open the image file in a new tab
+                    </a>{" "}
+                    if you prefer.
+                  </p>
+                </DialogContent>
+              </Dialog>
+            </div>
+            <p className="mt-1.5 text-center text-[11.5px] text-muted-foreground">
+              Real Meta Business Settings screen. Meta may change labels.
             </p>
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap justify-between gap-2 border-t border-(--line) pt-4 [@media(max-height:920px)]:mt-2.5 [@media(max-height:920px)]:pt-2.5">
+        <div className="mt-4 flex flex-wrap justify-between gap-2 border-t border-(--line) pt-4">
           <Button variant="outline" className="min-h-11" onClick={onBack}>
             <ArrowLeft />
             {step === 0 ? "Back to start" : "Previous"}
           </Button>
           <Button className="min-h-11" onClick={onNext}>
-            {step === 3 ? "I’ve assigned the assets" : "Next step"}
+            {item.action}
             <ArrowRight />
           </Button>
         </div>
