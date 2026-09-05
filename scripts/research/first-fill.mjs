@@ -18,7 +18,7 @@
  *   --report=<path>      write a reconciliation snapshot; reporting reads the
  *                        DB and never spends credits; run it AFTER collection
  *                        has happened (it does not wait for the queue)
- *   --finalize           mark the build run completed/failed once the queue
+ *   --finalize           mark the build run success/failed once the queue
  *                        for it has drained
  *   --credit-ceiling=N   refuse to queue if remaining provider credit budget
  *                        is below N (default: pages × 25)
@@ -40,6 +40,7 @@ const args = Object.fromEntries(process.argv.slice(2).map((arg) => {
 
 const batch = Number(args.batch ?? 48);
 const staggerMs = Number(args["stagger-ms"] ?? 5000);
+const providerBalanceVerifiedAt = args["provider-balance-verified-at"] ? Date.parse(String(args["provider-balance-verified-at"])) : NaN;
 const dryRun = args["dry-run"] === true;
 const includeDue = args["include-due"] === true;
 const finalize = args.finalize === true;
@@ -128,7 +129,7 @@ if (finalize) {
           and wq.payload->>'build_run_id' = br.id::text
           and wq.status in ('pending','claimed')) as outstanding
     from research.build_runs br
-    where br.mode like 'first_fill%' and br.status = 'running';
+    where br.mode = 'build' and br.input_payload->> 'kind' = 'first_fill' and br.status = 'running';
   `);
   for (const [runId, status, outstanding] of drained) {
     if (Number(outstanding) === 0) {
@@ -137,9 +138,9 @@ if (finalize) {
         where wq.payload->>'build_run_id' = '${runId}'
           and wq.status in ('failed','blocked');
       `)[0][0]);
-      sql(`update research.build_runs set status = '${failed > 0 ? "completed_with_failures" : "completed"}', finished_at = now()
+      sql(`update research.build_runs set status = '${failed > 0 ? "partial" : "success"}', finished_at = now()
            where id = '${runId}'::uuid;`);
-      console.log(`Build run ${runId}: finalized (${failed > 0 ? "completed_with_failures" : "completed"}).`);
+      console.log(`Build run ${runId}: finalized (${failed > 0 ? "partial" : "success"}).`);
     } else {
       console.log(`Build run ${runId}: ${outstanding} job(s) outstanding, still running.`);
     }
@@ -190,6 +191,10 @@ const budget = sqlRows(`
   from research.provider_credit_budgets where provider = 'scrapingbee'
   order by period_start desc limit 1;
 `);
+if (budget.length === 0) { console.error("ABORT: no provider_credit_budgets row for scrapingbee."); process.exit(3); }
+if (!Number.isFinite(providerBalanceVerifiedAt) || Date.now() - providerBalanceVerifiedAt > 86400000 || providerBalanceVerifiedAt > Date.now() + 60000) { console.error("ABORT: provider balance is unverified; pass fresh --provider-balance-verified-at."); process.exit(3); }
+const remaining = Number(budget[0][0]); const needed = pages.length * CREDITS_PER_REQUEST; const requiredCeiling = creditCeiling ?? needed;
+if (!Number.isFinite(requiredCeiling) || requiredCeiling <= 0 || remaining < Math.min(needed, requiredCeiling)) { console.error("ABORT: credit budget remaining is below required ceiling."); process.exit(3); }
 if (budget.length > 0 && creditCeiling !== null) {
   const remaining = Number(budget[0][0]);
   const needed = pages.length * CREDITS_PER_REQUEST;
@@ -205,8 +210,8 @@ if (budget.length > 0 && creditCeiling !== null) {
 // Durable build run for provenance (the collector accepts an explicit one and
 // finalizes it when the queue drains).
 const buildRunId = sqlRows(
-  `insert into research.build_runs (mode, status)
-   values ('first_fill_v2', 'running')
+  `insert into research.build_runs (mode, status, trigger, input_payload)
+   values ('build', 'running', 'manual', ${sqlValue({ kind: "first_fill", provider_balance_verified_at: new Date(providerBalanceVerifiedAt).toISOString(), credit_ceiling: requiredCeiling })})
    returning id::text;`,
 )[0]?.[0];
 
