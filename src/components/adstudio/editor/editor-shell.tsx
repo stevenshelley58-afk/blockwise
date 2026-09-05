@@ -418,6 +418,7 @@ function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandCo
   const metaPreviewBase = {
     templateId,
     existingAdId: adId,
+    assets: pack.assets,
     colours: state.resolvedColourMap,
     textValues: previewCopy,
     imageValues: previewImages,

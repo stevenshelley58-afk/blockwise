@@ -179,6 +179,7 @@ export function StoryPreview({
       <LayeredCanvas
         templateId={templateId}
         existingAdId={existingAdId}
+        assets={assets}
         layout={layout}
         colours={colours}
         imageValues={imageValues}
