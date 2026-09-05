@@ -1,7 +1,7 @@
 export type SupabaseServerCredential = {
   value: string;
   kind: "secret" | "legacy_jwt";
-  source: "SUPABASE_SECRET_KEY" | "SUPABASE_SERVICE_ROLE_KEY";
+  source: "SUPABASE_SECRET_KEY" | "SUPABASE_SERVICE_ROLE_KEY" | "SUPABASE_SERVICE_ROLE_KEY_FILE";
 };
 
 export type SupabaseServerEnv = Readonly<Record<string, string | undefined>>;
@@ -14,6 +14,22 @@ export function isLegacySupabaseJwt(value: string): boolean {
   return /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/u.test(value);
 }
 
+function readRootOwnedSecretFile(path: string): string {
+  if (!path.startsWith("/")) throw new Error("SUPABASE_SERVICE_ROLE_KEY_FILE must be absolute.");
+  const getBuiltinModule = (process as typeof process & { getBuiltinModule?: (name: string) => unknown }).getBuiltinModule;
+  const fs = getBuiltinModule?.("node:fs") as {
+    lstatSync: (file: string) => { isFile(): boolean; isSymbolicLink(): boolean; uid?: number; mode: number };
+    readFileSync: (file: string, encoding: string) => string;
+  } | undefined;
+  if (!fs) throw new Error("node:fs is unavailable for SUPABASE_SERVICE_ROLE_KEY_FILE.");
+  const stat = fs.lstatSync(path);
+  const owner = typeof process.getuid === "function" ? process.getuid() : undefined;
+  if (!stat.isFile() || stat.isSymbolicLink() || (owner !== undefined && stat.uid !== owner) || (stat.mode & 0o077) !== 0) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY_FILE must be an owner-readable 0600 regular file.");
+  }
+  return cleanSupabaseEnv(fs.readFileSync(path, "utf8"));
+}
+
 export function resolveSupabaseServerCredential(
   env: SupabaseServerEnv = process.env,
 ): SupabaseServerCredential | null {
@@ -24,6 +40,18 @@ export function resolveSupabaseServerCredential(
       kind: isLegacySupabaseJwt(secret) ? "legacy_jwt" : "secret",
       source: "SUPABASE_SECRET_KEY",
     };
+  }
+
+  const file = cleanSupabaseEnv(env.SUPABASE_SERVICE_ROLE_KEY_FILE);
+  if (file) {
+    const value = readRootOwnedSecretFile(file);
+    if (value) {
+      return {
+        value,
+        kind: isLegacySupabaseJwt(value) ? "legacy_jwt" : "secret",
+        source: "SUPABASE_SERVICE_ROLE_KEY_FILE",
+      };
+    }
   }
 
   const legacy = cleanSupabaseEnv(env.SUPABASE_SERVICE_ROLE_KEY);

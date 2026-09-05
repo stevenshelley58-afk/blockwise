@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { BookingWebhookError, verifyCalcomWebhook } from "./provider.ts";
+import { readBookingSecret } from "./secret.ts";
 import { parseSnagtimeWebhook, resolveSnagtimeEventId, verifySnagtimeWebhook } from "./snagtime-contract.ts";
 import { applyProviderBookingEvent, applyBookingWebhook, bookingEventId } from "./service.ts";
 
@@ -11,7 +12,7 @@ import { applyProviderBookingEvent, applyBookingWebhook, bookingEventId } from "
  */
 
 export async function handleCalcomBookingWebhook(request: Request): Promise<NextResponse> {
-  const secret = process.env.CALCOM_WEBHOOK_SECRET?.trim();
+  const secret = readBookingSecret(process.env, "CALCOM_WEBHOOK_SECRET", "CALCOM_WEBHOOK_SECRET_FILE");
   if (!secret) {
     return NextResponse.json(
       { error: "Booking webhook credentials are not configured." },
@@ -50,7 +51,12 @@ export async function handleCalcomBookingWebhook(request: Request): Promise<Next
 }
 
 export async function handleSnagtimeBookingWebhook(request: Request): Promise<NextResponse> {
-  const secret = process.env.SNAGTIME_WEBHOOK_SECRET?.trim();
+  let secret = "";
+  try {
+    secret = readBookingSecret(process.env, "SNAGTIME_WEBHOOK_SECRET", "SNAGTIME_WEBHOOK_SECRET_FILE");
+  } catch {
+    secret = "";
+  }
   if (!secret) {
     return NextResponse.json(
       { error: "Booking webhook credentials are not configured." },

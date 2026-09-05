@@ -1,0 +1,190 @@
+# Blockwise customer operations contract
+
+Frank/Hermes reads this service-only contract with an HMAC request signed by
+the canonical `verifyInternalRequest` implementation and scope `ops.read`.
+Requests use `x-blockwise-timestamp`, `x-blockwise-nonce`,
+`x-blockwise-scope: ops.read`, and `x-blockwise-signature` headers. The
+signature is HMAC-SHA256 over the exact newline-separated value
+`v1\ntimestamp\nnonce\nscope\nMETHOD\npathname?query\nsha256(body)` using
+`BLOCKWISE_INTERNAL_AUTH_SECRET` (or the documented alias), which must be at
+least 32 characters. Timestamps have a 300-second skew window and nonces are
+single-use. Query strings are therefore authenticated, not merely logged.
+Every response is `Cache-Control: no-store`.
+
+## Read endpoints
+
+    GET /api/internal/ops/customers?limit=50&cursor=<opaque>&query=<name>
+    GET /api/internal/ops/customers/{workspaceId}
+    GET /api/internal/ops/customers/{workspaceId}/{lifecycle|activity|email|enquiries|bookings|billing|projections}
+    GET /api/internal/ops/enquiries?limit=50&cursor=<opaque>
+
+Absent `limit`/`pageSize` defaults to 50. Positive integer values are bounded
+to 100; malformed, zero, and negative values return `400 invalid_limit`.
+Customer and enquiry lists order by
+updated_at/created_at DESC, id DESC; nextCursor is opaque and must be sent
+unchanged. Only an absent `limit`/`pageSize` or `cursor` starts the first page;
+explicit empty/whitespace values return `400 invalid_limit` or
+`400 invalid_cursor`. A workspace detail contains only allowlisted source fields:
+members/profiles, activation lifecycle, bookings, explicitly associated
+enquiries, billing/entitlements, email preferences and suppressions, audit
+activity, projection receipts, and normalized provider snapshots. Enquiries
+are never attached by matching an email address. Billing identifiers and
+billing email are omitted except for a masked `billing_email_masked` value.
+Owner/member contact email and name are explicit safe PII fields; raw provider
+IDs, credentials, headers, metadata, and payloads are not exposed.
+
+## Read response envelope
+
+Every successful endpoint response is self-describing and has exactly this
+top-level shape (the existing rows, `nextCursor`, and `limit` remain inside
+`data`):
+
+    {
+      "schema": "blockwise.ops.read.v1",
+      "project_id": "blockwise",
+      "generated_at": "2026-09-04T00:00:00.000Z",
+      "fresh_until": "2026-09-04T00:05:00.000Z",
+      "source_revision": "<BLOCKWISE_BUILD_REVISION or VERCEL_GIT_COMMIT_SHA>",
+      "source_receipt_ids": ["receipt:ops/api/internal/ops/customers/<id>"],
+      "data": { "limit": 50, "total": 1, "nextCursor": null, "rows": [] }
+    }
+
+`source_receipt_ids` are opaque Blockwise read receipts derived from durable
+source/outbox/snapshot/audit row IDs, not provider IDs. `source_revision` is
+the immutable `BLOCKWISE_BUILD_REVISION` (or Vercel commit SHA) when supplied;
+the contract version is used only as a deterministic local fallback.
+Provider snapshots expose only normalized delivery/flow/lifecycle/conversation
+status, stage, subject, channel, masked provider record suffix, timestamps,
+and source version. Hermes writes snapshots after settlement through the
+service-role `upsert_ops_provider_snapshot` RPC; Frank never calls a provider.
+
+Unassigned public enquiries are listed by `GET /api/internal/ops/enquiries`.
+This route returns only associations with `workspace_id = null`; totals and
+opaque cursors are calculated over that same unassigned set. The `id` field is
+the internal Blockwise association reference. Source/provider identifiers such
+as `source_id` and `external_id` are omitted.
+An operator associates one through the service-role
+`associate_ops_enquiry(enquiry_id, workspace_id, actor_profile_id, reason)` RPC,
+which locks the row, writes an audit event, and lets the association trigger
+enqueue Chatwoot. Direct table writes are not an association workflow.
+
+## Projection envelope
+
+The durable outbox maps to this JSON shape:
+
+    {
+      "contractVersion": "blockwise.ops.projection.v1",
+      "workspaceId": "workspace-uuid",
+      "provider": "mautic",
+      "aggregate": { "type": "contact", "id": "profile-uuid" },
+      "operation": "upsert",
+      "source": { "eventId": "activation:workspace-uuid:42", "version": 42 },
+      "payload": { "workspaceId": "workspace-uuid", "email": "owner@example.com" }
+    }
+
+For an enquiry projection, `source.eventId` is
+`enquiry-association:<internal-association-uuid>:<sequence-version>` and the
+safe payload contains only `workspaceId`, `subject`, and `status`. Neither
+`source_id`, `external_id`, nor any provider/CRM identifier is copied into the
+payload or outbox source event.
+
+Adapter resources are fixed and provider-neutral:
+
+| provider | aggregate | resource | identity |
+| --- | --- | --- | --- |
+| mautic | contact | contact | workspaceId:profileId (aggregate id is a Blockwise profile) |
+| mautic | lifecycle | lifecycle | workspaceId:aggregate.id |
+| chatwoot | enquiry | enquiry | workspaceId:aggregate.id |
+| chatwoot | support | support | workspaceId:aggregate.id |
+
+Hermes claims with claim_ops_projection, maps the envelope, performs the
+provider call outside Blockwise request paths, and settles with the lease
+token. Claims and settlement are fenced: any older version is superseded and
+cannot be claimed or settled after a newer version exists.
+
+Source triggers enqueue after successful writes for workspace/bootstrap,
+profile/member, activation, booking, lead/lead-event, billing acceptance,
+communication preference, and explicitly associated demo/audit/report enquiry
+changes. Mautic contact envelopes carry only safe owner/member contact fields
+plus activation stage and booking status/subject; Chatwoot envelopes carry
+safe enquiry/support subject/status fields. The outbox is the durable handoff;
+there are no provider calls in customer request paths.
+
+Every action-capable row also carries a positive `ops_version`: workspace rows
+for invite/billing actions, member and pending-invitation rows for access
+actions, audit activity rows for session actions, and enquiry-association rows
+for assignment. These are source-row versions (initial value `1`, incremented
+by a protected BEFORE UPDATE trigger), not timestamps, provider IDs, or a
+worker-generated fallback. Frank sends the exact row version as
+`expectedVersion`; the action executor must reject a stale value under its
+target lock (the enquiry-assignment RPC already uses this CAS contract).
+Rows without an authoritative source target are omitted, leaving the related
+control disabled rather than inventing a usable-looking version.
+
+## Rollback
+
+Run only against the intended database, after confirming the archive has
+enough retention:
+
+    psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v confirm=ROLLBACK_CUSTOMER_OPERATIONS -f scripts/ops/rollback-customer-operations.sql
+
+The procedure requires the exact sentinel `ROLLBACK_CUSTOMER_OPERATIONS`.
+It first takes transactional `ACCESS EXCLUSIVE` locks over all source and
+derived operations tables, freezing writers and trigger inserts for the
+archive/count/drop cut.
+Before any drop it archives every row from the outbox, enquiry associations,
+communication preferences, provider snapshots, and the complete current
+`email_suppressions` rows (including `workspace_id`) into
+`legacy_archive.customer_operations_tables_archive`, then verifies per-table
+live/archive row counts for the current rollback run in the same transaction.
+Each run has its own `run_id`, so a previously retained archive cannot cause a
+false mismatch or be overwritten. It refuses to continue on a count mismatch.
+The archive remains available for retention and recovery;
+only then are the operations objects and canonical suppression association
+objects removed.
+
+Consent normalization keeps the newest case-normalized preference row while
+carrying forward any restrictive withdrawn/denied, unsubscribe, or suppressed
+state. Discarded legacy rows are archived in
+`legacy_archive.customer_operations_consent_reconciliation_202609040003`.
+
+## Provider adapter contract
+
+Hermes uses Mautic's documented REST endpoints: contact create/edit under
+`/api/contacts/new` and `/api/contacts/{id}/edit`, segment membership under
+`/api/segments/{segment}/contact/{contact}/add`, and campaign membership under
+`/api/campaigns/{campaign}/contact/{contact}/add`. Contact tags are applied via
+the documented contact edit `tags` field. See the [Mautic Contacts API](https://devdocs.mautic.org/en/7.2/rest_api/contacts.html),
+[Segments API](https://devdocs.mautic.org/en/5.x/rest_api/segments.html), and
+[Campaigns API](https://devdocs.mautic.org/en/7.1/rest_api/campaigns.html).
+
+Chatwoot uses its account-scoped contact, conversation, messages, status, and
+assignment endpoints with only the official `api_access_token` header. Contact
+search uses the documented email query and then exact deterministic attributes;
+the configured inbox-specific `source_id` is supplied when creating a
+conversation. Every contact and
+conversation carries a deterministic Blockwise custom attribute; every message
+carries the operation key so a crash after a remote write is reconciled before
+a retry. Contact and conversation identifiers are stored in separate encrypted
+ledger columns and reduced to masked suffixes in snapshots. Website leads with
+no workspace use only the fixed global account/inbox and are published to
+Frank after the global queue settles; they are never associated by email.
+Deployment must set `CHATWOOT_ENQUIRY_SOURCE_ID`,
+`CHATWOOT_SUPPORT_SOURCE_ID`, and `CHATWOOT_GLOBAL_SOURCE_ID` to the source IDs
+belonging to their respective configured inboxes; the worker refuses to create
+a conversation when the binding is absent.
+
+The Hermes publisher writes Frank's exact pointer and publication-receipt
+shape, plus a generation `manifest.json` containing SHA-256 checksums for every
+projection, receipt, and pointer. Accepted Frank #122 verifies the pointer SHA,
+bundle SHA, every listed file hash, generation identity and complete file set,
+publication receipt, source revision/receipt/workspace metadata, and freshness
+before exposing a projection. The Blockwise-side read-only mount handoff is
+defined in `infra/frank/docker-compose.customer-ops.yml`; the production
+Frank service must apply the corresponding `/ops-projections:ro` mount. The
+deployed `BLOCKWISE_WORKER_REVISION`
+(full image Git SHA) is the bundle source revision; provider/source row and
+queue identifiers form the durable source receipt set. Mautic lifecycle
+snapshots also materialize configured segment/campaign flow status, while the
+Frank email projection is sourced from Blockwise `email_outbox` delivery,
+failure, and suppression state rather than Mautic contact snapshots.

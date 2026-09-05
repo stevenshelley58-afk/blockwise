@@ -7,6 +7,8 @@
 services:
   blockwise-worker:
     image: "${BLOCKWISE_WORKER_IMAGE:?Set BLOCKWISE_WORKER_IMAGE to blockwise/worker:<full-git-sha>}"
+    user: "0:0"
+    entrypoint: ["/usr/local/bin/blockwise-worker-entrypoint"]
     restart: unless-stopped
     env_file:
       - "${BLOCKWISE_WORKER_ENV_FILE:?Set BLOCKWISE_WORKER_ENV_FILE to the absolute worker env path}"
@@ -17,12 +19,30 @@ services:
       WORKER_LEASE_SECONDS: ${WORKER_LEASE_SECONDS:-600}
       WORKER_HEARTBEAT_INTERVAL_MS: ${WORKER_HEARTBEAT_INTERVAL_MS:-200000}
       WORKER_REAP_INTERVAL_MS: ${WORKER_REAP_INTERVAL_MS:-60000}
+      MAUTIC_TOKEN_FILE: /run/blockwise-secrets/mautic-token
+      CHATWOOT_API_TOKEN_FILE: /run/blockwise-secrets/chatwoot-api-token
+      CHATWOOT_ENQUIRY_SOURCE_ID: ${CHATWOOT_ENQUIRY_SOURCE_ID:-}
+      CHATWOOT_SUPPORT_SOURCE_ID: ${CHATWOOT_SUPPORT_SOURCE_ID:-}
+      CHATWOOT_GLOBAL_SOURCE_ID: ${CHATWOOT_GLOBAL_SOURCE_ID:-}
+      BLOCKWISE_OPS_CORRELATION_KEY_FILE: /run/blockwise-secrets/ops-correlation-key
+      SUPABASE_SERVICE_ROLE_KEY_FILE: /run/blockwise-secrets/supabase-service-role
     read_only: true
+    tmpfs:
+      - /run/blockwise-secrets:rw,noexec,nosuid,nodev
     cap_drop:
       - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
     security_opt:
       - no-new-privileges:true
     stop_grace_period: 30s
+    volumes:
+      - ${MAUTIC_TOKEN_HOST_FILE:-/srv/blockwise/secrets/mautic_token}:/run/secrets/mautic-token-source:ro
+      - ${CHATWOOT_API_TOKEN_HOST_FILE:-/srv/blockwise/secrets/chatwoot_api_token}:/run/secrets/chatwoot-api-token-source:ro
+      - ${BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE:?BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE is required}:/run/secrets/ops-correlation-key-source:ro
+      - ${SUPABASE_SERVICE_ROLE_KEY_HOST_FILE:?Set SUPABASE_SERVICE_ROLE_KEY_HOST_FILE to a root-owned 0600 file}:/run/secrets/supabase-service-role-source:ro
     logging:
       driver: json-file
       options:

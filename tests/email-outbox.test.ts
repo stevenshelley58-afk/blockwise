@@ -22,6 +22,7 @@ function makeSupabase(opts: {
   outboxRows?: Row[];
   suppressions?: string[];
   failSuppressions?: boolean;
+  marketingDecision?: { allowed: boolean; reason: string };
   businessRows?: Record<string, Row[]>;
 } = {}): SupabaseClient & OutboxTestDouble {
   const outbox: Row[] = (opts.outboxRows ?? []).map((r) => ({ ...r }));
@@ -130,6 +131,7 @@ function makeSupabase(opts: {
     },
     from: table,
     rpc(fn: string, args: Record<string, unknown>) {
+      if (fn === 'can_send_marketing') return Promise.resolve({ data: [opts.marketingDecision ?? { allowed: true, reason: 'allowed' }], error: null });
       if (fn !== 'claim_email_outbox_batch') return Promise.resolve({ data: null, error: { message: 'unexpected rpc ' + fn } });
       const size = Number(args.p_batch_size ?? 10);
       return Promise.resolve({ data: claimedBatch.slice(0, size).map((r) => ({ ...r, attempts: (r.attempts as number) + 1 })), error: null });
@@ -181,10 +183,18 @@ describe("email outbox", () => {
   it("schedules follow-ups with an explicit not-before timestamp", async () => {
     const supabase = makeSupabase();
     await scheduleFollowUpEmail({
-      to: "customer@example.com", from: "hello@blockwise.sale", subject: "Follow up", text: "Tomorrow",
+      workspaceId: "workspace-1", topic: "follow_up", to: "customer@example.com", from: "hello@blockwise.sale", subject: "Follow up", text: "Tomorrow",
       scheduledAt: "2099-01-01T09:00:00.000Z", leadId: "lead-1", supabase,
     });
     assert.equal(supabase.outbox[0].next_attempt_at, "2099-01-01T09:00:00.000Z");
+  });
+  it("denies follow-ups when consent or suppression guard rejects the topic", async () => {
+    const supabase = makeSupabase({ marketingDecision: { allowed: false, reason: "suppressed" } });
+    await assert.rejects(() => scheduleFollowUpEmail({
+      workspaceId: "workspace-1", topic: "follow_up", to: "customer@example.com", from: "hello@blockwise.sale", subject: "Follow up", text: "Tomorrow",
+      scheduledAt: "2099-01-01T09:00:00.000Z", leadId: "lead-denied", supabase,
+    }), /marketing_send_denied:suppressed/);
+    assert.equal(supabase.outbox.length, 0);
   });
   it("collapses duplicate enqueues to the first message", async () => {
     const supabase = makeSupabase();

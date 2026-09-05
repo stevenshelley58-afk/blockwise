@@ -13,9 +13,9 @@ profile runs Stalwart with durable config/data volumes and exposes only the
 SMTP listeners required by GoTrue/outbox and approved server-to-server mail.
 `BLOCKWISE_MAIL_ENABLED=true` is a fail-closed production gate. DNS, TLS,
 mailbox credentials, queue operations and external signup acceptance are
-separate operator gates; no DNS value or secret is assumed here. SMTP does not
-configure the inbound operator inbox: that UI remains a quarantined Resend
-compatibility adapter pending a separate JMAP/IMAP support work package.
+separate operator gates; no DNS value or secret is assumed here. Customer
+operations uses the existing product-mail Stalwart instance for private IMAP
+and the reviewed Chatwoot email-channel API bootstrap.
 
 `infra/coolify/docker-compose.product.yml` is the deployment contract for the
 self-hosted product. It runs PostgreSQL 17, PostgREST, GoTrue, Storage API,

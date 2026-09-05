@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+import { hasBookingSecret } from "./secret.ts";
+
 export type BookingProvider = "calcom" | "snagtime";
 export type BookingMarket = "US" | "AU";
 export type BookingState = "link_sent" | "booked" | "rescheduled" | "cancelled" | "completed" | "failed";
@@ -106,13 +108,13 @@ export function getBookingProviderReadiness(env: NodeJS.ProcessEnv = process.env
   if (provider === "snagtime") {
     if (!env.SNAGTIME_BASE_URL?.trim()) missing.push("SNAGTIME_BASE_URL");
     else if (!getSnagtimeBookingUrl(env)) invalid.push("SNAGTIME_BASE_URL");
-    if (!env.SNAGTIME_WEBHOOK_SECRET?.trim()) missing.push("SNAGTIME_WEBHOOK_SECRET");
+    if (!hasBookingSecret(env, "SNAGTIME_WEBHOOK_SECRET", "SNAGTIME_WEBHOOK_SECRET_FILE")) missing.push("SNAGTIME_WEBHOOK_SECRET");
   } else {
     for (const key of ["CALCOM_ONBOARDING_URL_US", "CALCOM_ONBOARDING_URL_AU"] as const) {
       if (!env[key]?.trim()) missing.push(key);
       else if (!getHostedBookingUrl(key.endsWith("US") ? "US" : "AU", env)) invalid.push(key);
     }
-    if (!env.CALCOM_WEBHOOK_SECRET?.trim()) missing.push("CALCOM_WEBHOOK_SECRET");
+    if (!hasBookingSecret(env, "CALCOM_WEBHOOK_SECRET", "CALCOM_WEBHOOK_SECRET_FILE")) missing.push("CALCOM_WEBHOOK_SECRET");
   }
   return { provider, ok: missing.length === 0 && invalid.length === 0, missing, invalid };
 }

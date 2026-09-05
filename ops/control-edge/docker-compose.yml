@@ -1,0 +1,40 @@
+services:
+  customer-ops-control-edge:
+    # Publish this image from the exact merged Blockwise SHA. The control edge
+    # has no public port and is reachable only on the private networks below.
+    image: "${CONTROL_EDGE_IMAGE:?Set CONTROL_EDGE_IMAGE to an immutable digest-pinned image}"
+    pull_policy: never
+    user: "0:0"
+    entrypoint: ["/usr/local/bin/blockwise-control-edge-entrypoint"]
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /run/blockwise-secrets:rw,noexec,nosuid,nodev
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID]
+    security_opt: [no-new-privileges:true]
+    networks: [hermes-private, blockwise-product]
+    env_file: [/etc/blockwise/customer-ops/control-edge.env]
+    volumes:
+      - "${CONTROL_EDGE_INTERNAL_AUTH_HOST_FILE:?Set CONTROL_EDGE_INTERNAL_AUTH_HOST_FILE to a root-owned 0600 file}:/run/secrets/internal-auth-source:ro"
+      - "${CONTROL_EDGE_SUPABASE_SERVICE_ROLE_HOST_FILE:?Set CONTROL_EDGE_SUPABASE_SERVICE_ROLE_HOST_FILE to a root-owned 0600 file}:/run/secrets/supabase-service-role-source:ro"
+      - "${CONTROL_EDGE_EXECUTOR_SECRET_HOST_FILE:?Set CONTROL_EDGE_EXECUTOR_SECRET_HOST_FILE to a root-owned 0600 file}:/run/secrets/action-executor-source:ro"
+    environment:
+      BLOCKWISE_INTERNAL_AUTH_SECRET_FILE: /run/blockwise-secrets/internal-auth
+      SUPABASE_SERVICE_ROLE_KEY_FILE: /run/blockwise-secrets/supabase-service-role
+      BLOCKWISE_ACTION_EXECUTOR_SECRET_FILE: /run/blockwise-secrets/action-executor
+      CONTROL_EDGE_EXPECTED_REVISION: "${CONTROL_EDGE_EXPECTED_REVISION:?Set CONTROL_EDGE_EXPECTED_REVISION to the published image Git SHA}"
+    expose: ["8660"]
+    healthcheck:
+      test: ["CMD-SHELL", "test \"$(cat /app/REVISION)\" = \"$${CONTROL_EDGE_EXPECTED_REVISION}\" && wget --spider --quiet http://127.0.0.1:8660/health/live"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+networks:
+  hermes-private:
+    external: true
+  blockwise-product:
+    external: true

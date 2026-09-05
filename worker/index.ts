@@ -22,6 +22,7 @@ import { pathToFileURL } from "node:url";
 
 import { resolveSupabaseServerCredential } from "../src/lib/supabase/credentials.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
+import { reapOpsProjections, runGlobalProjectionOnce, runOpsProjectionOnce } from "./ops-projection.ts";
 
 type ServiceSupabase = ReturnType<typeof createSupabaseServiceClient>;
 type HandlerExecutionContext = {
@@ -596,7 +597,7 @@ export async function preflightWorker(expectedRevision?: string): Promise<Worker
   const missing: string[] = [];
   if (!providerWritesEnabled) missing.push("BLOCKWISE_ENABLE_PROVIDER_WRITES=true");
   if (!supabaseUrlPresent) missing.push("SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL");
-  if (!supabaseCredentialPresent) missing.push("SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseCredentialPresent) missing.push("SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY_FILE");
   if (!tokenEncryptionKeyPresent) missing.push("TOKEN_ENCRYPTION_KEY");
   if (missing.length > 0) {
     throw new Error(`Worker preflight failed; missing: ${missing.join(", ")}.`);
@@ -699,6 +700,11 @@ async function main() {
   const reaper = setInterval(() => void reap(supabase), REAP_EVERY_MS);
   reaper.unref?.();
   await reap(supabase);
+  const projectionsEnabled = process.env.BLOCKWISE_OPS_PROJECTION_WORKER === "true";
+  if (projectionsEnabled) {
+    await reapOpsProjections(supabase);
+    log("customer-operations projection lane enabled");
+  }
 
   // Single-threaded claim loop. claim_job_v2 is concurrency-safe (FOR UPDATE SKIP
   // LOCKED), so multiple worker replicas can run this same loop without
@@ -707,6 +713,10 @@ async function main() {
   try {
     while (!shutdownRequested) {
       try {
+        if (projectionsEnabled) {
+          await runOpsProjectionOnce(supabase);
+          await runGlobalProjectionOnce(supabase);
+        }
         const did = await runOnce(supabase, { shutdownSignal: shutdownController.signal });
         if (!shutdownRequested) await sleep(did ? POLL_BUSY_MS : POLL_IDLE_MS);
       } catch (err) {

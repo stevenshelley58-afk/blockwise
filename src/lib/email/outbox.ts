@@ -19,6 +19,8 @@ export type EmailDeliveryProjection =
   | { kind: "report_email"; id: string };
 
 export type OutboxEnqueueInput = {
+  /** Authoritative tenant; omitted only for intentionally global/operator mail. */
+  workspaceId?: string;
   messageType: string;
   templateId: string;
   templateVersion: number;
@@ -68,6 +70,7 @@ export async function enqueueEmail(
     .from("email_outbox")
     .upsert(
       {
+        ...(input.workspaceId ? { workspace_id: input.workspaceId } : {}),
         message_type: input.messageType,
         template_id: input.templateId,
         template_version: input.templateVersion,
@@ -113,12 +116,13 @@ export async function enqueueEmail(
 
 export async function recordEmailSuppression(
   supabase: SupabaseClient,
-  input: { email: string; reason: "bounce" | "complaint" | "unsubscribe" | "admin"; source: string },
+  input: { email: string; reason: "bounce" | "complaint" | "unsubscribe" | "admin"; source: string; workspaceId?: string },
 ): Promise<void> {
+  const email = input.email.toLowerCase().trim();
   const { error } = await supabase
     .from("email_suppressions")
     .upsert(
-      { email: input.email.toLowerCase().trim(), reason: input.reason, source: input.source },
+      { email, reason: input.reason, source: input.source, ...(input.workspaceId ? { workspace_id: input.workspaceId } : {}) },
       { onConflict: "email,reason", ignoreDuplicates: true },
     );
   if (error) {
