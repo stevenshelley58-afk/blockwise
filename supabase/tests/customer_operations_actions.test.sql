@@ -17,7 +17,7 @@ select ok(not has_table_privilege('service_role', 'public.ops_action_receipts', 
 select ok(not has_table_privilege('service_role', 'public.ops_action_capabilities', 'INSERT'), 'service_role cannot directly insert capabilities');
 select ok(not has_table_privilege('service_role', 'public.ops_action_capabilities', 'UPDATE'), 'service_role cannot directly update capabilities');
 select ok(not has_table_privilege('service_role', 'public.ops_action_capabilities', 'DELETE'), 'service_role cannot directly delete capabilities');
-select is((select count(*)::int from public.ops_action_capabilities), 21, 'all agreed actions have a capability entry');
+select is((select count(*)::int from public.ops_action_capabilities), 24, 'all agreed actions have a capability entry');
 select is((select capability_state from public.ops_action_capabilities where action_type = 'team_suspend'), 'unsupported', 'suspension is explicitly unsupported');
 select is((select capability_state from public.ops_action_capabilities where action_type = 'team_role_change'), 'available', 'role changes are owner-only CAS protected');
 select is((select capability_state from public.ops_action_capabilities where action_type = 'billing_portal_link'), 'capability_required', 'billing portal links are explicitly gated until an executor exists');
@@ -146,10 +146,12 @@ select lives_ok($$ select public.enqueue_ops_action(
   '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', (select ops_version from public.workspace_members where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777'),
   'Role executor is not enabled', now() - interval '1 hour', now() + interval '2 hours',
   '{"role":"viewer"}'::jsonb
-) $$, 'capability-gated action is recorded without inventing execution');
-select is((select status from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888883'), 'rejected', 'capability-gated action is rejected explicitly');
-select is((select last_error from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888883'), 'capability_required', 'capability reason is persisted safely');
+) $$, 'available role action is recorded for execution');
+select is((select status from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888883'), 'pending', 'available role action is queued explicitly');
+select is((select last_error from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888883'), null::text, 'available role action has no capability error');
 
+update public.workspace_members set updated_at=now()
+  where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777';
 select lives_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888884', 'ops:test:suspend:unsupported',
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
