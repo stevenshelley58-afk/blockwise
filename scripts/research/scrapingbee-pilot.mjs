@@ -54,6 +54,7 @@ const args = Object.fromEntries(process.argv.slice(2).map((arg) => {
 }));
 
 const live = args.live === true;
+if (live) { console.error("Live pilot is disabled until durable reservation wiring is deployed."); process.exit(4); }
 const apiKey = process.env.SCRAPINGBEE_API_KEY || process.env.HERMES_SCRAPINGBEE_API_KEY || "";
 if (live && !apiKey) {
   console.error("SCRAPINGBEE_API_KEY is required for --live runs.");
