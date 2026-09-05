@@ -87,6 +87,38 @@ function walkAdIds(node, out) {
   for (const value of Object.values(node)) walkAdIds(value, out);
 }
 
+function numericPageId(value) {
+  const text = String(value ?? "").trim();
+  return /^\d{5,}$/u.test(text) ? text : null;
+}
+
+function pageIdsIn(value, out = new Set(), parentKey = "") {
+  if (!value || typeof value !== "object") return out;
+  if (Array.isArray(value)) {
+    for (const item of value) pageIdsIn(item, out, parentKey);
+    return out;
+  }
+  for (const [key, child] of Object.entries(value)) {
+    if (/^(?:view_all_page_id|page_id|pageId|pageID)$/u.test(key)) {
+      const pageId = numericPageId(child);
+      if (pageId) out.add(pageId);
+    } else if (key === "id" && /page/iu.test(parentKey)) {
+      const pageId = numericPageId(child);
+      if (pageId) out.add(pageId);
+    }
+    pageIdsIn(child, out, key);
+  }
+  return out;
+}
+
+function nearbyPageIds(source, start, end) {
+  const ids = new Set();
+  const nearby = source.slice(Math.max(0, start - 256), Math.min(source.length, end + 2048));
+  const pattern = /\\?"(?:view_all_page_id|page_id|pageId|pageID)\\?"\s*:\s*\\?"(\d{5,})\\?"/giu;
+  for (const match of nearby.matchAll(pattern)) ids.add(match[1]);
+  return ids;
+}
+
 function extractConnections(html) {
   const text = String(html || "");
   const connections = [];
@@ -108,7 +140,10 @@ function extractConnections(html) {
           const key = JSON.stringify(parsed);
           if (!seen.has(key)) {
             seen.add(key);
-            connections.push(parsed);
+            connections.push({
+              connection: parsed,
+              pageIds: new Set([...pageIdsIn(parsed), ...nearbyPageIds(source, match.index, braceIndex + raw.length)]),
+            });
           }
         }
       } catch {
@@ -130,7 +165,7 @@ function extractConnections(html) {
  *   warnings: string[],
  * }}
  */
-export function classifyMetaAdLibraryPayload(html) {
+export function classifyMetaAdLibraryPayload(html, { requestedPageId = null } = {}) {
   const text = String(html || "");
   const warnings = [];
 
@@ -167,22 +202,26 @@ export function classifyMetaAdLibraryPayload(html) {
     return { outcome: "unparseable", ads: [], adIds: [], connectionCount: null, pageInfo: { hasNextPage: null, endCursor: null }, warnings };
   }
 
-  // Merge connection objects: the richest edges win; counts and page_info are
-  // taken from objects that carry them (field order in the payload varies).
-  let bestEdges = null;
-  let maxCount = null;
-  let pageInfo = { hasNextPage: null, endCursor: null };
-  for (const connection of connections) {
-    const count = typeof connection.count === "number" ? connection.count : null;
-    if (count !== null && (maxCount === null || count > maxCount)) maxCount = count;
-    const edges = Array.isArray(connection.edges) ? connection.edges : null;
-    if (edges && (!bestEdges || edges.length > bestEdges.length)) bestEdges = edges;
-    const info = connection.page_info && typeof connection.page_info === "object" ? connection.page_info : null;
-    if (info) {
-      if (typeof info.has_next_page === "boolean") pageInfo.hasNextPage = info.has_next_page;
-      if (typeof info.end_cursor === "string" && !pageInfo.endCursor) pageInfo.endCursor = info.end_cursor;
-    }
+  const requested = requestedPageId === null || requestedPageId === undefined ? null : numericPageId(requestedPageId);
+  if (requestedPageId !== null && requestedPageId !== undefined && !requested) {
+    warnings.push("requested_page_id_invalid");
+    return { outcome: "partial", ads: [], adIds: [], connectionCount: null, pageInfo: { hasNextPage: null, endCursor: null }, warnings };
   }
+  // Never merge edges/count/page_info from different connections: an HTML shell
+  // can contain prefetches for unrelated pages. Select one correlated
+  // connection only; no correlation is partial evidence, never success/zero.
+  const correlated = requested ? connections.filter(({ pageIds }) => pageIds.has(requested)) : connections;
+  if (correlated.length === 0) {
+    warnings.push("requested_page_connection_not_found");
+    return { outcome: "partial", ads: [], adIds: [], connectionCount: null, pageInfo: { hasNextPage: null, endCursor: null }, warnings };
+  }
+  const selected = correlated
+    .map(({ connection }) => connection)
+    .sort((a, b) => (Array.isArray(b.edges) ? b.edges.length : -1) - (Array.isArray(a.edges) ? a.edges.length : -1))[0];
+  const bestEdges = Array.isArray(selected.edges) ? selected.edges : null;
+  const maxCount = typeof selected.count === "number" ? selected.count : null;
+  const info = selected.page_info && typeof selected.page_info === "object" ? selected.page_info : {};
+  const pageInfo = { hasNextPage: typeof info.has_next_page === "boolean" ? info.has_next_page : null, endCursor: typeof info.end_cursor === "string" ? info.end_cursor : null };
 
   const ads = [];
   const adIds = new Set();

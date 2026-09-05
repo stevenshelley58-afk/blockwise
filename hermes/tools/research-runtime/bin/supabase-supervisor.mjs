@@ -2988,7 +2988,7 @@ async function runScrapingBeePageCapture(input) {
     }
 
     // Shared deterministic parser: classification + structured pagination.
-    const classified = classifyMetaAdLibraryPayload(html);
+    const classified = classifyMetaAdLibraryPayload(html, { requestedPageId: input.metaPageId });
     if (classified.outcome === "challenge" || classified.outcome === "login_wall") {
       const message = `scrapingbee_${classified.outcome}`;
       await finalizeAttempt({ outcome: "blocked", httpStatus: response.status, providerStatus: Number.isNaN(spbInitialStatus) ? null : spbInitialStatus, responseBytes: html.length, error: message });
@@ -3008,13 +3008,10 @@ async function runScrapingBeePageCapture(input) {
     }
 
     // success / partial / confirmed_absence: normalise items through the
+    if (classified.outcome === "partial") throw new Error("scrapingbee payload was only partial; refusing incomplete ingestion");
     // ingestion pipeline (escape-aware since extractJsonObjectsAfterKey
     // handles escaped variants).
-    const parsed = normaliseMetaAdLibraryHtml({
-      html,
-      pageId: input.metaPageId,
-      limit: input.resultsLimit,
-    });
+    const parsed = normaliseHostedMetaItems({ body: classified.ads.map((ad) => ad.node), pageId: input.metaPageId, limit: input.resultsLimit });
     // Pagination evidence comes ONLY from page_info.has_next_page. A bounded
     // result list alone never proves exhaustion.
     const paginationExhausted = classified.pageInfo.hasNextPage === false;
@@ -3563,6 +3560,7 @@ function isAdLikeObject(value) {
 }
 
 function normaliseHostedMetaAd(raw, pageId) {
+  raw = { ...(asObject(raw?.collation_result?.ad_archive) || {}), ...raw };
   const snapshot = asObject(pick(raw, "snapshot", "ad_snapshot", "creative", "ad_creative")) || raw;
   const cards = objectArray(pick(snapshot, "cards", "asset_cards", "ad_cards"));
   const firstCard = cards[0] || null;
@@ -5112,8 +5110,25 @@ async function handleAdClassifier(job) {
 }
 
 async function captureMediaAsset(asset, buildRunId) {
+  // The archive worker is the only path allowed to mark an asset captured.
   if (!asset.source_url || !/^https?:\/\//iu.test(asset.source_url)) throw new Error("media asset has no downloadable source_url");
   await ensureMediaBucket();
+async function runVerifiedMediaArchive(assetId) {
+  const cliPath = env.HERMES_MEDIA_ARCHIVE_CLI_PATH || join(dirname(new URL(import.meta.url).pathname), "media-archive.mjs");
+  await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [cliPath, "--asset-id", String(assetId)], { stdio: ["ignore", "pipe", "pipe"] });
+    let stderr = "";
+    child.stderr.on("data", (chunk) => { stderr += String(chunk); });
+    child.once("error", reject);
+    child.once("close", (code) => code === 0 ? resolve() : reject(new Error(`media archive failed (${code}): ${stderr.slice(-500)}`)));
+  });
+  const rows = await rest("research", `media_assets?select=storage_path,storage_bucket,content_type,byte_size,checksum,content_hash,width,height,capture_status&id=eq.${encode(assetId)}&limit=1`);
+  const asset = rows?.[0];
+  if (asset?.capture_status !== "captured" || !asset.storage_path || !(asset.checksum || asset.content_hash) || !Number(asset.byte_size)) {
+    throw new Error("media archive did not produce a verified captured asset");
+  }
+  return { rejected: false, storagePath: asset.storage_path, contentType: asset.content_type, byteSize: asset.byte_size, checksum: asset.checksum, contentHash: asset.content_hash || asset.checksum, width: asset.width, height: asset.height, deduped: false };
+}
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), metaCaptureTimeoutMs);
   try {
@@ -5833,15 +5848,9 @@ async function maybeRunAccuracyAudit() {
 }
 
 async function maybeRunInactiveAdPurge() {
-  const current = Date.now();
-  if (current - lastInactiveAdPurgeCheckAt < inactiveAdPurgeCheckIntervalMs) {
-    return { skipped: true, reason: "not_due" };
-  }
-  lastInactiveAdPurgeCheckAt = current;
-  return runInactiveAdPurge({
-    researchRest: rest,
-    intervalHours: inactiveAdPurgeIntervalHours,
-  });
+  // Ad evidence and archived media are retained permanently. This guard stays
+  // in the runtime so an old scheduled RPC can never delete collection data.
+  return { skipped: true, reason: "archival_retention_enabled" };
 }
 
 async function main() {

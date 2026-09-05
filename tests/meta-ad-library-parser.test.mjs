@@ -70,9 +70,17 @@ test("empty input is unparseable, not absence", () => {
   const result = classifyMetaAdLibraryPayload("");
   assert.equal(result.outcome, "unparseable");
 });
-
 test("parser is deterministic across repeated runs", () => {
   const first = classifyMetaAdLibraryPayload(fixture("positive-plain.json"));
   const second = classifyMetaAdLibraryPayload(fixture("positive-plain.json"));
   assert.deepEqual(first, second);
+});
+
+test("requested numeric page id selects only its own connection and fails closed on a mismatch", () => {
+  const html = fixture("positive-plain.json");
+  assert.equal(classifyMetaAdLibraryPayload(html, { requestedPageId: "391219454073578" }).outcome, "success");
+  const mismatch = classifyMetaAdLibraryPayload(html, { requestedPageId: "999999999999999" });
+  assert.equal(mismatch.outcome, "partial");
+  assert.deepEqual(mismatch.adIds, []);
+  assert.ok(mismatch.warnings.includes("requested_page_connection_not_found"));
 });
