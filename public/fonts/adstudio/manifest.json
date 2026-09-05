@@ -135,7 +135,8 @@
       "license": "SIL Open Font License, 1.1",
       "licenseUrl": "https://openfontlicense.org",
       "sha256": "e2863d3bbe2e094f1ce98053ee3c6200cfa35f82b9f4cc6fd95fbaead4125d4f",
-      "bytes": 14528
+      "bytes": 14528,
+      "licenseFile": "/fonts/adstudio/licenses/BodoniModa-OFL.txt"
     },
     {
       "file": "/fonts/adstudio/cairo-900.woff2",
