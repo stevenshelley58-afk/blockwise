@@ -30,9 +30,10 @@ data migration.
   `release/product.env.before-1b50a52f74a7` in
   `/srv/blockwise/e2e-runs/cleanup-20260905/`. See [rollback](rollback.md).
 - The serving checkout `/projects/blockwise-cleanup-20260905` is committed and
-  clean at the serving SHA. `main` remains deliberately divergent from live
-  (customer-ops work and migrations on main; newer AdStudio changes on live);
-  reconciliation is not part of this release.
+  clean; its HEAD is a docs-only evidence commit directly after the serving
+  SHA, not a new application build. `main` remains deliberately divergent from
+  live (customer-ops work and migrations on main; newer AdStudio changes on
+  live); reconciliation is not part of this release.
 
 ## Current runtime
 
