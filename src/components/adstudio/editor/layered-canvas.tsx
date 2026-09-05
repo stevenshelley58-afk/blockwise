@@ -34,8 +34,12 @@ function fontStem(file: string): string {
   return file.split("/").pop()?.replace(/\.[^.]+$/u, "") || "BlockwiseAdFont";
 }
 
+function fontFamily(templateId: string, file: string): string {
+  return `Blockwise_${templateId}_${fontStem(file)}`;
+}
+
 function ensureTemplateFont(templateId: string, existingAdId: string, assets: AdTemplate["assets"], font: { file: string }): Promise<void> {
-  const family = fontStem(font.file);
+  const family = fontFamily(templateId, font.file);
   const declaration = Object.entries(assets).find(([, asset]) => asset.fileName === font.file);
   const assetKey = declaration?.[0] ?? null;
   const fontUrl = assetKey
@@ -49,7 +53,10 @@ function ensureTemplateFont(templateId: string, existingAdId: string, assets: Ad
     ? Promise.resolve()
     : new FontFace(family, `url(${fontUrl})`).load().then(face => {
       document.fonts.add(face);
-    }).catch(() => { throw new Error(`Font ${font.file} could not be loaded from the template asset.`); });
+    }).catch(() => {
+      loadedFontFaces.delete(cacheKey);
+      throw new Error(`Font ${font.file} could not be loaded from the template asset.`);
+    });
   loadedFontFaces.set(cacheKey, task);
   return task;
 }
@@ -308,7 +315,7 @@ async function createLayerObject({
       originY: "top",
       width: geometry.width,
       height: geometry.height,
-      fontFamily: fontStem(layer.font.file),
+      fontFamily: fontFamily(templateId, layer.font.file),
       fontWeight: layer.fontWeight ?? "normal",
       fontStyle: layer.italic ? "italic" : "normal",
       fontSize,
