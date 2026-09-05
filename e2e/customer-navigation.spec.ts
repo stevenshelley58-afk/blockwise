@@ -7,16 +7,17 @@ const workspaceId = process.env.ADSTUDIO_E2E_WORKSPACE_ID;
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL;
 const canRun = Boolean(baseUrl && workspaceId && storageState && existsSync(storageState));
 
+test.use({
+  storageState,
+  ignoreHTTPSErrors: controlledCanary,
+  launchOptions: controlledCanary ? {
+    executablePath: process.env.ADSTUDIO_E2E_CHROMIUM,
+    args: ["--host-resolver-rules=MAP blockwise.sale 127.0.0.1,EXCLUDE localhost"],
+  } : undefined,
+});
+
 test.describe("customer navigation canary", () => {
   test.skip(!canRun, "Set PLAYWRIGHT_BASE_URL and ADSTUDIO_E2E_WORKSPACE_ID; the controlled auth fixture must exist.");
-  test.use({
-    storageState,
-    ignoreHTTPSErrors: controlledCanary,
-    launchOptions: controlledCanary ? {
-      executablePath: process.env.ADSTUDIO_E2E_CHROMIUM,
-      args: ["--host-resolver-rules=MAP blockwise.sale 127.0.0.1,EXCLUDE localhost"],
-    } : undefined,
-  });
 
   test("keeps one active destination, hides disabled tools, and supports the command shortcut", async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1440, height: 900 });
