@@ -20,7 +20,7 @@ services:
       driver: json-file
       options: {max-size: "10m", max-file: "3"}
   ad-db-gateway:
-    image: caddy:2.11.3-alpine
+    image: caddy:2.11.3-alpine@sha256:86deaf5e3d3408a6ccec08fbb79989783dd26e206ae10bcf78a801dc8c9ab794
     restart: unless-stopped
     depends_on: [ad-db-rest]
     ports: ["127.0.0.1:8652:3000"]
