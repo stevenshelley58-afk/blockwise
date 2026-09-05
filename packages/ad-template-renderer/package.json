@@ -14,7 +14,8 @@
     },
     "./text-layout": {
       "import": "./dist/text-layout.js",
-      "types": "./dist/text-layout.d.ts"
+      "types": "./dist/text-layout.d.ts",
+      "default": "./dist/text-layout.js"
     }
   },
   "scripts": {
