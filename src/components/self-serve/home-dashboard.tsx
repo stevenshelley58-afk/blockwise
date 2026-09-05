@@ -159,7 +159,10 @@ export function HomeDashboard({ data }: { data: HomeData }) {
 
   return (
     <div className="mx-auto w-full max-w-[1120px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
-      <AnimatedGroup className="grid gap-3.5">
+      {/* Explicit minmax(0,1fr) tracks: without them a single nowrap leaf
+          (e.g. a truncated subtitle) inflates the auto track and the whole
+          column overflows <main> on small screens. */}
+      <AnimatedGroup className="grid grid-cols-1 gap-3.5">
         {/* Page head */}
         <div>
           <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
@@ -244,20 +247,20 @@ export function HomeDashboard({ data }: { data: HomeData }) {
         </AnimatedGroup>
 
         {/* One server-resolved activation card remains dominant; performance is secondary. */}
-        <AnimatedGroup className="grid gap-3.5 lg:grid-cols-[3fr_2fr]" itemClassName="h-full">
+        <AnimatedGroup className="grid grid-cols-1 gap-3.5 lg:grid-cols-[3fr_2fr]" itemClassName="h-full">
           <ActivationCard data={data} />
           <HomePerformanceChart daily={performance?.daily ?? null} />
         </AnimatedGroup>
 
         {/* Quick actions */}
-        <AnimatedGroup className="grid gap-3.5 sm:grid-cols-2" itemClassName="h-full">
+        <AnimatedGroup className="grid grid-cols-1 gap-3.5 sm:grid-cols-2" itemClassName="h-full">
           {quickActions.map((action) => {
             const Icon = navByVariant.self_serve.find((item) => item.href === action.href)?.icon ?? ArrowRight;
             return (
               <Link
                 key={action.href}
                 href={action.href}
-                className="group flex items-center gap-3.5 rounded-(--r-card) bg-card px-5 py-[18px] shadow-card transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-float motion-reduce:hover:translate-y-0"
+                className="group flex min-w-0 items-center gap-3.5 rounded-(--r-card) bg-card px-5 py-[18px] shadow-card transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-float motion-reduce:hover:translate-y-0"
               >
                 <span
                   aria-hidden

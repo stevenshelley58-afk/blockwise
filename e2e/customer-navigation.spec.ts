@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 const storageState = process.env.ADSTUDIO_E2E_STORAGE_STATE;
 const controlledCanary = process.env.BLOCKWISE_CONTROLLED_CANARY === "1";
@@ -16,6 +16,82 @@ test.use({
   } : undefined,
 });
 
+/** Wait for fonts, hydration, entrance and count-up animations to settle. */
+async function settle(page: Page) {
+  await page.evaluate(() => document.fonts.ready);
+  // KPI count-up runs 0.9s; entrance springs finish inside that window.
+  await page.waitForTimeout(1200);
+}
+
+/** Dismiss the cookie banner so screenshots and hit-testing are unobstructed. */
+async function dismissCookieConsent(page: Page) {
+  const banner = page.getByRole("region", { name: "Cookie consent" });
+  if (await banner.isVisible().catch(() => false)) {
+    await banner.getByRole("button", { name: "Essential only" }).click();
+  }
+  await expect(banner).toHaveCount(0);
+}
+
+/**
+ * Real clipping check: <main> has `overflow-x: clip`, so
+ * documentElement.scrollWidth stays correct while content is visibly
+ * cropped. Assert main's own scroll box AND every visible card/control
+ * rectangle stay inside main's box.
+ */
+async function assertNothingClipped(page: Page) {
+  const result = await page.evaluate(() => {
+    const main = document.querySelector("main");
+    if (!main) return null;
+    const mainRect = main.getBoundingClientRect();
+    const offenders: string[] = [];
+    for (const el of main.querySelectorAll("a, button, input, select, section, h1, h2, table, svg[role], p, span")) {
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0) continue;
+      const style = getComputedStyle(el);
+      if (style.display === "none" || style.visibility === "hidden") continue;
+      if (rect.right > mainRect.right + 0.5 || rect.left < mainRect.left - 0.5) {
+        offenders.push(`${el.tagName.toLowerCase()}:${String(el.className).slice(0, 60)}`);
+      }
+    }
+    return {
+      mainScrollWidth: main.scrollWidth,
+      mainClientWidth: main.clientWidth,
+      offenders: offenders.slice(0, 8),
+    };
+  });
+  expect(result, "main element must exist").not.toBeNull();
+  expect(
+    result!.mainScrollWidth,
+    "main.scrollWidth must not exceed main.clientWidth (clipped overflow)",
+  ).toBeLessThanOrEqual(result!.mainClientWidth);
+  expect(result!.offenders, "visible content must fit without clipping").toEqual([]);
+}
+
+/** The fixed bottom tab bar must be visible, inside the viewport, and tappable. */
+async function assertMobileNavUsable(page: Page) {
+  const nav = page.getByRole("navigation", { name: "Primary mobile navigation" });
+  await expect(nav).toBeVisible();
+  const items = nav.getByRole("link");
+  expect(await items.count()).toBeGreaterThanOrEqual(4);
+  const boxes = await items.evaluateAll((elements) =>
+    elements.map((el) => {
+      const rect = el.getBoundingClientRect();
+      return {
+        left: rect.left,
+        right: rect.right,
+        height: rect.height,
+        viewportWidth: window.innerWidth,
+      };
+    }),
+  );
+  for (const box of boxes) {
+    expect(box.left).toBeGreaterThanOrEqual(-0.5);
+    expect(box.right).toBeLessThanOrEqual(box.viewportWidth + 0.5);
+    expect(box.height, "nav item must keep a usable tap height").toBeGreaterThanOrEqual(40);
+  }
+  await expect(nav.getByRole("button", { name: "More" })).toBeVisible();
+}
+
 test.describe("customer navigation canary", () => {
   test.skip(!canRun, "Set PLAYWRIGHT_BASE_URL and ADSTUDIO_E2E_WORKSPACE_ID; the controlled auth fixture must exist.");
 
@@ -23,36 +99,42 @@ test.describe("customer navigation canary", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`/self-serve?workspaceId=${encodeURIComponent(workspaceId!)}`);
     await expect(page).not.toHaveURL(/\/login/);
+    await dismissCookieConsent(page);
     await expect(page.getByRole("link", { name: "Ad Radar" })).toHaveCount(0);
     await page.keyboard.press("Control+K");
     await expect(page.getByRole("dialog")).toBeVisible();
     await expect(page.getByRole("dialog")).toContainText("Go to");
+    await page.keyboard.press("Escape");
+    await settle(page);
+    await assertNothingClipped(page);
+    await page.screenshot({ path: testInfo.outputPath("customer-home-desktop.png"), fullPage: true });
     await page.goto(`/ad-studio/brand?workspaceId=${encodeURIComponent(workspaceId!)}`);
     await expect(page.locator('[aria-current="page"]:visible')).toHaveCount(1);
     await page.goto(`/settings?workspaceId=${encodeURIComponent(workspaceId!)}`);
     await expect(page.locator('[aria-current="page"]:visible')).toHaveCount(1);
-    await page.screenshot({ path: testInfo.outputPath("customer-desktop.png"), fullPage: true });
+    await dismissCookieConsent(page);
+    await settle(page);
+    await assertNothingClipped(page);
+    await page.screenshot({ path: testInfo.outputPath("customer-settings-desktop.png"), fullPage: true });
   });
 
-  test("works at 320px without horizontal overflow", async ({ page }, testInfo) => {
-    await page.setViewportSize({ width: 320, height: 844 });
-    await page.goto(`/self-serve?workspaceId=${encodeURIComponent(workspaceId!)}`);
-    await expect(page).not.toHaveURL(/\/login/);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
-    await page.screenshot({ path: testInfo.outputPath("customer-mobile-320-after.png"), fullPage: true });
-    await page.goto(`/settings?workspaceId=${encodeURIComponent(workspaceId!)}`);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
-  });
-
-  test("works at 390px without horizontal overflow", async ({ page }, testInfo) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(`/self-serve?workspaceId=${encodeURIComponent(workspaceId!)}`);
-    await expect(page).not.toHaveURL(/\/login/);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
-    await page.screenshot({ path: testInfo.outputPath("customer-mobile-390-after.png"), fullPage: true });
-    await page.goto(`/settings?workspaceId=${encodeURIComponent(workspaceId!)}`);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
-  });
+  for (const width of [320, 390]) {
+    test(`fits Home and Settings without clipping at ${width}px`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto(`/self-serve?workspaceId=${encodeURIComponent(workspaceId!)}`);
+      await expect(page).not.toHaveURL(/\/login/);
+      await dismissCookieConsent(page);
+      await settle(page);
+      await assertNothingClipped(page);
+      await assertMobileNavUsable(page);
+      await page.screenshot({ path: testInfo.outputPath(`customer-home-${width}.png`), fullPage: true });
+      await page.goto(`/settings?workspaceId=${encodeURIComponent(workspaceId!)}`);
+      await dismissCookieConsent(page);
+      await settle(page);
+      await assertNothingClipped(page);
+      await page.screenshot({ path: testInfo.outputPath(`customer-settings-${width}.png`), fullPage: true });
+    });
+  }
 
   test("keeps workspace name saves recoverable", async ({ page }) => {
     await page.route("**/rest/v1/workspaces**", async (route) => {
