@@ -37,4 +37,7 @@ test("Hermes bundle publication is atomic and provenance-bound", () => {
   assert.match(bundle, /source_receipt_ids/);
   assert.match(bundle, /fresh_until/);
   assert.match(bundle, /chmodSync/);
+  assert.match(bundle, /capabilities\.json/);
+  assert.match(bundle, /capabilities:\s*"schema:\/\/blockwise\.ops-action-capabilities\/v1"/);
+  assert.match(bundle, /projection_count:\s*PROJECTIONS\.length/);
 });

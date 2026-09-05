@@ -104,7 +104,7 @@ declare
   v_revision text := 'unbound';
   v_workspaces jsonb; v_workspace_ids text[]; v_receipts text[];
   v_members jsonb; v_bookings jsonb; v_billing jsonb; v_email jsonb;
-  v_flows jsonb; v_mautic jsonb; v_enquiries jsonb; v_activity jsonb;
+  v_flows jsonb; v_mautic jsonb; v_enquiries jsonb; v_activity jsonb; v_capabilities jsonb;
 begin
   select coalesce(jsonb_agg(jsonb_build_object(
     'id',s.workspace_id,'workspace_id',s.workspace_id,'name',s.workspace_name,
@@ -183,7 +183,7 @@ begin
 
   select coalesce(jsonb_agg(jsonb_build_object('id',s.id,'customer_id',s.workspace_id,
     'workspace_id',s.workspace_id,'name','Mautic '||coalesce(s.stage,'lifecycle'),
-    'type','lifecycle','status',s.status,'stage',s.stage,
+    'type','lifecycle','status',s.status,'stage',s.stage,'profile_id',nullif(s.aggregate_id,''),'flow_id',nullif(s.safe_data->>'flow_key',''),
     'campaign',coalesce(s.safe_data->>'campaign_status','not_configured'),
     'enrolled_at',s.created_at,'last_activity_at',s.last_activity_at,
     'updated_at',s.updated_at,'snapshot_kind',s.snapshot_kind,
@@ -223,12 +223,15 @@ begin
       from public.audit_logs a where a.workspace_id=any(v_workspace_ids::uuid[])
   ) x;
 
+  select coalesce(jsonb_agg(jsonb_build_object('action',action_type,'state',capability_state,'description',description) order by action_type),'[]'::jsonb)
+    into v_capabilities from public.ops_action_capabilities;
+
   return jsonb_build_object('project_id','blockwise','source_revision',v_revision,
     'source_receipt_ids',to_jsonb(v_receipts),'workspace_ids',to_jsonb(v_workspace_ids),
     'fresh_until',(now()+interval '15 minutes'),'projections',jsonb_build_object(
       'customers',v_workspaces,'email',v_email,'flows',v_flows,'mautic',v_mautic,
       'enquiries',v_enquiries,'bookings',v_bookings,'billing',v_billing,
-      'activity',v_activity,'members',v_members));
+      'activity',v_activity,'members',v_members,'capabilities',v_capabilities));
 end; $$;
 revoke all on function public.resolve_ops_frank_bundle() from public, anon, authenticated;
 grant execute on function public.resolve_ops_frank_bundle() to service_role;
@@ -273,7 +276,7 @@ begin
       where e.id=new.target_id
         and (e.workspace_id=new.workspace_id or e.workspace_id is null) for update;
   elsif new.action_type in ('team_role_change','team_suspend','team_reactivate',
-      'consent_grant','consent_withdraw','consent_unsubscribe','suppression_add','suppression_remove') then
+      'consent_grant','consent_withdraw','consent_unsubscribe','suppression_add','suppression_remove','flow_enroll','flow_pause','flow_resume') then
     if new.target_type <> 'profile' then
       raise exception 'operations action target is not owned by workspace' using errcode='42501';
     end if;
@@ -284,7 +287,7 @@ begin
       raise exception 'operations action target is not owned by workspace' using errcode='42501';
     end if;
     select w.ops_version into v_current from public.workspaces w where w.id=new.workspace_id for update;
-  elsif new.action_type in ('enquiry_close','enquiry_reply') then
+  elsif new.action_type in ('enquiry_close','enquiry_reply','enquiry_reopen') then
     if new.target_type <> 'enquiry' then
       raise exception 'operations action target is not owned by workspace' using errcode='42501';
     end if;

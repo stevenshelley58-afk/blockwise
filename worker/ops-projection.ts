@@ -44,7 +44,26 @@ async function publishFrankBundleIfConfigured(supabase: Supabase): Promise<void>
   if (!revision || !/^[0-9a-f]{40}$/u.test(revision)) throw new Error("BLOCKWISE_WORKER_REVISION must be the full deployed Git SHA");
   const result = await Promise.resolve(supabase.rpc("resolve_ops_frank_bundle"));
   if (result.error || !result.data || typeof result.data !== "object") throw new Error("Frank operations bundle resolution failed");
-  publishOpsBundle(root, { ...(result.data as Parameters<typeof publishOpsBundle>[1]), source_revision: revision });
+  const bundle = result.data as Parameters<typeof publishOpsBundle>[1];
+  const threads = await Promise.resolve(supabase.rpc("resolve_ops_enquiry_threads"));
+  if (threads.error) throw new Error("Frank enquiry thread resolution failed");
+  const threadByEnquiry = new Map<string, unknown>((Array.isArray(threads.data) ? threads.data : []).map((row: Record<string, unknown>) => [String(row.enquiry_id), row.messages ?? []]));
+  if (Array.isArray(bundle.projections.enquiries)) bundle.projections = { ...bundle.projections, enquiries: bundle.projections.enquiries.map((item: unknown) => { const row = item as Record<string, unknown>; const key = String(row.id ?? "").split(":")[0]; return { ...row, messages: threadByEnquiry.get(key) ?? [] }; }) };
+  // Capabilities are effective state, not merely the last persisted intent.
+  // Require a recent verification lease before exposing provider actions.
+  const capabilityQuery = (supabase as unknown as { from?: (table: string) => { select: (columns: string) => Promise<{ data: Record<string, unknown>[] | null; error: { message: string } | null }> } }).from;
+  if (capabilityQuery) {
+    const capabilityRows = await Promise.resolve(capabilityQuery.call(supabase, "ops_action_capabilities").select("action_type,capability_state,description,verified_at,expires_at,updated_at"));
+    if (capabilityRows.error) throw new Error("Frank capability resolution failed");
+    const now = Date.now();
+    bundle.projections = { ...bundle.projections, capabilities: (capabilityRows.data ?? []).map((row: Record<string, unknown>) => {
+    const expires = typeof row.expires_at === "string" ? Date.parse(row.expires_at) : NaN;
+    const verified = typeof row.verified_at === "string" ? Date.parse(row.verified_at) : NaN;
+    const effective = row.capability_state === "available" && Number.isFinite(verified) && Number.isFinite(expires) && verified <= now && expires > now;
+    return { action: row.action_type, state: effective ? "available" : (row.capability_state === "unsupported" ? "unsupported" : "capability_required"), description: row.description, verified_at: row.verified_at, expires_at: row.expires_at, updated_at: row.updated_at };
+    }) };
+  }
+  publishOpsBundle(root, { ...bundle, source_revision: revision });
 }
 
 /** Global website leads use a dedicated queue and are never assigned to a customer. */
@@ -101,7 +120,8 @@ async function processProjection(supabase: Supabase, row: Row, fetchImpl: Fetche
   const sourcePayload = { ...safeQueued, ...(resolved.data as Record<string, unknown>), workspaceId: row.workspace_id };
   const envelope = buildProjectionEnvelope({ workspaceId: row.workspace_id, provider: row.provider, aggregate: { type: row.aggregate_type, id: row.aggregate_id }, operation: row.operation, source: { eventId: row.source_event_id, version: row.source_version }, payload: sourcePayload as BlockwiseProjectionEnvelope["payload"] });
   const mapping = mapProjectionForAdapter(envelope); const operationKey = `${row.provider}:${row.workspace_id}:${row.aggregate_type}:${row.aggregate_id}:${row.source_version}`;
-  const intent = await Promise.resolve(supabase.rpc("begin_ops_provider_operation", { p_operation_key: operationKey, p_workspace_id: row.workspace_id, p_provider: row.provider, p_aggregate_type: row.aggregate_type, p_aggregate_id: row.aggregate_id, p_source_version: row.source_version, p_intent: { resource: mapping.resource, externalId: mapping.fields.externalId } }));
+  const chatwootBinding = row.provider === "chatwoot" ? { accountId: requiredEnv("CHATWOOT_ACCOUNT_ID"), inboxId: numericId(row.aggregate_type === "enquiry" ? "CHATWOOT_ENQUIRY_INBOX_ID" : "CHATWOOT_SUPPORT_INBOX_ID"), sourceId: requiredEnv(row.aggregate_type === "enquiry" ? "CHATWOOT_ENQUIRY_SOURCE_ID" : "CHATWOOT_SUPPORT_SOURCE_ID") } : {};
+  const intent = await Promise.resolve(supabase.rpc("begin_ops_provider_operation", { p_operation_key: operationKey, p_workspace_id: row.workspace_id, p_provider: row.provider, p_aggregate_type: row.aggregate_type, p_aggregate_id: row.aggregate_id, p_source_version: row.source_version, p_intent: { resource: mapping.resource, externalId: mapping.fields.externalId, ...chatwootBinding } }));
   if (intent.error) throw new Error(`provider operation ledger failed: ${redact(intent.error.message)}`);
   const ledger = (intent.data as Ledger | null) ?? {};
   if (ledger.state === "settled") return;

@@ -23,6 +23,7 @@ import { pathToFileURL } from "node:url";
 import { resolveSupabaseServerCredential } from "../src/lib/supabase/credentials.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
 import { reapOpsProjections, runGlobalProjectionOnce, runOpsProjectionOnce } from "./ops-projection.ts";
+import { checkChatwootActionReadiness, runOpsActionOnce } from "./ops-actions.ts";
 
 type ServiceSupabase = ReturnType<typeof createSupabaseServiceClient>;
 type HandlerExecutionContext = {
@@ -196,6 +197,7 @@ const META_ACTIVATION_COMPENSATION_REQUEST_TIMEOUT_MS = 30_000;
 const LEASE_LOSS_HANDLER_DRAIN_TIMEOUT_MS = 100_000;
 const JOB_EXECUTION_TIMEOUT_MS = positiveNumber("WORKER_JOB_TIMEOUT_MS", 15 * 60_000);
 const JOB_TIMEOUT_HANDLER_DRAIN_MS = 30_000;
+const CAPABILITY_REFRESH_MS = positiveNumber("WORKER_CAPABILITY_REFRESH_MS", 60_000);
 
 if (HEARTBEAT_EVERY_MS >= LEASE_SECONDS * 1_000) {
   throw new Error("WORKER_HEARTBEAT_INTERVAL_MS must be shorter than WORKER_LEASE_SECONDS.");
@@ -701,6 +703,22 @@ async function main() {
   reaper.unref?.();
   await reap(supabase);
   const projectionsEnabled = process.env.BLOCKWISE_OPS_PROJECTION_WORKER === "true";
+  const actionsEnabled = process.env.BLOCKWISE_OPS_ACTION_WORKER === "true";
+  let lastCapabilityCheck = 0;
+  const refreshCapabilities = async () => {
+    try {
+      const reason = actionsEnabled ? "verified Hermes Chatwoot worker and provider health" : "Chatwoot action worker disabled";
+      if (actionsEnabled) await checkChatwootActionReadiness();
+      const result = await supabase.rpc("set_ops_chatwoot_capability", { p_enabled: actionsEnabled, p_reason: reason });
+      if (result.error) throw new Error(`capability state update failed: ${result.error.message}`);
+    } catch (error) {
+      // A failed enable/disable is not silently treated as truth; operators must
+      // see the failure because a stale available row is unsafe.
+      log(`Chatwoot capability refresh failed: ${error instanceof Error ? error.message : String(error)}`);
+      if (actionsEnabled) { try { await supabase.rpc("set_ops_chatwoot_capability", { p_enabled: false, p_reason: "Chatwoot worker or provider health unavailable" }); } catch { /* next refresh retries */ } }
+    } finally { lastCapabilityCheck = Date.now(); }
+  };
+  await refreshCapabilities();
   if (projectionsEnabled) {
     await reapOpsProjections(supabase);
     log("customer-operations projection lane enabled");
@@ -713,10 +731,12 @@ async function main() {
   try {
     while (!shutdownRequested) {
       try {
+        if (Date.now() - lastCapabilityCheck >= CAPABILITY_REFRESH_MS) await refreshCapabilities();
         if (projectionsEnabled) {
           await runOpsProjectionOnce(supabase);
           await runGlobalProjectionOnce(supabase);
         }
+        if (actionsEnabled) await runOpsActionOnce(supabase);
         const did = await runOnce(supabase, { shutdownSignal: shutdownController.signal });
         if (!shutdownRequested) await sleep(did ? POLL_BUSY_MS : POLL_IDLE_MS);
       } catch (err) {
