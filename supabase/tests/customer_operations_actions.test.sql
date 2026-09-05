@@ -150,7 +150,7 @@ select lives_ok($$ select public.enqueue_ops_action(
 select is((select status from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888883'), 'pending', 'available role action is queued explicitly');
 select is((select last_error from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888883'), null::text, 'available role action has no capability error');
 
-update public.workspace_members set updated_at=now()
+update public.workspace_members set role=role
   where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777';
 select lives_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888884', 'ops:test:suspend:unsupported',

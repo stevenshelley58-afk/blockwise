@@ -7,6 +7,10 @@ alter table public.ops_action_capabilities add column if not exists verified_at 
 alter table public.ops_action_capabilities add column if not exists expires_at timestamptz;
 alter table public.ops_action_capabilities add column if not exists verification_error text;
 
+alter table public.ops_enquiry_associations drop constraint if exists ops_enquiry_associations_source_system_check;
+alter table public.ops_enquiry_associations add constraint ops_enquiry_associations_source_system_check
+  check (source_system in ('blockwise', 'crm', 'audit', 'chatwoot'));
+
 -- The action enum is a CHECK in the original outbox migration; extend it for
 -- already-migrated databases as well as fresh replays.
 alter table public.ops_action_capabilities drop constraint if exists ops_action_capabilities_action_type_check;
