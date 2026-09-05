@@ -1,3 +1,12 @@
+-- Opt-in VPS verification against the currently applied migration state:
+-- docker exec -i blockwise-research-db psql -U postgres -d blockwise_research -v ON_ERROR_STOP=1 < supabase/tests/ad_db_archive_native.sql
+-- Run from /root/work/blockwise on the VPS. Fixtures and assertions roll back.
+-- Do not concatenate migrations 011-014 into this command after they are live.
+
+begin;
+set local lock_timeout = '3s';
+set local statement_timeout = '60s';
+
 -- Opt-in VPS pre-apply verification (the final ROLLBACK keeps 011-014 unapplied):
 -- {
 --   printf '%s\n' 'BEGIN;' "SET LOCAL lock_timeout = '3s';" "SET LOCAL statement_timeout = '60s';"
