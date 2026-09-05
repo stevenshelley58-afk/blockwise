@@ -34,16 +34,23 @@ function fontStem(file: string): string {
   return file.split("/").pop()?.replace(/\.[^.]+$/u, "") || "BlockwiseAdFont";
 }
 
-function ensureLocalFont(font: { file: string }): Promise<void> {
+function ensureTemplateFont(templateId: string, existingAdId: string, assets: AdTemplate["assets"], font: { file: string }): Promise<void> {
   const family = fontStem(font.file);
-  const existing = loadedFontFaces.get(family);
+  const declaration = Object.entries(assets).find(([, asset]) => asset.fileName === font.file);
+  const assetKey = declaration?.[0] ?? null;
+  const fontUrl = assetKey
+    ? templateAssetProxyUrl(templateId, assetKey, existingAdId)
+    : `/fonts/adstudio/${font.file.split("/").pop()}`;
+  if (!fontUrl) throw new Error(`Font asset route is invalid for ${font.file}`);
+  const cacheKey = `${templateId}:${assetKey ?? fontUrl}:${font.file}`;
+  const existing = loadedFontFaces.get(cacheKey);
   if (existing) return existing;
   const task = typeof document === "undefined" || typeof FontFace === "undefined"
     ? Promise.resolve()
-    : new FontFace(family, `url(/fonts/adstudio/${font.file.split("/").pop()})`).load().then(face => {
+    : new FontFace(family, `url(${fontUrl})`).load().then(face => {
       document.fonts.add(face);
-    }).catch(() => undefined);
-  loadedFontFaces.set(family, task);
+    }).catch(() => { throw new Error(`Font ${font.file} could not be loaded from the template asset.`); });
+  loadedFontFaces.set(cacheKey, task);
   return task;
 }
 
@@ -51,6 +58,7 @@ export interface LayeredCanvasProps {
   templateId: string;
   /** Saved-ad identity used to authorize withdrawn template assets. */
   existingAdId: string;
+  assets: AdTemplate["assets"];
   layout: Layout;
   colours: AdTemplate["semanticColours"];
   imageValues?: Record<string, string | null | undefined>;
@@ -215,6 +223,7 @@ async function createLayerObject({
   fabric,
   templateId,
   existingAdId,
+  assets,
   placement,
   layer,
   colours,
@@ -225,6 +234,7 @@ async function createLayerObject({
   fabric: typeof import("fabric");
   templateId: string;
   existingAdId: string;
+  assets: AdTemplate["assets"];
   placement: Layout["placement"];
   layer: LayoutLayer;
   colours: AdTemplate["semanticColours"];
@@ -285,7 +295,7 @@ async function createLayerObject({
     const source = layer.case === "upper" ? rawSource.toUpperCase() : layer.case === "lower" ? rawSource.toLowerCase() : rawSource;
     if (layer.overflowBehaviour === "refuse" && source.length > layer.maxCharacters) return null;
     const text = source.slice(0, layer.maxCharacters);
-    await ensureLocalFont(layer.font);
+    await ensureTemplateFont(templateId, existingAdId, assets, layer.font);
     const fontSize = effectiveTextFontSize(layer, geometry);
     const textbox = new fabric.Textbox(text, {
       left: geometry.x,
