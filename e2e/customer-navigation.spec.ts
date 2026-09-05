@@ -188,7 +188,7 @@ test.describe("customer navigation canary", () => {
       await expect(page.getByText(/recent sync/i)).toHaveCount(0);
       await expect(page).toHaveURL(/\/results/);
       await expect(page.getByRole("main").getByText("Enquiries", { exact: true })).toBeVisible();
-      await expect(page.getByText("Example data", { exact: true })).toBeVisible();
+      await expect(page.getByRole("main").getByText("Example data", { exact: true })).toBeVisible();
       await expect(page.getByText(/^Last known /)).toHaveCount(0);
       await settle(page);
       await assertNothingClipped(page);
