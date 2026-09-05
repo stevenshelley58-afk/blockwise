@@ -6,16 +6,16 @@
 # (@supabase/supabase-js + ws + node builtins) is installed.
 #
 # No secrets are baked into the image. NEXT_PUBLIC_SUPABASE_URL,
-# SUPABASE_SERVICE_ROLE_KEY and TOKEN_ENCRYPTION_KEY are injected at runtime via
-# the compose environment / .env, exactly like the research stack.
+# Supabase service-role credentials and TOKEN_ENCRYPTION_KEY are supplied at
+# runtime via protected mounts/environment and never baked into the image.
 
-FROM node:22-slim AS deps
+FROM node:22-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5 AS deps
 WORKDIR /app
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci --omit=dev --ignore-scripts
 
-FROM node:22-slim
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tini \
+FROM node:22-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tini gosu \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd -r worker && useradd -r -g worker worker
 
@@ -37,6 +37,7 @@ COPY --from=deps --chown=worker:worker /app/node_modules ./node_modules
 COPY --chown=worker:worker package.json ./
 COPY --chown=worker:worker src ./src
 COPY --chown=worker:worker worker ./worker
+COPY --chmod=0755 worker/runtime-entrypoint.sh /usr/local/bin/blockwise-worker-entrypoint
 
 USER worker
 ENV NODE_ENV=production

@@ -51,7 +51,12 @@ The executor secret must match the product's `BLOCKWISE_INTERNAL_AUTH_SECRET`
 used by `/api/internal/customer-ops/actions`; it is a separate file mount in
 the edge container, never a value copied into the repository or action payload.
 
-The Compose image runs as UID 1000 and never as root. Before starting it, make
+The Compose file mounts those three files individually from
+`CONTROL_EDGE_*_HOST_FILE`; it never mounts the complete secret directory.
+`CONTROL_EDGE_IMAGE` must be a published immutable digest, and `pull_policy:
+never` prevents an unreviewed replacement. The Compose networks are external
+private networks and the service has no host port. The Compose image runs as
+UID 1000 and never as root. Before starting it, make
 the secret directory `0700`, the files `0600`, and their owner UID 1000 (or use
 the deployment's equivalent non-root UID); otherwise the fail-closed file
 checks intentionally refuse to start.

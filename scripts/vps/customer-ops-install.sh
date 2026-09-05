@@ -62,12 +62,14 @@ mkdir -p "$SECRETS_DIR"
 [[ "$(readlink -f -- "$SECRETS_DIR")" == "$SECRETS_DIR" ]] || { echo 'CUSTOMER_OPS_SECRETS_DIR may not contain symlinked path components' >&2; exit 64; }
 chmod 700 "$SECRETS_DIR"
 [[ "$(stat -c '%u' "$SECRETS_DIR" 2>/dev/null || stat -f '%u' "$SECRETS_DIR")" == '0' ]] || { echo 'secret directory must be owned by root' >&2; exit 64; }
-required_vars=(MAIL_PUBLIC_HOST MAUTIC_HOST CHATWOOT_HOST SNAGTIME_HOST GOOGLE_CLIENT_ID MAUTIC_SMTP_USER CHATWOOT_SMTP_USER SNAGTIME_SMTP_USER MAUTIC_EMAIL_FROM CHATWOOT_EMAIL_FROM SNAGTIME_EMAIL_FROM EMAIL_REPLY_TO CHATWOOT_INBOX_USER SNAGTIME_IMAGE SNAGTIME_REVISION)
+required_vars=(MAIL_PUBLIC_HOST MAUTIC_HOST CHATWOOT_HOST SNAGTIME_HOST GOOGLE_CLIENT_ID MAUTIC_SMTP_USER CHATWOOT_SMTP_USER SNAGTIME_SMTP_USER MAUTIC_EMAIL_FROM CHATWOOT_EMAIL_FROM SNAGTIME_EMAIL_FROM EMAIL_REPLY_TO CHATWOOT_INBOX_USER CHATWOOT_ACCOUNT_ID CHATWOOT_ENQUIRY_INBOX_ID CHATWOOT_SUPPORT_INBOX_ID CHATWOOT_GLOBAL_ACCOUNT_ID CHATWOOT_GLOBAL_INBOX_ID SNAGTIME_IMAGE SNAGTIME_REVISION SNAGTIME_WEBHOOK_SECRET_HOST_FILE CHATWOOT_WEBHOOK_SECRET_HOST_FILE)
 for name in "${required_vars[@]}"; do
   [[ -n "${!name:-}" ]] || { echo "missing required setting: $name" >&2; exit 64; }
 done
 [[ "$SNAGTIME_REVISION" =~ ^[0-9a-f]{40}$ ]] || { echo 'SNAGTIME_REVISION must be a full lowercase Git SHA' >&2; exit 64; }
 [[ "$SNAGTIME_IMAGE" =~ @sha256:[0-9a-f]{64}$ && "$SNAGTIME_IMAGE" != *:latest@* ]] || { echo 'SNAGTIME_IMAGE must include the published immutable sha256 digest' >&2; exit 64; }
+[[ "$SNAGTIME_WEBHOOK_SECRET_HOST_FILE" == "$SECRETS_DIR/blockwise_webhook_secret" ]] || { echo 'SNAGTIME_WEBHOOK_SECRET_HOST_FILE must be the same blockwise_webhook_secret source file' >&2; exit 64; }
+[[ "$CHATWOOT_WEBHOOK_SECRET_HOST_FILE" == "$SECRETS_DIR/chatwoot_webhook_secret" ]] || { echo 'CHATWOOT_WEBHOOK_SECRET_HOST_FILE must be the bootstrap-created chatwoot_webhook_secret source file' >&2; exit 64; }
 validate_dns_host() {
   local value="$1" label="$2"
   python3 - "$value" "$label" <<'PY'
@@ -140,7 +142,7 @@ if [[ "$MAUTIC_SMTP_USER" == "$CHATWOOT_SMTP_USER" || "$MAUTIC_SMTP_USER" == "$S
   echo 'Mautic, Chatwoot, and SnagTime SMTP users must be distinct' >&2
   exit 64
 fi
-for secret in google_client_secret mautic_smtp_password chatwoot_smtp_password snagtime_smtp_password chatwoot_inbox_password; do
+for secret in google_client_secret mautic_smtp_password chatwoot_smtp_password snagtime_smtp_password chatwoot_inbox_password app_database_url worker_database_url booking_capability_secret booking_capability_keyring snagtime_token_encryption_key email_token_secret tenant_context_secret rate_limit_hash_secret proxy_shared_secret operator_health_secret blockwise_webhook_secret blockwise_booking_action_secret; do
   path="$SECRETS_DIR/$secret"
   [[ -s "$path" && ! -L "$path" && "$(readlink -f -- "$path")" == "$path" && "$(stat -c '%a' "$path" 2>/dev/null || stat -f '%Lp' "$path")" == '600' && "$(stat -c '%u' "$path" 2>/dev/null || stat -f '%u' "$path")" == '0' ]] || { echo "provider credential must pre-exist as absolute regular root-owned mode-0600 file: $path" >&2; exit 64; }
 done

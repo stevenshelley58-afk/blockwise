@@ -48,7 +48,16 @@ BOOKING_PROVIDER=snagtime
 NEXT_PUBLIC_APP_URL=https://example.com
 NEXT_PUBLIC_SUPABASE_ANON_KEY=contract-anon
 NEXT_PUBLIC_SUPABASE_URL=https://supabase.example.com
-SUPABASE_SERVICE_ROLE_KEY=contract-service
+SUPABASE_SERVICE_ROLE_KEY_HOST_FILE=/tmp/blockwise-service-role
+SNAGTIME_WEBHOOK_SECRET_HOST_FILE=/tmp/blockwise-snagtime-webhook
+CHATWOOT_WEBHOOK_SECRET_HOST_FILE=/tmp/blockwise-chatwoot-webhook
+BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE=/tmp/blockwise-ops-correlation-key
+CHATWOOT_ACCOUNT_ID=1
+CHATWOOT_ENQUIRY_INBOX_ID=2
+CHATWOOT_SUPPORT_INBOX_ID=3
+CHATWOOT_GLOBAL_ACCOUNT_ID=1
+CHATWOOT_GLOBAL_INBOX_ID=4
+BLOCKWISE_WORKER_EXPECTED_REVISION=0123456789abcdef0123456789abcdef01234567
 TOKEN_ENCRYPTION_KEY=contract-token
 TRUSTED_PROXY_RANGES=127.0.0.1/32
 BLOCKWISE_MAIL_PUBLIC_HOST=mail.example.com
@@ -70,6 +79,7 @@ CHATWOOT_SMTP_USER=chatwoot
 SNAGTIME_SMTP_USER=snagtime
 CHATWOOT_INBOX_USER=support
 GOOGLE_CLIENT_ID=contract-google-client
+BOOKING_CAPABILITY_KEY_ID=contract-booking-key
 SNAGTIME_IMAGE=ghcr.io/example/snagtime@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 SNAGTIME_REVISION=0123456789abcdef0123456789abcdef01234567
 CUSTOMER_OPS_SECRETS_DIR=/tmp/blockwise-customer-ops-contract-secrets
@@ -120,14 +130,60 @@ CADDY_VALIDATOR='caddy:2.11.3-alpine@sha256:86deaf5e3d3408a6ccec08fbb79989783dd2
 grep -q "$CADDY_VALIDATOR" "$ROOT_DIR/scripts/vps/customer-ops-install.sh" || { echo 'pinned Caddy validator missing' >&2; exit 1; }
 grep -q "$CADDY_VALIDATOR" "$ROOT_DIR/.github/workflows/hard-reset-verification.yml" || { echo 'CI Caddy validator digest differs or is missing' >&2; exit 1; }
 grep -q 'customer-ops-contract-test.sh' "$ROOT_DIR/.github/workflows/hard-reset-verification.yml" || { echo 'customer-ops contract test is not wired into CI' >&2; exit 1; }
+grep -q 'BLOCKWISE_OPS_PROJECTION_WORKER' "$PRODUCT_COMPOSE_FILE" || { echo 'Blockwise projection worker feature gate missing' >&2; exit 1; }
+grep -q 'WORKER_REAP_INTERVAL_MS' "$PRODUCT_COMPOSE_FILE" || { echo 'worker recovery scheduler is not configured' >&2; exit 1; }
+grep -q 'healthcheck:' "$PRODUCT_COMPOSE_FILE" || { echo 'product worker healthcheck missing' >&2; exit 1; }
+grep -q 'BLOCKWISE_WORKER_EXPECTED_REVISION:?BLOCKWISE_WORKER_EXPECTED_REVISION is required' "$PRODUCT_COMPOSE_FILE" || { echo 'worker expected revision guard missing' >&2; exit 1; }
+grep -q 'SUPABASE_SERVICE_ROLE_KEY_FILE: /run/blockwise-secrets/supabase-service-role' "$PRODUCT_COMPOSE_FILE" || { echo 'worker service-role file env missing' >&2; exit 1; }
+! awk -v service='product-worker' '$0 ~ "^  " service ":" { in_service=1; next } in_service && /^  [A-Za-z0-9_-]+:/ { exit } in_service && /^    build:/ { found=1 } END { exit found ? 0 : 1 }' "$PRODUCT_COMPOSE_FILE" || { echo 'production product-worker build section remains' >&2; exit 1; }
+! grep -q 'ops-projections:rw' "$ROOT_DIR/worker/docker-compose.worker.yml" || { echo 'standalone worker must not write Frank projections' >&2; exit 1; }
+test "$(grep -c '/data/ops-projections:rw' "$PRODUCT_COMPOSE_FILE")" -eq 1 || { echo 'projection root must have exactly one active writer' >&2; exit 1; }
+grep -q 'ops-projections:ro' "$ROOT_DIR/infra/frank/docker-compose.customer-ops.yml" || { echo 'Frank read-only projection handoff missing' >&2; exit 1; }
+grep -Eq '^FROM node:[^@]+@sha256:[0-9a-f]{64}' "$ROOT_DIR/worker/Dockerfile" || { echo 'worker base image is not digest-pinned' >&2; exit 1; }
 ! grep -q 'contract-placeholder' "$COMPOSE_FILE" || { echo 'moving placeholder image remains' >&2; exit 1; }
 grep -q 'run --rm --no-deps' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'private-network IMAPS client contract missing' >&2; exit 1; }
 grep -q -- '--profile smoke' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'private-network SMTP client profile missing' >&2; exit 1; }
 grep -q -- '--tls-sni-name' "$ROOT_DIR/scripts/vps/customer-ops-install.sh" || { echo 'installer SMTP SNI contract missing' >&2; exit 1; }
 grep -q -- '--profile smoke' "$ROOT_DIR/scripts/vps/customer-ops-install.sh" || { echo 'installer private SMTP client profile missing' >&2; exit 1; }
+grep -q 'CONTROL_EDGE_IMAGE' "$ROOT_DIR/ops/control-edge/docker-compose.yml" || { echo 'control-edge immutable image contract missing' >&2; exit 1; }
+! grep -Eq '^    build:' "$ROOT_DIR/ops/control-edge/docker-compose.yml" || { echo 'production control-edge build section remains' >&2; exit 1; }
+grep -Eq '^FROM node:[^@]+@sha256:[0-9a-f]{64}$' "$ROOT_DIR/ops/control-edge/Dockerfile" || { echo 'control-edge base image is not digest-pinned' >&2; exit 1; }
+grep -q 'CONTROL_EDGE_INTERNAL_AUTH_HOST_FILE' "$ROOT_DIR/ops/control-edge/docker-compose.yml" || { echo 'control-edge strict per-file secret mount missing' >&2; exit 1; }
+grep -q 'healthcheck:' "$ROOT_DIR/ops/control-edge/docker-compose.yml" || { echo 'control-edge healthcheck missing' >&2; exit 1; }
+grep -q 'customer-ops-bootstrap.sh' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'customer-ops bootstrap script missing' >&2; exit 1; }
+grep -q 'MAUTIC_LIFECYCLE_FIELDS_JSON' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Mautic lifecycle field bootstrap contract missing' >&2; exit 1; }
+grep -q 'fields/contact/new' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Mautic documented fields API bootstrap missing' >&2; exit 1; }
+grep -q 'tags/new' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Mautic tag API bootstrap missing' >&2; exit 1; }
+grep -q 'verify_mautic_resource segments' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Mautic segment verification missing' >&2; exit 1; }
+grep -q 'verify_mautic_resource campaigns' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Mautic campaign verification missing' >&2; exit 1; }
+grep -q 'api_access_token' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot official auth header missing' >&2; exit 1; }
+grep -q 'conversation_status_changed' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot status webhook subscription missing' >&2; exit 1; }
+grep -q 'message_updated' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot message update webhook subscription missing' >&2; exit 1; }
+grep -q 'BLOCKWISE_WEBHOOK_URL=https://blockwise.example/api/booking/webhooks/snagtime' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'SnagTime Blockwise webhook route contract missing' >&2; exit 1; }
+grep -q 'SNAGTIME_WEBHOOK_SECRET_HOST_FILE=.*blockwise_webhook_secret' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'SnagTime webhook source pairing missing' >&2; exit 1; }
+grep -q 'CHATWOOT_WEBHOOK_SECRET_HOST_FILE=.*chatwoot_webhook_secret' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'Chatwoot webhook source pairing missing' >&2; exit 1; }
+grep -q 'BLOCKWISE_OPS_CORRELATION_KEY_HOST_FILE' "$ROOT_DIR/infra/coolify/docker-compose.product.yml" || { echo 'product correlation-key file mount missing' >&2; exit 1; }
+grep -q 'api/webhooks/chatwoot' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'Blockwise Chatwoot receiver route missing' >&2; exit 1; }
+! grep -q '/api/internal/booking/webhook' "$ROOT_DIR/infra/customer-ops/customer-ops.env.example" || { echo 'obsolete internal booking webhook route remains' >&2; exit 1; }
+grep -q 'X-Chatwoot-Signature' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'official Chatwoot signed smoke probe missing' >&2; exit 1; }
+grep -q 'CHATWOOT_ENQUIRY_INBOX_ID' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'Chatwoot harmless smoke inbox contract missing' >&2; exit 1; }
+for key in CHATWOOT_ENQUIRY_INBOX_ID CHATWOOT_SUPPORT_INBOX_ID CHATWOOT_GLOBAL_ACCOUNT_ID CHATWOOT_GLOBAL_INBOX_ID; do
+  grep -q "$key" "$PRODUCT_COMPOSE_FILE" || { echo "product Chatwoot receiver setting missing: $key" >&2; exit 1; }
+done
+grep -q 'write_chatwoot_webhook_secret' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot API webhook secret capture missing' >&2; exit 1; }
+grep -q 'blockwise_webhook_secret' "$ROOT_DIR/scripts/vps/customer-ops-smoke.sh" || { echo 'paired SnagTime webhook secret missing from smoke' >&2; exit 1; }
+grep -q 'chatwoot_webhook_secret' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot webhook secret contract missing' >&2; exit 1; }
+! grep -q 'chatwoot_webhook_probe_secret' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'obsolete webhook probe secret filename remains' >&2; exit 1; }
+for service in mautic-cron mautic-worker snagtime-worker; do
+  awk -v service="$service" '$0 ~ "^  " service ":" { in_service=1; next } in_service && /^  [A-Za-z0-9_-]+:/ { exit } in_service { print }' "$ROOT_DIR/infra/customer-ops/docker-compose.yml" | grep -q 'healthcheck:' || { echo "$service healthcheck missing" >&2; exit 1; }
+done
+grep -q 'api/health/operator' "$ROOT_DIR/infra/customer-ops/docker-compose.yml" || { echo 'SnagTime operator health contract missing' >&2; exit 1; }
+grep -Fq 'accounts/${CHATWOOT_ACCOUNT_ID}/inboxes' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot email inbox API bootstrap missing' >&2; exit 1; }
+grep -Fq 'accounts/${CHATWOOT_ACCOUNT_ID}/webhooks' "$ROOT_DIR/scripts/vps/customer-ops-bootstrap.sh" || { echo 'Chatwoot webhook API bootstrap missing' >&2; exit 1; }
+! grep -qi 'adapter.*deferred' "$ROOT_DIR/docs/runbooks/customer-ops-vps.md" || { echo 'obsolete adapter deferred language remains' >&2; exit 1; }
 grep -q 'FROM alpine:3.22.1@sha256:' "$ROOT_DIR/infra/customer-ops/smtp-client/Dockerfile" || { echo 'SMTP client base image is not digest-pinned' >&2; exit 1; }
 if grep -Eq '(^|[/:])latest([@:]|$)' "$COMPOSE_FILE"; then echo 'floating latest image tag found' >&2; exit 1; fi
-for script in customer-ops-install.sh customer-ops-backup.sh customer-ops-restore.sh customer-ops-smoke.sh customer-ops-contract-test.sh; do
+for script in customer-ops-install.sh customer-ops-backup.sh customer-ops-restore.sh customer-ops-smoke.sh customer-ops-bootstrap.sh customer-ops-contract-test.sh; do
   bash -n "$ROOT_DIR/scripts/vps/$script"
 done
 bash -n "$ROOT_DIR/infra/customer-ops/postgres-init/001-roles.sh"
