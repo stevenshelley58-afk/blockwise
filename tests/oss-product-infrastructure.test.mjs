@@ -14,7 +14,7 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   assert.match(compose, /supabase\/gotrue:v2\.189\.0/);
   assert.match(compose, /supabase\/storage-api:v1\.60\.4/);
   assert.match(compose, /supabase\/realtime:v2\.102\.3/);
-  assert.match(compose, /stalwartlabs\/stalwart:v0\.16\.18@sha256:0df5900cab389a8ec47b7521ef0681ec93598caf72a09097685845211861f6c2/);
+  assert.match(compose, /stalwartlabs\/stalwart:v0\.16\.20@sha256:74ca4f7f6885fe302f38a99381f36a208547afce1033d8734d9e6d8d3eba7446/);
   assert.match(compose, /profiles: \[mail\]/);
   assert.match(compose, /STALWART_PUBLIC_URL/);
   assert.match(compose, /healthz\/ready/);

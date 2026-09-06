@@ -10,7 +10,7 @@ const read = (name) => readFile(new URL(name, root), "utf8");
 test("Stalwart foundation is pinned, isolated and mail-only at the host", async () => {
   const compose = await read("infra/coolify/docker-compose.product.yml");
   const service = compose.slice(compose.indexOf("  product-mail:"), compose.indexOf("  product-auth:"));
-  assert.match(service, /image: stalwartlabs\/stalwart:v0\.16\.18@sha256:0df5900cab389a8ec47b7521ef0681ec93598caf72a09097685845211861f6c2/);
+  assert.match(service, /image: stalwartlabs\/stalwart:v0\.16\.20@sha256:74ca4f7f6885fe302f38a99381f36a208547afce1033d8734d9e6d8d3eba7446/);
   assert.match(service, /profiles: \[mail\]/);
   assert.match(service, /read_only: true/);
   assert.match(service, /no-new-privileges:true/);
