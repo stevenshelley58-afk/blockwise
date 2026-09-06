@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { publicOrigin } from "@/lib/config/public-origin";
+
 // GoTrue's built-in email templates link to `{SITE_URL}/verify?token=...&type=...`
 // (the app has no custom GoTrue templates). This route forwards the one-time
 // token to the auth server's `/auth/v1/verify` endpoint and lands the browser
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest) {
   verifyTarget.searchParams.set("token", token);
   verifyTarget.searchParams.set("type", type);
 
-  const confirmUrl = new URL("/auth/confirm", requestUrl.origin);
+  const confirmUrl = new URL("/auth/confirm", publicOrigin(requestUrl));
   confirmUrl.searchParams.set("flow", type);
   verifyTarget.searchParams.set("redirect_to", confirmUrl.toString());
 

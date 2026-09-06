@@ -62,7 +62,7 @@ test("confirm route verifies token hash and only redirects to safe relative next
   assert.match(source, /type === "recovery"/);
   assert.match(source, /function sanitizeNextPath/i);
   assert.match(source, /const DEFAULT_NEXT_PATH = "\/self-serve"/);
-  assert.match(source, /new URL\(redirectPath,\s*requestUrl\.origin\)/);
+  assert.match(source, /new URL\(redirectPath,\s*publicOrigin\(requestUrl\)\)/);
   assert.match(source, /startsWith\("\/\/"\)/);
   assert.match(source, /includes\("\\\\"\)/);
   assert.match(source, /parsed\.origin !== SAFE_REDIRECT_ORIGIN/i);
@@ -142,7 +142,7 @@ test("verify route forwards GoTrue default-template tokens to the auth server co
   assert.match(source, /new URL\("\/auth\/v1\/verify", supabaseBase\)/);
   assert.match(source, /verifyTarget\.searchParams\.set\("token", token\)/);
   assert.match(source, /verifyTarget\.searchParams\.set\("type", type\)/);
-  assert.match(source, /new URL\("\/auth\/confirm", requestUrl\.origin\)/);
+  assert.match(source, /new URL\("\/auth\/confirm", publicOrigin\(requestUrl\)\)/);
   assert.match(source, /confirmUrl\.searchParams\.set\("flow", type\)/);
   assert.match(source, /verifyTarget\.searchParams\.set\("redirect_to", confirmUrl\.toString\(\)\)/);
   assert.doesNotMatch(source, /requestUrl\.searchParams\.get\("redirect_to"\)/);
