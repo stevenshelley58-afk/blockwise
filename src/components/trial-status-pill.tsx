@@ -46,6 +46,7 @@ function useTrialStatus(initialStatus: TrialStatus | null) {
 
 function trialLabel(status: TrialStatus): string {
   const copy = niche.copy.shell.trial;
+  if (status.trialState === "pending_delivery") return "Free creation · trial starts at first delivery";
   if (status.trialExpired) return copy.ended;
   if (typeof status.trialDaysRemaining === "number") {
     return copy.daysLeft(status.trialDaysRemaining);

@@ -156,7 +156,7 @@ export async function loadOperatorCustomerDetail(input: {
 export async function runOperatorCustomerAction(input: {
   workspaceId: string;
   operatorProfileId: string;
-  action: "adjust_credits" | "resend_booking" | "complete_onboarding";
+  action: "adjust_credits" | "resend_booking" | "complete_onboarding" | "approve_managed_scope";
   mutationId: string;
   reason: string;
   creditDelta?: number;
@@ -203,6 +203,18 @@ export async function runOperatorCustomerAction(input: {
       delivery = "queued";
     }
     result = { action: input.action, bookingUrl: booking.hostedBookingUrl, delivery };
+  } else if (input.action === "approve_managed_scope") {
+    // Written-scope approval is recorded server-side by operators only. The
+    // workspace column is protected from customer writes by the billing
+    // column trigger. A scope reference in the reason keeps the audit trail
+    // tied to the approved written scope.
+    const approvedAt = new Date().toISOString();
+    const update = await service
+      .from("workspaces")
+      .update({ managed_scope_approved_at: approvedAt, updated_at: approvedAt })
+      .eq("id", input.workspaceId);
+    if (update.error) throw new Error(`Managed scope approval could not be recorded: ${update.error.message}`);
+    result = { action: input.action, managedScopeApprovedAt: approvedAt };
   } else {
     const latest = await getLatestOnboardingBooking({
       workspaceId: input.workspaceId,

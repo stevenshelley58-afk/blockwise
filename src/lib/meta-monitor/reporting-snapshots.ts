@@ -7,6 +7,10 @@ import type { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 import { resolveMonitorDateRange, type MonitorCustomRange } from "../monitor/dashboard-data.ts";
 import { getResultsPayload } from "./getResultsPayload.ts";
+import {
+  reportIndicatesMetaDelivery,
+  startTrialOnFirstDeliveryBestEffort,
+} from "../trial/first-delivery.ts";
 import { buildSampleMetaMonitorPayload } from "./sampleMetaMonitorData.ts";
 import type { MetaMonitorPayload, MonitorRange } from "./types.ts";
 
@@ -169,6 +173,17 @@ export async function refreshReportingSnapshot(input: {
 
   if (error) {
     throw new Error(`Reporting snapshot could not be saved: ${error.message}`);
+  }
+
+  // Meta has reported actual delivery for this workspace: start the 14-day
+  // no-card app trial if it is still pending. Durable and idempotent
+  // server-side; a failure here never breaks reporting.
+  if (reportIndicatesMetaDelivery(payload)) {
+    await startTrialOnFirstDeliveryBestEffort({
+      service: input.serviceSupabase,
+      workspaceId: input.workspaceId,
+      deliveredAt: now,
+    });
   }
 
   return snapshot;

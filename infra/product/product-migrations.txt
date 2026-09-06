@@ -102,3 +102,4 @@
 20260904011000_quarantine_unreviewed_ad_templates.sql
 20260904012000_enforce_ad_template_review_activation.sql
 20260905010000_ad_template_smoke_review.sql
+20260906010000_no_card_trial_delivery_start.sql

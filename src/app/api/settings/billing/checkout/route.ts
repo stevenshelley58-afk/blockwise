@@ -1,16 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { recordWorkspaceFunnelEventBestEffort } from "@/lib/analytics/progressive-funnel";
-import { canManageProviderConnections } from "@/lib/auth/access-control";
 import { requireApiWorkspace } from "@/lib/auth/api-guards";
+import { evaluateCheckoutRequest } from "@/lib/billing/checkout-policy";
 import {
-  currencyForMarket,
-  isBillingCurrency,
-  isBillingMarket,
-  isBillingProduct,
-  type BillingProduct,
-} from "@/lib/billing/offers";
-import { isBillingConfigured, createCheckoutSession } from "@/lib/billing/stripe-scaffold";
+  findReusableCheckoutSession,
+  recordCheckoutSession,
+} from "@/lib/billing/checkout-sessions";
+import { isBillingConfigured, createCheckoutSession, findReusableStripeCheckoutSession } from "@/lib/billing/stripe-scaffold";
+import { publicOrigin } from "@/lib/config/public-origin";
+import { getBillingOffer } from "@/lib/billing/offers";
+import type { BillingProduct } from "@/lib/billing/offers";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -33,8 +33,10 @@ export async function POST(request: NextRequest) {
 
   if (!guard.ok) return guard.response;
   const { supabase, access } = guard;
-  if (!canManageProviderConnections(access)) {
-    return NextResponse.json({ error: "Only an owner or admin can manage billing." }, { status: 403 });
+
+  const product = body.product ?? "self_serve";
+  if (product !== "self_serve" && product !== "managed") {
+    return NextResponse.json({ error: "Unknown billing product." }, { status: 400 });
   }
 
   const service = createSupabaseServiceClient();
@@ -44,7 +46,9 @@ export async function POST(request: NextRequest) {
   ] = await Promise.all([
     service
       .from("workspaces")
-      .select("stripe_customer_id, country_code, billing_currency")
+      .select(
+        "stripe_customer_id, stripe_subscription_id, billing_access_state, country_code, billing_currency, managed_scope_approved_at",
+      )
       .eq("id", access.workspaceId)
       .maybeSingle(),
     service
@@ -59,42 +63,71 @@ export async function POST(request: NextRequest) {
   if (activationError) {
     return NextResponse.json({ error: "Couldn't verify the workspace market confirmation." }, { status: 500 });
   }
-  if (!(activation as { country_confirmed_at?: unknown } | null)?.country_confirmed_at) {
-    return NextResponse.json({ error: "Confirm the workspace country before starting Checkout." }, { status: 409 });
+
+  const decision = evaluateCheckoutRequest({
+    facts: {
+      countryConfirmedAt: (activation as { country_confirmed_at?: unknown } | null)?.country_confirmed_at as
+        | string
+        | null
+        | undefined ?? null,
+      countryCode: (ws as { country_code?: unknown } | null)?.country_code as string | null,
+      billingCurrency: (ws as { billing_currency?: unknown } | null)?.billing_currency as string | null,
+      billingAccessState: (ws as { billing_access_state?: unknown } | null)?.billing_access_state as string | null,
+      stripeSubscriptionId: (ws as { stripe_subscription_id?: unknown } | null)?.stripe_subscription_id as
+        | string
+        | null,
+      managedScopeApprovedAt: (ws as { managed_scope_approved_at?: unknown } | null)?.managed_scope_approved_at as
+        | string
+        | null,
+    },
+    context: { role: access.role, product },
+  });
+  if (!decision.ok) {
+    return NextResponse.json({ error: decision.error }, { status: decision.status });
   }
-  const workspace = ws as {
-    stripe_customer_id?: unknown;
-    country_code?: unknown;
-    billing_currency?: unknown;
-  } | null;
-  if (!isBillingMarket(workspace?.country_code) || !isBillingCurrency(workspace?.billing_currency)) {
-    return NextResponse.json({ error: "Confirm the workspace country before starting Checkout." }, { status: 409 });
-  }
-  if (workspace.billing_currency !== currencyForMarket(workspace.country_code)) {
-    return NextResponse.json({ error: "The workspace billing currency does not match its country." }, { status: 409 });
-  }
-  const product = body.product ?? "self_serve";
-  if (!isBillingProduct(product)) {
-    return NextResponse.json({ error: "Unknown billing product." }, { status: 400 });
-  }
+
   const stripeCustomerId =
-    typeof workspace.stripe_customer_id === "string" ? workspace.stripe_customer_id : null;
+    typeof (ws as { stripe_customer_id?: unknown } | null)?.stripe_customer_id === "string"
+      ? ((ws as { stripe_customer_id?: unknown }).stripe_customer_id as string)
+      : null;
 
   const { data: profile } = await supabase.auth.getUser();
   const customerEmail = profile.user?.email ?? null;
+  const offer = getBillingOffer("AU", product);
+
+  // Reuse an eligible open Checkout session so retries never create competing
+  // subscriptions. Expired sessions are never reused; a fresh one is created.
+  try {
+    const reusable =
+      (await findReusableCheckoutSession(service, access.workspaceId, offer.key).catch(() => null)) ??
+      (await findReusableStripeCheckoutSession({
+        workspaceId: access.workspaceId,
+        offerKey: offer.key,
+      }).catch(() => null));
+    if (reusable) {
+      return NextResponse.json({ url: reusable.url });
+    }
+  } catch {
+    // Reuse is an optimization; fall through to session creation.
+  }
 
   try {
     const session = await createCheckoutSession({
       workspaceId: access.workspaceId,
-      market: workspace.country_code,
-      currency: workspace.billing_currency,
+      market: "AU",
+      currency: "AUD",
       product,
       stripeCustomerId,
       customerEmail,
       userId: profile.user?.id ?? null,
-      successUrl: new URL("/settings?billing=success", request.url).toString(),
-      cancelUrl: new URL("/settings", request.url).toString(),
+      successUrl: `${publicOrigin(request.url)}/settings?billing=success`,
+      cancelUrl: `${publicOrigin(request.url)}/settings`,
       idempotencyKey: checkoutIdempotencyKey(access.workspaceId, product, body.clientMutationId),
+    });
+    await recordCheckoutSession(service, {
+      workspaceId: access.workspaceId,
+      offerKey: offer.key,
+      session,
     });
     await recordWorkspaceFunnelEventBestEffort(service, {
       eventName: "checkout_started",
@@ -102,8 +135,8 @@ export async function POST(request: NextRequest) {
       idempotencyKey: `billing:${access.workspaceId}:checkout-started:${product}`,
       properties: {
         product,
-        market: workspace.country_code,
-        currency: workspace.billing_currency,
+        market: "AU",
+        currency: "AUD",
       },
     });
     return NextResponse.json({ url: session.url });

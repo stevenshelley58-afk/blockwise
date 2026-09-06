@@ -207,7 +207,9 @@ test("public marketing copy states the approved progressive offer", () => {
   assert.match(home, /Approve every ad before it goes live/i);
   assert.match(home, /Create three complete ads free/i);
   assert.match(home, /Start with only your email/i);
-  assert.match(pricing, /Create three complete Feed \+ Story ads with only your email/i);
+  assert.match(pricing, /Create three complete Feed \+ Story ad packs with only your email/i);
+  assert.match(pricing, /no card required/i);
+  assert.match(pricing, /14-day trial starts when your first ad delivers/i);
   assert.match(pricing, /Meta ad spend is separate/i);
   assert.doesNotMatch(combined, /\$799/);
   assert.doesNotMatch(combined, /Launch from Blockwise/);

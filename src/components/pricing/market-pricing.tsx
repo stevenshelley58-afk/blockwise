@@ -119,8 +119,9 @@ export function MarketPricing() {
             <p className="pricing-kicker">Free</p>
             <h2 id="free-title">Build the ads before you pay.</h2>
             <p>
-              Every plan starts here. Create three complete Feed + Story ads with only your
-              email, and launch a trial campaign before adding a card.
+              Every plan starts here. Create three complete Feed + Story ad packs with only
+              your email — no card required — and launch one trial campaign. Your 14-day trial
+              starts when your first ad delivers on Meta.
             </p>
           </div>
           <ul aria-label="Free plan features">

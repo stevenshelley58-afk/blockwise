@@ -447,7 +447,8 @@ test("Checkout requires the recorded country confirmation milestone, not only de
   const route = readFileSync("src/app/api/settings/billing/checkout/route.ts", "utf8");
   assert.match(route, /from\("customer_activations"\)/);
   assert.match(route, /select\("country_confirmed_at"\)/);
-  assert.match(route, /Confirm the workspace country before starting Checkout/);
+  const policy = readFileSync("src/lib/billing/checkout-policy.ts", "utf8");
+  assert.match(policy, /Confirm the workspace country before starting Checkout/);
 });
 
 test("invoice webhooks retrieve subscription metadata before applying billing state", () => {

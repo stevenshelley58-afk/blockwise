@@ -26,7 +26,7 @@ export async function POST(request: Request, context: RouteContext) {
     creditDelta?: unknown;
   };
   const action = typeof body.action === "string" ? body.action : "";
-  if (!["adjust_credits", "resend_booking", "complete_onboarding"].includes(action)) {
+  if (!["adjust_credits", "resend_booking", "complete_onboarding", "approve_managed_scope"].includes(action)) {
     return NextResponse.json({ error: "Unsupported customer action." }, { status: 400 });
   }
   const mutationId = typeof body.mutationId === "string" ? body.mutationId.trim() : "";
@@ -38,7 +38,7 @@ export async function POST(request: Request, context: RouteContext) {
     const result = await runOperatorCustomerAction({
       workspaceId,
       operatorProfileId: auth.userId,
-      action: action as "adjust_credits" | "resend_booking" | "complete_onboarding",
+      action: action as "adjust_credits" | "resend_booking" | "complete_onboarding" | "approve_managed_scope",
       mutationId,
       reason,
       creditDelta: body.creditDelta === undefined ? undefined : Number(body.creditDelta),

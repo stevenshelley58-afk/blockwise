@@ -24,6 +24,7 @@ test("trial status converts the wallet-backed three-pack RPC into six render cre
 
   assert.deepEqual(status, {
     isTrial: true,
+    trialState: null,
     includedRenders: 6,
     usedRenders: 2,
     remainingRenders: 4,

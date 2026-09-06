@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   title: "Pricing",
   alternates: { canonical: "/pricing" },
   description:
-    "Blockwise self-serve and managed pricing for the United States and Australia. Create three complete ads free before adding a card.",
+    "Blockwise self-serve and managed pricing for Australia. Create three complete Feed + Story ad packs free with only your email — no card required.",
 };
 
 export default function PricingPage() {
@@ -25,8 +25,9 @@ export default function PricingPage() {
             <p className="pricing-kicker">Pricing</p>
             <h1 id="pricing-title">Start with the ad. Pay when you want to run it.</h1>
             <p className="pricing-lead">
-              Create three complete Feed + Story ads with only your email. Add a card when you
-              choose to launch, with one live campaign setup included.
+              Create three complete Feed + Story ad packs with only your email — no card required.
+              Your 14-day trial starts when your first ad delivers on Meta, with one live campaign
+              setup included.
             </p>
           </div>
         </section>

@@ -46,7 +46,7 @@ const DISPLAY_MILESTONES = [
   ["first_template_selected", "Template selected"],
   ["first_ad_pack_generated", "First ad created"],
   ["meta_connected", "Connection step completed"],
-  ["checkout_completed", "Payment method added"],
+  ["checkout_completed", "Checkout completed"],
   ["first_campaign_live", "First ad live"],
   ["intro_invoice_paid", "First invoice paid"],
 ] as const;
@@ -178,7 +178,7 @@ function StatusCell({
 
 function planLabel(state: string): string {
   if (state === "paid") return "Self-serve paid";
-  if (state === "trialing") return "Billing trial";
+  if (state === "trialing") return "Billing trial (legacy)";
   if (state === "payment_recovery") return "Payment needs attention";
   if (state === "canceled") return "Canceled";
   return "Free creation trial";

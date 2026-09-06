@@ -31,7 +31,11 @@ export function isBillingConfigured(): boolean {
   return Boolean(getStripeSecretKey(false));
 }
 
-export type BillingSessionResult = { url: string };
+export type BillingSessionResult = {
+  url: string;
+  sessionId: string;
+  expiresAt: Date;
+};
 export type StripeFormParams = Record<string, string | number | boolean | null | undefined>;
 
 export type StripeWebhookEvent = {
@@ -51,6 +55,27 @@ export type StripeObject = Record<string, unknown> & {
 type CheckoutSessionResponse = {
   id: string;
   url?: string | null;
+  expires_at?: number | null;
+};
+
+type StripePriceResponse = {
+  id: string;
+  active?: boolean;
+  currency?: string;
+  unit_amount?: number | null;
+  type?: string;
+  recurring?: { interval?: string | null } | null;
+};
+
+type StripeCheckoutSessionListResponse = {
+  data?: Array<{
+    id?: string;
+    url?: string | null;
+    status?: string | null;
+    client_reference_id?: string | null;
+    expires_at?: number | null;
+    metadata?: Record<string, string | null | undefined> | null;
+  }>;
 };
 
 type PortalSessionResponse = {
@@ -115,7 +140,77 @@ export async function createBillingPortalSession(input: {
     throw new Error("Stripe did not return a billing portal URL.");
   }
 
-  return { url: session.url };
+  return {
+    url: session.url,
+    sessionId: session.id,
+    expiresAt: new Date(),
+  };
+}
+
+/**
+ * Defense in depth: the configured Stripe price must exactly match the
+ * approved offer — active, subscription type, currency, monthly interval, and
+ * the approved A$ amount — before any Checkout session is created.
+ */
+export async function validateStripePriceForOffer(
+  offer: BillingOffer,
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<void> {
+  const priceId = env[offer.priceEnvKey]?.trim();
+  if (!priceId) {
+    throw new BillingNotConfiguredError(`${offer.priceEnvKey} is not configured.`);
+  }
+
+  const price = await stripeGet<StripePriceResponse>(`/v1/prices/${encodeURIComponent(priceId)}`);
+  if (price.active !== true) {
+    throw new Error(`The configured Stripe price for ${offer.key} is not active.`);
+  }
+  if (price.type !== "subscription" || !price.recurring) {
+    throw new Error(`The configured Stripe price for ${offer.key} is not a recurring subscription price.`);
+  }
+  if (price.currency !== offer.currency.toLowerCase()) {
+    throw new Error(`The configured Stripe price for ${offer.key} is not charged in ${offer.currency}.`);
+  }
+  if (price.recurring.interval !== "month") {
+    throw new Error(`The configured Stripe price for ${offer.key} is not billed monthly.`);
+  }
+  if (price.unit_amount !== offer.recurringAmount) {
+    throw new Error(
+      `The configured Stripe price for ${offer.key} does not match the approved ${offer.currency === "AUD" ? "A$" : "US$"}${Math.round(offer.recurringAmount / 100)} monthly amount.`,
+    );
+  }
+}
+
+const CHECKOUT_REUSE_MARGIN_MS = 5 * 60 * 1000;
+
+/**
+ * Fallback for open-session reuse when the local session table has no row
+ * (for example, sessions created before the bookkeeping table existed).
+ * Only an open, unexpired session for the same workspace and offer qualifies.
+ */
+export async function findReusableStripeCheckoutSession(input: {
+  workspaceId: string;
+  offerKey: string;
+  now?: Date;
+}): Promise<BillingSessionResult | null> {
+  const now = input.now ?? new Date();
+  const createdGte = Math.floor(now.getTime() / 1000) - 24 * 60 * 60;
+  const list = await stripeGet<StripeCheckoutSessionListResponse>(
+    `/v1/checkout/sessions?status=open&created%5Bgte%5D=${createdGte}&limit=100`,
+  );
+
+  for (const session of list.data ?? []) {
+    if (!session.id || !session.url) continue;
+    if (session.client_reference_id !== input.workspaceId) continue;
+    if (session.metadata?.offer_key !== input.offerKey) continue;
+    if (!session.expires_at || session.expires_at * 1000 <= now.getTime() + CHECKOUT_REUSE_MARGIN_MS) continue;
+    return {
+      url: session.url,
+      sessionId: session.id,
+      expiresAt: new Date(session.expires_at * 1000),
+    };
+  }
+  return null;
 }
 
 export function buildCheckoutSessionRequest(
@@ -195,6 +290,7 @@ export function buildCheckoutSessionRequest(
 
 export async function createCheckoutSession(input: CheckoutSessionInput): Promise<BillingSessionResult> {
   const request = buildCheckoutSessionRequest(input);
+  await validateStripePriceForOffer(request.offer);
   const session = await stripePost<CheckoutSessionResponse>(
     "/v1/checkout/sessions",
     request.params,
@@ -203,7 +299,11 @@ export async function createCheckoutSession(input: CheckoutSessionInput): Promis
   if (!session.url) {
     throw new Error("Stripe did not return a checkout URL.");
   }
-  return { url: session.url };
+  return {
+    url: session.url,
+    sessionId: session.id,
+    expiresAt: session.expires_at ? new Date(session.expires_at * 1000) : new Date(Date.now() + 24 * 60 * 60 * 1000),
+  };
 }
 
 export async function retrieveStripeSubscription(subscriptionId: string): Promise<StripeObject> {
