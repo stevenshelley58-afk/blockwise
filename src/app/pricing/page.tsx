@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { Building2, Wallet } from "lucide-react";
+
 import { SiteFooter, SiteHeader } from "@/components/home-landing/site-chrome";
 import { MarketPricing } from "@/components/pricing/market-pricing";
 
@@ -33,18 +35,31 @@ export default function PricingPage() {
 
         <section className="pricing-clarity" aria-labelledby="pricing-clarity-title">
           <div className="pricing-shell pricing-clarity-layout">
-            <h2 id="pricing-clarity-title">Your ad account. Your media budget.</h2>
-            <div>
-              <p>
-                Meta ad spend is separate from every Blockwise plan. You pay Meta directly from
-                your connected ad account; Blockwise never marks up or silently funds that spend.
-              </p>
-              <p>
-                Self-serve covers one brand, one workspace, and one primary Meta ad account.
-                Additional brands or client accounts need another workspace or a managed
-                agreement.
-              </p>
-            </div>
+            <h2 id="pricing-clarity-title">Built on clear terms.</h2>
+            <ul className="pricing-clarity-points" aria-label="Billing clarity">
+              <li>
+                <Wallet aria-hidden size={22} strokeWidth={1.8} />
+                <div>
+                  <h3>Your ad account. Your media budget.</h3>
+                  <p>
+                    Meta ad spend is separate from every Blockwise plan. You pay Meta directly
+                    from your connected ad account; Blockwise never marks up or silently funds
+                    that spend.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <Building2 aria-hidden size={22} strokeWidth={1.8} />
+                <div>
+                  <h3>One brand per workspace.</h3>
+                  <p>
+                    Self-serve covers one brand, one workspace, and one primary Meta ad account.
+                    Additional brands or client accounts need another workspace or a managed
+                    agreement.
+                  </p>
+                </div>
+              </li>
+            </ul>
           </div>
         </section>
       </main>
