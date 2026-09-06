@@ -35,10 +35,13 @@ const META_PIXEL_ID = "1699948581050851";
 const META_APP_ID = process.env.META_APP_ID;
 const GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID;
 
+const HOMEPAGE_PREVIEW = process.env.BLOCKWISE_HOMEPAGE_PREVIEW === "true";
+
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://blockwise.sale";
 const SITE_TITLE = "Blockwise | Real Estate Meta Ads Workflow";
-const SITE_DESCRIPTION =
-  "Create, approve, publish, and track Meta ad campaigns through your own ad account. Start with email and create three complete ads before adding a card.";
+const SITE_DESCRIPTION = HOMEPAGE_PREVIEW
+  ? "Blockwise homepage concept. Create, approve and track real estate ads in one place."
+  : "Create, approve, publish, and track Meta ad campaigns through your own ad account. Start with email and create three complete ads before adding a card.";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -77,7 +80,7 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
   },
   facebook: META_APP_ID ? { appId: META_APP_ID } : undefined,
-  robots: { index: true, follow: true },
+  robots: { index: !HOMEPAGE_PREVIEW, follow: !HOMEPAGE_PREVIEW },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -95,11 +98,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </Script>
       </head>
       <body>
-        <MarketingAnalytics metaPixelId={META_PIXEL_ID} googleAdsId={GOOGLE_ADS_ID} />
+        {!HOMEPAGE_PREVIEW && <MarketingAnalytics metaPixelId={META_PIXEL_ID} googleAdsId={GOOGLE_ADS_ID} />}
         {children}
-        <ServiceWorkerRegistrar />
-        <PageViewTracker />
-        <ConsentBanner />
+        {!HOMEPAGE_PREVIEW && <ServiceWorkerRegistrar />}
+        {!HOMEPAGE_PREVIEW && <PageViewTracker />}
+        {!HOMEPAGE_PREVIEW && <ConsentBanner />}
       </body>
     </html>
   );
