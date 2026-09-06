@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { register } from "tsx/esm/api";
-
-register();
-const { createCustomerAd, loadCustomerAd, CustomerAdNotFoundError } = await import("../src/lib/adstudio/create-customer-ad.ts");
-const { adFormatLabel } = await import("../src/lib/adstudio/library-contract.ts");
+import { createCustomerAd, loadCustomerAd, CustomerAdNotFoundError } from "../src/lib/adstudio/create-customer-ad.ts";
+import { adFormatLabel } from "../src/lib/adstudio/library-contract.ts";
 const pack = { templateId: "pack-1", semanticColours: {} };
 
 function fakeCreateClient({ insertResult, replay = null }) {

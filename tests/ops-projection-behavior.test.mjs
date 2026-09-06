@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -7,6 +7,14 @@ import { runGlobalProjectionOnce, runOpsProjectionOnce } from "../worker/ops-pro
 import { publishOpsBundle } from "../worker/ops-bundle.ts";
 
 const workspace = "81111111-1111-4111-8111-111111111111";
+
+// readSecretFile rejects a secret whose ancestors are group/other writable, so
+// these fixtures cannot live under os.tmpdir(): /tmp is mode 1777. Stage them
+// under the repo, which has safe ancestors, and clean up when the run ends.
+const secretParent = join(process.cwd(), ".tmp-test-secrets");
+mkdirSync(secretParent, { recursive: true, mode: 0o700 });
+process.on("exit", () => { try { rmSync(secretParent, { recursive: true, force: true }); } catch {} });
+const secretDir = (prefix) => mkdtempSync(join(secretParent, prefix));
 function fixture(provider = "chatwoot", aggregateType = "enquiry") {
   const calls = [];
   const row = { id: "91111111-1111-4111-8111-111111111111", workspace_id: workspace, provider, aggregate_type: aggregateType, aggregate_id: "lead-1", operation: "upsert", source_event_id: "lead-event-1", source_version: 1, payload: {}, attempts: 1, max_attempts: 8, lease_token: "92222222-2222-4222-8222-222222222222" };
@@ -16,7 +24,7 @@ function fixture(provider = "chatwoot", aggregateType = "enquiry") {
 function response(body, status = 200) { return { status, ok: status >= 200 && status < 300, json: async () => body }; }
 
 test("Chatwoot adapter performs deterministic contact, conversation, message and status sequence", async () => {
-  const secretRoot = mkdtempSync(join(tmpdir(), "ops-worker-")); const tokenPath = join(secretRoot, "chatwoot-token"); const keyPath = join(secretRoot, "correlation-key"); writeFileSync(tokenPath, "test-token\n", { mode: 0o600 }); writeFileSync(keyPath, "test-correlation-key\n", { mode: 0o600 });
+  const secretRoot = secretDir("ops-worker-"); const tokenPath = join(secretRoot, "chatwoot-token"); const keyPath = join(secretRoot, "correlation-key"); writeFileSync(tokenPath, "test-token\n", { mode: 0o600 }); writeFileSync(keyPath, "test-correlation-key\n", { mode: 0o600 });
   Object.assign(process.env, { CHATWOOT_BASE_URL: "https://chatwoot.example.test", CHATWOOT_API_TOKEN_FILE: tokenPath, CHATWOOT_ACCOUNT_ID: "7", CHATWOOT_ENQUIRY_INBOX_ID: "8", CHATWOOT_ENQUIRY_SOURCE_ID: "source-8", BLOCKWISE_OPS_CORRELATION_KEY_FILE: keyPath });
   const { supabase, calls } = fixture(); const urls = [];
   const fetchImpl = async (url, init) => { urls.push([String(url), init.method, JSON.parse(init.body ?? "{}"), init.headers]); if (String(url).includes("/contacts/search")) return response({ payload: [] }); if (String(url).includes("/contacts") && init.method === "POST") return response({ payload: { id: 10 } }); if (String(url).includes("/conversations?") ) return response({ payload: [] }); if (String(url).endsWith("/conversations") && init.method === "POST") return response({ id: 20 }); return response({ ok: true }); };
@@ -28,7 +36,7 @@ test("Chatwoot adapter performs deterministic contact, conversation, message and
 });
 
 test("Mautic lifecycle enrollments reuse the authoritative profile contact id", async () => {
-  const secretRoot = mkdtempSync(join(tmpdir(), "ops-mautic-")); const tokenPath = join(secretRoot, "mautic-token"); const keyPath = join(secretRoot, "correlation-key"); writeFileSync(tokenPath, "test-token\n", { mode: 0o600 }); writeFileSync(keyPath, "test-correlation-key\n", { mode: 0o600 });
+  const secretRoot = secretDir("ops-mautic-"); const tokenPath = join(secretRoot, "mautic-token"); const keyPath = join(secretRoot, "correlation-key"); writeFileSync(tokenPath, "test-token\n", { mode: 0o600 }); writeFileSync(keyPath, "test-correlation-key\n", { mode: 0o600 });
   Object.assign(process.env, { MAUTIC_BASE_URL: "https://mautic.example.test", MAUTIC_TOKEN_FILE: tokenPath, MAUTIC_CONTACT_TAG: "blockwise-contact", MAUTIC_LIFECYCLE_TAG: "blockwise-active", MAUTIC_LIFECYCLE_SEGMENTS_JSON: JSON.stringify({ active: "segment-active" }), MAUTIC_LIFECYCLE_CAMPAIGNS_JSON: JSON.stringify({ active: "campaign-active" }), BLOCKWISE_OPS_CORRELATION_KEY_FILE: keyPath });
   delete process.env.HERMES_OPS_PROJECTION_ROOT;
   const profileId = "84444444-4444-4444-8444-444444444444";
@@ -45,7 +53,7 @@ test("Mautic lifecycle enrollments reuse the authoritative profile contact id", 
 });
 
 test("provider 429 is retried through the durable fail RPC and never settles", async () => {
-  const secretRoot = mkdtempSync(join(tmpdir(), "ops-worker-")); const tokenPath = join(secretRoot, "token"); const keyPath = join(secretRoot, "key"); writeFileSync(tokenPath, "test-token\n", { mode: 0o600 }); writeFileSync(keyPath, "test-correlation-key\n", { mode: 0o600 }); Object.assign(process.env, { CHATWOOT_BASE_URL: "https://chatwoot.example.test", CHATWOOT_API_TOKEN_FILE: tokenPath, CHATWOOT_ACCOUNT_ID: "7", CHATWOOT_ENQUIRY_INBOX_ID: "8", BLOCKWISE_OPS_CORRELATION_KEY_FILE: keyPath });
+  const secretRoot = secretDir("ops-worker-"); const tokenPath = join(secretRoot, "token"); const keyPath = join(secretRoot, "key"); writeFileSync(tokenPath, "test-token\n", { mode: 0o600 }); writeFileSync(keyPath, "test-correlation-key\n", { mode: 0o600 }); Object.assign(process.env, { CHATWOOT_BASE_URL: "https://chatwoot.example.test", CHATWOOT_API_TOKEN_FILE: tokenPath, CHATWOOT_ACCOUNT_ID: "7", CHATWOOT_ENQUIRY_INBOX_ID: "8", BLOCKWISE_OPS_CORRELATION_KEY_FILE: keyPath });
   const { supabase, calls } = fixture(); const fetchImpl = async () => response({}, 429); await runOpsProjectionOnce(supabase, fetchImpl); assert.equal(calls.some(([name]) => name === "fail_ops_projection"), true); assert.equal(calls.some(([name]) => name === "complete_ops_projection"), false);
 });
 
@@ -71,7 +79,7 @@ test("Frank bundle publication preserves nested scope and pointer compatibility"
 });
 
 test("global lead delivery settles its ledger and publishes a Frank generation", async () => {
-  const secretRoot = mkdtempSync(join(tmpdir(), "ops-global-")); const tokenPath = join(secretRoot, "chatwoot-token"); const keyPath = join(secretRoot, "correlation-key"); const bundleRoot = join(secretRoot, "bundle");
+  const secretRoot = secretDir("ops-global-"); const tokenPath = join(secretRoot, "chatwoot-token"); const keyPath = join(secretRoot, "correlation-key"); const bundleRoot = join(secretRoot, "bundle");
   writeFileSync(tokenPath, "test-token\n", { mode: 0o600 }); writeFileSync(keyPath, "test-correlation-key\n", { mode: 0o600 });
   Object.assign(process.env, { CHATWOOT_BASE_URL: "https://chatwoot.example.test", CHATWOOT_API_TOKEN_FILE: tokenPath, CHATWOOT_GLOBAL_ACCOUNT_ID: "77", CHATWOOT_GLOBAL_INBOX_ID: "88", CHATWOOT_GLOBAL_SOURCE_ID: "source-88", BLOCKWISE_OPS_CORRELATION_KEY_FILE: keyPath, HERMES_OPS_PROJECTION_ROOT: bundleRoot, BLOCKWISE_WORKER_REVISION: "a".repeat(40) });
   const calls = []; const leadId = "a1111111-1111-4111-8111-111111111111";
