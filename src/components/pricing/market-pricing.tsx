@@ -15,7 +15,11 @@ const PLAN_SUMMARY = [
     prefix: "",
     per: "",
     note: "Three complete ads and one trial campaign. No card.",
-    cta: { label: "Start free", href: "/signup?offer=self-serve", location: "pricing-summary-free" },
+    cta: {
+      label: "Start free trial",
+      href: "/signup?offer=self-serve",
+      location: "pricing-summary-free",
+    },
     featured: false,
   },
   {
@@ -25,7 +29,11 @@ const PLAN_SUMMARY = [
     prefix: "",
     per: "/month",
     note: "Build, publish, and track in one place.",
-    cta: { label: "Create three ads free", href: "/signup?offer=self-serve", location: "pricing-summary-self-serve" },
+    cta: {
+      label: "Start free trial",
+      href: "/signup?offer=self-serve",
+      location: "pricing-summary-self-serve",
+    },
     featured: true,
   },
   {
@@ -35,7 +43,11 @@ const PLAN_SUMMARY = [
     prefix: "from",
     per: "/month",
     note: "Operator launch and weekly optimization. Plus Meta ad spend.",
-    cta: { label: "Book a call", href: "/#managed-setup", location: "pricing-summary-managed" },
+    cta: {
+      label: "Book a walkthrough",
+      href: "/#managed-setup",
+      location: "pricing-summary-managed",
+    },
     featured: false,
   },
 ] as const;
@@ -65,7 +77,8 @@ const MANAGED_FEATURES = [
   "Monthly performance report",
 ] as const;
 
-const formatPrice = (value: number) => `A$${Math.round(value).toLocaleString("en-AU")}`;
+const formatPrice = (value: number) =>
+  `A$${Math.round(value).toLocaleString("en-AU")}`;
 
 export function MarketPricing() {
   const reduced = useReducedMotion();
@@ -94,7 +107,9 @@ export function MarketPricing() {
             >
               <h3 id={`summary-${plan.id}-title`}>{plan.name}</h3>
               <p className="pricing-summary-price">
-                {plan.prefix ? <span className="pricing-summary-from">{plan.prefix}</span> : null}
+                {plan.prefix ? (
+                  <span className="pricing-summary-from">{plan.prefix}</span>
+                ) : null}
                 <AnimatedNumber value={plan.amount} format={formatPrice} />
                 {plan.per ? <span>{plan.per}</span> : null}
               </p>
@@ -119,8 +134,9 @@ export function MarketPricing() {
             <p className="pricing-kicker">Free</p>
             <h2 id="free-title">Build the ads before you pay.</h2>
             <p>
-              Every plan starts here. Create three complete Feed + Story ads with only your
-              email, and launch a trial campaign before adding a card.
+              Every plan starts here. Create three complete Feed + Story ads
+              with only your email, and launch a trial campaign before adding a
+              card.
             </p>
           </div>
           <ul aria-label="Free plan features">
@@ -133,13 +149,18 @@ export function MarketPricing() {
           </ul>
         </article>
 
-        <article className="pricing-self-serve" aria-labelledby="self-serve-title">
+        <article
+          className="pricing-self-serve"
+          aria-labelledby="self-serve-title"
+        >
           <div className="pricing-plan-intro">
             <p className="pricing-kicker">Self-serve with assistance</p>
-            <h2 id="self-serve-title">Build, publish, and track in one place.</h2>
+            <h2 id="self-serve-title">
+              Build, publish, and track in one place.
+            </h2>
             <p>
-              Start without a card. When you choose to subscribe, checkout collects a payment
-              method and clearly shows the renewal schedule.
+              Start without a card. When you choose to subscribe, checkout
+              collects a payment method and clearly shows the renewal schedule.
             </p>
           </div>
 
@@ -147,7 +168,11 @@ export function MarketPricing() {
             <div>
               <span className="pricing-amount-label">Monthly subscription</span>
               <strong>
-                <AnimatedNumber value={249} format={formatPrice} startOnView={false} />
+                <AnimatedNumber
+                  value={249}
+                  format={formatPrice}
+                  startOnView={false}
+                />
               </strong>
               <span className="pricing-per">/month</span>
             </div>
@@ -168,26 +193,32 @@ export function MarketPricing() {
                 href="/signup?offer=self-serve"
                 className="hw-btn hw-btn--dark"
               >
-                Create three ads free
+                Start free trial
               </CtaLink>
-              <p>Only your email to start. No password. No card.</p>
+              <p>
+                Start free — no password or card. Pay A$249/month only when
+                you&rsquo;re ready to subscribe.
+              </p>
             </div>
           </div>
 
           <p className="pricing-consent-note">
-            Three complete ads and one trial campaign are free — no card. Your Meta ad spend is
-            separate. When you choose to subscribe, your Blockwise subscription starts at A$249
-            monthly until cancelled.
+            Three complete ads and one trial campaign are free — no card. Your
+            Meta ad spend is separate. When you choose to subscribe, your
+            Blockwise subscription starts at A$249 monthly until cancelled.
           </p>
         </article>
 
         <article className="pricing-managed" aria-labelledby="managed-title">
           <div className="pricing-managed-copy">
             <p className="pricing-kicker">Managed service</p>
-            <h2 id="managed-title">Strategy and weekly optimization included.</h2>
+            <h2 id="managed-title">
+              Strategy and weekly optimization included.
+            </h2>
             <p>
-              From <strong>A$1,500/month</strong>, plus Meta ad spend. Scope beyond the standard
-              engagement is confirmed and repriced during onboarding.
+              From <strong>A$1,500/month</strong>, plus Meta ad spend. Scope
+              beyond the standard engagement is confirmed and repriced during
+              onboarding.
             </p>
             <div className="pricing-managed-actions">
               <CtaLink
@@ -195,7 +226,7 @@ export function MarketPricing() {
                 href="/#managed-setup"
                 className="hw-btn hw-btn--dark"
               >
-                Book a managed-service call
+                Book a walkthrough
               </CtaLink>
             </div>
           </div>

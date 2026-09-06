@@ -256,7 +256,8 @@ test("pricing shows the single A$ offer with no market switcher or US pricing", 
   assert.match(combined, /Up to 50 complete Feed \+ Story packs/);
   assert.match(combined, /Five named, email-verified team members/);
   assert.match(combined, /One live trial campaign before you subscribe/);
-  assert.match(combined, /Book a managed-service call/);
+  assert.match(combined, /Start free trial/);
+  assert.match(combined, /Book a walkthrough/);
   assert.doesNotMatch(combined, /Subscribe and book onboarding/);
 });
 

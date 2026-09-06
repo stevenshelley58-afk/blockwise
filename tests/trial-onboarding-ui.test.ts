@@ -51,7 +51,7 @@ test("landing CTA tracking fires cta_click for every CTA and BookDemoClick only 
   assert.match(ctaLink, /trackCtaClick\(location/);
   assert.match(pixel, /trackCustom", "cta_click"/);
   // Managed setup links also fire BookDemoClick for analytics continuity.
-  assert.match(ctaLink, /if \(href === "#managed-setup"\)/);
+  assert.match(ctaLink, /href\.endsWith\("#managed-setup"\)/);
   assert.match(ctaLink, /trackDemoCtaClick\(location\)/);
   // The hook is not a single arrow-onClick that fires only for managed setup.
   assert.doesNotMatch(ctaLink, /onClick=\{\(\) => trackDemoCtaClick\(location\)\}/);
