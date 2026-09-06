@@ -362,11 +362,11 @@ export function FreeTrial() {
         </div>
         <div className="hw-trial-fact">
           <h3>No card</h3>
-          <p>Add payment details only when you choose to run a campaign.</p>
+          <p>Add payment details only when you choose to subscribe.</p>
         </div>
         <div className="hw-trial-fact">
-          <h3>One live setup free</h3>
-          <p>Your Meta ad spend is always paid separately to Meta.</p>
+          <h3>One trial campaign</h3>
+          <p>You approve the budget and end date with Meta. Ad spend is paid separately to Meta.</p>
         </div>
       </div>
     </div>

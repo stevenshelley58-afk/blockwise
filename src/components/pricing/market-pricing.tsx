@@ -11,22 +11,20 @@ const OFFERS = {
   us: {
     name: "United States",
     shortName: "US",
-    firstMonth: "US$99",
-    renewal: "US$499",
+    monthly: "US$149",
     managed: "US$1,500",
   },
   au: {
     name: "Australia",
     shortName: "AU",
-    firstMonth: "A$99",
-    renewal: "A$499",
+    monthly: "A$249",
     managed: "A$2,500",
   },
 } as const;
 
 const SELF_SERVE_FEATURES = [
   "Three complete Feed + Story ads before payment",
-  "One free live campaign setup",
+  "One live trial campaign before you subscribe",
   "100 render credits each paid month",
   "Up to 50 complete Feed + Story packs",
   "One Brand Pack, workspace, and primary Meta ad account",
@@ -76,20 +74,15 @@ export function MarketPricing() {
             <p className="pricing-kicker">Self-serve with assistance</p>
             <h2 id="self-serve-title">Build, publish, and track in one place.</h2>
             <p>
-              Start without a card. When you choose to run a campaign, checkout collects a payment
+              Start without a card. When you choose to subscribe, checkout collects a payment
               method and clearly shows the renewal schedule.
             </p>
           </div>
 
-          <div className="pricing-amount" aria-label={`${offer.firstMonth} first month, then ${offer.renewal} per month`}>
+          <div className="pricing-amount" aria-label={`${offer.monthly} per month`}>
             <div>
-              <span className="pricing-amount-label">First paid month</span>
-              <strong>{offer.firstMonth}</strong>
-            </div>
-            <span className="pricing-then" aria-hidden>then</span>
-            <div>
-              <span className="pricing-amount-label">Following months</span>
-              <strong>{offer.renewal}</strong>
+              <span className="pricing-amount-label">Monthly subscription</span>
+              <strong>{offer.monthly}</strong>
               <span className="pricing-per">/month</span>
             </div>
           </div>
@@ -116,10 +109,9 @@ export function MarketPricing() {
           </div>
 
           <p className="pricing-consent-note">
-            One live campaign setup is free. Your Meta ad spend is separate. Your Blockwise
-            subscription starts at {offer.firstMonth} when the campaign launches or seven days
-            after checkout, whichever comes first, then renews at {offer.renewal} monthly until
-            cancelled.
+            Three complete ads and one trial campaign are free — no card. Your Meta ad spend is
+            separate. When you choose to subscribe, your Blockwise subscription starts at{" "}
+            {offer.monthly} monthly until cancelled.
           </p>
         </article>
 

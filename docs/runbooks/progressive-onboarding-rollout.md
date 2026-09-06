@@ -72,14 +72,14 @@ properties.
 
 Configure test-mode resources before setting the billing flag:
 
-- recurring self-serve Prices: USD 499 tax-exclusive and AUD 499
+- recurring self-serve Prices: USD 149 tax-exclusive and AUD 249
   tax-inclusive;
-- once-only introductory Coupons: USD 400 off and AUD 400 off;
 - recurring managed Prices: USD 1,500 and AUD 2,500 base monthly prices;
 - Stripe Tax, billing-address collection, applicable business tax-ID
-  collection, receipts, and the seven-day trial reminder;
-- a Checkout subscription requiring a reusable payment method and using the
-  normal 499 recurring Price plus the market Coupon;
+  collection, receipts, and payment-failure reminders;
+- a Checkout subscription requiring a reusable payment method and charging the
+  full monthly Price with no trial and no discount (the free trial happens
+  before Checkout and never requires a card);
 - Customer Portal cancellation, payment-method, and invoice features;
 - webhook endpoint and secret for Checkout, subscription, paid/failed invoice,
   refund, and dispute events supported by the billing domain.
@@ -90,19 +90,18 @@ Set the IDs in:
 - `STRIPE_SELF_SERVE_AUD_PRICE_ID`
 - `STRIPE_MANAGED_USD_PRICE_ID`
 - `STRIPE_MANAGED_AUD_PRICE_ID`
-- `STRIPE_SELF_SERVE_USD_INTRO_COUPON_ID`
-- `STRIPE_SELF_SERVE_AUD_INTRO_COUPON_ID`
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
 
 Use Stripe test clocks for both markets. Verify:
 
-1. Checkout starts trialing with a reusable payment method.
-2. A reconciled successful first Meta launch ends the trial and invoices 99 in
-   the workspace currency.
-3. No launch converts automatically after seven days and invoices 99.
-4. A publish failure neither consumes the free-live claim nor ends the trial.
-5. The first successful renewal invoices 499.
+1. Checkout invoices the full monthly amount in the workspace currency and the
+   subscription starts active with a reusable payment method.
+2. The workspace never enters a Stripe billing trial; the free trial campaign
+   runs from the unbilled state via the free-live claim.
+3. Cancelling through the Customer Portal stops future renewals.
+4. A publish failure neither consumes the free-live claim nor charges again.
+5. The first successful renewal invoices 149/249 in the workspace currency.
 6. A paid invoice grants one 100-credit wallet exactly once.
 7. Payment failure and cancellation preserve history and apply the documented
    access and credit behavior.

@@ -11,6 +11,7 @@ import {
 
 const STRIPE_API_BASE = "https://api.stripe.com";
 const WEBHOOK_TOLERANCE_SECONDS = 300;
+const STRIPE_REQUEST_TIMEOUT_MS = 30000;
 
 export class BillingNotConfiguredError extends Error {
   constructor(message = "Billing is not connected yet.") {
@@ -130,10 +131,6 @@ export function buildCheckoutSessionRequest(
   if (!priceId) {
     throw new BillingNotConfiguredError(`${offer.priceEnvKey} is not configured.`);
   }
-  const couponId = offer.couponEnvKey ? env[offer.couponEnvKey]?.trim() : null;
-  if (offer.product === "self_serve" && !couponId) {
-    throw new BillingNotConfiguredError(`${offer.couponEnvKey} is not configured.`);
-  }
 
   const customerEmail = input.customerEmail?.trim() || null;
   const userId = input.userId?.trim() || null;
@@ -183,9 +180,8 @@ export function buildCheckoutSessionRequest(
           "customer_update[name]": "auto",
         }
       : {}),
-    ...(offer.product === "self_serve"
+    ...(offer.product === "self_serve" && offer.trialDays > 0
       ? {
-          "discounts[0][coupon]": couponId,
           "subscription_data[trial_period_days]": offer.trialDays,
           "subscription_data[trial_settings][end_behavior][missing_payment_method]": "cancel",
         }
@@ -272,16 +268,22 @@ export function constructStripeWebhookEvent(
 }
 
 async function stripePost<T>(path: string, params: StripeFormParams, idempotencyKey?: string): Promise<T> {
-  const response = await fetch(`${STRIPE_API_BASE}${path}`, {
-    method: "POST",
-    headers: {
-      authorization: `Basic ${Buffer.from(`${getStripeSecretKey(true)}:`).toString("base64")}`,
-      "content-type": "application/x-www-form-urlencoded",
-      ...(idempotencyKey ? { "idempotency-key": idempotencyKey } : {}),
-    },
-    body: encodeStripeForm(params),
-    cache: "no-store",
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), STRIPE_REQUEST_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(`${STRIPE_API_BASE}${path}`, {
+      method: "POST",
+      headers: {
+        authorization: `Basic ${Buffer.from(`${getStripeSecretKey(true)}:`).toString("base64")}`,
+        "content-type": "application/x-www-form-urlencoded",
+        ...(idempotencyKey ? { "idempotency-key": idempotencyKey } : {}),
+      },
+      body: encodeStripeForm(params),
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } finally { clearTimeout(timer); }
   const payload = (await response.json().catch(() => ({}))) as T & StripeErrorResponse;
 
   if (!response.ok) {
@@ -292,12 +294,18 @@ async function stripePost<T>(path: string, params: StripeFormParams, idempotency
 }
 
 async function stripeGet<T>(path: string): Promise<T> {
-  const response = await fetch(`${STRIPE_API_BASE}${path}`, {
-    headers: {
-      authorization: `Basic ${Buffer.from(`${getStripeSecretKey(true)}:`).toString("base64")}`,
-    },
-    cache: "no-store",
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), STRIPE_REQUEST_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(`${STRIPE_API_BASE}${path}`, {
+      headers: {
+        authorization: `Basic ${Buffer.from(`${getStripeSecretKey(true)}:`).toString("base64")}`,
+      },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } finally { clearTimeout(timer); }
   const payload = (await response.json().catch(() => ({}))) as T & StripeErrorResponse;
 
   if (!response.ok) {

@@ -178,7 +178,7 @@ function StatusCell({
 
 function planLabel(state: string): string {
   if (state === "paid") return "Self-serve paid";
-  if (state === "trialing") return "Seven-day billing trial";
+  if (state === "trialing") return "Billing trial";
   if (state === "payment_recovery") return "Payment needs attention";
   if (state === "canceled") return "Canceled";
   return "Free creation trial";
@@ -186,12 +186,12 @@ function planLabel(state: string): string {
 
 function billingTiming(plan: ActivationCardData["plan"]): string {
   if (plan.accessState === "unbilled") {
-    return `${plan.currency === "USD" ? "US$" : "A$"}99 first month when you launch or seven days after Checkout.`;
+    return `Subscribe for ${plan.currency === "USD" ? "US$149" : "A$249"} monthly whenever you're ready. Your free trial never requires a card.`;
   }
   if (!plan.periodEnd) return "Billing timing will appear after Stripe confirms the subscription.";
   const date = formatDate(plan.periodEnd);
   if (plan.cancelAtPeriodEnd) return `Credits and access remain available until ${date}.`;
-  return `Next ${plan.currency === "USD" ? "US$" : "A$"}499 renewal: ${date}.`;
+  return `Next ${plan.currency === "USD" ? "US$149" : "A$249"} renewal: ${date}.`;
 }
 
 function metaLabel(state: string): string {
