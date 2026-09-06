@@ -5,11 +5,10 @@ import type { useRouter } from "next/navigation";
 
 import type { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-export const REGION_CURRENCY: Record<string, string> = { AU: "AUD", US: "USD" };
+export const REGION_CURRENCY: Record<string, string> = { AU: "AUD" };
 
 export const REGION_NAMES: Record<string, string> = {
   AU: "Australia",
-  US: "United States",
 };
 
 export const ASSIGNABLE_ROLES = ["owner", "admin", "member", "viewer"];

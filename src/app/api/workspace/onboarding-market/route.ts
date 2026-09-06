@@ -8,7 +8,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type Market = "AU" | "US";
+type Market = "AU";
 
 type OnboardingMarketBody = {
   workspaceId?: string;
@@ -16,16 +16,15 @@ type OnboardingMarketBody = {
   websiteUrl?: string;
 };
 
-const MARKET_CURRENCY: Record<Market, "AUD" | "USD"> = {
+const MARKET_CURRENCY: Record<Market, "AUD"> = {
   AU: "AUD",
-  US: "USD",
 };
 
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => ({}))) as OnboardingMarketBody;
   const country = body.country?.trim().toUpperCase();
-  if (country !== "AU" && country !== "US") {
-    return NextResponse.json({ error: "Choose Australia or the United States." }, { status: 400 });
+  if (country !== "AU") {
+    return NextResponse.json({ error: "Blockwise currently supports Australia only." }, { status: 400 });
   }
 
   const website = normalizeAndValidateExtractionUrl(body.websiteUrl ?? "");

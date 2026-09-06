@@ -219,9 +219,8 @@ test("homepage FAQ discloses billing triggers, credit expiry, cancellation, and 
   const faq = readFileSync("src/components/home-landing/data.ts", "utf8");
 
   assert.match(faq, /Only when you choose to subscribe/i);
-  assert.match(faq, /US\$149 \(United States\) or A\$249 \(Australia\) monthly until cancelled/i);
+  assert.match(faq, /A\$249 monthly until cancelled/i);
   assert.match(faq, /no introductory price and no automatic charge at the end of the trial/i);
-  assert.match(faq, /market and local currency you confirm/i);
 
   assert.match(faq, /Credits expire at the end of that period/i);
   assert.match(faq, /do not roll over or transfer/i);
@@ -230,31 +229,29 @@ test("homepage FAQ discloses billing triggers, credit expiry, cancellation, and 
   assert.match(faq, /Deleting a profile, workspace, or creative is not a substitute for cancelling/i);
   assert.match(faq, /paid access and remaining credits continue until the end of the current billing period/i);
 
-  assert.match(faq, /US\$1,500\/month in the United States/i);
-  assert.match(faq, /A\$2,500\/month in Australia/i);
+  assert.match(faq, /A\$1,500\/month/i);
   assert.match(faq, /100 monthly render credits/i);
   assert.match(faq, /weekly optimization of up to four live campaigns/i);
   assert.match(faq, /You pay Meta directly/i);
   assert.match(faq, /additional scope is confirmed and repriced during onboarding/i);
 });
 
-test("pricing keeps US and AU offers explicit and accessible", () => {
+test("pricing shows the single A$ offer with no market switcher or US pricing", () => {
   const pricingPage = readFileSync("src/app/pricing/page.tsx", "utf8");
   const pricing = readFileSync("src/components/pricing/market-pricing.tsx", "utf8");
   const combined = `${pricingPage}\n${pricing}`;
 
-  assert.match(pricing, /aria-pressed=\{market === value\}/);
-  assert.match(pricing, /Choose your market/);
-  assert.match(pricing, /United States/);
-  assert.match(pricing, /Australia/);
-  assert.match(pricing, /US\$149/);
+  assert.doesNotMatch(pricing, /Choose your market/);
+  assert.doesNotMatch(pricing, /aria-pressed/);
+  assert.doesNotMatch(pricing, /United States/);
+  assert.doesNotMatch(combined, /US\$/);
+  assert.doesNotMatch(combined, /A\$2,500/);
   assert.match(pricing, /A\$249/);
+  assert.match(pricing, /A\$1,500/);
   assert.doesNotMatch(pricing, /US\$99/);
   assert.doesNotMatch(pricing, /A\$99/);
   assert.doesNotMatch(pricing, /US\$499/);
   assert.doesNotMatch(pricing, /A\$499/);
-  assert.match(pricing, /US\$1,500/);
-  assert.match(pricing, /A\$2,500/);
   assert.match(combined, /100 render credits/);
   assert.match(combined, /Up to 50 complete Feed \+ Story packs/);
   assert.match(combined, /Five named, email-verified team members/);

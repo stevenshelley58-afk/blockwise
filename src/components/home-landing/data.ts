@@ -33,7 +33,7 @@ export const FAQ_DATA = [
   },
   {
     q: "When does the self-serve subscription start?",
-    a: "Only when you choose to subscribe. Checkout collects a card and starts US$149 (United States) or A$249 (Australia) monthly until cancelled. There is no introductory price and no automatic charge at the end of the trial. Checkout uses the market and local currency you confirm.",
+    a: "Only when you choose to subscribe. Checkout collects a card and starts A$249 monthly until cancelled. There is no introductory price and no automatic charge at the end of the trial.",
   },
   {
     q: "Do unused render credits roll over?",
@@ -45,7 +45,7 @@ export const FAQ_DATA = [
   },
   {
     q: "What does managed service include?",
-    a: "Managed service starts at US$1,500/month in the United States or A$2,500/month in Australia, plus Meta ad spend. It includes the complete self-serve product, 100 monthly render credits, one brand, one Meta ad account, operator launch and weekly optimization of up to four live campaigns, and a monthly report. You pay Meta directly; additional scope is confirmed and repriced during onboarding.",
+    a: "Managed service starts at A$1,500/month, plus Meta ad spend. It includes the complete self-serve product, 100 monthly render credits, one brand, one Meta ad account, operator launch and weekly optimization of up to four live campaigns, and a monthly report. You pay Meta directly; additional scope is confirmed and repriced during onboarding.",
   },
 ] as const;
 
