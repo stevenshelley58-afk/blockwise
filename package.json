@@ -12,7 +12,7 @@
     "prebuild": "npm run build:packages",
     "build": "next build",
     "start": "next start",
-    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/*.test.ts tests/**/*.test.ts tests/**/*.test.mjs packages/*/src/**/*.test.ts",
+    "test": "node scripts/run-tests.mjs",
     "test:db": "npx supabase db reset --local && npx supabase test db",
     "test:hard-reset": "node --test tests/hard-reset/*.test.ts",
     "test:e2e": "playwright test",
