@@ -25,7 +25,7 @@ export const FAQ_DATA = [
   },
   {
     q: "What do I get before paying?",
-    a: "You can create three complete Feed + Story ads without a card. When you choose to run one, Blockwise collects a card and includes one live campaign setup free.",
+    a: "You can create three complete Feed + Story ads without a card, and one live trial campaign is included before you subscribe. You approve the campaign's budget and end date with Meta before it starts — free means no Blockwise subscription fee, not free advertising.",
   },
   {
     q: "What is included after I subscribe?",
@@ -33,7 +33,7 @@ export const FAQ_DATA = [
   },
   {
     q: "When does the self-serve subscription start?",
-    a: "After you add a card, your subscription starts at US$99 or A$99 when your first campaign launches, or seven days after checkout, whichever comes first. It then renews at US$499 or A$499 each month until cancelled. Checkout uses the market and local currency you confirm.",
+    a: "Only when you choose to subscribe. Checkout collects a card and starts US$149 (United States) or A$249 (Australia) monthly until cancelled. There is no introductory price and no automatic charge at the end of the trial. Checkout uses the market and local currency you confirm.",
   },
   {
     q: "Do unused render credits roll over?",

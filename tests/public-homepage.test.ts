@@ -218,9 +218,9 @@ test("public marketing copy states the approved progressive offer", () => {
 test("homepage FAQ discloses billing triggers, credit expiry, cancellation, and managed scope", () => {
   const faq = readFileSync("src/components/home-landing/data.ts", "utf8");
 
-  assert.match(faq, /US\$99 or A\$99 when your first campaign launches/i);
-  assert.match(faq, /seven days after checkout, whichever comes first/i);
-  assert.match(faq, /US\$499 or A\$499 each month until cancelled/i);
+  assert.match(faq, /Only when you choose to subscribe/i);
+  assert.match(faq, /US\$149 \(United States\) or A\$249 \(Australia\) monthly until cancelled/i);
+  assert.match(faq, /no introductory price and no automatic charge at the end of the trial/i);
   assert.match(faq, /market and local currency you confirm/i);
 
   assert.match(faq, /Credits expire at the end of that period/i);
@@ -247,16 +247,18 @@ test("pricing keeps US and AU offers explicit and accessible", () => {
   assert.match(pricing, /Choose your market/);
   assert.match(pricing, /United States/);
   assert.match(pricing, /Australia/);
-  assert.match(pricing, /US\$99/);
-  assert.match(pricing, /US\$499/);
-  assert.match(pricing, /A\$99/);
-  assert.match(pricing, /A\$499/);
+  assert.match(pricing, /US\$149/);
+  assert.match(pricing, /A\$249/);
+  assert.doesNotMatch(pricing, /US\$99/);
+  assert.doesNotMatch(pricing, /A\$99/);
+  assert.doesNotMatch(pricing, /US\$499/);
+  assert.doesNotMatch(pricing, /A\$499/);
   assert.match(pricing, /US\$1,500/);
   assert.match(pricing, /A\$2,500/);
   assert.match(combined, /100 render credits/);
   assert.match(combined, /Up to 50 complete Feed \+ Story packs/);
   assert.match(combined, /Five named, email-verified team members/);
-  assert.match(combined, /One free live campaign setup/);
+  assert.match(combined, /One live trial campaign before you subscribe/);
   assert.match(combined, /Book a managed-service call/);
   assert.doesNotMatch(combined, /Subscribe and book onboarding/);
 });
