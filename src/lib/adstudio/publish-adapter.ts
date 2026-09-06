@@ -289,7 +289,10 @@ export function validatePublishState(
       ? "Missing valid HTTPS destination URL/article — add the article or website URL before publishing"
       : "Missing valid HTTPS destination URL — add the Instant Form thank-you website URL before publishing");
   }
-  if (requirements.requiredCtaTypes.length > 0 && !requirements.requiredCtaTypes.includes(mappedCta)) {
+  // Template publish requirements may declare CTA tokens in either case
+  // (e.g. "learn_more"); the app enum is uppercase, so compare normalized.
+  const normalizedRequiredCtas = requirements.requiredCtaTypes.map(value => value.trim().toLowerCase());
+  if (normalizedRequiredCtas.length > 0 && !normalizedRequiredCtas.includes(mappedCta.toLowerCase())) {
     issues.push(`CTA must be one of: ${requirements.requiredCtaTypes.join(", ")}`);
   }
   if (mode === "instant_form") {
