@@ -147,3 +147,11 @@ test("verify route forwards GoTrue default-template tokens to the auth server co
   assert.match(source, /verifyTarget\.searchParams\.set\("redirect_to", confirmUrl\.toString\(\)\)/);
   assert.doesNotMatch(source, /requestUrl\.searchParams\.get\("redirect_to"\)/);
 });
+
+test("supabase clients pin the pkce auth flow so email links exchange server-side", () => {
+  const browser = readFileSync("src/lib/supabase/browser.ts", "utf8");
+  const server = readFileSync("src/lib/supabase/server.ts", "utf8");
+
+  assert.match(browser, /auth:\s*\{\s*flowType:\s*"pkce"\s*\}/);
+  assert.match(server, /auth:\s*\{\s*flowType:\s*"pkce"\s*\}/);
+});
