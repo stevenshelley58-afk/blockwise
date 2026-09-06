@@ -3,7 +3,6 @@
 import { Check } from "lucide-react";
 import { motion } from "motion/react";
 
-import { AnimatedNumber } from "@/components/ui/animated-number";
 import { CtaLink } from "@/components/landing/cta-link";
 import { entrance, useReducedMotion } from "@/lib/motion";
 
@@ -110,7 +109,7 @@ export function MarketPricing() {
                 {plan.prefix ? (
                   <span className="pricing-summary-from">{plan.prefix}</span>
                 ) : null}
-                <AnimatedNumber value={plan.amount} format={formatPrice} />
+                {formatPrice(plan.amount)}
                 {plan.per ? <span>{plan.per}</span> : null}
               </p>
               <p className="pricing-summary-note">{plan.note}</p>
@@ -168,11 +167,7 @@ export function MarketPricing() {
             <div>
               <span className="pricing-amount-label">Monthly subscription</span>
               <strong>
-                <AnimatedNumber
-                  value={249}
-                  format={formatPrice}
-                  startOnView={false}
-                />
+                {formatPrice(249)}
               </strong>
               <span className="pricing-per">/month</span>
             </div>
