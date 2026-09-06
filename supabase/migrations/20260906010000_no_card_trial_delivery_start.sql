@@ -355,6 +355,7 @@ comment on function public.bootstrap_verified_trial_workspace(uuid) is
   'Idempotently creates or resumes one self-serve trial workspace after authoritative email verification. The 14-day trial starts later, on first Meta-reported delivery.';
 
 -- Expose the trial state machine to the existing trial status reader.
+drop function if exists public.get_trial_status(uuid);
 create or replace function public.get_trial_status(target_workspace_id uuid)
 returns table (
   plan_key text,
