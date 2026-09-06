@@ -1,14 +1,18 @@
 "use client";
 
 import { Check } from "lucide-react";
+import { motion } from "motion/react";
 
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { CtaLink } from "@/components/landing/cta-link";
+import { entrance, useReducedMotion } from "@/lib/motion";
 
 const PLAN_SUMMARY = [
   {
     id: "free",
     name: "Free",
-    price: "A$0",
+    amount: 0,
+    prefix: "",
     per: "",
     note: "Three complete ads and one trial campaign. No card.",
     cta: { label: "Start free", href: "/signup?offer=self-serve", location: "pricing-summary-free" },
@@ -17,7 +21,8 @@ const PLAN_SUMMARY = [
   {
     id: "self-serve",
     name: "Self-serve",
-    price: "A$249",
+    amount: 249,
+    prefix: "",
     per: "/month",
     note: "Build, publish, and track in one place.",
     cta: { label: "Create three ads free", href: "/signup?offer=self-serve", location: "pricing-summary-self-serve" },
@@ -26,8 +31,9 @@ const PLAN_SUMMARY = [
   {
     id: "managed",
     name: "Managed",
-    price: "A$1,500",
-    per: "/month from",
+    amount: 1500,
+    prefix: "from",
+    per: "/month",
     note: "Operator launch and weekly optimization. Plus Meta ad spend.",
     cta: { label: "Book a call", href: "/#managed-setup", location: "pricing-summary-managed" },
     featured: false,
@@ -59,13 +65,24 @@ const MANAGED_FEATURES = [
   "Monthly performance report",
 ] as const;
 
+const formatPrice = (value: number) => `A$${Math.round(value).toLocaleString("en-AU")}`;
+
 export function MarketPricing() {
+  const reduced = useReducedMotion();
+  const { container, item } = entrance(reduced);
+
   return (
     <section className="pricing-offers" aria-label="Plans and pricing">
       <div className="pricing-shell">
-        <div className="pricing-summary" aria-label="Plan prices at a glance">
+        <motion.div
+          className="pricing-summary"
+          aria-label="Plan prices at a glance"
+          variants={container}
+          initial="hidden"
+          animate="visible"
+        >
           {PLAN_SUMMARY.map((plan) => (
-            <article
+            <motion.article
               key={plan.id}
               className={
                 plan.featured
@@ -73,10 +90,12 @@ export function MarketPricing() {
                   : "pricing-summary-card"
               }
               aria-labelledby={`summary-${plan.id}-title`}
+              variants={item}
             >
               <h3 id={`summary-${plan.id}-title`}>{plan.name}</h3>
               <p className="pricing-summary-price">
-                <strong>{plan.price}</strong>
+                {plan.prefix ? <span className="pricing-summary-from">{plan.prefix}</span> : null}
+                <AnimatedNumber value={plan.amount} format={formatPrice} />
                 {plan.per ? <span>{plan.per}</span> : null}
               </p>
               <p className="pricing-summary-note">{plan.note}</p>
@@ -91,9 +110,9 @@ export function MarketPricing() {
               >
                 {plan.cta.label}
               </CtaLink>
-            </article>
+            </motion.article>
           ))}
-        </div>
+        </motion.div>
 
         <article className="pricing-free-details" aria-labelledby="free-title">
           <div className="pricing-free-copy">
@@ -127,7 +146,9 @@ export function MarketPricing() {
           <div className="pricing-amount" aria-label="A$249 per month">
             <div>
               <span className="pricing-amount-label">Monthly subscription</span>
-              <strong>A$249</strong>
+              <strong>
+                <AnimatedNumber value={249} format={formatPrice} startOnView={false} />
+              </strong>
               <span className="pricing-per">/month</span>
             </div>
           </div>
