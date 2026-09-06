@@ -19,7 +19,7 @@ const ALLOWED_OTP_TYPES = new Set([
 ]);
 
 function missingTokenRedirect(requestUrl: URL) {
-  return NextResponse.redirect(new URL("/login?error=confirm_failed", requestUrl.origin));
+  return NextResponse.redirect(new URL("/login?error=confirm_failed", publicOrigin(requestUrl)));
 }
 
 export async function GET(request: NextRequest) {
