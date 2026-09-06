@@ -12,8 +12,8 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@blockwise/ad-template-pack-contract": "file:../../packages/ad-template-pack-contract",
-    "@blockwise/ad-deterministic-renderer": "file:../../packages/ad-deterministic-renderer",
+    "@blockwise/ad-template-contract": "file:../../packages/ad-template-contract",
+    "@blockwise/ad-template-renderer": "file:../../packages/ad-template-renderer",
     "express": "^5.1.0",
     "zod": "^3.24.0"
   },
