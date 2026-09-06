@@ -18,7 +18,7 @@ test("Terms state the exact self-serve trigger, credit, seat, and Meta-spend rul
     "three complete Feed and Story ad creations",
     "one live trial campaign",
     "the trial never charges you automatically",
-    "US$149/A$249 monthly until",
+    "A$249 monthly until",
     "no introductory price",
     "100 render credits per billing period",
     "Credits expire at the end of the",
@@ -32,8 +32,7 @@ test("Terms state the exact self-serve trigger, credit, seat, and Meta-spend rul
 
 test("Terms distinguish managed scope and cancellation from deletion", () => {
   for (const required of [
-    "US$1,500 per month",
-    "A$2,500 per month",
+    "A$1,500 per month",
     "weekly optimization of up to",
     "four live campaigns",
     "monthly report",

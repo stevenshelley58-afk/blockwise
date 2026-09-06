@@ -186,12 +186,12 @@ function planLabel(state: string): string {
 
 function billingTiming(plan: ActivationCardData["plan"]): string {
   if (plan.accessState === "unbilled") {
-    return `Subscribe for ${plan.currency === "USD" ? "US$149" : "A$249"} monthly whenever you're ready. Your free trial never requires a card.`;
+    return "Subscribe for A$249 monthly whenever you're ready. Your free trial never requires a card.";
   }
   if (!plan.periodEnd) return "Billing timing will appear after Stripe confirms the subscription.";
   const date = formatDate(plan.periodEnd);
   if (plan.cancelAtPeriodEnd) return `Credits and access remain available until ${date}.`;
-  return `Next ${plan.currency === "USD" ? "US$149" : "A$249"} renewal: ${date}.`;
+  return `Next A$249 renewal: ${date}.`;
 }
 
 function metaLabel(state: string): string {

@@ -1,26 +1,8 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { useState } from "react";
 
 import { CtaLink } from "@/components/landing/cta-link";
-
-type Market = "us" | "au";
-
-const OFFERS = {
-  us: {
-    name: "United States",
-    shortName: "US",
-    monthly: "US$149",
-    managed: "US$1,500",
-  },
-  au: {
-    name: "Australia",
-    shortName: "AU",
-    monthly: "A$249",
-    managed: "A$2,500",
-  },
-} as const;
 
 const SELF_SERVE_FEATURES = [
   "Three complete Feed + Story ads before payment",
@@ -41,34 +23,9 @@ const MANAGED_FEATURES = [
 ] as const;
 
 export function MarketPricing() {
-  const [market, setMarket] = useState<Market>("au");
-  const offer = OFFERS[market];
-
   return (
-    <section className="pricing-offers" aria-label="Plans and market pricing">
+    <section className="pricing-offers" aria-label="Plans and pricing">
       <div className="pricing-shell">
-        <fieldset className="pricing-market" aria-describedby="pricing-market-note">
-          <legend>Choose your market</legend>
-          <div className="pricing-market-switch">
-            {(Object.keys(OFFERS) as Market[]).map((value) => (
-              <button
-                key={value}
-                type="button"
-                className="pricing-market-option"
-                aria-pressed={market === value}
-                onClick={() => setMarket(value)}
-              >
-                <span aria-hidden>{OFFERS[value].shortName}</span>
-                {OFFERS[value].name}
-              </button>
-            ))}
-          </div>
-          <p id="pricing-market-note">
-            Prices below are shown in {market === "us" ? "US dollars" : "Australian dollars"}.
-            You&rsquo;ll confirm your market before checkout.
-          </p>
-        </fieldset>
-
         <article className="pricing-self-serve" aria-labelledby="self-serve-title">
           <div className="pricing-plan-intro">
             <p className="pricing-kicker">Self-serve with assistance</p>
@@ -79,10 +36,10 @@ export function MarketPricing() {
             </p>
           </div>
 
-          <div className="pricing-amount" aria-label={`${offer.monthly} per month`}>
+          <div className="pricing-amount" aria-label="A$249 per month">
             <div>
               <span className="pricing-amount-label">Monthly subscription</span>
-              <strong>{offer.monthly}</strong>
+              <strong>A$249</strong>
               <span className="pricing-per">/month</span>
             </div>
           </div>
@@ -98,8 +55,8 @@ export function MarketPricing() {
             </ul>
             <div className="pricing-action-block">
               <CtaLink
-                location={`pricing-self-serve-${market}`}
-                href={`/signup?offer=self-serve&market=${market}`}
+                location="pricing-self-serve"
+                href="/signup?offer=self-serve"
                 className="hw-btn hw-btn--dark"
               >
                 Create three ads free
@@ -110,8 +67,8 @@ export function MarketPricing() {
 
           <p className="pricing-consent-note">
             Three complete ads and one trial campaign are free — no card. Your Meta ad spend is
-            separate. When you choose to subscribe, your Blockwise subscription starts at{" "}
-            {offer.monthly} monthly until cancelled.
+            separate. When you choose to subscribe, your Blockwise subscription starts at A$249
+            monthly until cancelled.
           </p>
         </article>
 
@@ -120,12 +77,12 @@ export function MarketPricing() {
             <p className="pricing-kicker">Managed service</p>
             <h2 id="managed-title">Strategy and weekly optimization included.</h2>
             <p>
-              From <strong>{offer.managed}/month</strong>, plus Meta ad spend. Scope beyond the
-              standard engagement is confirmed and repriced during onboarding.
+              From <strong>A$1,500/month</strong>, plus Meta ad spend. Scope beyond the standard
+              engagement is confirmed and repriced during onboarding.
             </p>
             <div className="pricing-managed-actions">
               <CtaLink
-                location={`pricing-managed-call-${market}`}
+                location="pricing-managed-call"
                 href="/#managed-setup"
                 className="hw-btn hw-btn--dark"
               >

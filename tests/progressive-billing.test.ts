@@ -21,23 +21,18 @@ import {
 
 const billingEnv: NodeJS.ProcessEnv = {
   ...process.env,
-  STRIPE_SELF_SERVE_USD_PRICE_ID: "price_self_us",
   STRIPE_SELF_SERVE_AUD_PRICE_ID: "price_self_au",
-  STRIPE_MANAGED_USD_PRICE_ID: "price_managed_us",
   STRIPE_MANAGED_AUD_PRICE_ID: "price_managed_au",
 } as NodeJS.ProcessEnv;
 
-test("regional offer catalog encodes the approved US/AU amounts and tax behavior", () => {
-  assert.equal(BILLING_OFFERS.self_serve_US.firstInvoiceAmount, 14_900);
-  assert.equal(BILLING_OFFERS.self_serve_US.recurringAmount, 14_900);
-  assert.equal(BILLING_OFFERS.self_serve_US.trialDays, 0);
-  assert.equal(BILLING_OFFERS.self_serve_US.taxBehavior, "exclusive");
+test("offer catalog encodes the approved A$ amounts and tax behavior (Australia only)", () => {
+  assert.equal(BILLING_OFFERS.self_serve_AU.firstInvoiceAmount, 24_900);
   assert.equal(BILLING_OFFERS.self_serve_AU.recurringAmount, 24_900);
   assert.equal(BILLING_OFFERS.self_serve_AU.trialDays, 0);
   assert.equal(BILLING_OFFERS.self_serve_AU.taxBehavior, "inclusive");
-  assert.equal(BILLING_OFFERS.managed_US.recurringAmount, 150_000);
-  assert.equal(BILLING_OFFERS.managed_AU.recurringAmount, 250_000);
-  assert.equal(currencyForMarket("US"), "USD");
+  assert.equal(BILLING_OFFERS.managed_AU.recurringAmount, 150_000);
+  assert.equal(BILLING_OFFERS.managed_AU.firstInvoiceAmount, 150_000);
+  assert.equal(BILLING_OFFERS.managed_AU.trialDays, 0);
   assert.equal(currencyForMarket("AU"), "AUD");
 });
 
@@ -45,8 +40,8 @@ test("self-serve Checkout charges the full monthly price with no trial, discount
   const result = buildCheckoutSessionRequest(
     {
       workspaceId: "workspace-1",
-      market: "US",
-      currency: "USD",
+      market: "AU",
+      currency: "AUD",
       product: "self_serve",
       stripeCustomerId: "cus_123",
       customerEmail: "owner@example.com",
@@ -58,7 +53,7 @@ test("self-serve Checkout charges the full monthly price with no trial, discount
     billingEnv,
   );
 
-  assert.equal(result.params["line_items[0][price]"], "price_self_us");
+  assert.equal(result.params["line_items[0][price]"], "price_self_au");
   assert.equal(result.params["discounts[0][coupon]"], undefined);
   assert.equal(result.params["subscription_data[trial_period_days]"], undefined);
   assert.equal(result.params.payment_method_collection, "always");
@@ -67,8 +62,8 @@ test("self-serve Checkout charges the full monthly price with no trial, discount
   assert.equal(result.params["tax_id_collection[enabled]"], true);
   assert.equal(result.params["consent_collection[terms_of_service]"], "required");
   assert.equal(result.params["metadata[offer_version]"], BILLING_OFFER_VERSION);
-  assert.equal(result.params["metadata[first_invoice_amount]"], 14_900);
-  assert.equal(result.params["metadata[renewal_amount]"], 14_900);
+  assert.equal(result.params["metadata[first_invoice_amount]"], 24_900);
+  assert.equal(result.params["metadata[renewal_amount]"], 24_900);
   assert.match(String(result.params["metadata[triggering_rule]"]), /never requires a card/);
   assert.equal(result.params["customer_update[address]"], "auto");
 });
@@ -91,7 +86,7 @@ test("managed Checkout uses the regional managed recurring price without a trial
   assert.equal(result.params["line_items[0][price]"], "price_managed_au");
   assert.equal(result.params["discounts[0][coupon]"], undefined);
   assert.equal(result.params["subscription_data[trial_period_days]"], undefined);
-  assert.equal(result.params["metadata[first_invoice_amount]"], 250_000);
+  assert.equal(result.params["metadata[first_invoice_amount]"], 150_000);
   assert.match(String(result.params["custom_text[submit][message]"]), /Meta ad spend is separate/);
   assert.equal(result.params["managed_payments[enabled]"], false);
 });
@@ -102,8 +97,8 @@ test("Checkout refuses a currency that does not match the confirmed workspace ma
       buildCheckoutSessionRequest(
         {
           workspaceId: "workspace-3",
-          market: "US",
-          currency: "AUD",
+          market: "AU",
+          currency: "USD" as never,
           product: "self_serve",
           customerEmail: null,
           successUrl: "https://blockwise.sale/settings",
