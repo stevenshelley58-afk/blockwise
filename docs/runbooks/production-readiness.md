@@ -1,19 +1,20 @@
 # Blockwise production readiness
 
-## Current release (6 September 2026)
+## Current release (6 September 2026, billing and trial)
 
-The public app serves `3b2770eb4dec62217589b074be999ae9fa9fda06` from
-`blockwise-app:3b2770eb4dec62217589b074be999ae9fa9fda06` (image ID
-`sha256:f787e10b3dc8cbf8e4213393a9e96907d3f30c2b8c0fc54c30d436c4b5c0689a`).
-This app-only release combines the focused lead-first usability cleanup with
-the coordinated template-editor fixes. The hero and design system are unchanged.
+The public app serves `f35a041563d4c5e257e323a97f851ec8c447fb3b` from
+`blockwise-app:f35a041563d4c5e257e323a97f851ec8c447fb3b`. This release ships
+the no-card 14-day trial anchored to first Meta-reported delivery, ad-pack
+credit consumption, and hardened Checkout, with migration
+`20260906010000_no_card_trial_delivery_start.sql` applied. See the
+[release record](../releases/2026-09-06-billing-trial.md) for checks, the
+rehearsal evidence, live-Stripe verification scope, and the retained
+bc2b1f3b rollback image. No test-mode payment flows were run (no test
+credentials in the deployment environment), and no customer was charged.
 
-Integrated checks passed: 924 tests, NUL check, typecheck and production build;
-the final test-only locator correction was rebuilt and passed six canary and
-six public browser tests with no skips. See the [release record](../releases/2026-09-06-template-editor.md)
-for evidence, the retained d39771a9 rollback image/environment, and limitations.
-Provider writes remain disabled and the worker remains omitted. This is not
-acceptance of real Meta publishing, SMTP, billing, or a template's quality.
+The earlier same-day release `3b2770eb4dec62217589b074be999ae9fa9fda06`
+(template editor and customer usability) remains recorded below.
+
 
 Earlier records below are historical, not the current deployment identity.
 
