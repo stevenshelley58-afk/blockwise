@@ -2,6 +2,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { recordProgressiveFunnelEventBestEffort } from "@/lib/analytics/progressive-funnel";
+import { publicOrigin } from "@/lib/config/public-origin";
 import { acceptVerifiedWorkspaceInvitations } from "@/lib/auth/verified-workspace-invitations";
 import { bootstrapVerifiedTrialWorkspace } from "@/lib/auth/verified-workspace-bootstrap";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -28,11 +29,11 @@ function sanitizeNextPath(next: string | null) {
 }
 
 function confirmFailedRedirect(request: NextRequest) {
-  return NextResponse.redirect(new URL("/login?error=confirm_failed", request.url));
+  return NextResponse.redirect(new URL("/login?error=confirm_failed", publicOrigin(request.url)));
 }
 
 function bootstrapFailedRedirect(request: NextRequest) {
-  return NextResponse.redirect(new URL("/access-unavailable?reason=workspace_bootstrap_failed", request.url));
+  return NextResponse.redirect(new URL("/access-unavailable?reason=workspace_bootstrap_failed", publicOrigin(request.url)));
 }
 
 export async function GET(request: NextRequest) {
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
   const isRecovery = flow === "recovery" || type === "recovery";
   const isSignup = flow === "signup" || type === "signup";
   if (isRecovery) {
-    return NextResponse.redirect(new URL(next, requestUrl.origin));
+    return NextResponse.redirect(new URL(next, publicOrigin(requestUrl)));
   }
 
   const service = createSupabaseServiceClient();
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
   });
 
   const redirectPath = isSignup ? appendConfirmed(next) : next;
-  return NextResponse.redirect(new URL(redirectPath, requestUrl.origin));
+  return NextResponse.redirect(new URL(redirectPath, publicOrigin(requestUrl)));
 }
 
 function appendConfirmed(path: string): string {
