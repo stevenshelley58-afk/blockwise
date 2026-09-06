@@ -84,3 +84,6 @@ record-meta-segments.cmd
 # Local tool logs must never be committed
 tailwindcss-*.log
 *.tsbuildinfo
+
+# Test-only secret fixtures (see tests/ops-projection-behavior.test.mjs)
+.tmp-test-secrets/
