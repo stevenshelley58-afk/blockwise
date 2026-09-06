@@ -131,3 +131,19 @@ test("reset and denied access flows avoid dead-end redirects", () => {
   assert.match(accessActions, /supabase\.auth\.signOut\(\)/);
   assert.match(accessActions, /router\.replace\(target === "signup" \? "\/signup" : "\/login"\)/);
 });
+
+test("verify route forwards GoTrue default-template tokens to the auth server confirm exchange", () => {
+  const source = readFileSync("src/app/verify/route.ts", "utf8");
+
+  assert.match(source, /searchParams\.get\("token"\)/);
+  assert.match(source, /searchParams\.get\("type"\)/);
+  assert.match(source, /ALLOWED_OTP_TYPES\.has\(type\)/);
+  assert.match(source, /login\?error=confirm_failed/);
+  assert.match(source, /new URL\("\/auth\/v1\/verify", supabaseBase\)/);
+  assert.match(source, /verifyTarget\.searchParams\.set\("token", token\)/);
+  assert.match(source, /verifyTarget\.searchParams\.set\("type", type\)/);
+  assert.match(source, /new URL\("\/auth\/confirm", requestUrl\.origin\)/);
+  assert.match(source, /confirmUrl\.searchParams\.set\("flow", type\)/);
+  assert.match(source, /verifyTarget\.searchParams\.set\("redirect_to", confirmUrl\.toString\(\)\)/);
+  assert.doesNotMatch(source, /requestUrl\.searchParams\.get\("redirect_to"\)/);
+});
