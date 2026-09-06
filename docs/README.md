@@ -15,6 +15,7 @@ This index separates current operating guidance from retained history.
 ## Design previews
 
 - [Homepage concept](design/homepage-concept.md) — isolated mobile/desktop mockup; not a production homepage release.
+- [Homepage preview evidence](releases/2026-09-06-homepage-concept.md) — revision, browser checks and reapplication instructions.
 
 ## Migration and historical references
 
