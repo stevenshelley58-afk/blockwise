@@ -2,6 +2,9 @@
 
 Follow `AGENTS.md` as the source of truth for Blockwise engineering rules.
 
+**CRITICAL RULE: Homepage Updates**
+The homepage UI is split into separate desktop and mobile components in `src/components/home-landing`. Whenever you are asked to update the homepage copy, links, or sections, you MUST update both the `Desktop` and `Mobile` component variants.
+
 ## VPS / Deploy access
 
 To SSH into the production VPS or redeploy Hermes, follow

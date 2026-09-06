@@ -48,6 +48,10 @@ deleted (Phase 1). Do not reference `buildCloneImageRequest`,
 `scripts/verify/adstudio-templates.mjs` — none exist. See
 `docs/plans/PRODUCT-REBUILD.md` for the leftover inventory.
 
+## Homepage Updates
+
+- The homepage UI is split into separate desktop and mobile components in `src/components/home-landing`. Whenever you are asked to update the homepage copy, links, or sections, you MUST update both the `Desktop` and `Mobile` component variants.
+
 ## Component system (shadcn/ui canonical)
 
 - The customer (self-serve) surface is built on shadcn/ui + Tailwind v4. New
