@@ -209,15 +209,25 @@ export async function loadPublishState(
     ? savedDocument.destinationUrl
     : "";
 
+  // The ad-row meta columns are legacy denormalizations that current save
+  // paths no longer write. Fall back to the active revision document, the
+  // same source of truth manual publishing uses.
+  const documentString = (key: string, fallback: unknown): string =>
+    typeof fallback === "string" && fallback.length > 0
+      ? fallback
+      : typeof savedDocument?.[key] === "string"
+        ? (savedDocument[key] as string)
+        : "";
+
   return {
     ad: {
       id: ad.id,
       templateId: ad.template_id,
       colourMode: ad.colour_mode,
-      metaPrimaryText: ad.meta_primary_text,
-      metaHeadline: ad.meta_headline,
-      metaDescription: ad.meta_description,
-      metaCta: ad.meta_cta,
+      metaPrimaryText: documentString("metaPrimaryText", ad.meta_primary_text),
+      metaHeadline: documentString("metaHeadline", ad.meta_headline),
+      metaDescription: documentString("metaDescription", ad.meta_description),
+      metaCta: documentString("metaCta", ad.meta_cta),
       destinationUrl,
     },
     revision: {
