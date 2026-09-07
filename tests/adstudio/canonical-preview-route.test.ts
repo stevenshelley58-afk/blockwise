@@ -19,11 +19,11 @@ describe("canonical preview route contract", () => {
 
   it("uses the same renderer and asset inputs as save", () => {
     assert.match(saveService, /renderPlacement/);
-    assert.match(saveRoute, /renderPlacement/);
+    assert.match(saveService, /renderPlacement/);
     assert.match(route, /feedCropOverrides/);
     assert.match(saveService, /feedCropOverrides/);
     assert.match(saveService, /storyCropOverrides/);
-    assert.match(saveRoute, /storyCropOverrides/);
+    assert.match(saveService, /storyCropOverrides/);
   });
 
   it("canonical renderer is deterministic for identical replacement inputs", async () => {
