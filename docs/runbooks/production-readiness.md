@@ -3,10 +3,10 @@
 ## Release candidate (7 September 2026, beta readiness)
 
 The coordinated candidate checkout is `/projects/blockwise-beta-release-20260907`.
-At the latest validation checkpoint the application code revision is
-`7563960ecbc7ac8eb83f679c310029a09a16da26`. The public app remains on
-`c02b11e452203a2d54bd278b913f410588ce6ff4`; no application deployment was
-performed by this validation task.
+The deployed application revision is
+`f972e44d4ee1a47c1602e1427883835512240fce`, built from the clean release
+checkout and now serving publicly. The immutable image manifest is
+`sha256:65255dc9e9eb87fbdb3f7716c5f5b16101bf449dd4a3eb31e823af057a064587`.
 
 Release scaffolding is isolated under `/srv/blockwise/beta-release-20260907/`:
 `build-image.sh` builds an immutable SHA-labelled image, `deploy-app.sh` keeps
@@ -32,8 +32,11 @@ OAuth writes, email sends, worker restart, or Caddy restart were performed.
   lifecycle comparison test and the root-only unwritable-directory typecheck
   test. No package test failed.
 - `npm run typecheck -- --pretty false`: passed after package builds; no diagnostics.
-- No final image was built while product E2E and operations follow-up remained
-  in progress.
+- Final image build succeeded and app-only deployment completed. Public
+  `/api/health` reports `status=ready` and the exact deployed revision above.
+- Product canary persistence smoke returned `SAVE_REOPEN_OK` for the explicitly
+  seeded E2E workspace, including Feed/Story hashes and exact edited-text
+  reload. This is not fresh signup or external-provider proof.
 
 ### Required gates before deployment
 
