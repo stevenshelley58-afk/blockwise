@@ -1,91 +1,91 @@
 const FAQ_GROUPS = [
   {
-    title: "Setup and customer work",
+    title: "Getting started",
     questions: [
       {
         q: "What if I don’t have a Meta ad account?",
-        a: "We can help you set up a Meta ad account, connect it to Blockwise and get your first ads ready. A Blockwise response is needed to confirm the meeting details.",
+        a: "We can help you set up a Meta ad account and connect it to Blockwise.",
       },
       {
         q: "What do I need to provide?",
-        a: "You provide your email to start, then the brand/property inputs and assets needed for your ads. For live publishing, connect your Meta ad account and review the final copy, creative, claims, pricing language and export.",
+        a: "Your email to start, then your branding, photos and ad details. You review everything before launch.",
       },
       {
-        q: "What is the managed-service process?",
-        a: "Request a call first. Blockwise confirms the service scope and onboarding plan before payment; after that, you provide the required account and brand inputs and review customer-facing claims and creative.",
+        q: "How does managed service start?",
+        a: "Book a call. We agree the scope and price before getting started.",
       },
     ],
   },
   {
-    title: "Fit and plans",
+    title: "Plans",
     questions: [
       {
-        q: "Who is the free option for?",
-        a: "It is for agents who want to try the workflow before a subscription. You can create three complete Feed + Story ads and set up one live trial campaign with only your email.",
+        q: "What does the free option include?",
+        a: "Try three Feed + Story ads and one campaign without a Blockwise subscription.",
       },
       {
         q: "What happens after the free trial?",
-        a: "You can keep running and managing your ads yourself for free, choose the A$249/month self-serve plan, or ask about managed service. There is no automatic Blockwise charge at the end of the trial.",
+        a: "Keep running your ads yourself for free, or choose self-serve or managed. No automatic upgrade.",
       },
     ],
   },
   {
-    title: "Costs and ad spend",
+    title: "Costs",
     questions: [
       {
         q: "What does self-serve cost?",
-        a: "Self-serve is A$249 per month until cancelled. It includes 100 render credits each billing period, up to 50 complete Feed + Story packs, one brand/workspace/primary Meta ad account, and five named, email-verified team members.",
+        a: "A$249/month until cancelled. Your ad spend is separate.",
       },
       {
         q: "Is Meta ad spend included?",
-        a: "No. Meta bills advertising spend directly to your connected ad account. Meta spend is separate from every Blockwise plan and is not marked up or funded by Blockwise.",
+        a: "No. You pay Meta directly through your own ad account.",
       },
       {
-        q: "How are taxes and extra charges handled?",
-        a: "Prices include GST where Blockwise is required to collect it. Managed service starts at A$1,500/month; additional brands, ad accounts, campaign volume or other work need a written scope change and may be repriced.",
+        q: "How are taxes and extras handled?",
+        a: "GST is included where required. Extra brands, accounts or campaigns are quoted separately.",
       },
     ],
   },
   {
-    title: "Commitment and cancellation",
+    title: "Billing",
     questions: [
       {
         q: "Will the free trial charge my card?",
-        a: "No. The free creation and trial campaign never charge you automatically and do not require a card. Checkout collects a payment method only when you choose to subscribe.",
+        a: "No card needed. You only pay Blockwise if you choose a paid plan.",
       },
       {
         q: "How do I cancel self-serve?",
-        a: "Cancel through Blockwise billing settings or the Stripe-hosted billing portal. Cancellation stops future renewals and credit grants; paid access and credits already granted remain available until the current billing period ends.",
+        a: "Cancel in billing settings or the Stripe portal to stop renewals. Paid access and remaining credits last until the billing period ends.",
       },
     ],
   },
   {
-    title: "Support, ownership and results",
+    title: "Ownership and support",
     questions: [
       {
-        q: "Who owns my Meta account and data?",
-        a: "Your Meta ad account and ad data remain yours, even if you leave Blockwise. Blockwise does not take ownership of your Meta assets, and Meta bills spend to your connected account.",
+        q: "Who owns my Meta ad account and ad data?",
+        a: "You do—even if you leave Blockwise.",
       },
       {
         q: "Does Blockwise guarantee leads or sales?",
-        a: "No. Blockwise supports ad creation, publishing and reporting, but results depend on the market, offer, budget, audience and follow-up. Your agency remains responsible for final review and advertising claims.",
+        a: "No. Results depend on your market, offer, budget and follow-up.",
       },
       {
         q: "What support is included?",
-        a: "Self-serve includes support when you are blocked. Managed service adds operator launch, weekly optimization for up to four live campaigns, and a monthly performance report.",
+        a: "Self-serve includes help when you’re stuck. Managed adds setup and weekly campaign reviews.",
       },
     ],
   },
   {
-    title: "Meetings",
+    title: "Let’s talk",
     questions: [
       {
         q: "Can I talk to someone before choosing?",
-        a: "Yes. Use Book a call to send a managed-service enquiry. A Blockwise response is needed to confirm the scope and meeting details.",
+        a: "Yes. Book a call and we’ll arrange a time.",
       },
       {
         q: "Can I arrange a Perth meeting?",
-        a: "Yes. Use Arrange a Perth meeting to email hello@blockwise.sale with a request. Sending the request does not confirm a meeting; Blockwise will respond to arrange it.",
+        a: "Yes. Request a Perth meeting by email and we’ll arrange the details.",
       },
     ],
   },
@@ -97,10 +97,9 @@ export function PricingFaq() {
       <div className="pricing-shell">
         <div className="pricing-faq-heading">
           <p className="pricing-kicker">Questions</p>
-          <h2 id="pricing-faq-title">Clear answers before you choose.</h2>
+          <h2 id="pricing-faq-title">FAQ</h2>
           <p>
-            Short version below; the full billing terms are in the{" "}
-            <a href="/terms">Terms</a>.
+            See our <a href="/terms">Terms</a> for the details.
           </p>
         </div>
         <div className="pricing-faq-groups">

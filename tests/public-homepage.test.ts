@@ -209,10 +209,10 @@ test("public marketing copy states the approved progressive offer", () => {
   assert.match(home, /Approve every ad before it goes live/i);
   assert.match(home, /Create three complete ads free/i);
   assert.match(home, /Start with only your email/i);
-  assert.match(pricing, /Create three complete Feed \+ Story ad packs with only your email/i);
-  assert.match(pricing, /no card required/i);
-  assert.match(`${pricing}\n${pricingMarket}\n${pricingFaq}`, /14-day trial starts when your first ad delivers/i);
-  assert.match(pricing, /Meta ad spend is separate/i);
+  assert.ok(pricing.includes("Start free. Manage your own ads, or let us help."));
+  assert.match(pricingMarket, /no card/i);
+  assert.match(pricingMarket, /14 days start when your first ad runs on Meta/i);
+  assert.ok(pricingMarket.includes("Ad spend is paid separately to Meta."));
   assert.doesNotMatch(combined, /\$799/);
   assert.doesNotMatch(combined, /Launch from Blockwise/);
   assert.doesNotMatch(combined, /create, approve, launch/i);
@@ -257,9 +257,9 @@ test("pricing shows the single A$ offer with no market switcher or US pricing", 
   assert.doesNotMatch(pricing, /US\$499/);
   assert.doesNotMatch(pricing, /A\$499/);
   assert.match(combined, /100 render credits/);
-  assert.match(combined, /Up to 50 complete Feed \+ Story packs/);
-  assert.match(combined, /Five named, email-verified team members/);
-  assert.match(combined, /One live trial campaign setup/);
+  assert.ok(pricing.includes("50 Feed + Story packs"));
+  assert.match(pricing, /five email-verified members/i);
+  assert.ok(pricing.includes("One trial campaign"));
   assert.match(combined, /Book a call/);
   assert.match(combined, /\/#managed-setup/);
   assert.doesNotMatch(combined, /Subscribe and book onboarding/);
