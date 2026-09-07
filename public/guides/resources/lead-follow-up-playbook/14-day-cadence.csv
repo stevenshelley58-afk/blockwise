@@ -1,0 +1,16 @@
+day,channel,condition,purpose
+0,email,resource requested and email permitted,deliver resource and identify sender
+1,none,review,check delivery replies consent and channel preference
+2,call,phone requested or permitted and allowed hour,one service-led delivery check
+3,none,no reply,wait and do not add another channel
+4,none,no reply,wait and record a bounce or suppression
+5,none,review,agree timing and channel if person asks
+6,none,no reply,wait
+7,email or SMS,one preferred channel with consent,one helpful follow-up with opt-out
+8,none,no reply,wait
+9,none,no reply,wait
+10,none,no reply,do not infer intent from a click or view
+11,none,no reply,wait
+12,none,review,remove refusals and update suppression
+13,none,no reply,wait
+14,review,all,agree a next step with engaged people or pause

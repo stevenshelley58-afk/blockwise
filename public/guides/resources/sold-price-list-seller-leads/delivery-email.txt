@@ -1,0 +1,13 @@
+Subject: Your [Suburb] sold-price list
+
+Hi [first name],
+
+Here is the [Suburb] sold-price list you requested: [link]. It covers [home type] with disclosed sales from [start date] to [end date]. Last updated: [date].
+
+This list is market context, not a valuation of your home. If you tell me which row looks most comparable, I can explain what is and is not comparable.
+
+If you did not opt into ongoing updates, you will not be added to them. If you did opt in, unsubscribe here: [unsubscribe link].
+
+Regards,
+[name] | [agency] | [phone]
+[privacy-policy link]

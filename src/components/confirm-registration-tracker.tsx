@@ -4,6 +4,7 @@ import { useEffect } from "react";
 
 import { getConsentStatus } from "@/components/consent-banner";
 import { gtagConversionSignup } from "@/lib/analytics/gtag";
+import { trackMarketingEvent } from "@/lib/analytics/marketing";
 import "@/lib/analytics/pixel";
 
 const GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID;
@@ -24,6 +25,7 @@ export function ConfirmRegistrationTracker() {
     if (getConsentStatus() === "granted") {
       try {
         window.fbq?.("track", "CompleteRegistration");
+        trackMarketingEvent("sign_up", { method: "email" });
         if (GOOGLE_ADS_ID) gtagConversionSignup(GOOGLE_ADS_ID);
       } catch {
         // best-effort

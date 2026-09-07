@@ -3,16 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-const CONSENT_KEY = "bw-consent";
-
-export type ConsentStatus = "granted" | "essential";
-
-export function getConsentStatus(): ConsentStatus | null {
-  if (typeof window === "undefined") return null;
-  const val = localStorage.getItem(CONSENT_KEY);
-  if (val === "granted" || val === "essential") return val;
-  return null;
-}
+import { CONSENT_KEY, getConsentStatus, type ConsentStatus } from "@/lib/analytics/consent";
+export { CONSENT_KEY, getConsentStatus } from "@/lib/analytics/consent";
 
 function applyConsent(status: ConsentStatus): void {
   if (typeof window === "undefined") return;
@@ -24,6 +16,25 @@ function applyConsent(status: ConsentStatus): void {
     }
   } catch {
     // best-effort
+  }
+  try {
+    window.gtag?.("consent", "update", {
+      ad_storage: status === "granted" ? "granted" : "denied",
+      ad_user_data: status === "granted" ? "granted" : "denied",
+      ad_personalization: status === "granted" ? "granted" : "denied",
+      analytics_storage: status === "granted" ? "granted" : "denied",
+    });
+  } catch {
+    // The optional Google tag may not have loaded.
+  }
+  try {
+    window.clarity?.("consentv2", {
+      ad_Storage: status === "granted" ? "granted" : "denied",
+      analytics_Storage: status === "granted" ? "granted" : "denied",
+    });
+    if (status !== "granted") window.clarity?.("stop");
+  } catch {
+    // Optional session recording must never interrupt consent changes.
   }
   window.dispatchEvent(new CustomEvent("blockwise:consent-changed", { detail: { status } }));
 }

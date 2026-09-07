@@ -1,9 +1,11 @@
 "use client";
 
+import { trackMarketingEvent } from "@/lib/analytics/marketing";
+
 import Link from "next/link";
 
 function fireSafe(event: string, properties: Record<string, string | number>) {
-  try { const w = window as Window & { fbq?: (...args: unknown[]) => void; gtag?: (...args: unknown[]) => void }; w.fbq?.("trackCustom", event, properties); w.gtag?.("event", event, properties); } catch {}
+  try { const w = window as Window & { fbq?: (...args: unknown[]) => void; gtag?: (...args: unknown[]) => void }; w.fbq?.("trackCustom", event, properties); trackMarketingEvent(event, properties); } catch {}
 }
 
 import { useActionState, useEffect, useRef, useState } from "react";

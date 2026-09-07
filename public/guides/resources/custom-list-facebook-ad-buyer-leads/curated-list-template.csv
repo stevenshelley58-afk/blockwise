@@ -1,0 +1,3 @@
+property_reference,location_context,property_type,price,why_included,trade_off_or_check,source,permission_checked,last_checked,fictional_example
+example-001,"4 Example Street, [Suburb]","single-level","650000","small courtyard near stated bus route","availability and upkeep to verify","authorised source","yes","2026-09-07",true
+example-002,"Unit 2, Sample Walk, [Suburb]","three-bedroom unit","690000","lift access noted in source","strata costs and lift operation to verify","authorised source","yes","2026-09-07",true

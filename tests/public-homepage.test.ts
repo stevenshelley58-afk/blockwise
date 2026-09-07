@@ -198,8 +198,10 @@ test("landing page metadata matches Blockwise positioning", () => {
 test("public marketing copy states the approved progressive offer", () => {
   const { combined: home } = readHomeSources();
   const pricing = readFileSync("src/app/pricing/page.tsx", "utf8");
+  const pricingMarket = readFileSync("src/components/pricing/market-pricing.tsx", "utf8");
+  const pricingFaq = readFileSync("src/components/pricing/pricing-faq.tsx", "utf8");
   const layout = readFileSync("src/app/layout.tsx", "utf8");
-  const combined = `${home}\n${pricing}\n${layout}`;
+  const combined = `${home}\n${pricing}\n${pricingMarket}\n${pricingFaq}\n${layout}`;
 
   assert.match(home, /Nothing spends until you approve/i);
   assert.match(home, /Nothing spends before approval/i);
@@ -209,7 +211,7 @@ test("public marketing copy states the approved progressive offer", () => {
   assert.match(home, /Start with only your email/i);
   assert.match(pricing, /Create three complete Feed \+ Story ad packs with only your email/i);
   assert.match(pricing, /no card required/i);
-  assert.match(pricing, /14-day trial starts when your first ad delivers/i);
+  assert.match(`${pricing}\n${pricingMarket}\n${pricingFaq}`, /14-day trial starts when your first ad delivers/i);
   assert.match(pricing, /Meta ad spend is separate/i);
   assert.doesNotMatch(combined, /\$799/);
   assert.doesNotMatch(combined, /Launch from Blockwise/);
@@ -257,8 +259,9 @@ test("pricing shows the single A$ offer with no market switcher or US pricing", 
   assert.match(combined, /100 render credits/);
   assert.match(combined, /Up to 50 complete Feed \+ Story packs/);
   assert.match(combined, /Five named, email-verified team members/);
-  assert.match(combined, /One live trial campaign before you subscribe/);
-  assert.match(combined, /Book a managed-service call/);
+  assert.match(combined, /One live trial campaign setup/);
+  assert.match(combined, /Book a call/);
+  assert.match(combined, /\/#managed-setup/);
   assert.doesNotMatch(combined, /Subscribe and book onboarding/);
 });
 

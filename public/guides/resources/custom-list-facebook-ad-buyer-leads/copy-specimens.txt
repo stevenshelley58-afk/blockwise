@@ -1,0 +1,11 @@
+PRIMARY TEXT
+A short list for a specific brief: [feature] homes near [location context], with the trade-offs explained. Request the current guide and check which options are still available.
+
+HEADLINE
+[Feature] homes near [location context], with the trade-offs explained
+
+THANK-YOU SCREEN
+Your [list name] is ready: [link]. Last checked [date]. This is a curated guide, not a promise that every property is available.
+
+DELIVERY EMAIL
+Hi [name], here is the list you requested: [link]. I included [why these properties were selected] and noted [trade-offs]. Reply if you want help comparing one. [agency/contact/privacy].

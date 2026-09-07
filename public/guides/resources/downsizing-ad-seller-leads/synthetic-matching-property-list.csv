@@ -1,0 +1,4 @@
+property_reference,location,price,low_maintenance_detail,access_or_lifestyle_note,trade_off,source,fictional_example
+example-001,"Unit 3 Example Lane, [Suburb]",540000,"small courtyard","single level; near shops","one entry step; verify strata","authorised source",true
+example-002,"8 Sample Road, [Suburb]",575000,"compact garden","near bus route","strata costs to verify","authorised source",true
+example-003,"2 Placeholder Way, [Suburb]",610000,"small block","two bedrooms","accessibility not confirmed","authorised source",true
