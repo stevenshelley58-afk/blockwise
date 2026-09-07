@@ -5,7 +5,6 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
-  CircleDollarSign,
   Inbox,
   LayoutTemplate,
   Palette,

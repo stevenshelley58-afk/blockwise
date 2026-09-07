@@ -23,3 +23,11 @@ Production-built, secret-free, read-only container on a separate internal Docker
 ## Verification
 
 See the release evidence record for compiled revision, required checks, browser measurements, form behavior and public preview acceptance.
+
+## Results walkthrough
+
+The dark results section is a content-height, full-shell product walkthrough rather than a viewport-filling reporting card. It connects three user-controlled stages: creating a branded ad from an existing creative, reviewing an explicit budget and approval gate, and seeing example enquiries with their source and spend context.
+
+The light application surface keeps the product legible inside the dark page rhythm. Blue marks the active connection and actionable state; it does not imply performance. Example data is labelled in the interface, Meta ad spend remains separate, and no ROI or conversion claim is made.
+
+Stage changes are finite, entry-only state transitions using the shared motion timing. Keyboard and reduced-motion changes render immediately. Mobile stacks the same complete sequence and keeps every control at least 44 pixels tall.
