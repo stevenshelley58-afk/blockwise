@@ -16,7 +16,7 @@ export function ResultsReporting() {
   const report = REPORTS[range];
   const email = exampleEmail(cadence, customDays);
   const transition = { duration: reducedMotion || instant ? 0 : durations.state, ease: [0.22, 1, 0.36, 1] as const };
-  const chartMax = range === "week" ? 5 : 25;
+  const chartMax = range === "week" ? 4 : 24;
 
   return (
     <section className="hc-results" id="results" aria-labelledby="results-heading">

@@ -868,11 +868,11 @@
 .hc-reporting-topbar > span:last-child { color: #667080; font-size: 11px; }
 .hc-dashboard-body { padding: 24px 26px 18px; }
 .hc-dashboard-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.hc-dashboard-title h4 { font-family: var(--hc-display); font-size: 18px; font-weight: 750; letter-spacing: -.025em; }
+.hc-dashboard-title h4 { margin: 0; font-family: var(--hc-display); font-size: 18px; font-weight: 750; letter-spacing: -.025em; }
 .hc-report-range { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--hc-line); border-radius: 9px; background: #f4f6f8; }
 .hc-report-range button { min-height: 44px; border: 0; border-radius: 6px; padding: 0 10px; background: transparent; color: var(--hc-muted); font-size: 11px; font-weight: 650; cursor: pointer; }
 .hc-report-range button[aria-pressed="true"] { background: var(--hc-ink); color: #fff; }
-.hc-report-metrics { display: grid; grid-template-columns: repeat(3, 1fr); margin: 28px 0 !important; }
+.hc-report-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 28px 0 !important; }
 .hc-report-metrics > div { border-right: 1px solid var(--hc-line); padding-left: 24px; }
 .hc-report-metrics > div:first-child { padding-left: 0; }
 .hc-report-metrics > div:last-child { border-right: 0; }
@@ -909,7 +909,7 @@
 .hc-email-sender strong { font-size: 12px; font-weight: 750; }
 .hc-email-sender span { color: #667080; font-size: 10px; }
 .hc-email-content { padding: 22px 20px; }
-.hc-email-content h4 { font-family: var(--hc-display); font-size: 22px; font-weight: 750; letter-spacing: -.025em; line-height: 1.2; }
+.hc-email-content h4 { margin: 0; font-family: var(--hc-display); font-size: 22px; font-weight: 750; letter-spacing: -.025em; line-height: 1.2; }
 .hc-email-content > p { margin-top: 8px; color: var(--hc-muted); font-size: 11px; }
 .hc-email-period { display: block; margin-top: 24px; color: #667080; font-size: 10px; }
 .hc-email-metrics { margin-top: 4px !important; }
@@ -1140,7 +1140,7 @@
   .hc-report-metrics { margin-block: 24px !important; }
   .hc-report-metrics > div { padding-left: 12px; }
   .hc-report-metrics dt { font-size: 10px; }
-  .hc-report-metrics dd { font-size: 28px; }
+  .hc-report-metrics dd { font-size: clamp(24px, 7.1vw, 28px); }
   .hc-chart-bars { gap: 6px; }
   .hc-chart-label { font-size: 9px; }
   .hc-campaign-report { font-size: 10px; }
