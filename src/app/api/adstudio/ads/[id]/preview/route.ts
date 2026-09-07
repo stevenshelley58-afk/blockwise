@@ -50,7 +50,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       },
     });
   } catch (error) {
-    const code = error instanceof Error const code = error instanceof Error ? error.message : "preview_failed";const code = error instanceof Error ? error.message : "preview_failed"; ["invalid_preview", "image_upload_required", "ad_not_found", "template_not_found"].includes(error.message) ? error.message : "preview_failed";
+    const code = error instanceof Error && ["invalid_preview", "image_upload_required", "ad_not_found", "template_not_found"].includes(error.message) ? error.message : "preview_failed";
     const status = code === "ad_not_found" || code === "template_not_found" ? 404 : code === "image_upload_required" || code === "invalid_preview" ? 400 : 500;
     return NextResponse.json({ error: status === 500 ? "Preview could not be rendered." : code, code }, { status });
   }

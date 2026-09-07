@@ -137,7 +137,13 @@ export function useCanonicalPreview({
     status: "idle", url: null, documentHash: null, templateHash: null, error: null,
   });
   const controllerRef = useRef<ReturnType<typeof createCanonicalPreviewController> | null>(null);
-  if (!controllerRef.current) controllerRef.current = createCanonicalPreviewController();
+  useEffect(() => {
+    controllerRef.current = createCanonicalPreviewController();
+    return () => {
+      controllerRef.current?.dispose();
+      controllerRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     const controller = controllerRef.current!;
@@ -155,7 +161,6 @@ export function useCanonicalPreview({
     return () => controller.cancelPending();
   }, [adId, workspaceId, document, placement, enabled]);
 
-  useEffect(() => () => controllerRef.current?.dispose(), []);
 
   return state;
 }

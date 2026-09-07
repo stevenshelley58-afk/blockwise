@@ -225,7 +225,7 @@ export function LayeredCanvas({
   }, [ready, selectedLayerId]);
 
   return (
-    <div ref={hostRef} className={cn("relative h-full w-full overflow-hidden bg-white", className)}>
+    <div ref={hostRef} className={cn("relative isolate h-full w-full overflow-hidden bg-white [&_.upper-canvas]:z-20", className)}>
       <div className="sr-only" aria-live="polite">{selectedLayerId ? `Selected layer: ${layout.layers.find(layer => layer.layerId === selectedLayerId)?.layerId ?? selectedLayerId}` : "No layer selected"}</div>
       {!ready && <div className="absolute inset-0 animate-pulse bg-muted" aria-hidden="true" />}
       <canvas

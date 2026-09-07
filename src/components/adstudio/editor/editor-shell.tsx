@@ -417,19 +417,29 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
   const [canonicalDocument, setCanonicalDocument] = useState<{ document: AdDocumentParsed; version: number } | null>(null);
   useEffect(() => {
     let cancelled = false;
-    setCanonicalDocument(null);
     void buildAdDocument(state).then(document => {
-      if (!cancelled) setCanonicalDocument({ document, version: state.editVersion ?? 0 });
+      if (!cancelled) setCanonicalDocument(previous =>
+        previous?.version === (state.editVersion ?? 0) && JSON.stringify(previous.document) === JSON.stringify(document)
+          ? previous : { document, version: state.editVersion ?? 0 });
     }).catch(() => {
       if (!cancelled) setCanonicalDocument(null);
     });
     return () => { cancelled = true; };
   }, [state]);
-  const canonicalPreview = useCanonicalPreview({
+  const previewDocument = canonicalDocument?.version === (state.editVersion ?? 0) ? canonicalDocument.document : null;
+  const feedCanonicalPreview = useCanonicalPreview({
     adId,
     workspaceId,
-    document: canonicalDocument?.version === (state.editVersion ?? 0) ? canonicalDocument.document : null,
-    placement: state.activePlacement,
+    document: previewDocument,
+    placement: "feed",
+    enabled: pendingImageUploads === 0 && (placementView === "both" || state.activePlacement === "feed"),
+  });
+  const storyCanonicalPreview = useCanonicalPreview({
+    adId,
+    workspaceId,
+    document: previewDocument,
+    placement: "story",
+    enabled: pendingImageUploads === 0 && (placementView === "both" || state.activePlacement === "story"),
   });
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [layersOpen, setLayersOpen] = useState(false);
@@ -450,6 +460,7 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
     <FeedPreview
       {...metaPreviewBase}
       layout={pack.feedLayout}
+      canonicalPreview={feedCanonicalPreview}
       cropOverrides={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.crops.feed]))}
       className="max-h-full"
     />
@@ -458,6 +469,7 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
     <StoryPreview
       {...metaPreviewBase}
       layout={pack.storyLayout}
+      canonicalPreview={storyCanonicalPreview}
       cropOverrides={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.crops.story]))}
       className="max-h-full"
     />
@@ -503,7 +515,7 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
       selectedLayerId={interactive && placement === state.activePlacement ? state.selectedLayerId : null}
       onSelect={interactive ? layerId => { if (layerId) editLayer(placement, layerId); } : undefined}
       onError={setError}
-      canonicalPreview={placement === state.activePlacement ? canonicalPreview : undefined}
+      canonicalPreview={placement === "feed" ? feedCanonicalPreview : storyCanonicalPreview}
       zoom={canvasZoom}
     />
   );
