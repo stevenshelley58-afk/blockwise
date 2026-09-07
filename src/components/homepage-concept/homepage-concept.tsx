@@ -8,9 +8,11 @@ import {
   ChevronRight,
   CircleDollarSign,
   Clock3,
+  MoreHorizontal,
   MousePointer2,
-  PencilLine,
-  Send,
+  Pause,
+  Play,
+  RotateCcw,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
@@ -101,42 +103,204 @@ function TrialForm() {
   );
 }
 
-function ProcessMiniatures() {
+const PROCESS_STEPS = [
+  { label: "Choose", description: "Start with a ready-made ad." },
+  { label: "Customise", description: "Add your photo and brand." },
+  { label: "Review", description: "Check everything before spending." },
+] as const;
+
+function ProcessAdPreview({ step }: { step: number }) {
+  const branded = step > 0;
+
   return (
-    <div className="hc-process-grid">
-      <article className="hc-process-card">
-        <div className="hc-step-number">1</div>
-        <div className="hc-template-mini" aria-hidden="true">
-          <img src={withBasePath(AD_EXAMPLES[0].image)} alt="" width="1080" height="1350" />
-          <span><Check size={13} /> Selected</span>
+    <article className={`hc-ad-preview hc-process-ad${branded ? " is-branded" : ""}`}>
+      <div className="hc-ad-account">
+        <span className="hc-ad-avatar" aria-hidden="true">
+          <span className="hc-process-name--template">YA</span>
+          <span className="hc-process-name--branded">N&amp;C</span>
+        </span>
+        <span className="hc-process-account-name">
+          <span className="hc-process-name--template"><strong>Your Agency</strong></span>
+          <span className="hc-process-name--branded"><strong>North &amp; Co</strong></span>
+          <small>Sponsored</small>
+        </span>
+        <MoreHorizontal aria-hidden="true" size={19} />
+      </div>
+      <p className="hc-ad-copy">Thinking of selling? Find out what your home could be worth with a free property appraisal.</p>
+      <div className="hc-ad-image-wrap hc-process-photo">
+        <img
+          className="hc-ad-image hc-process-photo--template"
+          src={withBasePath(AD_EXAMPLES[0].image)}
+          alt=""
+          width="1080"
+          height="1350"
+        />
+        <img
+          className="hc-ad-image hc-process-photo--branded"
+          src={withBasePath(AD_EXAMPLES[1].image)}
+          alt=""
+          width="1080"
+          height="1350"
+        />
+      </div>
+      <div className="hc-ad-link">
+        <span>
+          <small className="hc-process-name--template">YOURAGENCY.COM.AU</small>
+          <small className="hc-process-name--branded">NORTHANDCO.COM.AU</small>
+          <strong>Find out what your home could be worth</strong>
+        </span>
+        <span className="hc-ad-link-button">Learn more</span>
+      </div>
+    </article>
+  );
+}
+
+function ProcessShowcase() {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const hasStarted = useRef(false);
+  const [step, setStep] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [inView, setInView] = useState(false);
+  const [pageVisible, setPageVisible] = useState(true);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const syncMotion = () => {
+      setReduceMotion(motionQuery.matches);
+      if (motionQuery.matches) {
+        setStep(2);
+        setPlaying(false);
+      }
+    };
+    const syncVisibility = () => setPageVisible(document.visibilityState === "visible");
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setInView(entry.isIntersecting);
+        if (entry.isIntersecting && !motionQuery.matches && !hasStarted.current) {
+          hasStarted.current = true;
+          setStep(0);
+          setPlaying(true);
+        }
+      },
+      { threshold: 0.35 },
+    );
+
+    syncMotion();
+    syncVisibility();
+    if (sectionRef.current) observer.observe(sectionRef.current);
+    motionQuery.addEventListener("change", syncMotion);
+    document.addEventListener("visibilitychange", syncVisibility);
+    return () => {
+      observer.disconnect();
+      motionQuery.removeEventListener("change", syncMotion);
+      document.removeEventListener("visibilitychange", syncVisibility);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!playing || !inView || !pageVisible || reduceMotion) return;
+    if (step >= PROCESS_STEPS.length - 1) {
+      setPlaying(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => setStep((current) => current + 1), step === 0 ? 2200 : 2600);
+    return () => window.clearTimeout(timer);
+  }, [inView, pageVisible, playing, reduceMotion, step]);
+
+  function selectStep(nextStep: number) {
+    setStep(nextStep);
+    setPlaying(false);
+  }
+
+  function togglePlayback() {
+    if (playing) {
+      setPlaying(false);
+      return;
+    }
+    if (step === PROCESS_STEPS.length - 1) setStep(0);
+    setPlaying(!reduceMotion);
+  }
+
+  return (
+    <div className="hc-process-layout" ref={sectionRef}>
+      <div className="hc-process-copy">
+        <h2>Create real estate ads for Facebook &amp; Instagram.</h2>
+        <p>Ready-made templates. Your photos. Your brand.</p>
+
+        <div className="hc-process-steps" aria-label="How Blockwise works">
+          {PROCESS_STEPS.map((item, index) => (
+            <button
+              key={item.label}
+              type="button"
+              aria-pressed={step === index}
+              onClick={() => selectStep(index)}
+            >
+              <span className="hc-process-step-mark" aria-hidden="true" />
+              <span><strong>{item.label}</strong><small>{item.description}</small></span>
+            </button>
+          ))}
         </div>
-        <h3>Choose a template</h3>
-        <p>Pick a ready-made ad.</p>
-      </article>
-      <article className="hc-process-card">
-        <div className="hc-step-number">2</div>
-        <div className="hc-editor-mini" aria-hidden="true">
-          <div className="hc-editor-preview">
-            <img src={withBasePath(AD_EXAMPLES[1].image)} alt="" width="1080" height="1350" />
+
+        <div className="hc-process-actions">
+          <PrimaryLink>Start free trial</PrimaryLink>
+          <span><ShieldCheck aria-hidden="true" size={16} /> You approve before spending.</span>
+        </div>
+      </div>
+
+      <div className="hc-process-demo" data-step={step} aria-label="Animated example of creating an ad">
+        <div className="hc-process-demo-topbar">
+          <span><i aria-hidden="true" /> Blockwise Ad Studio</span>
+          <button type="button" onClick={togglePlayback} hidden={reduceMotion}>
+            {playing ? <Pause aria-hidden="true" size={15} /> : step === PROCESS_STEPS.length - 1 ? <RotateCcw aria-hidden="true" size={15} /> : <Play aria-hidden="true" size={15} />}
+            {playing ? "Pause" : step === PROCESS_STEPS.length - 1 ? "Replay" : "Resume"}
+          </button>
+        </div>
+
+        <div className="hc-process-demo-body" aria-hidden="true">
+          <aside className="hc-process-template-rail">
+            <strong>Templates</strong>
+            {AD_EXAMPLES.slice(0, 3).map((example, index) => (
+              <span key={example.id} className={index === 0 ? "is-selected" : ""}>
+                <img src={withBasePath(example.image)} alt="" width="1080" height="1350" />
+                {index === 0 ? <i><Check size={10} /></i> : null}
+              </span>
+            ))}
+          </aside>
+
+          <div className="hc-process-ad-stage">
+            <ProcessAdPreview step={step} />
           </div>
-          <div className="hc-editor-fields">
-            <span /><span /><span className="hc-editor-field-short" />
+
+          <div className="hc-process-side">
+            <div className={`hc-process-panel${step === 0 ? " is-active" : ""}`}>
+              <span className="hc-process-panel-status"><Check size={13} /> Selected</span>
+              <h3>Free appraisal</h3>
+              <p>Ready to customise.</p>
+            </div>
+
+            <div className={`hc-process-panel hc-process-editor${step === 1 ? " is-active" : ""}`}>
+              <h3>Make it yours</h3>
+              <label><span>Photo</span><strong>Living room.jpg</strong></label>
+              <label><span>Agency</span><strong>North &amp; Co</strong></label>
+              <label><span>Brand</span><i><b /><b /><b /></i></label>
+            </div>
+
+            <div className={`hc-process-panel hc-process-review${step === 2 ? " is-active" : ""}`}>
+              <span className="hc-process-panel-status"><CheckCircle2 size={13} /> Ready for approval</span>
+              <h3>Review campaign</h3>
+              <dl>
+                <div><dt>Audience</dt><dd>Mt Lawley +15 km</dd></div>
+                <div><dt>Budget</dt><dd>$20 / day</dd></div>
+              </dl>
+              <strong className="hc-process-approve"><ShieldCheck size={14} /> Approve</strong>
+              <small>Nothing spends yet.</small>
+            </div>
           </div>
-          <PencilLine size={18} />
         </div>
-        <h3>Make it yours</h3>
-        <p>Your photos. Your brand.</p>
-      </article>
-      <article className="hc-process-card">
-        <div className="hc-step-number">3</div>
-        <div className="hc-approve-mini" aria-hidden="true">
-          <span><CheckCircle2 size={17} /> Creative ready</span>
-          <span><CheckCircle2 size={17} /> Budget checked</span>
-          <strong>Launch <Send size={15} /></strong>
-        </div>
-        <h3>Approve and launch</h3>
-        <p>Check the ad and budget.</p>
-      </article>
+        <p className="hc-process-demo-caption">Example only · Review before launch</p>
+      </div>
     </div>
   );
 }
@@ -174,8 +338,8 @@ export function HomepageConcept() {
         <section className="hc-hero" id="top">
           <div className="hc-shell hc-hero-grid">
             <div className="hc-hero-copy">
-              <h1>Facebook &amp; Instagram ads. <span>Built for real estate.</span></h1>
-              <p>Create, approve and track your ads in one place.</p>
+              <h1><span>Your competition is running ads.</span> <span className="hc-hero-prompt">Are you?</span></h1>
+              <p>More listings, less marketing stress.</p>
               <div className="hc-hero-actions">
                 <PrimaryLink>Start free trial</PrimaryLink>
                 <span><Check aria-hidden="true" size={16} /> No card required.</span>
@@ -197,13 +361,9 @@ export function HomepageConcept() {
           </div>
         </section>
 
-        <section className="hc-process hc-screen" id="how-it-works">
+        <section className="hc-process" id="how-it-works">
           <div className="hc-shell">
-            <div className="hc-section-copy">
-              <h2>From template to live ad.</h2>
-            </div>
-            <ProcessMiniatures />
-            <div className="hc-centered-cta"><PrimaryLink>Start free trial</PrimaryLink><span>No card required.</span></div>
+            <ProcessShowcase />
           </div>
         </section>
 

@@ -40,8 +40,15 @@ test("homepage concept includes the required mobile story and disclosures", asyn
   ].map((name) => readFile(new URL(`../src/components/homepage-concept/${name}`, import.meta.url), "utf8")))).join("\n");
 
   for (const copy of [
-    "Facebook &amp; Instagram ads.",
-    "From template to live ad.",
+    "Your competition is running ads.",
+    "More listings, less marketing stress.",
+    "Create real estate ads for Facebook &amp; Instagram.",
+    "Ready-made templates. Your photos. Your brand.",
+    "Choose",
+    "Customise",
+    "Review",
+    "You approve before spending.",
+    "Less managing ads. More meeting sellers.",
     "Start free trial",
     "No card required.",
     "Ad spend is separate.",
@@ -50,5 +57,9 @@ test("homepage concept includes the required mobile story and disclosures", asyn
   ]) {
     assert.match(component, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+  assert.match(component, /IntersectionObserver/);
+  assert.match(component, /prefers-reduced-motion: reduce/);
+  assert.match(component, /Pause/);
+  assert.match(component, /Replay/);
   assert.doesNotMatch(component, /Property Check|three free ads|3 free ads/i);
 });
