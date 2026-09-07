@@ -8,7 +8,6 @@ import {
   ChevronRight,
   CircleDollarSign,
   Clock3,
-  Mail,
   MousePointer2,
   PencilLine,
   Send,
@@ -18,6 +17,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import { AdPreview } from "@/components/homepage-concept/ad-preview";
+import { ResultsWalkthrough } from "@/components/homepage-concept/results-walkthrough";
 import { AD_EXAMPLES, FAQS, withBasePath } from "@/lib/homepage-concept/content";
 import { requestMockTrial, validateTrialEmail } from "@/lib/homepage-concept/mock-trial";
 
@@ -141,41 +141,6 @@ function ProcessMiniatures() {
   );
 }
 
-function ResultsPanel() {
-  return (
-    <div className="hc-results-panel">
-      <div className="hc-results-topline">
-        <span>Mt Lawley appraisal</span>
-        <span className="hc-live"><i /> Active</span>
-      </div>
-      <div className="hc-results-label">Example data</div>
-      <div className="hc-results-stats">
-        <div><strong>18</strong><span>Leads</span></div>
-        <div><strong>$324</strong><span>Spend</span></div>
-        <div><strong>$18</strong><span>Per lead</span></div>
-      </div>
-      <div className="hc-chart" aria-label="Example chart showing leads increasing over fourteen days">
-        <div className="hc-chart-head"><span>Leads</span><span>Last 14 days</span></div>
-        <svg viewBox="0 0 520 122" preserveAspectRatio="none" role="img" aria-hidden="true">
-          <defs>
-            <linearGradient id="hc-chart-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#2a78d6" stopOpacity=".35" />
-              <stop offset="100%" stopColor="#2a78d6" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <path d="M0 111 L44 100 L88 103 L132 81 L176 88 L220 64 L264 70 L308 48 L352 54 L396 31 L440 40 L480 17 L520 23 L520 122 L0 122 Z" fill="url(#hc-chart-fill)" />
-          <polyline points="0,111 44,100 88,103 132,81 176,88 220,64 264,70 308,48 352,54 396,31 440,40 480,17 520,23" fill="none" stroke="#2a78d6" strokeWidth="3" />
-        </svg>
-      </div>
-      <div className="hc-email-mini">
-        <Mail aria-hidden="true" size={19} />
-        <span><strong>Your ads yesterday</strong><small>3 new leads · $42 spend · 2 ads active</small></span>
-        <ChevronRight aria-hidden="true" size={18} />
-      </div>
-    </div>
-  );
-}
-
 export function HomepageConcept() {
   const [selectedExample, setSelectedExample] = useState(0);
   const activeExample = AD_EXAMPLES[selectedExample];
@@ -242,22 +207,7 @@ export function HomepageConcept() {
           </div>
         </section>
 
-        <section className="hc-results hc-screen" id="results">
-          <div className="hc-shell hc-results-grid">
-            <div className="hc-results-copy">
-              <h2>Your ads. Your leads. Your budget.</h2>
-              <p>See what is live, what it costs and what needs your attention—without living in Ads Manager.</p>
-              <ul>
-                <li><Check aria-hidden="true" size={18} /> You approve before launch</li>
-                <li><Check aria-hidden="true" size={18} /> Meta ad spend stays separate</li>
-                <li><Check aria-hidden="true" size={18} /> Optional updates arrive by email</li>
-              </ul>
-              <PrimaryLink>Start free trial</PrimaryLink>
-              <span className="hc-inline-note">No card required.</span>
-            </div>
-            <ResultsPanel />
-          </div>
-        </section>
+        <ResultsWalkthrough />
 
         <section className="hc-examples" id="examples">
           <div className="hc-shell">

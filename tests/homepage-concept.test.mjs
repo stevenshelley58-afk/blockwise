@@ -35,15 +35,13 @@ test("homepage concept is isolated, noindex and uses the mock adapter", async ()
 });
 
 test("homepage concept includes the required mobile story and disclosures", async () => {
-  const component = await readFile(
-    new URL("../src/components/homepage-concept/homepage-concept.tsx", import.meta.url),
-    "utf8",
-  );
+  const component = (await Promise.all([
+    "homepage-concept.tsx", "results-walkthrough.tsx",
+  ].map((name) => readFile(new URL(`../src/components/homepage-concept/${name}`, import.meta.url), "utf8")))).join("\n");
 
   for (const copy of [
     "Facebook &amp; Instagram ads.",
     "From template to live ad.",
-    "Your ads. Your leads. Your budget.",
     "Start free trial",
     "No card required.",
     "Ad spend is separate.",
