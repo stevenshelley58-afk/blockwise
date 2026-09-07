@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
   }
 
   const path = request.nextUrl.searchParams.get("path")?.trim();
+  const download = request.nextUrl.searchParams.get("download") === "1";
 
   if (!path) {
     return NextResponse.json({ error: "path is required." }, { status: 400 });
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(data, {
     headers: {
       "content-type": data.type || "application/octet-stream",
+      ...(download ? { "content-disposition": "attachment; filename=blockwise-ad.png" } : {}),
       // Storage paths are content-addressed (UUID per upload) and never change,
       // so the browser can cache aggressively instead of re-pulling the bytes
       // through this function on every view.

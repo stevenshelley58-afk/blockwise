@@ -27,6 +27,20 @@ export function LoginForm({ showTestProfiles = false, testProfilePassword = "" }
   async function signIn(targetEmail: string = email, targetPassword: string = password) {
     setError(null);
 
+    const normalizedEmail = targetEmail.trim();
+    if (!normalizedEmail) {
+      setError("Enter your email.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setError("Enter a valid email.");
+      return;
+    }
+    if (!targetPassword) {
+      setError("Enter your password.");
+      return;
+    }
+
     if (hasTurnstileSiteKey() && !turnstileToken) {
       setError("Complete the verification check.");
       return;
@@ -35,7 +49,7 @@ export function LoginForm({ showTestProfiles = false, testProfilePassword = "" }
     setIsSubmitting(true);
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: targetEmail,
+      email: normalizedEmail,
       password: targetPassword,
       options: {
         captchaToken: turnstileToken,
@@ -45,7 +59,7 @@ export function LoginForm({ showTestProfiles = false, testProfilePassword = "" }
     setIsSubmitting(false);
 
     if (signInError) {
-      setError(signInError.message);
+      setError("Those sign-in details were not recognized.");
       setTurnstileToken("");
       setTurnstileResetSignal((signal) => signal + 1);
       return;
@@ -83,10 +97,10 @@ export function LoginForm({ showTestProfiles = false, testProfilePassword = "" }
         </div>
       ) : null}
 
-      <form className="login-form" onSubmit={submit}>
+      <form className="login-form" onSubmit={submit} noValidate aria-describedby={error ? "login-error" : undefined}>
         <label htmlFor="login-email">
           Email
-          <input id="login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" />
+          <input id="login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" required aria-invalid={Boolean(error) || undefined} />
         </label>
         <label htmlFor="login-password">
           Password
@@ -109,7 +123,7 @@ export function LoginForm({ showTestProfiles = false, testProfilePassword = "" }
           }}
           onError={() => setError("Verification failed. Please try again.")}
         />
-        {error ? <p className="form-error">{error}</p> : null}
+        {error ? <p className="form-error" id="login-error" role="alert">{error}</p> : null}
         <button
           className="button"
           type="submit"

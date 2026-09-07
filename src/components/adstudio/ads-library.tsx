@@ -118,7 +118,28 @@ function AdCard({ ad }: { ad: LibraryAdModel }) {
               <h2 className="truncate font-display text-[15.5px] font-extrabold">{ad.name}</h2>
               <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground" title={ad.adId}>Ad ID · {ad.adId}</p>
             </div>
-            {ad.src ? <a href={ad.src} download={`${ad.name}.png`} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-(--surface-subtle) hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`Download ${ad.name} preview`}><Download className="size-4" aria-hidden /></a> : null}
+            {ad.feedDownloadPath || ad.storyDownloadPath ? (
+              <div className="flex items-center gap-1">
+                {ad.feedDownloadPath ? (
+                  <a
+                    href={`/api/adstudio/media?path=${encodeURIComponent(ad.feedDownloadPath)}&download=1&filename=${encodeURIComponent(`${ad.name}-feed.png`)}`}
+                    className="inline-flex min-h-11 items-center justify-center rounded-full px-2 text-xs font-semibold text-muted-foreground hover:bg-(--surface-subtle) hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`Download ${ad.name} Feed PNG`}
+                  >
+                    <Download className="mr-1 size-4" aria-hidden />Feed
+                  </a>
+                ) : null}
+                {ad.storyDownloadPath ? (
+                  <a
+                    href={`/api/adstudio/media?path=${encodeURIComponent(ad.storyDownloadPath)}&download=1&filename=${encodeURIComponent(`${ad.name}-story.png`)}`}
+                    className="inline-flex min-h-11 items-center justify-center rounded-full px-2 text-xs font-semibold text-muted-foreground hover:bg-(--surface-subtle) hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`Download ${ad.name} Story PNG`}
+                  >
+                    <Download className="mr-1 size-4" aria-hidden />Story
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <span>{ad.format}</span>

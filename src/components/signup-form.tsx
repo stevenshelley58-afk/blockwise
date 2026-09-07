@@ -44,6 +44,11 @@ export function SignupForm() {
       return;
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Enter a valid work email.");
+      return;
+    }
+
     if (hasTurnstileSiteKey() && !turnstileToken) {
       setError("Complete the verification check.");
       return;

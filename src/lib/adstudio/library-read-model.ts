@@ -29,6 +29,8 @@ export type LibraryAdModel = {
   templateId: string;
   name: string;
   src: string | null;
+  feedDownloadPath: string | null;
+  storyDownloadPath: string | null;
   format: string;
   updatedAt: string | null;
   revisionId: string | null;
@@ -175,6 +177,8 @@ export async function loadAdStudioLibraryPage(input: {
         templateId: String(row.template_id ?? ""),
         name: typeof row.name === "string" && row.name.trim() ? row.name : "Untitled ad",
         src: src ?? (templateId ? gallerySampleProxyUrl(templateId, "feed", String(row.id)) : null),
+        feedDownloadPath: feedPath,
+        storyDownloadPath: storyPath,
         format: adFormatLabel(Boolean(feedPath), Boolean(storyPath)),
         updatedAt: typeof row.updated_at === "string" ? row.updated_at : null,
         revisionId: typeof revision?.id === "string" ? revision.id : null,
