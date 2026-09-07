@@ -24,12 +24,12 @@ Production-built, secret-free, read-only container on a separate internal Docker
 
 See the release evidence record for compiled revision, required checks, browser measurements, form behavior and public preview acceptance.
 
-## Results reporting — minimal layout
+## Results reporting — motion-led graph
 
-Persuade through the visual, not explanatory copy. The owner explicitly requested a line graph, a substantially simpler layout and as few words as possible.
+Sell one idea: you can see how your ads are going without waiting for an agency update. Use the exact headline “Know how your ads are going.” and the supporting line “Your dashboard. Updates when you want them.” Keep the whole server-rendered section below 70 words, including interface labels.
 
-One dashboard sits beside a five-word headline and seven-word supporting line. Its metrics lead into a true line graph; email frequency lives in a compact footer instead of a second full email card. Campaign rows, repeated captions, email greetings/signoffs and the closing slogan are removed. Daily/weekly/custom controls and a short example-data/no-send disclosure remain. The server-rendered section has a regression budget of fewer than 80 words including interface labels.
+The graph is the product. It spans the section directly on the near-black canvas instead of sitting in a split layout or generic dashboard card. Three large metrics lead into one blue line graph. A small update preview connects reporting to scheduled email delivery without adding another explanatory panel.
 
-Inherit the established dark/white/blue marketing world and typography. Reuse Motion for finite user-triggered line drawing; SSR, keyboard and reduced-motion paths remain immediate. A small deterministic SVG geometry helper is sufficient for the fixed fixture series, so no additional chart dependency is needed. The rest of the homepage is untouched.
+Motion is finite and functional. The line draws once over a visible static base; changing between 7 and 30 days morphs the SVG path because both fixtures use the same number of vertices. Hover or pointer movement reveals a data tooltip. Shared-layout pills glide between periods and email frequencies. Keyboard input is immediate, reduced motion removes movement, and all timing comes from `src/lib/motion.ts`.
 
-Product boundary: flexible email cadence is still an owner-requested concept, not a connected delivery scheduler. Nothing is sent or saved. Production scheduling must be implemented and verified separately before this concept replaces the public homepage.
+Daily, weekly and custom email cadence remain illustrative. The preview neither saves preferences nor sends email, and says so plainly. Production scheduling must be implemented and verified separately before this concept replaces the public homepage.
