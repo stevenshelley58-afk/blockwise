@@ -1388,6 +1388,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .hc-process-demo-topbar button { display: none !important; }
   .hc-root *,
   .hc-root *::before,
   .hc-root *::after {
