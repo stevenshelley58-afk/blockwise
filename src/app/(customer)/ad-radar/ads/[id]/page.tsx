@@ -22,8 +22,8 @@ const mediaClass =
 export default async function ResearchAdDetailPage({ params }: { params: Promise<{ id: string }> }) {
   if (!niche.features.adRadar) notFound();
   const { id } = await params;
-  const { supabase } = await requirePageSurfaceAccess("monitor");
-  const { ad, versions, error } = await loadCustomerResearchAdDetail(supabase, id);
+  await requirePageSurfaceAccess("monitor");
+  const { ad, versions, error } = await loadCustomerResearchAdDetail(id);
 
   if (error || !ad) {
     return (

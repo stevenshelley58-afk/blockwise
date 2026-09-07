@@ -179,30 +179,17 @@ export type PerformanceCopy = {
   };
 };
 
-/**
- * One ad-classification filter option. `value` is the stored classification /
- * query-param contract and is never rewritten for copy; only `label` is niche
- * surface text.
- */
-export type AdRadarAdTypeOption = {
-  value: string;
-  label: string;
-};
-
 export type AdRadarCopy = {
   title: string;
   lead: string;
   searchPlaceholder: string;
   /** Assistive line under the search input naming what can be searched. */
   searchScope: string;
-  includeSurrounding: string;
   filters: {
     agency: string;
     agent: string;
     allAgencies: string;
     allAgents: string;
-    adTypes: AdRadarAdTypeOption[];
-    hookPlaceholder: string;
   };
 };
 

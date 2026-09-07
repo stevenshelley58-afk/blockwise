@@ -1,4 +1,5 @@
 import { cleanCustomerMetaDisplayText, normaliseMediaUrl } from "./customer-meta-card.ts";
+import { searchAdDbAds } from "./ad-db-client.ts";
 
 /** Distinct advertiser page surfaced by the predictive advertiser search. */
 export type AdvertiserSuggestion = {
@@ -24,6 +25,30 @@ const MIN_QUERY_LENGTH = 2;
  * the typed term, sourced from the customer-safe Ad Radar read model so it
  * only ever surfaces advertisers that actually have visible, real-estate ads.
  */
+/** Customer-only advertiser suggestions sourced from the canonical Hermes Ad DB. */
+export async function loadCanonicalAdvertiserSuggestions(
+  query: string,
+  limit: number = SUGGESTION_LIMIT,
+): Promise<AdvertiserSuggestion[]> {
+  const term = query.trim();
+  if (term.length < MIN_QUERY_LENGTH) return [];
+
+  try {
+    const result = await searchAdDbAds({ query: term, limit: ROW_SCAN_LIMIT });
+    return dedupeAdvertisers(
+      result.items.map((row) => ({
+        page_id: row.advertiser_page_id,
+        page_name: row.page_name,
+        page_image_url: null,
+      })),
+      term,
+      limit,
+    );
+  } catch {
+    return [];
+  }
+}
+
 export async function loadAdvertiserSuggestions(
   supabase: { from: (table: string) => any },
   query: string,

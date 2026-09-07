@@ -17,7 +17,13 @@ export default async function SwipeFilePage() {
   if (!niche.features.adRadar) notFound();
   const { supabase } = await requirePageSurfaceAccess("monitor");
   const { saved, error } = await loadCustomerSavedResearchAds(supabase);
-  const ads = await loadCustomerAdsByIds(supabase, saved.map((row) => row.observedAdId));
+  let ads = [] as Awaited<ReturnType<typeof loadCustomerAdsByIds>>;
+  let adDbError: string | null = null;
+  try {
+    ads = await loadCustomerAdsByIds(saved.map((row) => row.observedAdId));
+  } catch {
+    adDbError = "Ad DB request failed.";
+  }
 
   return (
     <main className="mx-auto grid w-full max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
@@ -38,7 +44,7 @@ export default async function SwipeFilePage() {
         </Link>
       </header>
 
-      {error ? (
+      {error || adDbError ? (
         <section className="rounded-(--r-panel) border border-error/25 bg-error-soft p-5">
           <h2 className="font-display text-[15.5px] font-extrabold tracking-[-0.015em] text-error">
             Swipe file unavailable
