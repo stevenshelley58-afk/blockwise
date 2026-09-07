@@ -2,7 +2,16 @@ import { test, expect } from "@playwright/test";
 
 const adId = process.env.ADSTUDIO_E2E_AD_ID;
 const workspaceId = process.env.ADSTUDIO_E2E_WORKSPACE_ID;
-test.use({ storageState: process.env.ADSTUDIO_E2E_STORAGE_STATE ?? "/srv/blockwise/secrets/adstudio-e2e.storage-state.json" });
+const controlledCanary = process.env.BLOCKWISE_CONTROLLED_CANARY === "1";
+test.use({
+  storageState: process.env.ADSTUDIO_E2E_STORAGE_STATE ?? "/srv/blockwise/secrets/adstudio-e2e.storage-state.json",
+  serviceWorkers: "block",
+  ignoreHTTPSErrors: controlledCanary,
+  launchOptions: {
+    executablePath: process.env.ADSTUDIO_E2E_CHROMIUM,
+    args: controlledCanary ? ["--host-resolver-rules=MAP blockwise.sale 127.0.0.1,EXCLUDE localhost"] : undefined,
+  },
+});
 
 test("canonical PNG follows edits and every editor preview mode without saving", async ({ page }) => {
   test.setTimeout(120_000);
