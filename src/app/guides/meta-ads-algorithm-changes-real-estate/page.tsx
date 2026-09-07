@@ -1,237 +1,55 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 
 import { ArticleProgress } from "@/components/guides/article-progress";
+import { GuideCopyBlock } from "@/components/guides/guide-copy-block";
 import { GuidesShell } from "@/components/guides/guides-shell";
 
 import "../guides.css";
 
-const title = "How Meta's 2026 ad algorithm changes real estate advertising";
-const description =
-  "Understand how Andromeda, GEM and Meta's Adaptive Ranking Model affect Facebook and Instagram advertising for real estate agents in 2026.";
+const title = "How Meta’s 2026 ad algorithm changes real estate advertising";
+const description = "A dated, practical briefing on Meta’s Andromeda, GEM, Adaptive Ranking and sequence-learning announcements, with cautious actions for housing advertisers.";
 const canonical = "/guides/meta-ads-algorithm-changes-real-estate";
+const checklist = `Meta algorithm briefing — test/stop checklist
 
-export const metadata: Metadata = {
-  title,
-  description,
-  alternates: { canonical },
-  openGraph: {
-    type: "article",
-    title,
-    description,
-    url: canonical,
-    images: [{ url: "/guides/meta-algorithm/hero.webp", width: 1920, height: 1080, alt: "Abstract layers representing Meta's ad retrieval and ranking pipeline" }],
-  },
-  twitter: { card: "summary_large_image", title, description, images: ["/guides/meta-algorithm/hero.webp"] },
-};
+Date reviewed: 7 September 2026
 
-const articleSchema = {
-  "@context": "https://schema.org",
-  "@type": "Article",
-  headline: title,
-  description,
-  datePublished: "2026-07-24",
-  dateModified: "2026-07-24",
-  author: { "@type": "Organization", name: "Blockwise" },
-  publisher: { "@type": "Organization", name: "Blockwise", url: "https://blockwise.sale" },
-  image: "https://blockwise.sale/guides/meta-algorithm/hero.webp",
-  mainEntityOfPage: `https://blockwise.sale${canonical}`,
-};
+Test
+[ ] Keep the service area and current Housing-category requirements accurate.
+[ ] Write one clear homeowner problem, offer and CTA per ad.
+[ ] Run a small set of genuinely different concepts your budget can support.
+[ ] Track impressions, spend, contactability and downstream quality.
+[ ] Record the evidence and the decision date.
 
-const faqSchema = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: [
-    {
-      "@type": "Question",
-      name: "Do I still need to set a location target?",
-      acceptedAnswer: { "@type": "Answer", text: "Yes. Your geographic service area is a genuine business constraint, and Meta's system respects it. What you should remove is the layering of speculative interests inside that location. Let the creative identify the homeowner situation; let the location setting define where you can operate." },
-    },
-    {
-      "@type": "Question",
-      name: "Does this mean I should run 50 ads at once?",
-      acceptedAnswer: { "@type": "Answer", text: "No. A local agent spending a modest daily budget should not blindly upload dozens of ads. Start with six to twelve genuinely distinct assets — different problems, different proofs, different offers — and let the system learn which messages create real conversations." },
-    },
-    {
-      "@type": "Question",
-      name: 'Is "creative is the new targeting" just a marketing phrase?',
-      acceptedAnswer: { "@type": "Answer", text: "It reflects a real architectural change. Andromeda retrieves ads by reading creative signals. Advantage+ audience treats your audience inputs as suggestions. The content of your ad now plays a larger role in determining who responds. Audience settings have not disappeared — they have been demoted." },
-    },
-    {
-      "@type": "Question",
-      name: "Should I select the Housing Special Ad Category for real estate ads?",
-      acceptedAnswer: { "@type": "Answer", text: "Yes, when the campaign relates to housing. Meta requires advertisers to select the relevant Special Ad Category, and failing to do so may result in ad rejection. The algorithm changes do not remove compliance obligations." },
-    },
-  ],
-};
+Stop or revise
+[ ] Stop a concept when it has enough delivery for a fair review and consistently weak quality.
+[ ] Revise one variable at a time; do not call a colour change a new hypothesis.
+[ ] Pause any ad whose local claim or proof cannot be verified.
+[ ] Re-check account country, reachable markets and current Meta requirements before expansion.
+
+Remember: Meta’s engineering announcements describe platform systems, not a performance guarantee for your account.`;
+
+export const metadata: Metadata = { title, description, alternates: { canonical }, openGraph: { type: "article", title, description, url: canonical, images: [{ url: "/guides/og-guides-index.webp", alt: "Blockwise real estate advertising guides" }] }, twitter: { card: "summary_large_image", title, description, images: ["/guides/og-guides-index.webp"] } };
+const articleSchema = { "@context": "https://schema.org", "@type": "Article", headline: title, description, datePublished: "2026-07-24", dateModified: "2026-09-07", author: { "@type": "Organization", name: "Blockwise" }, publisher: { "@type": "Organization", name: "Blockwise", url: "https://blockwise.sale" }, mainEntityOfPage: `https://blockwise.sale${canonical}` };
+const faq = [
+  ["Do I still need a location setting?", "Yes, where your account and market rules provide that control. Service geography is a genuine business constraint. Check the current account-country and market requirements rather than assuming an Australian radius rule applies everywhere."],
+  ["Should I upload a fixed number of ads?", "There is no universal count. Use as many genuinely different concepts as your budget can support and your team can review. Engineering announcements do not prescribe a local advertiser’s asset count."],
+  ["Is creative the new targeting?", "That is a useful shorthand, not a Meta guarantee. Meta has described stronger creative and behavioural signals in retrieval and ranking. Audience settings, geography and compliance still matter."],
+  ["Does algorithm change remove Housing compliance?", "No. Housing-related campaigns still need the applicable Special Ad Category and nondiscrimination controls. Confirm current requirements in the account before publishing."],
+];
+const faqSchema = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faq.map(([name, text]) => ({ "@type": "Question", name, acceptedAnswer: { "@type": "Answer", text } })) };
 
 export default function MetaAlgorithmGuidePage() {
-  return (
-    <GuidesShell>
-      <ArticleProgress />
-      <main id="main-content">
-        <article className="bw-article">
-          <header className="bw-article-hero">
-            <div className="bw-article-hero-copy">
-              <div className="bw-article-breadcrumbs">
-                <Link href="/guides">Guides</Link>
-                <span aria-hidden>/</span>
-                <span>Meta ads strategy</span>
-              </div>
-              <p className="bw-guides-label">The algorithm guide</p>
-              <h1>{title}</h1>
-              <p className="bw-article-deck">
-                Meta replaced three layers of its ad system in twelve months. The agents who adapt are the ones who stop over-targeting and start diversifying their creative.
-              </p>
-              <div className="bw-article-byline">
-                <span>By Blockwise</span>
-                <span>24 July 2026</span>
-                <span>12 minute read</span>
-              </div>
-            </div>
-            <div className="bw-article-hero-media">
-              <Image
-                src="/guides/meta-algorithm/hero.webp"
-                alt="Abstract layers representing Meta's ad retrieval and ranking pipeline"
-                fill
-                priority
-                sizes="100vw"
-              />
-            </div>
-          </header>
-
-          <div className="bw-article-body">
-            <aside className="bw-article-toc" aria-label="On this page">
-              <strong>On this page</strong>
-              <a href="#three-layers">The three layers</a>
-              <a href="#pace-framework">The PACE framework</a>
-              <a href="#stop-over-targeting">Stop over-targeting</a>
-              <a href="#different-problems">Give Meta different problems</a>
-              <a href="#track-outcomes">Track outcomes</a>
-            </aside>
-
-            <div className="bw-article-prose">
-              <section className="bw-opening" id="three-layers">
-                <p className="bw-drop-intro">
-                  <span>Most explanations of Meta's advertising system begin and end with Andromeda.</span> That is now incomplete. Meta replaced three layers of its ad system in roughly twelve months — the retrieval engine, the shared knowledge model, and the real-time ranking process. Each change shifts more of the matching work away from the targeting panel and toward the creative itself.
-                </p>
-
-                <div className="bw-section-heading">
-                  <span>What changed</span>
-                  <h2>Three systems, one shift.</h2>
-                </div>
-
-                <div className="bw-measure-table" role="table" aria-label="Meta's three new ad system layers">
-                  <div role="row" className="bw-measure-head"><span role="columnheader">System</span><span role="columnheader">What it does</span><span role="columnheader">Meta-reported lift</span></div>
-                  <div role="row"><strong role="cell">Andromeda</strong><span role="cell">Retrieves relevant ads from tens of millions of candidates by reading creative signals</span><span role="cell">6% recall, 8% ad quality</span></div>
-                  <div role="row"><strong role="cell">GEM</strong><span role="cell">Foundation model sharing learning across all Meta advertising models</span><span role="cell">5% Instagram, 3% Facebook Feed</span></div>
-                  <div role="row"><strong role="cell">Adaptive Ranking</strong><span role="cell">LLM-scale model complexity in real-time ad ranking</span><span role="cell">3% conversions, 5% CTR</span></div>
-                  <div role="row"><strong role="cell">Sequence learning</strong><span role="cell">Examines patterns across previous interactions, not just manual targeting</span><span role="cell">2–4% conversions</span></div>
-                </div>
-                <p className="bw-article-note">These are Meta-reported platform averages, not performance guarantees for an individual advertiser.</p>
-              </section>
-
-              <section id="pace-framework" className="bw-list-section">
-                <div className="bw-section-heading bw-section-heading-split">
-                  <span>The PACE framework</span>
-                  <h2>Four checks before you build your next campaign.</h2>
-                  <p>If one of these is weak, fix it before spending.</p>
-                </div>
-                <div className="bw-list-grid">
-                  <div className="bw-list-item"><b>P</b><div><h3>Problem diversity</h3><p>Do your ads address different homeowner problems, or the same problem reworded?</p><span>Good: sold-price report + renovation guide + buyer-demand update</span></div></div>
-                  <div className="bw-list-item"><b>A</b><div><h3>Audience as suggestion</h3><p>Are you treating location as a constraint and leaving the rest to Meta?</p><span>Good: suburb targeting + Advantage+ expansion</span></div></div>
-                  <div className="bw-list-item"><b>C</b><div><h3>Creative as signal</h3><p>Does each ad contain enough specific information for the algorithm to match it?</p><span>Good: "Four-bedroom Baldivis homes — see recent sales"</span></div></div>
-                  <div className="bw-list-item"><b>E</b><div><h3>Evidence over assertion</h3><p>Does each ad demonstrate local knowledge with verifiable proof?</p><span>Good: three recent sales with dates and types</span></div></div>
-                </div>
-              </section>
-
-              <section id="stop-over-targeting" className="bw-text-section">
-                <div className="bw-section-heading">
-                  <span>The targeting panel</span>
-                  <h2>Stop over-targeting.</h2>
-                </div>
-                <p>The old approach was to build a precise audience: an age range, several property interests, a postcode and an income proxy, then show everyone in that audience the same appraisal ad. The new system makes that approach counterproductive.</p>
-                <p>Advantage+ audience can use your inputs as suggestions and search more broadly when it predicts better performance. Advantage+ is now the default for eligible leads campaigns.</p>
-                <div className="bw-contrast-row">
-                  <div><span>Keep</span><strong>Location, Special Ad Category: Housing, legal exclusions</strong></div>
-                  <div><span>Remove</span><strong>Seven interest filters stacked inside one postcode</strong></div>
-                </div>
-                <aside className="bw-compliance-note">
-                  <strong>Housing compliance</strong>
-                  <p>Real estate advertising on Meta requires selecting the Special Ad Category: Housing. The algorithm changes do not remove this obligation — they make strong creative more important because you cannot depend on unrestricted targeting.</p>
-                  <a href="https://www.facebook.com/business/help/1198401317374558" target="_blank" rel="noreferrer">Read the housing ads policy →</a>
-                </aside>
-              </section>
-
-              <section id="different-problems" className="bw-measure-section">
-                <div className="bw-section-heading">
-                  <span>Creative strategy</span>
-                  <h2>Give Meta different problems, not different colours.</h2>
-                </div>
-                <p>Changing the background colour on an appraisal graphic does not create another targeting option. Changing the homeowner's problem does.</p>
-                <div className="bw-measure-table" role="table" aria-label="Ad concepts for different homeowner situations">
-                  <div role="row" className="bw-measure-head"><span role="columnheader">Ad concept</span><span role="columnheader">Homeowner situation</span><span role="columnheader">Next step</span></div>
-                  <div role="row"><strong role="cell">Sold-price report</strong><span role="cell">Curious owner checking the market</span><span role="cell">Download</span></div>
-                  <div role="row"><strong role="cell">Buyer-demand update</strong><span role="cell">Owner considering timing</span><span role="cell">View summary</span></div>
-                  <div role="row"><strong role="cell">Renovate-or-sell guide</strong><span role="cell">Preparing seller</span><span role="cell">Download</span></div>
-                  <div role="row"><strong role="cell">Appraisal invitation</strong><span role="cell">Active seller</span><span role="cell">Book a call</span></div>
-                </div>
-                <p>These ads support the same commercial objective — more listings. They approach it through different homeowner situations.</p>
-              </section>
-
-              <section id="track-outcomes" className="bw-followup-section">
-                <div className="bw-section-heading">
-                  <span>The feedback signal</span>
-                  <h2>Track what happens after the lead arrives.</h2>
-                </div>
-                <p>Meta can only optimise toward the outcomes it receives. If the only signal is "form submitted," the system searches for more people likely to submit forms — not more people likely to become listings.</p>
-                <p>If your CRM can send downstream outcomes back to Meta through the Conversions API for CRM, the system can optimise toward leads more likely to become qualified. Meta reports advertisers using this setup saw an average 15% reduction in cost per quality lead.</p>
-                <aside className="bw-compliance-note">
-                  <strong>Why feedback matters</strong>
-                  <p>Without downstream data, two ads that each generate ten form submissions look identical to the algorithm — even if one produced a listing and the other produced nothing.</p>
-                </aside>
-              </section>
-
-              <section className="bw-blockwise-cta">
-                <div>
-                  <span>Where Blockwise fits</span>
-                  <h2>Stop fighting the algorithm with over-targeting.</h2>
-                  <p>The algorithm moved strategy out of the targeting panel and into the ad itself. Blockwise helps turn distinct seller propositions into on-brand creative, prepare the campaign and lead form, and bring Meta leads into a clearer review path.</p>
-                </div>
-                <Link href="/signup">Build your campaign <span aria-hidden>→</span></Link>
-              </section>
-
-              <section className="bw-faq-section">
-                <div className="bw-section-heading">
-                  <span>Questions</span>
-                  <h2>The practical details.</h2>
-                </div>
-                <details><summary>Do I still need to set a location target?</summary><p>Yes. Your geographic service area is a genuine business constraint. What you should remove is the layering of speculative interests inside that location. Let the creative identify the homeowner situation; let the location setting define where you can operate.</p></details>
-                <details><summary>Does this mean I should run 50 ads at once?</summary><p>No. A local agent spending a modest daily budget should start with six to twelve genuinely distinct assets — different problems, different proofs, different offers — and let the system learn which messages create real conversations.</p></details>
-                <details><summary>Is "creative is the new targeting" just a marketing phrase?</summary><p>It reflects a real architectural change. Andromeda retrieves ads by reading creative signals. Advantage+ audience treats your audience inputs as suggestions. The content of your ad now plays a larger role in determining who responds. Audience settings have not disappeared — they have been demoted.</p></details>
-                <details><summary>Should I select the Housing Special Ad Category for real estate ads?</summary><p>Yes, when the campaign relates to housing. Meta requires advertisers to select the relevant Special Ad Category, and failing to do so may result in ad rejection. The algorithm changes do not remove compliance obligations.</p></details>
-              </section>
-
-              <footer className="bw-article-sources">
-                <h2>Sources and further reading</h2>
-                <ol>
-                  <li><a href="https://engineering.fb.com/2024/12/02/production-engineering/meta-andromeda-advantage-automation-next-gen-personalized-ads-retrieval-engine/" target="_blank" rel="noreferrer">Meta Andromeda: Supercharging Advantage+ automation, Meta Engineering</a></li>
-                  <li><a href="https://engineering.fb.com/2025/11/10/ml-applications/metas-generative-ads-model-gem-the-central-brain-accelerating-ads-recommendation-ai-innovation/" target="_blank" rel="noreferrer">Meta's Generative Ads Model (GEM), Meta Engineering</a></li>
-                  <li><a href="https://engineering.fb.com/2026/03/31/ml-applications/meta-adaptive-ranking-model-bending-the-inference-scaling-curve-to-serve-llm-scale-models-for-ads/" target="_blank" rel="noreferrer">Meta Adaptive Ranking Model, Meta Engineering</a></li>
-                  <li><a href="https://engineering.fb.com/2024/11/19/data-infrastructure/sequence-learning-personalized-ads-recommendations/" target="_blank" rel="noreferrer">Sequence learning for personalized ads, Meta Engineering</a></li>
-                  <li><a href="https://www.facebook.com/business/help/273363992030035" target="_blank" rel="noreferrer">About Advantage+ audience, Meta Business Help Center</a></li>
-                  <li><a href="https://www.facebook.com/business/ads/meta-advantage-plus/leads" target="_blank" rel="noreferrer">Advantage+ leads campaigns, Meta for Business</a></li>
-                  <li><a href="https://www.facebook.com/business/generate-leads/conversions-api-for-crm" target="_blank" rel="noreferrer">Improve lead quality with Conversions API for CRM, Meta for Business</a></li>
-                  <li><a href="https://www.facebook.com/business/help/1198401317374558" target="_blank" rel="noreferrer">About ads for housing, Meta Business Help Center</a></li>
-                </ol>
-              </footer>
-            </div>
-          </div>
-        </article>
-      </main>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-    </GuidesShell>
-  );
+  return <GuidesShell><ArticleProgress /><main id="main-content"><article className="bw-article">
+    <header className="bw-article-hero"><div className="bw-article-hero-copy"><div className="bw-article-breadcrumbs"><Link href="/guides">Guides</Link><span aria-hidden>/</span><span>Meta ads strategy</span></div><p className="bw-guides-label">The algorithm briefing</p><h1>{title}</h1><p className="bw-article-deck">Meta’s engineering posts describe a more capable retrieval and ranking stack. For a local housing advertiser, the safe response is better hypotheses and cleaner evidence—not a promise that any one creative will win.</p><div className="bw-article-byline"><span>By Blockwise</span><span>7 September 2026</span><span>5 minute read</span></div></div><div className="bw-article-hero-media" aria-label="Dated Meta system announcements from 2024 to 2026"><span>19 Nov 2024</span><span>2 Dec 2024</span><span>10 Nov 2025</span><span>31 Mar 2026</span></div></header>
+    <div className="bw-article-body"><aside className="bw-article-toc" aria-label="On this page"><strong>On this page</strong><a href="#briefing">Dated briefing</a><a href="#confirmed">Confirmed versus inferred</a><a href="#actions">What to do now</a><a href="#review">Test and stop</a><a href="#sources">Sources</a></aside><div className="bw-article-prose">
+      <section className="bw-opening" id="briefing"><p className="bw-drop-intro"><span>The useful question is not “what replaced targeting?”</span> It is “what evidence can my next ad give the system?” Meta’s announcements describe several system improvements across retrieval, shared learning and ranking. They do not prescribe a particular budget, asset count or result for a real estate account.</p><div className="bw-measure-table" role="table" aria-label="Dated Meta engineering announcements"><div role="row" className="bw-measure-head"><span role="columnheader">Announcement</span><span role="columnheader">What Meta described</span><span role="columnheader">Practical reading</span></div><div role="row"><strong role="cell">19 Nov 2024 · Sequence learning</strong><span role="cell">Models can use sequences of prior interactions in recommendations.</span><span role="cell">Behavioural context can matter alongside settings.</span></div><div role="row"><strong role="cell">2 Dec 2024 · Andromeda</strong><span role="cell">A retrieval system for selecting relevant ads from a large candidate set.</span><span role="cell">Distinct creative signals are worth making legible.</span></div><div role="row"><strong role="cell">10 Nov 2025 · GEM</strong><span role="cell">A generative ads model intended to share learning across recommendation models.</span><span role="cell">Do not assume a local account receives a fixed lift.</span></div><div role="row"><strong role="cell">31 Mar 2026 · Adaptive Ranking</strong><span role="cell">More model complexity in real-time ad ranking.</span><span role="cell">Keep testing messages and outcomes; avoid platform folklore.</span></div></div><aside className="bw-compliance-note"><strong>Housing and geography</strong><p>Meta’s published restrictions cover US-based advertisers and housing ads reaching the US, Canada or Europe. An Australian business advertising only in Australia is not automatically subject to those same audience restrictions; verify the current account controls and markets reached. Australia is not a universal radius requirement. Check account country and current markets, apply nondiscrimination principles and document the decision.</p><a href="https://developers.facebook.com/docs/marketing-api/audiences/special-ad-category/" target="_blank" rel="noreferrer">Read Meta’s housing guidance →</a></aside></section>
+      <section id="confirmed" className="bw-list-section"><div className="bw-section-heading bw-section-heading-split"><span>Read the claims carefully</span><h2>Separate Meta-confirmed facts from our inference.</h2><p>This distinction keeps an engineering announcement useful without turning it into a performance promise.</p></div><div className="bw-list-grid"><div className="bw-list-item"><b>Meta</b><div><h3>Confirmed</h3><p>Andromeda is described as a retrieval system; GEM and Adaptive Ranking are described in their dated engineering posts.</p><span>Source each claim to the post.</span></div></div><div className="bw-list-item"><b>BW</b><div><h3>Inference</h3><p>Specific messages may help a system distinguish homeowner situations. That is a strategy hypothesis, not a guaranteed delivery rule.</p><span>Test it against your own evidence.</span></div></div><div className="bw-list-item"><b>—</b><div><h3>Not established here</h3><p>No universal six-to-twelve-asset prescription, lift, replacement timeline or performance guarantee.</p><span>Do not turn a heuristic into a fact.</span></div></div></div></section>
+      <section id="actions" className="bw-text-section"><div className="bw-section-heading"><span>Practical response</span><h2>Give each ad one homeowner problem.</h2></div><p>Within your legitimate service area, make the message specific enough for voluntary self-selection: a curious owner can request verified local sales evidence; a seller weighing preparation can request a decision guide; an active seller can request a conversation. Keep one argument, one offer and one CTA per ad.</p><div className="bw-contrast-row"><div><span>Keep</span><strong>Geography, Housing category, truthful proof, a sustainable budget and outcome tracking.</strong></div><div><span>Question</span><strong>Interest stacks, generic claims, duplicate ads and unverified “algorithm” advice.</strong></div></div><p>For the creative execution, see <Link href="/guides/real-estate-creative-portfolio-meta-ads">the real estate creative portfolio guide</Link>. For downstream quality signals, see <Link href="/guides/meta-lead-quality-crm-feedback-loop">the CRM feedback loop guide</Link>.</p></section>
+      <section id="review" className="bw-followup-section"><div className="bw-section-heading"><span>Leave a useful artifact</span><h2>Test, review, stop or revise.</h2></div><ol><li>Write the hypothesis: homeowner problem, proof, offer and CTA.</li><li>Set the current account geography and Housing-category checks.</li><li>Choose a small set of distinct concepts your budget can support.</li><li>Review impressions, spend, contactability and downstream quality together.</li><li>After enough delivery for a fair read, pause or revise weak concepts and record why.</li></ol><GuideCopyBlock title="Copy the test/stop checklist" text={checklist} /><p><a href="/guides/resources/meta-ads-algorithm-changes-real-estate/test-stop-checklist.txt" download>Download test-stop-checklist.txt</a></p></section>
+      <section className="bw-blockwise-cta"><div><span>Where Blockwise fits</span><h2>Make the test legible before you publish.</h2><p>Blockwise can help turn a reviewed seller proposition into editable creative and a staged campaign. Meta approval, account targeting, spend and any external CRM connection remain your decisions.</p></div><Link href="/signup">Prepare the test <span aria-hidden="true">→</span></Link></section>
+      <section className="bw-faq-section"><div className="bw-section-heading"><span>Questions</span><h2>The practical details.</h2></div>{faq.map(([q, a]) => <details key={q}><summary>{q}</summary><p>{a}</p></details>)}</section>
+      <footer id="sources" className="bw-article-sources"><h2>Sources and further reading</h2><ol><li><a href="https://engineering.fb.com/2024/11/19/data-infrastructure/sequence-learning-personalized-ads-recommendations/" target="_blank" rel="noreferrer">Sequence learning for personalised ads recommendations, 19 November 2024</a></li><li><a href="https://engineering.fb.com/2024/12/02/production-engineering/meta-andromeda-advantage-automation-next-gen-personalized-ads-retrieval-engine/" target="_blank" rel="noreferrer">Meta Andromeda, 2 December 2024</a></li><li><a href="https://engineering.fb.com/2025/11/10/ml-applications/metas-generative-ads-model-gem-the-central-brain-accelerating-ads-recommendation-ai-innovation/" target="_blank" rel="noreferrer">Meta GEM, 10 November 2025</a></li><li><a href="https://engineering.fb.com/2026/03/31/ml-applications/meta-adaptive-ranking-model-bending-the-inference-scaling-curve-to-serve-llm-scale-models-for-ads/" target="_blank" rel="noreferrer">Meta Adaptive Ranking Model, 31 March 2026</a></li><li><a href="https://developers.facebook.com/docs/marketing-api/audiences/special-ad-category/" target="_blank" rel="noreferrer">Special Ad Category, Meta for Developers</a></li></ol></footer>
+    </div></div>
+  </article></main><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} /><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} /></GuidesShell>;
 }

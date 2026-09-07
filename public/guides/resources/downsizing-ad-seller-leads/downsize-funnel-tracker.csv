@@ -1,0 +1,2 @@
+lead_id,lead_date,valid_contact,homeowner,needs_sale,seller_conversation,appraisal,listing,first_contact_date,channel_preference,suppressed_date,notes
+example-001,2026-09-07,true,true,true,true,false,false,2026-09-07,email,,fictional row; do not treat as a result

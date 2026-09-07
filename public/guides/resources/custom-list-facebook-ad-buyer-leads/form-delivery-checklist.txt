@@ -1,0 +1,20 @@
+CURATED LIST FORM AND DELIVERY CHECKLIST
+
+FORM
+[ ] Explain the buyer brief and what the person receives.
+[ ] Collect full name and email; request mobile only if phone purpose is explicit.
+[ ] Link to the privacy policy.
+[ ] Keep optional marketing consent separate and unticked.
+[ ] State who will contact them and via which channels.
+[ ] Record source, timestamp, consent wording and suppression.
+
+LIST LINK
+[ ] Every row has a source, permission note and last-checked date.
+[ ] Explain why each property fits and one trade-off to verify.
+[ ] Remove stale properties; never imply current availability without checking.
+[ ] Test the link, mobile layout and enquiry action.
+
+DELIVERY
+[ ] Thank-you button opens the actual list.
+[ ] Delivery email repeats scope, update date and contact details.
+[ ] Explain that curation is not exclusivity, valuation or availability guarantee.
