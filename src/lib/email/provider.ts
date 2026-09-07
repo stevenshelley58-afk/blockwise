@@ -65,6 +65,15 @@ export function assertEmailProviderConfigured(env: NodeJS.ProcessEnv = process.e
   }
 }
 
+/**
+ * Delivery is a separate, explicit operational gate. A configured provider
+ * alone must never cause a newly installed scheduler to send historical or
+ * unreviewed queued mail.
+ */
+export function isEmailDeliveryEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.EMAIL_OUTBOX_DELIVERY_ENABLED?.trim().toLowerCase() === "true";
+}
+
 export function makeEmailProvider(env: NodeJS.ProcessEnv = process.env): EmailProvider {
   switch (env.EMAIL_PROVIDER?.trim().toLowerCase()) {
     case "smtp":
