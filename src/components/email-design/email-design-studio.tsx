@@ -13,14 +13,14 @@ function PreviewFrame({ design, kind, theme, device, compact = false }: { design
   const srcDoc = useMemo(() => renderEmail(EMAIL_FIXTURES[kind], design, theme).html, [design, kind, theme]);
   const frameHeight = 820;
   return (
-    <div className="overflow-hidden rounded-[16px] border border-border bg-white shadow-card" style={{ width: compact ? "100%" : device === "mobile" ? 320 : 632, maxWidth: "100%", height: frameHeight }}>
+    <div className="overflow-hidden rounded-[16px] border border-border bg-white shadow-card" style={{ width: compact ? "100%" : device === "mobile" ? 320 : 632, minWidth: 0, maxWidth: "100%", height: frameHeight }}>
       <iframe
         title={`${EMAIL_DESIGN_LABELS[design].name}: ${EMAIL_KIND_LABELS[kind]}`}
         sandbox=""
         tabIndex={-1}
         srcDoc={srcDoc}
         className="pointer-events-none block border-0 bg-white"
-        style={{ width: "100%", height: 820 }}
+        style={{ width: "100%", minWidth: 0, maxWidth: "100%", height: 820 }}
       />
     </div>
   );
@@ -71,7 +71,7 @@ export function EmailDesignStudio() {
             const active = item === design;
             return (
               <button key={item} type="button" aria-pressed={active} onClick={() => setDesign(item)}
-                className={`cursor-pointer rounded-[20px] border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "border-foreground bg-card shadow-card" : "border-border bg-background hover:bg-card"}`}>
+                className={`min-w-0 cursor-pointer rounded-[20px] border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "border-foreground bg-card shadow-card" : "border-border bg-background hover:bg-card"}`}>
                 <span className="font-mono text-[10px] font-semibold tracking-[.13em] text-muted-foreground">{option.number}{item === "quiet-card" ? " · RECOMMENDED" : ""}</span>
                 <span className="mt-2 block text-[16px] font-extrabold tracking-[-.015em]">{option.name}</span>
                 <span className="mt-1 block text-[13px] leading-5 text-muted-foreground">{option.description}</span>
@@ -89,10 +89,10 @@ export function EmailDesignStudio() {
               </div>
               <div className="flex flex-wrap gap-2" aria-label="Preview settings">
                 <div className="inline-flex rounded-full border border-border bg-background p-0.5">
-                  {(["desktop", "mobile"] as const).map((value) => <Button key={value} type="button" size="xs" variant={device === value ? "default" : "ghost"} aria-pressed={device === value} onClick={() => setDevice(value)}>{value}</Button>)}
+                  {(["desktop", "mobile"] as const).map((value) => <Button key={value} type="button" size="sm" className="min-h-11 px-3" variant={device === value ? "default" : "ghost"} aria-pressed={device === value} onClick={() => setDevice(value)}>{value}</Button>)}
                 </div>
                 <div className="inline-flex rounded-full border border-border bg-background p-0.5">
-                  {(["light", "dark"] as const).map((value) => <Button key={value} type="button" size="xs" variant={theme === value ? "default" : "ghost"} aria-pressed={theme === value} onClick={() => setTheme(value)}>{value}</Button>)}
+                  {(["light", "dark"] as const).map((value) => <Button key={value} type="button" size="sm" className="min-h-11 px-3" variant={theme === value ? "default" : "ghost"} aria-pressed={theme === value} onClick={() => setTheme(value)}>{value}</Button>)}
                 </div>
               </div>
             </div>
@@ -105,7 +105,7 @@ export function EmailDesignStudio() {
             <div className="rounded-[20px] border border-border bg-card p-4">
               <p className="font-mono text-[10px] font-semibold tracking-[.13em] text-muted-foreground">MESSAGE TYPE</p>
               <div className="mt-3 grid grid-cols-2 gap-2 xl:grid-cols-1">
-                {EMAIL_KINDS.map((item) => <Button key={item} type="button" variant={kind === item ? "secondary" : "ghost"} size="sm" aria-pressed={kind === item} onClick={() => setKind(item)} className="justify-start px-3">{EMAIL_KIND_LABELS[item]}</Button>)}
+                {EMAIL_KINDS.map((item) => <Button key={item} type="button" variant={kind === item ? "secondary" : "ghost"} size="sm" aria-pressed={kind === item} onClick={() => setKind(item)} className="h-auto min-h-11 whitespace-normal justify-start px-3">{EMAIL_KIND_LABELS[item]}</Button>)}
               </div>
             </div>
             <div className="rounded-[20px] border border-border bg-background p-4">
@@ -122,7 +122,7 @@ export function EmailDesignStudio() {
             <span className="font-mono text-[10px] tracking-[.12em] text-muted-foreground">SAME CONTENT · THREE COMPOSITIONS</span>
           </div>
           <div className="mt-3 grid gap-4 lg:grid-cols-3">
-            {EMAIL_DESIGNS.map((item) => <button key={item} type="button" onClick={() => setDesign(item)} className="cursor-pointer rounded-[20px] border border-border bg-card p-3 text-left hover:shadow-card focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"><span className="mb-3 block text-[13px] font-bold">{EMAIL_DESIGN_LABELS[item].number} · {EMAIL_DESIGN_LABELS[item].name}</span><PreviewFrame design={item} kind={kind} theme={theme} device="mobile" /></button>)}
+            {EMAIL_DESIGNS.map((item) => <button key={item} type="button" onClick={() => setDesign(item)} className="min-w-0 w-full cursor-pointer rounded-[20px] border border-border bg-card p-3 text-left hover:shadow-card focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"><span className="mb-3 block text-[13px] font-bold">{EMAIL_DESIGN_LABELS[item].number} · {EMAIL_DESIGN_LABELS[item].name}</span><PreviewFrame design={item} kind={kind} theme={theme} device="mobile" /></button>)}
           </div>
         </section>
       </div>
