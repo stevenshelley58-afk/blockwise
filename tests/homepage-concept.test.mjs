@@ -35,7 +35,7 @@ test("homepage concept is isolated, noindex and uses the mock adapter", async ()
   assert.match(content, /NEXT_PUBLIC_BASE_PATH/);
 });
 
-test("homepage concept includes the required mobile story and disclosures", async () => {
+test("homepage concept includes the Meta ad loop and disclosures", async () => {
   const component = (await Promise.all([
     "homepage-concept.tsx", "results-walkthrough.tsx",
   ].map((name) => readFile(new URL(`../src/components/homepage-concept/${name}`, import.meta.url), "utf8")))).join("\n");
@@ -43,17 +43,15 @@ test("homepage concept includes the required mobile story and disclosures", asyn
   for (const copy of [
     "Your competition is running ads.",
     "More listings, less marketing stress.",
-    "Create real estate ads for Facebook &amp; Instagram.",
-    "Ready-made templates. Your photos. Your brand.",
-    "Choose",
-    "Customise",
-    "Review",
-    "Post copy",
-    "Text on creative",
-    "Review campaign",
-    "Approve campaign",
-    "Approved",
-    "You approve before spending.",
+    "Real estate ads that look native on Meta.",
+    "Facebook Feed",
+    "Instagram Story",
+    "Sponsored",
+    "Learn more",
+    "Like",
+    "Comment",
+    "Share",
+    "Send message",
     "Less managing ads. More meeting sellers.",
     "Start free trial",
     "No card required.",
@@ -63,13 +61,15 @@ test("homepage concept includes the required mobile story and disclosures", asyn
   ]) {
     assert.match(component, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+  assert.equal((component.match(/format: "feed",/g) ?? []).length, 4);
+  assert.equal((component.match(/format: "story",/g) ?? []).length, 4);
+  assert.match(component, /META_SHOWCASE_ADS/);
   assert.match(component, /IntersectionObserver/);
-  assert.match(component, /STORY_PHASE_DELAYS/);
-  assert.match(component, /layoutId="story-template-image"/);
+  assert.match(component, /visibilitychange/);
   assert.match(component, /useReducedMotion/);
-  assert.match(component, /Pause/);
-  assert.match(component, /Replay/);
-  assert.doesNotMatch(component, /Property Check|three free ads|3 free ads/i);
+  assert.match(component, /Pause ad showcase/);
+  assert.match(component, /Play ad showcase/);
+  assert.doesNotMatch(component, /Property Check\b|three free ads|3 free ads/i);
 });
 
 test("homepage FAQ keeps setup first and explains separate spend and data ownership", async () => {
