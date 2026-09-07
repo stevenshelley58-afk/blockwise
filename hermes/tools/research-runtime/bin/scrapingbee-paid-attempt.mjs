@@ -1,5 +1,6 @@
 function strictNumber(value) {
-  if (value === null || value === undefined || String(value).trim() === "") return null;
+  if (value === null || value === undefined || String(value).trim() === "")
+    return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
@@ -16,7 +17,9 @@ export function parseScrapingBeeUsage(usage, verifiedAt) {
 export function assertBudgetWithinConfiguredCap(maxCredits, configuredCap) {
   const budgetMax = strictNumber(maxCredits);
   if (budgetMax === null || budgetMax <= 0 || budgetMax > configuredCap) {
-    throw new Error("scrapingbee database budget exceeds configured monthly cap");
+    throw new Error(
+      "scrapingbee database budget exceeds configured monthly cap",
+    );
   }
 }
 
@@ -24,9 +27,10 @@ export function readScrapingBeeReceipt(headers) {
   const rawCost = headers.get("spb-cost");
   const rawAutoCost = headers.get("spb-auto-cost");
   const selected = rawCost !== null ? rawCost : rawAutoCost;
-  const validNumber = (value) => value !== null && value.trim() !== "" && Number.isFinite(Number(value));
+  const validNumber = (value) =>
+    value !== null && value.trim() !== "" && Number.isFinite(Number(value));
   const parsed = validNumber(selected) ? Number(selected) : NaN;
-  const numberOrNull = (value) => validNumber(value) ? Number(value) : null;
+  const numberOrNull = (value) => (validNumber(value) ? Number(value) : null);
   return {
     chargeKnown: Number.isFinite(parsed) && parsed >= 0,
     credits: Number.isFinite(parsed) && parsed >= 0 ? parsed : null,
@@ -65,10 +69,15 @@ async function readBoundedBody(response, maxBytes) {
   return body;
 }
 
-
 export async function executeScrapingBeePaidAttempt({
   maxResponseBytes = 10_000_000,
-  reserve, persist, request, persistReceipt, handleResponse, complete, settle,
+  reserve,
+  persist,
+  request,
+  persistReceipt,
+  handleResponse,
+  complete,
+  settle,
 }) {
   const reservation = await reserve();
   if (reservation?.idempotent === true || reservation?.status === "settled") {
@@ -77,11 +86,22 @@ export async function executeScrapingBeePaidAttempt({
   try {
     await persist(reservation);
   } catch (error) {
-    await settle({ outcome: "attempt_persistence_failed", chargeKnown: true, actualCredits: 0 });
+    await settle({
+      outcome: "attempt_persistence_failed",
+      chargeKnown: true,
+      actualCredits: 0,
+    });
     throw error;
   }
 
-  let receipt = { chargeKnown: false, credits: null, spbCost: null, spbAutoCost: null, requestId: null, initialStatus: null };
+  let receipt = {
+    chargeKnown: false,
+    credits: null,
+    spbCost: null,
+    spbAutoCost: null,
+    requestId: null,
+    initialStatus: null,
+  };
   let finalizationStarted = false;
   const finalize = async (details) => {
     finalizationStarted = true;
@@ -110,9 +130,17 @@ export async function executeScrapingBeePaidAttempt({
   } catch (error) {
     if (!finalizationStarted) {
       try {
-        await finalize({ outcome: "error", httpStatus: null, responseBytes: null, error: error.message });
+        await finalize({
+          outcome: "error",
+          httpStatus: null,
+          responseBytes: null,
+          error: error.message,
+        });
       } catch (finalizeError) {
-        throw new Error(`${error.message}; credit finalization failed: ${finalizeError.message}`, { cause: error });
+        throw new Error(
+          `${error.message}; credit finalization failed: ${finalizeError.message}`,
+          { cause: error },
+        );
       }
     }
     throw error;
