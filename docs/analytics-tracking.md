@@ -52,3 +52,6 @@ or completed-registration measurement is claimed by this activation.
 
 References: [manual page views](https://developers.google.com/analytics/devguides/collection/ga4/views),
 [Google opt-out](https://developers.google.com/tag-platform/security/guides/privacy).
+
+Visitors can reopen the existing consent banner with **Change cookie preferences**
+on `/privacy`. This uses the same stored consent and provider update path as first visit.

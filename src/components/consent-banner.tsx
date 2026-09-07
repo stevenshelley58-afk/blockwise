@@ -43,12 +43,15 @@ export function ConsentBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    const open = () => setVisible(true);
+    window.addEventListener("blockwise:consent-open", open);
     const stored = getConsentStatus();
     if (stored) {
       applyConsent(stored);
     } else {
       setVisible(true);
     }
+    return () => window.removeEventListener("blockwise:consent-open", open);
   }, []);
 
   function handleAccept() {
@@ -82,5 +85,15 @@ export function ConsentBanner() {
         </button>
       </div>
     </div>
+  );
+}
+
+/** Reopens the existing banner; no parallel consent state or tracking code. */
+export function CookiePreferencesButton() {
+  return (
+    <button type="button" className="consent-banner__btn consent-banner__btn--secondary"
+      onClick={() => window.dispatchEvent(new CustomEvent("blockwise:consent-open"))}>
+      Change cookie preferences
+    </button>
   );
 }

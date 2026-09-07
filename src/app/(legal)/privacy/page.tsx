@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CookiePreferencesButton } from "@/components/consent-banner";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -13,7 +14,7 @@ export default function PrivacyPolicyPage() {
   return (
     <>
       <p style={{ color: "#475569", fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5 }}>
-        Last updated: 27 July 2026
+        Last updated: 7 September 2026
       </p>
       <h1 style={{ fontSize: 36, margin: "8px 0 24px", fontWeight: 600 }}>Privacy Policy</h1>
 
@@ -214,6 +215,20 @@ export default function PrivacyPolicyPage() {
         <br />
         General contact: <a href="mailto:hello@blockwise.sale">hello@blockwise.sale</a>
       </p>
+
+      <h2 style={{ fontSize: 22, marginTop: 32, fontWeight: 600 }}>Website cookies and analytics</h2>
+      <p>
+        If you choose Accept all, we use Google Analytics to understand visits and interactions
+        on our public website. Google receives website activity and device information. We do
+        not include form contents, email addresses, URL query strings, or private workspace pages
+        in our custom Analytics events. Optional advertising tags also depend on this choice.
+      </p>
+      <p>
+        Essential only keeps optional tracking off. Our separate cookie-free page counter remains
+        active. You can change your choice at any time below; choosing Essential only stops further
+        optional tracking. It does not delete information already collected.
+      </p>
+      <p><CookiePreferencesButton /></p>
 
       <h2 style={{ fontSize: 22, marginTop: 32, fontWeight: 600 }}>10. Changes to this policy</h2>
       <p>
