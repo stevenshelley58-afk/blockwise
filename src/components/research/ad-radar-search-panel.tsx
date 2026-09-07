@@ -6,30 +6,15 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { AdRadarLocationForm } from "@/components/research/ad-radar-location-form";
 import { AdRadarResultsGrid } from "@/components/research/ad-radar-results-grid";
-import { Switch } from "@/components/ui/switch";
 import { niche } from "@/config/niche";
 import type { CustomerMetaAdLibraryCard } from "@/lib/research/customer-meta-card";
 
-type ResearchSort = "recent" | "longest";
-
 type Filters = {
-  status: "" | "active" | "inactive";
   agency: string;
   agent: string;
-  adType: string;
-  format: string;
-  hook: string;
 };
 
-const EMPTY_FILTERS: Filters = { status: "", agency: "", agent: "", adType: "", format: "", hook: "" };
-
-const AD_TYPE_OPTIONS = niche.copy.adRadar.filters.adTypes;
-
-const FORMAT_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "image", label: "Image" },
-  { value: "video", label: "Video" },
-  { value: "carousel", label: "Carousel" },
-];
+const EMPTY_FILTERS: Filters = { agency: "", agent: "" };
 
 const fieldLabelClass = "font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase";
 const controlClass =
@@ -39,8 +24,6 @@ const ghostButtonClass =
 
 type Props = {
   initialQuery: string;
-  initialSort: ResearchSort;
-  initialIncludeSurrounding: boolean;
   initialLocationLabel: string;
   initialNote: string;
   /** Search fired on mount when the visitor did not type a query. */
@@ -53,8 +36,6 @@ type SearchResponse = { cards?: CustomerMetaAdLibraryCard[]; error?: string };
 
 export function AdRadarSearchPanel({
   initialQuery,
-  initialSort,
-  initialIncludeSurrounding,
   initialLocationLabel,
   initialNote,
   autoSearchTerm = null,
@@ -62,8 +43,6 @@ export function AdRadarSearchPanel({
   autoSearchSource = null,
 }: Props) {
   const [query, setQuery] = useState(initialQuery);
-  const [sort, setSort] = useState<ResearchSort>(initialSort);
-  const [includeSurrounding, setIncludeSurrounding] = useState(initialIncludeSurrounding);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [agencyOptions, setAgencyOptions] = useState<string[]>([]);
@@ -77,8 +56,6 @@ export function AdRadarSearchPanel({
 
   function doSearch(
     q: string,
-    activeSort: ResearchSort = sort,
-    activeIncludeSurrounding = includeSurrounding,
     activeFilters: Filters = filters,
   ) {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -90,14 +67,8 @@ export function AdRadarSearchPanel({
     timerRef.current = setTimeout(async () => {
       try {
         const params = new URLSearchParams({ q });
-        if (activeSort !== "recent") params.set("sort", activeSort);
-        if (activeIncludeSurrounding) params.set("includeSurrounding", "1");
-        if (activeFilters.status) params.set("status", activeFilters.status);
         if (activeFilters.agency) params.set("agency", activeFilters.agency);
         if (activeFilters.agent) params.set("agent", activeFilters.agent);
-        if (activeFilters.adType) params.set("adType", activeFilters.adType);
-        if (activeFilters.format) params.set("format", activeFilters.format);
-        if (activeFilters.hook) params.set("hook", activeFilters.hook);
         const res = await fetch(`/api/research/ads/search?${params.toString()}`, {
           signal: controller.signal,
         });
@@ -133,38 +104,27 @@ export function AdRadarSearchPanel({
     setQuery(q);
     setAgencyOptions([]);
     setAgentOptions([]);
-    doSearch(q, sort, includeSurrounding, filters);
-  }
-
-  function onToggleSurrounding(nextValue: boolean) {
-    setIncludeSurrounding(nextValue);
-    if (searched && query.trim()) doSearch(query, sort, nextValue, filters);
+    doSearch(q, filters);
   }
 
   function onChangeFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
     const next = { ...filters, [key]: value };
     setFilters(next);
-    if (searched && query.trim()) doSearch(query, sort, includeSurrounding, next);
+    if (searched && query.trim()) doSearch(query, next);
   }
 
   function onClearFilters() {
     if (activeFilterCount === 0) return;
     setFilters(EMPTY_FILTERS);
-    if (searched && query.trim()) doSearch(query, sort, includeSurrounding, EMPTY_FILTERS);
-  }
-
-  function onChangeSort(nextSort: ResearchSort) {
-    if (nextSort === sort) return;
-    setSort(nextSort);
-    if (searched && query.trim()) doSearch(query, nextSort, includeSurrounding, filters);
+    if (searched && query.trim()) doSearch(query, EMPTY_FILTERS);
   }
 
   useEffect(() => {
     if (initialQuery) {
-      doSearch(initialQuery, initialSort, initialIncludeSurrounding);
+      doSearch(initialQuery);
     } else if (autoSearchTerm) {
       // Lazy first paint: the panel renders immediately, results stream in.
-      doSearch(autoSearchTerm, initialSort, initialIncludeSurrounding);
+      doSearch(autoSearchTerm);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -190,11 +150,6 @@ export function AdRadarSearchPanel({
     .sort()
     .at(-1);
 
-  const sortChipClass = (active: boolean) =>
-    `cursor-pointer rounded-full px-3 py-1.5 text-xs font-bold transition-[background,color] duration-150 ${
-      active ? "bg-(--ink) text-white" : "text-muted-foreground hover:text-foreground"
-    }`;
-
   return (
     <>
       <section className="grid gap-4 rounded-(--r-panel) border border-(--line) bg-(--surface) p-5 shadow-card">
@@ -209,13 +164,7 @@ export function AdRadarSearchPanel({
           surface="research"
         />
 
-        <label className="flex w-fit cursor-pointer items-center gap-2.5">
-          <Switch checked={includeSurrounding} onCheckedChange={onToggleSurrounding} />
-          <span className="text-[12.5px] font-bold text-foreground">{niche.copy.adRadar.includeSurrounding}</span>
-        </label>
-
-        {/* Two rows at mobile: actions + freshness, then a full-width sort
-            segment. At >=640px both collapse back onto one line. */}
+        {/* Search actions and current result freshness. */}
         <div className="grid gap-2.5 border-t border-(--line) pt-4 sm:grid-cols-[auto_1fr] sm:items-center">
           <div className="flex min-w-0 items-center gap-2.5">
             <button
@@ -250,66 +199,11 @@ export function AdRadarSearchPanel({
               </span>
             </span>
           </div>
-
-          <div
-            role="group"
-            aria-label="Sort ads"
-            className="flex w-full items-center rounded-full border border-(--line) bg-(--surface) p-0.5 sm:ml-auto sm:w-auto"
-          >
-            <button
-              type="button"
-              aria-pressed={sort === "recent"}
-              onClick={() => onChangeSort("recent")}
-              className={`${sortChipClass(sort === "recent")} flex-1 sm:flex-none`}
-            >
-              Most recent
-            </button>
-            <button
-              type="button"
-              aria-pressed={sort === "longest"}
-              onClick={() => onChangeSort("longest")}
-              className={`${sortChipClass(sort === "longest")} flex-1 sm:flex-none`}
-            >
-              Longest running
-            </button>
-          </div>
         </div>
 
         {filtersOpen ? (
           <div className="border-t border-(--line) pt-4">
             <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
-              <label className="grid gap-1.5">
-                <span className={fieldLabelClass}>Status</span>
-                <SelectWrap>
-                  <select className={controlClass} value={filters.status} onChange={(e) => onChangeFilter("status", e.target.value as Filters["status"])}>
-                    <option value="">Any</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </SelectWrap>
-              </label>
-              <label className="grid gap-1.5">
-                <span className={fieldLabelClass}>Ad type</span>
-                <SelectWrap>
-                  <select className={controlClass} value={filters.adType} onChange={(e) => onChangeFilter("adType", e.target.value)}>
-                    <option value="">All</option>
-                    {AD_TYPE_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </SelectWrap>
-              </label>
-              <label className="grid gap-1.5">
-                <span className={fieldLabelClass}>Format</span>
-                <SelectWrap>
-                  <select className={controlClass} value={filters.format} onChange={(e) => onChangeFilter("format", e.target.value)}>
-                    <option value="">All</option>
-                    {FORMAT_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </SelectWrap>
-              </label>
               <label className="grid gap-1.5">
                 <span className={fieldLabelClass}>{niche.copy.adRadar.filters.agency}</span>
                 <SelectWrap>
@@ -331,16 +225,6 @@ export function AdRadarSearchPanel({
                     ))}
                   </select>
                 </SelectWrap>
-              </label>
-              <label className="grid gap-1.5">
-                <span className={fieldLabelClass}>Hook contains</span>
-                <input
-                  className="h-9 w-full rounded-(--r-card) border border-(--line) bg-(--surface) px-2.5 text-[12.5px] font-semibold text-foreground outline-none transition-[border-color] duration-150 placeholder:text-(--faint) focus:border-(--ink)"
-                  type="text"
-                  value={filters.hook}
-                  placeholder={niche.copy.adRadar.filters.hookPlaceholder}
-                  onChange={(e) => onChangeFilter("hook", e.target.value)}
-                />
               </label>
             </div>
             <div className="mt-3 flex justify-end">
@@ -388,7 +272,7 @@ export function AdRadarSearchPanel({
           <button
             type="button"
             className="inline-flex min-h-11 w-fit cursor-pointer items-center gap-2 rounded-full bg-(--ink) px-4 text-[12.5px] font-bold text-white hover:opacity-85"
-            onClick={() => doSearch(query, sort, includeSurrounding, filters)}
+            onClick={() => doSearch(query, filters)}
             disabled={loading}
           >
             <RotateCw size={14} aria-hidden />

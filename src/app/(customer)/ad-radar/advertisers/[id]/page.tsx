@@ -15,8 +15,8 @@ const ghostButtonClass =
 export default async function AdvertiserProfilePage({ params }: { params: Promise<{ id: string }> }) {
   if (!niche.features.adRadar) notFound();
   const { id } = await params;
-  const { supabase } = await requirePageSurfaceAccess("monitor");
-  const { ads, error } = await loadCustomerAdvertiserAds(supabase, id);
+  await requirePageSurfaceAccess("monitor");
+  const { ads, error } = await loadCustomerAdvertiserAds(id);
 
   const first = ads[0] ?? null;
   const activeCount = ads.filter((ad) => ad.status.active === "active").length;

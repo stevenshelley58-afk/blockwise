@@ -2,15 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
 import { featureDisabledResponse, requireApiWorkspace } from "@/lib/auth/api-guards";
-import {
-  CUSTOMER_RESEARCH_AD_HISTORY_VIEW,
-  RESEARCH_AD_SELECT,
-  normaliseResearchAd,
-  type ResearchAdListRow,
-} from "@/lib/research/ad-library-api";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { fetchAdDbAd } from "@/lib/research/ad-db-client";
+import { mapAdDbRowToCustomerMetaCard } from "@/lib/research/ad-db-card-mapper";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 const saveSchema = z.object({
   observedAdId: z.string().uuid(),
@@ -35,15 +31,18 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const observedIds = (savedRows ?? []).map((row) => row.observed_ad_id).filter(Boolean);
-  const ads = observedIds.length
-    ? await loadAds(supabase, observedIds)
-    : [];
+  let ads: Awaited<ReturnType<typeof loadAds>> = [];
+  try {
+    ads = observedIds.length ? await loadAds(observedIds) : [];
+  } catch {
+    return NextResponse.json({ error: "Ad DB is unavailable." }, { status: 502 });
+  }
 
   return NextResponse.json({
     savedAds: (savedRows ?? []).map((saved) => ({
       id: saved.id,
       observedAdId: saved.observed_ad_id,
-      notes: saved.notes,
+      notes: saved.note,
       status: saved.status,
       createdAt: saved.created_at,
       ad: ads.find((ad) => ad.id === saved.observed_ad_id) ?? null,
@@ -62,15 +61,12 @@ export async function POST(request: NextRequest) {
   const parsed = saveSchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
-  const [adRows, creativeRows] = await Promise.all([
-    loadAds(supabase, [parsed.data.observedAdId]),
-    supabase
-      .from("customer_ad_radar_cards")
-      .select("source_ad_creative_id")
-      .eq("observed_ad_id", parsed.data.observedAdId)
-      .maybeSingle(),
-  ]);
-
+  let adRows: Awaited<ReturnType<typeof loadAds>> = [];
+  try {
+    adRows = await loadAds([parsed.data.observedAdId]);
+  } catch {
+    return NextResponse.json({ error: "Ad DB is unavailable." }, { status: 502 });
+  }
   const ad = adRows[0];
   if (!ad) return NextResponse.json({ error: "Ad not found." }, { status: 404 });
 
@@ -80,9 +76,11 @@ export async function POST(request: NextRequest) {
       {
         workspace_id: access.workspaceId,
         observed_ad_id: parsed.data.observedAdId,
-        ad_creative_id: creativeRows.data?.source_ad_creative_id ?? null,
+        ad_creative_id: null,
         note: parsed.data.note ?? null,
-        source_snapshot_url: ad.source.snapshotUrl,
+        source_snapshot_url: ad.libraryId
+          ? "https://www.facebook.com/ads/library/?id=" + encodeURIComponent(ad.libraryId)
+          : null,
         created_by: access.userId,
         handoff_status: "saved",
       },
@@ -97,7 +95,7 @@ export async function POST(request: NextRequest) {
       ? {
           id: data.id,
           observedAdId: data.observed_ad_id,
-          notes: data.notes,
+          notes: data.note,
           status: data.status,
           createdAt: data.created_at,
         }
@@ -106,15 +104,10 @@ export async function POST(request: NextRequest) {
   }, { status: 201 });
 }
 
-async function loadAds(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  observedIds: string[],
-) {
-  const { data } = await supabase
-    .from(CUSTOMER_RESEARCH_AD_HISTORY_VIEW)
-    .select(RESEARCH_AD_SELECT)
-    .in("observed_ad_id", observedIds)
-    .limit(200);
-
-  return ((data ?? []) as unknown as ResearchAdListRow[]).map(normaliseResearchAd);
+async function loadAds(observedIds: string[]) {
+  if (observedIds.length === 0) return [];
+  const rows = await Promise.all(observedIds.map((id) => fetchAdDbAd(id)));
+  return rows
+    .filter((row): row is NonNullable<typeof row> => row !== null)
+    .map(mapAdDbRowToCustomerMetaCard);
 }

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { featureDisabledResponse, requireApiWorkspace } from "@/lib/auth/api-guards";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { loadAdvertiserSuggestions } from "@/lib/research/advertiser-autocomplete";
+import { loadCanonicalAdvertiserSuggestions } from "@/lib/research/advertiser-autocomplete";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
   const guard = await requireApiWorkspace(request, "monitor");
   if (!guard.ok) return guard.response;
-  const { supabase, access } = guard;
+  const { access } = guard;
 
   const rateLimit = await checkRateLimit(access.workspaceId, access.userId, {
     windowSeconds: 60,
@@ -31,6 +31,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ advertisers: [] });
   }
 
-  const advertisers = await loadAdvertiserSuggestions(supabase, q);
+  const advertisers = await loadCanonicalAdvertiserSuggestions(q);
   return NextResponse.json({ advertisers });
 }
