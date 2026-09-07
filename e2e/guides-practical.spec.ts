@@ -27,6 +27,10 @@ for (const slug of slugs) {
     const response = await page.goto(`/guides/${slug}`);
     expect(response?.status()).toBe(200);
     await expect(page.locator("main h1")).toBeVisible();
+    const diagram = page.locator(".bw-article-hero-media");
+    if (await diagram.count()) {
+      expect((await diagram.boundingBox())!.height, "Summary diagram must not retain the old image-sized hero row").toBeLessThan(190);
+    }
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", `https://blockwise.sale/guides/${slug}`);
     const contents = page.locator(".bw-article-toc");
     await expect(contents).toBeVisible();
