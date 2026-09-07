@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import type { AdDocumentParsed } from "../../packages/ad-template-contract/src/schema.ts";
 import { createCanvas } from "@napi-rs/canvas";
 import { describe, it } from "node:test";
-import { renderPlacement } from "../../packages/ad-template-renderer/src/renderer.ts";
 import { handleCanonicalPreview } from "../../src/lib/adstudio/canonical-preview.ts";
 import { saveAd } from "../../src/lib/adstudio/save-ad.ts";
 
@@ -48,20 +47,10 @@ describe("canonical preview replacement fixture", () => {
       supabase: supabase as never,
       workspaceId: "ws",
       adId: "ad",
-      document,
+      document: document as AdDocumentParsed,
       expectedRevision: 0,
       colourMap: colours,
       imageValues: { hero: imageBytes },
-      renderPlacement: async placement => {
-        const rendered = await renderPlacement({
-          template,
-          imageValues: { hero: imageBytes },
-          textValues: document.sharedTextValues,
-          colourMap: colours,
-          cropOverrides: placement === "feed" ? document.feedCropOverrides : document.storyCropOverrides,
-        }, placement);
-        return { sha256: createHash("sha256").update(rendered.png).digest("hex"), png: rendered.png };
-      },
     });
     const savedFeed = [...uploads.entries()].find(([path]) => path.includes("/feed-"))?.[1];
     const savedStory = [...uploads.entries()].find(([path]) => path.includes("/story-"))?.[1];

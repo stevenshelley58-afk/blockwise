@@ -247,7 +247,7 @@ async function renderPlacementSafe(
   } else {
     // Production — full render via @blockwise/ad-template-renderer.
     // Renders the pack with customer image/text values and colour map.
-    const renderer = await import("../../../packages/ad-template-renderer/src/renderer");
+    const renderer = await import("../../../packages/ad-template-renderer/src/renderer.ts");
     const result = await renderer.renderPlacement(
       {
         template: pack,

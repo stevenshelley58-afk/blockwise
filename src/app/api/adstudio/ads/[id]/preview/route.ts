@@ -4,7 +4,6 @@ import { resolveImageValues, resolveTemplateAssetValues } from "@/lib/adstudio/r
 import { handleCanonicalPreview } from "@/lib/adstudio/canonical-preview";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { getTemplateForInternalInspection } from "@/lib/adstudio/pack-gallery";
-import { sha256Hex } from "@/lib/adstudio/document-token";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
