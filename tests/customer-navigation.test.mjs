@@ -24,18 +24,18 @@ test("the customer registry declares unique destinations and at most five mobile
 });
 
 
-test("disabled customer tools remain declared but are excluded from active navigation", () => {
+test("feature flags keep disabled customer tools out of active navigation", () => {
   const disabled = blockwise.nav.items.filter(
     (item) => item.feature && !blockwise.features[item.feature],
   );
   assert.deepEqual(
     disabled.map(({ href, feature }) => [href, feature]),
-    [["/ad-radar", "adRadar"], ["/property-check", "propertyCheck"]],
+    [["/property-check", "propertyCheck"]],
   );
 
   const active = blockwise.nav.items.filter(
     (item) => !item.feature || blockwise.features[item.feature],
   );
-  assert.equal(active.some((item) => item.href === "/ad-radar"), false);
+  assert.equal(active.some((item) => item.href === "/ad-radar"), true);
   assert.equal(active.some((item) => item.href === "/property-check"), false);
 });
