@@ -1629,3 +1629,29 @@
   .hc-hero-grid { width: calc(100% - 40px); }
   .hc-hero-copy h1 { font-size: clamp(36px, 10.5vw, 40px); }
 }
+
+@media (min-width: 961px) {
+  .hc-hero-grid { padding-block: 72px 24px; }
+  .hc-hero-stack { min-height: 500px; }
+  .hc-hero-feed { width: min(100% - 80px, 390px); }
+  .hc-hero-feed .hc-ad-preview--compact .hc-ad-image-wrap { aspect-ratio: 4 / 4.5; }
+}
+
+
+@media (min-width: 961px) {
+  .hc-hero-feed { width: min(100% - 90px, 350px); }
+}
+.hc-hero-visual.is-playing .hc-hero-feed .hc-ad-image {
+  animation: hc-hero-image-settle 1200ms .1s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes hc-hero-image-settle {
+  from { clip-path: inset(0 0 56% 0); transform: scale(1.035); }
+  to { clip-path: inset(0); transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hc-hero-visual.is-playing .hc-hero-feed .hc-ad-image {
+    animation: none !important;
+    clip-path: inset(0) !important;
+    transform: none !important;
+  }
+}

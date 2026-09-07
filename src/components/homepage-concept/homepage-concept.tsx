@@ -576,8 +576,8 @@ export function HomepageConcept() {
         <section className="hc-hero" id="top">
           <div className="hc-shell hc-hero-grid">
             <div className="hc-hero-copy">
-              <h1>Facebook &amp; Instagram ads. Built for real estate.</h1>
-              <p>Create, approve and track your ads in one place.</p>
+              <h1><span>Your competition is running ads.</span> <span className="hc-hero-prompt">Are you?</span></h1>
+              <p>More listings, less marketing stress.</p>
               <div className="hc-hero-actions">
                 <PrimaryLink>Start free trial</PrimaryLink>
                 <span><Check aria-hidden="true" size={16} /> No card required.</span>
