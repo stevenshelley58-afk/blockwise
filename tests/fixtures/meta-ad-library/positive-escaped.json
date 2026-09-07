@@ -1,0 +1,5 @@
+<script>
+// Escaped-quote variant: payload embedded inside a JS string literal, quotes
+// appear as \". This is the variant that produced HTTP-200 parser failures.
+var payload = "{\"ad_library_main\":{\"search_results_connection\":{\"count\":2,\"edges\":[{\"node\":{\"ad_archive_id\":\"891243346185243_201\",\"collation_result\":{\"ad_archive\":{\"ad_archive_id\":\"891243346185243_201\",\"active_status\":\"active\"}}}},{\"node\":{\"ad_archive_id\":\"891243346185243_202\",\"collation_result\":{\"ad_archive\":{\"ad_archive_id\":\"891243346185243_202\",\"active_status\":\"inactive\"}}}}],\"page_info\":{\"end_cursor\":\"CUR.escaped-1\",\"has_next_page\":false}}}}";
+</script>

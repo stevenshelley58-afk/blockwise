@@ -12,7 +12,6 @@ import { resolveBrandPackLocation } from "@/lib/research/brand-pack-suburb";
 
 export const dynamic = "force-dynamic";
 
-type ResearchSort = "recent" | "longest";
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function ResearchPage({ searchParams }: { searchParams?: SearchParams }) {
@@ -21,10 +20,8 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
   const requestHeaders = await headers();
   const params = searchParams ? await searchParams : {};
   const searchTerm = firstParam(params.q ?? params.postcode).trim();
-  const sort: ResearchSort = firstParam(params.sort) === "longest" ? "longest" : "recent";
-  const includeSurrounding = isTruthyParam(firstParam(params.includeSurrounding));
   const locationGuess = searchTerm
-    ? resolveAdRadarLocationSearch(searchTerm, { includeSurroundingSuburbs: includeSurrounding })
+    ? resolveAdRadarLocationSearch(searchTerm)
     : resolveAdRadarLocationGuess(requestHeaders);
   const locationLabel = locationGuess?.label ?? "Perth, WA";
 
@@ -60,9 +57,7 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
         <p className="mt-1 text-[13px] text-muted-foreground">{niche.copy.adRadar.lead}</p>
       </header>
       <AdRadarSearchPanel
-        initialIncludeSurrounding={includeSurrounding}
         initialQuery={searchTerm}
-        initialSort={sort}
         initialLocationLabel={locationLabel}
         initialNote=""
         autoSearchTerm={autoSearch?.searchTerm ?? null}
@@ -75,8 +70,4 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
 
 function firstParam(value: string | string[] | undefined): string {
   return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
-}
-
-function isTruthyParam(value: string): boolean {
-  return value === "1" || value === "true" || value === "yes";
 }
