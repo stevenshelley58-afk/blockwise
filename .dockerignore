@@ -36,11 +36,3 @@ frank
 frank/**
 worker
 worker/**
-
-# The customer Ad Radar needs the one canonical postcode directory at build
-# time. Re-include only that file; all other Hermes runtime source stays out.
-!hermes/
-hermes/*
-!hermes/data/
-hermes/data/*
-!hermes/data/au-postcodes.json
