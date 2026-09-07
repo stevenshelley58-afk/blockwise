@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Canvas as FabricCanvas, FabricObject } from "fabric";
+import type { CanonicalPreviewState } from "./canonical-preview";
 
 import type {
   ImageSlotLayer,
@@ -79,6 +80,7 @@ export interface LayeredCanvasProps {
   onSelect?: (layerId: string) => void;
   onCropImage?: (layer: ImageSlotLayer) => void;
   onError?: (message: string) => void;
+  canonicalPreview?: CanonicalPreviewState;
   className?: string;
 }
 
@@ -100,6 +102,7 @@ export function LayeredCanvas({
   onSelect,
   onCropImage,
   onError,
+  canonicalPreview,
   className,
 }: LayeredCanvasProps) {
   const elementRef = useRef<HTMLCanvasElement | null>(null);
@@ -222,7 +225,7 @@ export function LayeredCanvas({
   }, [ready, selectedLayerId]);
 
   return (
-    <div ref={hostRef} className={cn("relative h-full w-full overflow-hidden bg-white", className)}>
+    <div ref={hostRef} className={cn("relative isolate h-full w-full overflow-hidden bg-white [&_.upper-canvas]:z-20", className)}>
       <div className="sr-only" aria-live="polite">{selectedLayerId ? `Selected layer: ${layout.layers.find(layer => layer.layerId === selectedLayerId)?.layerId ?? selectedLayerId}` : "No layer selected"}</div>
       {!ready && <div className="absolute inset-0 animate-pulse bg-muted" aria-hidden="true" />}
       <canvas
@@ -230,6 +233,23 @@ export function LayeredCanvas({
         role="img"
         aria-label={`${layout.placement === "feed" ? "Feed" : "Story"} layered ad preview`}
       />
+      {canonicalPreview?.status === "ready" && canonicalPreview.url ? (
+        <img
+          src={canonicalPreview.url}
+          alt={(layout.placement === "feed" ? "Feed" : "Story") + " canonical server preview"}
+          className="pointer-events-none absolute inset-0 z-10 h-full w-full object-contain"
+        />
+      ) : null}
+      {canonicalPreview?.status === "pending" ? (
+        <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border border-white/20 bg-black/75 px-3 py-1.5 text-[11px] font-semibold text-white" role="status">
+          Updating server preview…
+        </div>
+      ) : null}
+      {canonicalPreview?.status === "error" ? (
+        <div className="pointer-events-none absolute inset-x-3 top-3 z-20 rounded-(--r-ctl) border border-destructive/40 bg-destructive/90 px-3 py-2 text-[11px] font-semibold text-white" role="status">
+          {canonicalPreview.error ?? "Server preview unavailable. Editing remains available."}
+        </div>
+      ) : null}
     </div>
   );
 }

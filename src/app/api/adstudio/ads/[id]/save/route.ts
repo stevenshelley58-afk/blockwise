@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
-import { getTemplateForInternalInspection, templateAssetStoragePath } from "@/lib/adstudio/pack-gallery";
 import { saveAd, SaveError } from "@/lib/adstudio/save-ad";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { adDocumentSchema, type AdDocumentParsed } from "../../../../../../../packages/ad-template-contract/src/schema.ts";
 import { containsInlineImageData, } from "@/lib/adstudio/persisted-document";
-import { CustomerImageStorageError, resolveCustomerImageValues } from "@/lib/adstudio/customer-image-storage";
+import { CustomerImageStorageError } from "@/lib/adstudio/customer-image-storage";
+import { resolveImageValues as resolveImageValuesShared, resolveTemplateAssetValues as resolveTemplateAssetValuesShared } from "@/lib/adstudio/render-assets";
 import { metaCopyLimitIssues } from "@/lib/adstudio/types";
 
 export const runtime = "nodejs";
@@ -74,8 +74,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
   try {
     const serviceSupabase = createSupabaseServiceClient();
     const [customerImages, templateAssets] = await Promise.all([
-      resolveImageValues(document, access.access.workspaceId, id, serviceSupabase),
-      resolveTemplateAssetValues(id, access.access.workspaceId, serviceSupabase),
+      resolveImageValuesShared(document, access.access.workspaceId, id, serviceSupabase),
+      resolveTemplateAssetValuesShared(id, access.access.workspaceId, serviceSupabase),
     ]);
     const persistedDocument = ({ ...document, sharedImageValues: customerImages.refs });
     const output = await saveAd({
@@ -115,64 +115,4 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
     return errorResponse(err);
   }
-}
-
-export async function resolveImageValues(
-  document: AdDocumentParsed,
-  workspaceId: string,
-  adId: string,
-  supabase: Parameters<typeof resolveCustomerImageValues>[3],
-): Promise<{ bytes: Record<string, Buffer>; refs: Record<string, string> }> {
-  return resolveCustomerImageValues(document.sharedImageValues, workspaceId, adId, supabase, { requireFinalizedLedger: true });
-}
-
-type StoredTemplateAsset = { asset_key: string; file_name: string; mime_type: string; storage_path: string };
-
-export async function resolveTemplateAssetValues(
-  adId: string,
-  workspaceId: string,
-  service = createSupabaseServiceClient(),
-): Promise<Record<string, Buffer>> {
-  const { data: ad, error: adError } = await service
-    .from("ad_customer_ads")
-    .select("template_id")
-    .eq("id", adId)
-    .eq("workspace_id", workspaceId)
-    .single();
-  if (adError || !ad?.template_id) throw new SaveError("ad_not_found", "Ad not found");
-
-  const template = await getTemplateForInternalInspection(service, ad.template_id);
-  if (!template) throw new SaveError("template_not_found", "Template not found");
-  const declarations = Object.entries(template.assets);
-  if (declarations.length === 0) return {};
-
-  const { data: assets, error: assetError } = await service
-    .from("ad_template_assets_direct")
-    .select("asset_key,file_name,mime_type,storage_path")
-    .eq("template_id", ad.template_id);
-  if (assetError) throw new SaveError("template_asset_load_failed", assetError.message);
-  const rows = (assets ?? []) as StoredTemplateAsset[];
-  if (rows.length !== declarations.length) throw new SaveError("template_asset_missing", "Template assets are incomplete.");
-  const byKey = new Map(rows.map(asset => [asset.asset_key, asset]));
-
-  const values: Record<string, Buffer> = {};
-  for (const [assetKey, declaration] of declarations) {
-    const asset = byKey.get(assetKey);
-    const expectedPath = templateAssetStoragePath(template.templateId, assetKey, declaration.fileName);
-    if (!asset || asset.file_name !== declaration.fileName || asset.mime_type !== declaration.mimeType || asset.storage_path !== expectedPath) {
-      throw new SaveError("template_asset_missing", `Template asset ${assetKey} does not match its declaration.`);
-    }
-    const { data, error } = await service.storage.from("workspace-artifacts").download(expectedPath);
-    if (error || !data) throw new SaveError("template_asset_missing", `Template asset ${assetKey} could not be loaded.`);
-    const bytes = Buffer.from(await data.arrayBuffer());
-    values[assetKey] = bytes;
-  }
-  for (const input of template.imageInputs) {
-    if (input.defaultAssetKey) {
-      const defaultBytes = values[input.defaultAssetKey];
-      if (!defaultBytes) throw new SaveError("template_asset_missing", `Default image for ${input.label} could not be loaded.`);
-      values[input.key] = defaultBytes;
-    }
-  }
-  return values;
 }
