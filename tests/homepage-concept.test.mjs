@@ -75,5 +75,10 @@ test("homepage FAQ keeps setup first and explains separate spend and data owners
   assert.ok(spend);
   assert.match(spend.answer, /pay Meta separately through your own ad account/);
   assert.match(spend.answer, /your ad data stays yours, even if you leave Blockwise/);
+  const trial = FAQS.find((faq) => faq.question === "What happens after the trial?");
+  assert.ok(trial);
+  assert.match(trial.answer, /keep running and managing your ads yourself for free/);
+  assert.match(trial.answer, /Meta ad spend is still separate/);
+  assert.match(trial.answer, /monthly plan or a managed account/);
   assert.equal(FAQS.length, 6);
 });

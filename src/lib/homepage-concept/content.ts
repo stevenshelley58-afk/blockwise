@@ -68,7 +68,7 @@ export const FAQS = [
   {
     question: "What happens after the trial?",
     answer:
-      "You'll see the plan and terms before committing to anything paid. No card is needed to start your trial.",
+      "You can keep running and managing your ads yourself for free. Meta ad spend is still separate. Or choose a monthly plan or a managed account.",
   },
   {
     question: "Can my team review ads?",
