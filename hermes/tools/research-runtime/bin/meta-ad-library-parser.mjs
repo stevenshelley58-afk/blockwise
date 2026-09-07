@@ -35,7 +35,8 @@ const CONNECTION_MARKER = /\\?"search_results_connection\\?"\s*:\s*/giu;
 // Fallback ad-id harvest when edges are not JSON-parsable. Accepts escaped
 // quotes and snake/camel key variants. IDs are numeric, sometimes with
 // internal separators (e.g. "<page_id>_<sequence>").
-const AD_ID_FALLBACK_PATTERN = /\\?"(?:ad_archive_id|adArchiveID)\\?"\s*:\s*\\?"(\d[\d_]{5,})\\?"/giu;
+const AD_ID_FALLBACK_PATTERN =
+  /\\?"(?:ad_archive_id|adArchiveID)\\?"\s*:\s*\\?"(\d[\d_]{5,})\\?"/giu;
 
 const AD_ID_VALUE_PATTERN = /^\d[\d_]{5,}$/u;
 
@@ -113,8 +114,12 @@ function pageIdsIn(value, out = new Set(), parentKey = "") {
 
 function nearbyPageIds(source, start, end) {
   const ids = new Set();
-  const nearby = source.slice(Math.max(0, start - 256), Math.min(source.length, end + 2048));
-  const pattern = /\\?"(?:view_all_page_id|page_id|pageId|pageID)\\?"\s*:\s*\\?"(\d{5,})\\?"/giu;
+  const nearby = source.slice(
+    Math.max(0, start - 256),
+    Math.min(source.length, end + 2048),
+  );
+  const pattern =
+    /\\?"(?:view_all_page_id|page_id|pageId|pageID)\\?"\s*:\s*\\?"(\d{5,})\\?"/giu;
   for (const match of nearby.matchAll(pattern)) ids.add(match[1]);
   return ids;
 }
@@ -142,7 +147,10 @@ function extractConnections(html) {
             seen.add(key);
             connections.push({
               connection: parsed,
-              pageIds: new Set([...pageIdsIn(parsed), ...nearbyPageIds(source, match.index, braceIndex + raw.length)]),
+              pageIds: new Set([
+                ...pageIdsIn(parsed),
+                ...nearbyPageIds(source, match.index, braceIndex + raw.length),
+              ]),
             });
           }
         }
@@ -165,17 +173,36 @@ function extractConnections(html) {
  *   warnings: string[],
  * }}
  */
-export function classifyMetaAdLibraryPayload(html, { requestedPageId = null } = {}) {
+export function classifyMetaAdLibraryPayload(
+  html,
+  { requestedPageId = null } = {},
+) {
   const text = String(html || "");
   const warnings = [];
 
-  const challengeDetected = CHALLENGE_PATTERNS.some((pattern) => pattern.test(text));
+  const challengeDetected = CHALLENGE_PATTERNS.some((pattern) =>
+    pattern.test(text),
+  );
   if (challengeDetected) {
-    return { outcome: "challenge", ads: [], adIds: [], connectionCount: null, pageInfo: { hasNextPage: null, endCursor: null }, warnings };
+    return {
+      outcome: "challenge",
+      ads: [],
+      adIds: [],
+      connectionCount: null,
+      pageInfo: { hasNextPage: null, endCursor: null },
+      warnings,
+    };
   }
   const loginWall = LOGIN_WALL_PATTERN.test(text);
   if (loginWall) {
-    return { outcome: "login_wall", ads: [], adIds: [], connectionCount: null, pageInfo: { hasNextPage: null, endCursor: null }, warnings };
+    return {
+      outcome: "login_wall",
+      ads: [],
+      adIds: [],
+      connectionCount: null,
+      pageInfo: { hasNextPage: null, endCursor: null },
+      warnings,
+    };
   }
 
   const connections = extractConnections(text);
@@ -199,29 +226,66 @@ export function classifyMetaAdLibraryPayload(html, { requestedPageId = null } = 
         warnings,
       };
     }
-    return { outcome: "unparseable", ads: [], adIds: [], connectionCount: null, pageInfo: { hasNextPage: null, endCursor: null }, warnings };
+    return {
+      outcome: "unparseable",
+      ads: [],
+      adIds: [],
+      connectionCount: null,
+      pageInfo: { hasNextPage: null, endCursor: null },
+      warnings,
+    };
   }
 
-  const requested = requestedPageId === null || requestedPageId === undefined ? null : numericPageId(requestedPageId);
+  const requested =
+    requestedPageId === null || requestedPageId === undefined
+      ? null
+      : numericPageId(requestedPageId);
   if (requestedPageId !== null && requestedPageId !== undefined && !requested) {
     warnings.push("requested_page_id_invalid");
-    return { outcome: "partial", ads: [], adIds: [], connectionCount: null, pageInfo: { hasNextPage: null, endCursor: null }, warnings };
+    return {
+      outcome: "partial",
+      ads: [],
+      adIds: [],
+      connectionCount: null,
+      pageInfo: { hasNextPage: null, endCursor: null },
+      warnings,
+    };
   }
   // Never merge edges/count/page_info from different connections: an HTML shell
   // can contain prefetches for unrelated pages. Select one correlated
   // connection only; no correlation is partial evidence, never success/zero.
-  const correlated = requested ? connections.filter(({ pageIds }) => pageIds.has(requested)) : connections;
+  const correlated = requested
+    ? connections.filter(({ pageIds }) => pageIds.has(requested))
+    : connections;
   if (correlated.length === 0) {
     warnings.push("requested_page_connection_not_found");
-    return { outcome: "partial", ads: [], adIds: [], connectionCount: null, pageInfo: { hasNextPage: null, endCursor: null }, warnings };
+    return {
+      outcome: "partial",
+      ads: [],
+      adIds: [],
+      connectionCount: null,
+      pageInfo: { hasNextPage: null, endCursor: null },
+      warnings,
+    };
   }
   const selected = correlated
     .map(({ connection }) => connection)
-    .sort((a, b) => (Array.isArray(b.edges) ? b.edges.length : -1) - (Array.isArray(a.edges) ? a.edges.length : -1))[0];
+    .sort(
+      (a, b) =>
+        (Array.isArray(b.edges) ? b.edges.length : -1) -
+        (Array.isArray(a.edges) ? a.edges.length : -1),
+    )[0];
   const bestEdges = Array.isArray(selected.edges) ? selected.edges : null;
   const maxCount = typeof selected.count === "number" ? selected.count : null;
-  const info = selected.page_info && typeof selected.page_info === "object" ? selected.page_info : {};
-  const pageInfo = { hasNextPage: typeof info.has_next_page === "boolean" ? info.has_next_page : null, endCursor: typeof info.end_cursor === "string" ? info.end_cursor : null };
+  const info =
+    selected.page_info && typeof selected.page_info === "object"
+      ? selected.page_info
+      : {};
+  const pageInfo = {
+    hasNextPage:
+      typeof info.has_next_page === "boolean" ? info.has_next_page : null,
+    endCursor: typeof info.end_cursor === "string" ? info.end_cursor : null,
+  };
 
   const ads = [];
   const adIds = new Set();
@@ -244,16 +308,37 @@ export function classifyMetaAdLibraryPayload(html, { requestedPageId = null } = 
   }
 
   if (adIds.size > 0) {
-    return { outcome: "success", ads, adIds: [...adIds], connectionCount: maxCount, pageInfo, warnings };
+    return {
+      outcome: "success",
+      ads,
+      adIds: [...adIds],
+      connectionCount: maxCount,
+      pageInfo,
+      warnings,
+    };
   }
 
   // No ads in edges. Absence needs complete structured evidence.
   const emptyEdges = bestEdges !== null && bestEdges.length === 0;
   if (maxCount === 0 && emptyEdges && pageInfo.hasNextPage === false) {
-    return { outcome: "confirmed_absence", ads: [], adIds: [], connectionCount: 0, pageInfo, warnings };
+    return {
+      outcome: "confirmed_absence",
+      ads: [],
+      adIds: [],
+      connectionCount: 0,
+      pageInfo,
+      warnings,
+    };
   }
   warnings.push("connection_present_but_unclassified");
-  return { outcome: "partial", ads: [], adIds: [], connectionCount: maxCount, pageInfo, warnings };
+  return {
+    outcome: "partial",
+    ads: [],
+    adIds: [],
+    connectionCount: maxCount,
+    pageInfo,
+    warnings,
+  };
 }
 
 export default classifyMetaAdLibraryPayload;
