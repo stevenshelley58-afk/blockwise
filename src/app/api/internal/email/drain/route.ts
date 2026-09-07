@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { verifyInternalRequest } from "@/lib/internal-auth";
-import { makeEmailProvider } from "@/lib/email/provider";
+import { isEmailDeliveryEnabled, makeEmailProvider } from "@/lib/email/provider";
 import { drainEmailOutbox, recoverPendingLeadWelcomeEmails } from "@/lib/email/outbox";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -18,6 +18,21 @@ export async function POST(request: Request) {
   const auth = await verifyInternalRequest(request, "email.drain");
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  // A healthy scheduler may run before launch, but it must not claim rows or
+  // rebuild welcome mail until the operator explicitly opens this gate.
+  if (!isEmailDeliveryEnabled(process.env)) {
+    return NextResponse.json({
+      ok: true,
+      deliveryEnabled: false,
+      recovery: { scanned: 0, queued: 0, failed: 0 },
+      claimed: 0,
+      sent: 0,
+      suppressed: 0,
+      failed: 0,
+      dead: 0,
+    });
   }
 
   const service = createSupabaseServiceClient();

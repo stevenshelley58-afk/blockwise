@@ -110,13 +110,13 @@ describe("direct-template revision persistence", () => {
     const revision = rpcCalls[0]?.args.p_revision as Record<string, unknown>;
     assert.equal(
       revision.template_hash,
-      "blockwise.ad-template:template-direct",
+      directTemplateRevisionIdentity(template.templateId, template),
     );
     assert.equal(revision.document_hash, documentToken(document));
     assert.deepEqual(revision.document_json, document);
   });
 
-  it("uses only the create-only direct template id, not generated-content hash semantics", () => {
+  it("uses the immutable canonical template JSON hash", () => {
     assert.equal(
       directTemplateRevisionIdentity("just-listed-calm-editorial"),
       "blockwise.ad-template:just-listed-calm-editorial",
