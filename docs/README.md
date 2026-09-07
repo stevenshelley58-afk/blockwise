@@ -15,6 +15,7 @@ This index separates current operating guidance from retained history.
 ## Design previews
 
 - [Homepage concept](design/homepage-concept.md) — isolated mobile/desktop mockup; not a production homepage release.
+- [Minimal reporting revision](releases/2026-09-07-homepage-reporting-minimal.md) — line graph, one dashboard and 73% fewer words.
 - [Homepage reporting redesign](releases/2026-09-07-homepage-reporting.md) — personal dashboard, scheduled-email concept and release evidence.
 - [Homepage FAQ preview update](releases/2026-09-07-homepage-faq.md) — friendlier copy, account setup and data ownership.
 - [Homepage preview evidence](releases/2026-09-06-homepage-concept.md) — revision, browser checks and reapplication instructions.
