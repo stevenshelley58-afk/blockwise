@@ -1,38 +1,59 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { adDocumentSchema, type AdDocumentParsed } from "../../../../../../../packages/ad-template-contract/src/schema.ts";
-import { renderPlacement } from "../../../../../../../packages/ad-template-renderer/src/renderer.ts";
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
-import { containsInlineImageData } from "@/lib/adstudio/persisted-document";
 import { resolveImageValues, resolveTemplateAssetValues } from "@/lib/adstudio/render-assets";
+import { handleCanonicalPreview } from "@/lib/adstudio/canonical-preview";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { getTemplateForInternalInspection } from "@/lib/adstudio/pack-gallery";
 import { sha256Hex } from "@/lib/adstudio/document-token";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> | { id: string } };
+
 export async function POST(request: NextRequest, context: RouteContext) {
   const access = await requireAdStudioRequest(request);
   if (!access.ok) return access.response;
   const { id } = await Promise.resolve(context.params);
   const body = await request.json().catch(() => ({})) as { document?: unknown; placement?: unknown };
   const placement = body.placement === "story" ? "story" : body.placement === "feed" ? "feed" : null;
-  const parsed = adDocumentSchema.safeParse(body.document);
-  if (!placement || !parsed.success) return NextResponse.json({ error: "Invalid preview request.", code: "invalid_preview" }, { status: 400 });
-  const document = parsed.data as AdDocumentParsed;
-  if (containsInlineImageData(document.sharedImageValues)) return NextResponse.json({ error: "Upload images before previewing this ad.", code: "image_upload_required" }, { status: 400 });
+  if (!placement) return NextResponse.json({ error: "Invalid preview request.", code: "invalid_preview" }, { status: 400 });
   const service = createSupabaseServiceClient();
   try {
-    const { data: ad, error } = await access.supabase.from("ad_customer_ads").select("template_id").eq("id", id).eq("workspace_id", access.access.workspaceId).maybeSingle();
-    if (error || !ad?.template_id || document.templateId !== ad.template_id) return NextResponse.json({ error: "Ad not found.", code: "ad_not_found" }, { status: 404 });
-    const { data: row, error: templateError } = await service.from("ad_templates").select("template_json").eq("template_id", ad.template_id).maybeSingle();
-    if (templateError || !row) return NextResponse.json({ error: "Template not found.", code: "template_not_found" }, { status: 404 });
-    const template = row.template_json as Parameters<typeof renderPlacement>[0]["template"];
-    const [customerImages, templateAssets] = await Promise.all([resolveImageValues(document, access.access.workspaceId, id, service), resolveTemplateAssetValues(id, access.access.workspaceId, service)]);
-    const textValues = Object.fromEntries(template.textInputs.map(input => [input.key, document.sharedTextValues[input.key] ?? input.placeholder]));
-    const result = await renderPlacement({ template, imageValues: { ...templateAssets, ...customerImages.bytes }, textValues, colourMap: document.resolvedColourMap, cropOverrides: placement === "feed" ? document.feedCropOverrides : document.storyCropOverrides }, placement);
-    return new NextResponse(new Uint8Array(result.png), { headers: { "content-type": "image/png", "cache-control": "private, no-store", "x-blockwise-document-hash": sha256Hex(document), "x-blockwise-template-hash": `sha256:${sha256Hex(template)}`, "x-blockwise-renderer": "blockwise-ad-template-renderer" } });
+    const output = await handleCanonicalPreview({
+      adId: id,
+      workspaceId: access.access.workspaceId,
+      placement,
+      document: body.document,
+      deps: {
+        loadAd: async (adId, workspaceId) => {
+          const { data, error } = await access.supabase.from("ad_customer_ads").select("template_id").eq("id", adId).eq("workspace_id", workspaceId).maybeSingle();
+          if (error || !data?.template_id) return null;
+          return { templateId: data.template_id as string };
+        },
+        loadTemplate: templateId => getTemplateForInternalInspection(service, templateId),
+        resolveImages: async (document, adId, workspaceId) => {
+          const [customer, template] = await Promise.all([
+            resolveImageValues(document, workspaceId, adId, service),
+            resolveTemplateAssetValues(adId, workspaceId, service),
+          ]);
+          return { ...template, ...customer.bytes };
+        },
+      },
+    });
+    const template = await getTemplateForInternalInspection(service, (body.document as { templateId?: string })?.templateId ?? "");
+    return new NextResponse(new Uint8Array(output.png), {
+      headers: {
+        "content-type": "image/png",
+        "cache-control": "private, no-store",
+        "x-blockwise-document-hash": sha256Hex(body.document),
+        "x-blockwise-template-hash": template ? `sha256:${sha256Hex(template)}` : "",
+        "x-blockwise-renderer": "blockwise-ad-template-renderer",
+      },
+    });
   } catch (error) {
-    console.error("Ad Studio canonical preview failed", { code: error instanceof Error ? error.name : "unknown" });
-    return NextResponse.json({ error: "Preview could not be rendered.", code: "preview_failed" }, { status: 400 });
+    const code = error instanceof Error ? error.message : "preview_failed";
+    const status = code === "ad_not_found" || code === "template_not_found" ? 404 : code === "image_upload_required" || code === "invalid_preview" ? 400 : 500;
+    return NextResponse.json({ error: status === 500 ? "Preview could not be rendered." : code, code }, { status });
   }
 }
 
