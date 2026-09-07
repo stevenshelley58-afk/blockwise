@@ -24,10 +24,12 @@ Production-built, secret-free, read-only container on a separate internal Docker
 
 See the release evidence record for compiled revision, required checks, browser measurements, form behavior and public preview acceptance.
 
-## Results walkthrough
+## Results reporting — corrected owner brief
 
-The dark results section is a content-height, full-shell product walkthrough rather than a viewport-filling reporting card. It connects three user-controlled stages: creating a branded ad from an existing creative, reviewing an explicit budget and approval gate, and seeing example enquiries with their source and spend context.
+Persuade agents that they can know how their ads are going without guessing or waiting for agency updates. The rest of the homepage already explains ad creation; this section must not repeat that workflow.
 
-The light application surface keeps the product legible inside the dark page rhythm. Blue marks the active connection and actionable state; it does not imply performance. Example data is labelled in the interface, Meta ad spend remains separate, and no ROI or conversion claim is made.
+A full-width dark section pairs a legible personal dashboard with a scheduled email preview. Leads, spend and cost per lead answer the visitor's practical questions. The 7/30-day dashboard switch updates consistent synthetic chart and campaign data. Daily, weekly and custom 1–30-day email controls visibly change the illustrative summary and schedule. Both benefits are visible without interaction; no carousel, stage gate or continuous animation hides the message.
 
-Stage changes are finite, entry-only state transitions using the shared motion timing. Keyboard and reduced-motion changes render immediately. Mobile stacks the same complete sequence and keeps every control at least 44 pixels tall.
+Reuse incumbent Manrope/Inter, near-black/white and blue, installed Motion and Lucide. Small authored chart markup is appropriate for this labelled, fixed demonstration, avoiding additional chart machinery. Pointer changes use finite ease-out chart/email transitions; keyboard and reduced-motion changes are immediate. Mobile stacks dashboard then email with 44px controls. All data is explicitly synthetic and nothing sends or saves.
+
+Product boundary: current customer settings expose a weekly-digest toggle, not a general configurable reporting scheduler. The owner's requested flexible cadence is demonstrated here as a concept only, not activated or claimed as shipped scheduling. Production email scheduling must be implemented and verified separately before this concept replaces the public homepage.

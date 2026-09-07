@@ -37,7 +37,7 @@ test("homepage concept is isolated, noindex and uses the mock adapter", async ()
 
 test("homepage concept includes the required mobile story and disclosures", async () => {
   const component = (await Promise.all([
-    "homepage-concept.tsx", "results-walkthrough.tsx",
+    "homepage-concept.tsx", "results-reporting.tsx",
   ].map((name) => readFile(new URL(`../src/components/homepage-concept/${name}`, import.meta.url), "utf8")))).join("\n");
 
   for (const copy of [
@@ -49,7 +49,9 @@ test("homepage concept includes the required mobile story and disclosures", asyn
     "Customise",
     "Review",
     "You approve before spending.",
-    "Less managing ads. More meeting sellers.",
+    "No guesswork.",
+    "No chasing updates.",
+    "Your own dashboard. Clear email updates. On your schedule.",
     "Start free trial",
     "No card required.",
     "Ad spend is separate.",
