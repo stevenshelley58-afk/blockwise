@@ -75,9 +75,9 @@ export default async function DataDeletionPage({ searchParams }: PageProps) {
       </ol>
       <p>
         Blockwise will permanently delete your workspace, all configuration, all stored Meta tokens,
-        and all stored lead submissions within 30 days. Encrypted product backups are retained on
-        the Blockwise VPS and the scheduled retention job removes snapshots older than 90 days.
-        Copies held by separate providers follow their own retention policies.
+        and all stored lead submissions within 30 days. New scheduled encrypted product backups are
+        retained on the Blockwise VPS, and the scheduled job targets snapshots older than approximately
+        90 days. Legacy or manual backups and copies held by separate providers follow their own controls.
       </p>
 
       <h2 style={{ fontSize: 22, marginTop: 32, fontWeight: 600 }}>

@@ -16,6 +16,7 @@ install -d -m 700 /srv/blockwise/product/backups/encrypted
 install -o root -g root -m 750 "$ROOT/scripts/vps/product-encrypted-backup.sh" /usr/local/libexec/blockwise-product-encrypted-backup
 install -o root -g root -m 750 "$ROOT/scripts/vps/product-backup-verify.sh" /usr/local/libexec/blockwise-product-backup-verify
 install -o root -g root -m 750 "$ROOT/scripts/vps/product-backup-verify.sh" /usr/local/libexec/product-backup-verify.sh
+install -o root -g root -m 750 "$ROOT/scripts/vps/product-backup-retention.sh" /usr/local/libexec/product-backup-retention.sh
 cat >/etc/systemd/system/blockwise-product-backup.service <<'EOF'
 [Unit]
 Description=Encrypted Blockwise product backup
