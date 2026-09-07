@@ -97,11 +97,11 @@ export function sniffMedia(bytes) {
     return "image/webp";
   return null;
 }
-export async function verifyVideoBytes(bytes) {
+export async function verifyVideoBytes(bytes, execFileImpl = execFile) {
   const path = join(tmpdir(), "blockwise-ad-video-" + randomUUID() + ".mp4");
   try {
     await writeFile(path, bytes, { flag: "wx" });
-    const result = await execFile(
+    const result = await execFileImpl(
       "ffprobe",
       [
         "-v",
@@ -118,7 +118,7 @@ export async function verifyVideoBytes(bytes) {
     );
     if (result.stdout.trim() !== "video")
       throw new Error("ffprobe found no video stream");
-    const frame = await execFile(
+    const frame = await execFileImpl(
       "ffmpeg",
       [
         "-v",
@@ -150,7 +150,11 @@ export async function verifyVideoBytes(bytes) {
     await rm(path, { force: true });
   }
 }
-export async function assertMediaMatches(bytes, declaredMime) {
+export async function assertMediaMatches(
+  bytes,
+  declaredMime,
+  videoVerifier = verifyVideoBytes,
+) {
   const magic = sniffMedia(bytes),
     declared = String(declaredMime || "")
       .split(";")[0]
@@ -161,7 +165,7 @@ export async function assertMediaMatches(bytes, declaredMime) {
   if (magic.startsWith("image/")) {
     const sharp = (await import("sharp")).default;
     await sharp(bytes, { failOn: "error", limitInputPixels: 40000000 }).stats();
-  } else await verifyVideoBytes(bytes);
+  } else await videoVerifier(bytes);
   return magic;
 }
 export async function downloadVerifiedMedia(
@@ -171,6 +175,7 @@ export async function downloadVerifiedMedia(
     fetchImpl = fetch,
     lookupImpl = lookup,
     allowedHosts = META_MEDIA_HOSTS,
+    videoVerifier = verifyVideoBytes,
   } = {},
 ) {
   let url = await assertSafeSourceUrl(sourceUrl, lookupImpl, allowedHosts);
@@ -213,6 +218,7 @@ export async function downloadVerifiedMedia(
       mimeType: await assertMediaMatches(
         bytes,
         response.headers.get("content-type"),
+        videoVerifier,
       ),
       sha256: createHash("sha256").update(bytes).digest("hex"),
     };
