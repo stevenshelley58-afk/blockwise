@@ -48,6 +48,11 @@ test("homepage concept includes the required mobile story and disclosures", asyn
     "Choose",
     "Customise",
     "Review",
+    "Post copy",
+    "Text on creative",
+    "Review campaign",
+    "Approve campaign",
+    "Approved",
     "You approve before spending.",
     "No guesswork.",
     "No chasing updates.",
@@ -61,7 +66,9 @@ test("homepage concept includes the required mobile story and disclosures", asyn
     assert.match(component, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
   assert.match(component, /IntersectionObserver/);
-  assert.match(component, /prefers-reduced-motion: reduce/);
+  assert.match(component, /STORY_PHASE_DELAYS/);
+  assert.match(component, /layoutId="story-template-image"/);
+  assert.match(component, /useReducedMotion/);
   assert.match(component, /Pause/);
   assert.match(component, /Replay/);
   assert.doesNotMatch(component, /Property Check|three free ads|3 free ads/i);

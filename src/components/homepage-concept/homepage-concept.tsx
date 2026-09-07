@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
+import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
 import { AdPreview } from "@/components/homepage-concept/ad-preview";
@@ -104,113 +105,326 @@ function TrialForm() {
 }
 
 const PROCESS_STEPS = [
-  { label: "Choose", description: "Start with a ready-made ad." },
-  { label: "Customise", description: "Add your photo and brand." },
-  { label: "Review", description: "Check everything before spending." },
+  { label: "Choose", description: "Pick a ready-made ad." },
+  { label: "Customise", description: "Edit the words and creative." },
+  { label: "Review", description: "Set the campaign and approve." },
 ] as const;
 
-function ProcessAdPreview({ step }: { step: number }) {
-  const branded = step > 0;
+const STORY_PHASE_DELAYS = [950, 950, 1050, 700, 1550, 2100, 2100, 1300, 1600, 420] as const;
+const STORY_STEP_PHASES = [0, 5, 8] as const;
+const STORY_PHASE_TO_STEP = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2] as const;
+const STORY_TEMPLATE_SEQUENCE = [0, 1, 2, 0] as const;
+const STORY_STATUS = [
+  "Browsing ready-made templates",
+  "Browsing ready-made templates",
+  "Browsing ready-made templates",
+  "Template selected",
+  "Opening the selected template",
+  "Editing the post copy",
+  "Editing text on the creative",
+  "Moving the finished ad to review",
+  "Adding campaign details",
+  "Approving the campaign",
+  "Campaign approved",
+] as const;
+
+const STORY_EASE = [0.22, 1, 0.36, 1] as const;
+const STORY_MOVE = { duration: 0.62, ease: STORY_EASE };
+const STORY_ENTER = { duration: 0.42, ease: STORY_EASE };
+const STORY_EXIT = { duration: 0.22, ease: [0.4, 0, 1, 1] as const };
+
+function StoryCursor({ pressed = false }: { pressed?: boolean }) {
+  return (
+    <motion.span
+      layoutId="story-cursor"
+      className="hc-story-cursor"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0, scale: pressed ? 0.88 : 1 }}
+      exit={{ opacity: 0, y: 4 }}
+      transition={pressed ? { duration: 0.14, ease: "easeInOut" } : STORY_ENTER}
+    >
+      <MousePointer2 aria-hidden="true" size={22} strokeWidth={2.2} />
+    </motion.span>
+  );
+}
+
+function StoryAd({ phase, review = false }: { phase: number; review?: boolean }) {
+  const copyEdited = phase >= 5;
+  const creativeEdited = phase >= 6;
+  const example = AD_EXAMPLES[0];
 
   return (
-    <article className={`hc-ad-preview hc-process-ad${branded ? " is-branded" : ""}`}>
+    <motion.article layoutId="story-ad" className={`hc-story-ad${review ? " is-review" : ""}`} transition={STORY_MOVE}>
       <div className="hc-ad-account">
-        <span className="hc-ad-avatar" aria-hidden="true">
-          <span className="hc-process-name--template">YA</span>
-          <span className="hc-process-name--branded">N&amp;C</span>
-        </span>
-        <span className="hc-process-account-name">
-          <span className="hc-process-name--template"><strong>Your Agency</strong></span>
-          <span className="hc-process-name--branded"><strong>North &amp; Co</strong></span>
-          <small>Sponsored</small>
-        </span>
-        <MoreHorizontal aria-hidden="true" size={19} />
+        <span className="hc-ad-avatar" aria-hidden="true">N&amp;C</span>
+        <span><strong>North &amp; Co</strong><small>Sponsored</small></span>
+        <MoreHorizontal aria-hidden="true" size={18} />
       </div>
-      <p className="hc-ad-copy">Thinking of selling? Find out what your home could be worth with a free property appraisal.</p>
-      <div className="hc-ad-image-wrap hc-process-photo">
-        <img
-          className="hc-ad-image hc-process-photo--template"
-          src={withBasePath(AD_EXAMPLES[0].image)}
-          alt=""
-          width="1080"
-          height="1350"
-        />
-        <img
-          className="hc-ad-image hc-process-photo--branded"
-          src={withBasePath(AD_EXAMPLES[1].image)}
-          alt=""
-          width="1080"
-          height="1350"
-        />
-      </div>
+      <motion.p
+        className={`hc-ad-copy${phase === 5 ? " is-editing" : ""}`}
+        key={copyEdited ? "edited-copy" : "starting-copy"}
+        initial={{ opacity: 0.35, y: 3 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={STORY_ENTER}
+      >
+        {copyEdited
+          ? "Thinking of selling in Mt Lawley? See what buyers could pay for your home."
+          : example.postCopy}
+        {phase === 5 ? <span className="hc-story-caret" /> : null}
+      </motion.p>
+      <motion.div layoutId="story-template-image" className="hc-ad-image-wrap hc-story-ad-image" transition={STORY_MOVE}>
+        <img src={withBasePath(example.image)} alt="" width="1080" height="1350" />
+        <motion.span
+          className={`hc-story-creative-overlay${phase === 6 ? " is-editing" : ""}`}
+          key={creativeEdited ? "edited-creative" : "starting-creative"}
+          initial={{ opacity: 0, y: 8, filter: "blur(4px)" }}
+          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          transition={STORY_ENTER}
+        >
+          {creativeEdited ? "What could your home be worth?" : "Free property appraisal"}
+          {phase === 6 ? <span className="hc-story-caret" /> : null}
+        </motion.span>
+      </motion.div>
       <div className="hc-ad-link">
-        <span>
-          <small className="hc-process-name--template">YOURAGENCY.COM.AU</small>
-          <small className="hc-process-name--branded">NORTHANDCO.COM.AU</small>
-          <strong>Find out what your home could be worth</strong>
-        </span>
+        <span><small>NORTHANDCO.COM.AU</small><strong>Book a free property appraisal</strong></span>
         <span className="hc-ad-link-button">Learn more</span>
       </div>
-    </article>
+    </motion.article>
+  );
+}
+
+function TemplateBrowser({ phase }: { phase: number }) {
+  const activeTemplate = STORY_TEMPLATE_SEQUENCE[Math.min(phase, STORY_TEMPLATE_SEQUENCE.length - 1)];
+  const selected = phase === 3;
+
+  return (
+    <motion.div
+      key="templates"
+      className="hc-story-scene hc-story-browser"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, x: -34, filter: "blur(3px)" }}
+      transition={{ ...STORY_EXIT, opacity: { duration: 0.18 } }}
+    >
+      <div className="hc-story-scene-heading">
+        <span>Ready-made ads</span>
+        <strong>{selected ? "Template selected" : "Choose a starting point"}</strong>
+      </div>
+      <div className="hc-story-template-window">
+        <motion.div
+          className="hc-story-template-track"
+          animate={{ x: `-${[0, 15, 31, 0][phase]}%` }}
+          transition={STORY_MOVE}
+        >
+          {AD_EXAMPLES.slice(0, 3).map((example, index) => {
+            const active = index === activeTemplate;
+            return (
+              <motion.div
+                className={`hc-story-template-card${active ? " is-active" : ""}${selected && active ? " is-selected" : ""}`}
+                key={example.id}
+                animate={{ opacity: active ? 1 : 0.62, scale: active ? 1 : 0.965 }}
+                transition={STORY_MOVE}
+              >
+                <motion.div
+                  layoutId={selected && active ? "story-template-image" : undefined}
+                  className="hc-story-template-image"
+                  transition={STORY_MOVE}
+                >
+                  <img src={withBasePath(example.image)} alt="" width="1080" height="1350" />
+                  {selected && active ? <span className="hc-story-selected"><Check aria-hidden="true" size={13} /> Selected</span> : null}
+                </motion.div>
+                <span><strong>{example.label}</strong><small>Facebook &amp; Instagram</small></span>
+                {active ? <StoryCursor pressed={selected} /> : null}
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+}
+
+function EditorScene({ phase }: { phase: number }) {
+  const copyActive = phase === 5;
+  const creativeActive = phase === 6;
+
+  return (
+    <motion.div
+      key="editor"
+      className="hc-story-scene hc-story-editor"
+      initial={{ opacity: 0, x: 38 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -30, filter: "blur(3px)" }}
+      transition={STORY_ENTER}
+    >
+      <aside className="hc-story-mini-rail">
+        <span>Templates</span>
+        {AD_EXAMPLES.slice(0, 3).map((example, index) => (
+          <div className={index === 0 ? "is-selected" : ""} key={example.id}>
+            <img src={withBasePath(example.image)} alt="" width="1080" height="1350" />
+          </div>
+        ))}
+      </aside>
+
+      <div className="hc-story-ad-workspace">
+        <StoryAd phase={phase} />
+      </div>
+
+      <div className="hc-story-edit-panel">
+        <span>Customise</span>
+        <h3>Make it yours</h3>
+        <label className={copyActive ? "is-active" : ""}>
+          <span>Post copy</span>
+          <motion.strong
+            key={phase >= 5 ? "new-post-copy" : "old-post-copy"}
+            initial={{ opacity: 0.35 }}
+            animate={{ opacity: 1 }}
+            transition={STORY_ENTER}
+          >
+            {phase >= 5
+              ? "Thinking of selling in Mt Lawley? See what buyers could pay..."
+              : "Thinking of selling? Find out what your home could be worth..."}
+            {copyActive ? <span className="hc-story-caret" /> : null}
+          </motion.strong>
+        </label>
+        <label className={creativeActive ? "is-active" : ""}>
+          <span>Text on creative</span>
+          <motion.strong
+            key={phase >= 6 ? "new-creative-copy" : "old-creative-copy"}
+            initial={{ opacity: 0.35 }}
+            animate={{ opacity: 1 }}
+            transition={STORY_ENTER}
+          >
+            {phase >= 6 ? "What could your home be worth?" : "Free property appraisal"}
+            {creativeActive ? <span className="hc-story-caret" /> : null}
+          </motion.strong>
+        </label>
+        <div className="hc-story-saved">
+          <CheckCircle2 aria-hidden="true" size={14} />
+          {creativeActive ? "Creative updated" : copyActive ? "Copy updated" : "Ready to edit"}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function ReviewScene({ phase }: { phase: number }) {
+  const valuesFilled = phase >= 8;
+  const pressing = phase === 9;
+  const approved = phase >= 10;
+
+  return (
+    <motion.div
+      key="review"
+      className="hc-story-scene hc-story-review"
+      initial={{ opacity: 0, x: 38 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0 }}
+      transition={STORY_ENTER}
+    >
+      <div className="hc-story-review-preview">
+        <span>Finished ad</span>
+        <StoryAd phase={phase} review />
+      </div>
+
+      <motion.div className="hc-story-review-panel" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ ...STORY_ENTER, delay: 0.14 }}>
+        <span className="hc-story-ready"><CheckCircle2 aria-hidden="true" size={14} /> Ready for approval</span>
+        <h3>Review campaign</h3>
+        <dl>
+          {[
+            ["Audience", "Mt Lawley +15 km"],
+            ["Budget", "$20 / day"],
+            ["Duration", "14 days"],
+          ].map(([label, value], index) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span
+                    key={valuesFilled ? value : `${label}-empty`}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ ...STORY_ENTER, delay: valuesFilled ? index * 0.12 : 0 }}
+                  >
+                    {valuesFilled ? value : "—"}
+                  </motion.span>
+                </AnimatePresence>
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <motion.strong
+          className={`hc-story-approve${approved ? " is-approved" : ""}`}
+          animate={{ scale: pressing ? 0.97 : 1 }}
+          transition={{ duration: 0.15, ease: "easeInOut" }}
+        >
+          {approved ? <Check aria-hidden="true" size={15} /> : <ShieldCheck aria-hidden="true" size={15} />}
+          {approved ? "Approved" : "Approve campaign"}
+          {pressing ? <StoryCursor pressed /> : null}
+        </motion.strong>
+        <small>Nothing spends until you approve.</small>
+      </motion.div>
+    </motion.div>
   );
 }
 
 function ProcessShowcase() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const hasStarted = useRef(false);
-  const [step, setStep] = useState(0);
+  const reduceMotion = Boolean(useReducedMotion());
+  const [phase, setPhase] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [inView, setInView] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const activeStep = STORY_PHASE_TO_STEP[phase];
 
   useEffect(() => {
-    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const syncMotion = () => {
-      setReduceMotion(motionQuery.matches);
-      if (motionQuery.matches) {
-        setStep(2);
-        setPlaying(false);
-      }
-    };
     const syncVisibility = () => setPageVisible(document.visibilityState === "visible");
     const observer = new IntersectionObserver(
       ([entry]) => {
         setInView(entry.isIntersecting);
-        if (entry.isIntersecting && !motionQuery.matches && !hasStarted.current) {
+        if (entry.isIntersecting && !reduceMotion && !hasStarted.current) {
           hasStarted.current = true;
-          setStep(0);
+          setPhase(0);
           setPlaying(true);
         }
       },
-      { threshold: 0.35 },
+      { threshold: 0.3 },
     );
 
-    syncMotion();
     syncVisibility();
     if (sectionRef.current) observer.observe(sectionRef.current);
-    motionQuery.addEventListener("change", syncMotion);
     document.addEventListener("visibilitychange", syncVisibility);
     return () => {
       observer.disconnect();
-      motionQuery.removeEventListener("change", syncMotion);
       document.removeEventListener("visibilitychange", syncVisibility);
     };
-  }, []);
+  }, [reduceMotion]);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      setPhase(STORY_STATUS.length - 1);
+      setPlaying(false);
+    }
+  }, [reduceMotion]);
 
   useEffect(() => {
     if (!playing || !inView || !pageVisible || reduceMotion) return;
-    if (step >= PROCESS_STEPS.length - 1) {
+    if (phase >= STORY_STATUS.length - 1) {
       setPlaying(false);
       return;
     }
 
-    const timer = window.setTimeout(() => setStep((current) => current + 1), step === 0 ? 2200 : 2600);
+    const timer = window.setTimeout(
+      () => setPhase((current) => Math.min(current + 1, STORY_STATUS.length - 1)),
+      STORY_PHASE_DELAYS[phase],
+    );
     return () => window.clearTimeout(timer);
-  }, [inView, pageVisible, playing, reduceMotion, step]);
+  }, [inView, pageVisible, phase, playing, reduceMotion]);
 
   function selectStep(nextStep: number) {
-    setStep(nextStep);
+    setPhase(STORY_STEP_PHASES[nextStep]);
     setPlaying(false);
   }
 
@@ -219,9 +433,11 @@ function ProcessShowcase() {
       setPlaying(false);
       return;
     }
-    if (step === PROCESS_STEPS.length - 1) setStep(0);
+    if (phase >= STORY_STATUS.length - 1) setPhase(0);
     setPlaying(!reduceMotion);
   }
+
+  const scene = phase <= 3 ? "browse" : phase <= 6 ? "edit" : "review";
 
   return (
     <div className="hc-process-layout" ref={sectionRef}>
@@ -234,7 +450,7 @@ function ProcessShowcase() {
             <button
               key={item.label}
               type="button"
-              aria-pressed={step === index}
+              aria-pressed={activeStep === index}
               onClick={() => selectStep(index)}
             >
               <span className="hc-process-step-mark" aria-hidden="true" />
@@ -249,56 +465,28 @@ function ProcessShowcase() {
         </div>
       </div>
 
-      <div className="hc-process-demo" data-step={step} aria-label="Animated example of creating an ad">
+      <div className="hc-process-demo" data-scene={scene} aria-label="Animated example of creating and approving an ad">
         <div className="hc-process-demo-topbar">
           <span><i aria-hidden="true" /> Blockwise Ad Studio</span>
+          <ol aria-hidden="true">
+            {PROCESS_STEPS.map((item, index) => <li className={activeStep === index ? "is-active" : ""} key={item.label}>{item.label}</li>)}
+          </ol>
           <button type="button" onClick={togglePlayback} hidden={reduceMotion}>
-            {playing ? <Pause aria-hidden="true" size={15} /> : step === PROCESS_STEPS.length - 1 ? <RotateCcw aria-hidden="true" size={15} /> : <Play aria-hidden="true" size={15} />}
-            {playing ? "Pause" : step === PROCESS_STEPS.length - 1 ? "Replay" : "Resume"}
+            {playing ? <Pause aria-hidden="true" size={15} /> : phase >= STORY_STATUS.length - 1 ? <RotateCcw aria-hidden="true" size={15} /> : <Play aria-hidden="true" size={15} />}
+            {playing ? "Pause" : phase >= STORY_STATUS.length - 1 ? "Replay" : "Resume"}
           </button>
         </div>
 
-        <div className="hc-process-demo-body" aria-hidden="true">
-          <aside className="hc-process-template-rail">
-            <strong>Templates</strong>
-            {AD_EXAMPLES.slice(0, 3).map((example, index) => (
-              <span key={example.id} className={index === 0 ? "is-selected" : ""}>
-                <img src={withBasePath(example.image)} alt="" width="1080" height="1350" />
-                {index === 0 ? <i><Check size={10} /></i> : null}
-              </span>
-            ))}
-          </aside>
-
-          <div className="hc-process-ad-stage">
-            <ProcessAdPreview step={step} />
+        <p className="hc-sr-only" aria-live="polite">{STORY_STATUS[phase]}</p>
+        <LayoutGroup id="blockwise-story">
+          <div className="hc-story-viewport" aria-hidden="true">
+            <AnimatePresence mode="sync" initial={false}>
+              {scene === "browse" ? <TemplateBrowser phase={phase} /> : null}
+              {scene === "edit" ? <EditorScene phase={phase} /> : null}
+              {scene === "review" ? <ReviewScene phase={phase} /> : null}
+            </AnimatePresence>
           </div>
-
-          <div className="hc-process-side">
-            <div className={`hc-process-panel${step === 0 ? " is-active" : ""}`}>
-              <span className="hc-process-panel-status"><Check size={13} /> Selected</span>
-              <h3>Free appraisal</h3>
-              <p>Ready to customise.</p>
-            </div>
-
-            <div className={`hc-process-panel hc-process-editor${step === 1 ? " is-active" : ""}`}>
-              <h3>Make it yours</h3>
-              <label><span>Photo</span><strong>Living room.jpg</strong></label>
-              <label><span>Agency</span><strong>North &amp; Co</strong></label>
-              <label><span>Brand</span><i><b /><b /><b /></i></label>
-            </div>
-
-            <div className={`hc-process-panel hc-process-review${step === 2 ? " is-active" : ""}`}>
-              <span className="hc-process-panel-status"><CheckCircle2 size={13} /> Ready for approval</span>
-              <h3>Review campaign</h3>
-              <dl>
-                <div><dt>Audience</dt><dd>Mt Lawley +15 km</dd></div>
-                <div><dt>Budget</dt><dd>$20 / day</dd></div>
-              </dl>
-              <strong className="hc-process-approve"><ShieldCheck size={14} /> Approve</strong>
-              <small>Nothing spends yet.</small>
-            </div>
-          </div>
-        </div>
+        </LayoutGroup>
         <p className="hc-process-demo-caption">Example only · Review before launch</p>
       </div>
     </div>
