@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, LogOut, MoreHorizontal } from "lucide-react";
+import { Download, LifeBuoy, LogOut, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
@@ -243,6 +243,13 @@ export function SelfServeShell({
           <div className="group-data-[collapsible=icon]:hidden">
             {trialStatus}
           </div>
+          <a
+            href="mailto:hello@blockwise.sale?subject=Blockwise%20support"
+            className="inline-flex min-h-11 items-center gap-2 rounded-(--r-card) px-2.5 text-sm font-semibold text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:justify-center"
+          >
+            <LifeBuoy aria-hidden size={18} />
+            <span className="group-data-[collapsible=icon]:hidden">Contact support</span>
+          </a>
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>
@@ -391,6 +398,14 @@ function SelfServeMobileNav({ account }: { account: Account }) {
           ) : null}
 
           <div className="mt-auto grid gap-2 px-4 pt-2">
+            <a
+              href="mailto:hello@blockwise.sale?subject=Blockwise%20support"
+              onClick={() => setMoreOpen(false)}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-(--r-card) border border-border bg-card px-4 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <LifeBuoy aria-hidden size={18} />
+              Contact support
+            </a>
             <button
               type="button"
               onClick={() => {
