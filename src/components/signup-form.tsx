@@ -92,6 +92,7 @@ export function SignupForm() {
       className="login-form signup-form"
       onSubmit={submit}
       noValidate
+      data-clarity-mask="true"
       aria-describedby={`${error ? "signup-error " : ""}signup-consent`}
     >
       <label htmlFor="signup-email">

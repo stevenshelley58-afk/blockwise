@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-const CONSENT_KEY = "bw-consent";
+export const CONSENT_KEY = "bw-consent";
 
 export type ConsentStatus = "granted" | "essential";
 
@@ -24,6 +24,16 @@ function applyConsent(status: ConsentStatus): void {
     }
   } catch {
     // best-effort
+  }
+  try {
+    window.gtag?.("consent", "update", {
+      ad_storage: status === "granted" ? "granted" : "denied",
+      ad_user_data: status === "granted" ? "granted" : "denied",
+      ad_personalization: status === "granted" ? "granted" : "denied",
+      analytics_storage: status === "granted" ? "granted" : "denied",
+    });
+  } catch {
+    // The optional Google tag may not have loaded.
   }
   window.dispatchEvent(new CustomEvent("blockwise:consent-changed", { detail: { status } }));
 }
