@@ -3,7 +3,7 @@
 ## Release candidate (7 September 2026, beta readiness)
 
 The coordinated candidate checkout is `/projects/blockwise-beta-release-20260907`.
-At the latest validation checkpoint its exact source revision is
+At the latest validation checkpoint the application code revision is
 `7563960ecbc7ac8eb83f679c310029a09a16da26`. The public app remains on
 `c02b11e452203a2d54bd278b913f410588ce6ff4`; no application deployment was
 performed by this validation task.

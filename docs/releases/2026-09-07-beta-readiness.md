@@ -5,7 +5,7 @@
 Validation is in progress. This record covers the coordinated candidate
 checkout `/projects/blockwise-beta-release-20260907`; it is not deployment
 authorisation. The public app remains on
-`c02b11e452203a2d54bd278b913f410588ce6ff4`. Candidate checkpoint:
+`c02b11e452203a2d54bd278b913f410588ce6ff4`. Candidate application checkpoint:
 `7563960ecbc7ac8eb83f679c310029a09a16da26`.
 
 ## Safety posture
