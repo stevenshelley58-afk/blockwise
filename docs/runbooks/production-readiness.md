@@ -1,6 +1,12 @@
 # Blockwise production readiness
 
-## Current release (6 September 2026, billing and trial)
+## Current release (7 September 2026, canonical template previews)
+
+The public app serves `447d05568b22bfb4ae138b70b083d74c12d67b6c`.
+See the [release record](../releases/2026-09-07-ad-template-canonical.md) for
+preview/save parity checks, generator compatibility, retained rollback and deployment evidence.
+
+## Historical release (6 September 2026, billing and trial)
 
 The public app serves `f35a041563d4c5e257e323a97f851ec8c447fb3b` from
 `blockwise-app:f35a041563d4c5e257e323a97f851ec8c447fb3b`. This release ships
