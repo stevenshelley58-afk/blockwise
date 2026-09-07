@@ -1,0 +1,16 @@
+DOWNSIZER BUYER FORM
+Full name
+Email address
+Mobile (optional; request only when phone purpose is explained and permitted)
+
+What would make a home easier for you to live in or maintain?
+[short answer]
+
+Optional, separate marketing consent (do not pre-tick)
+[ ] Yes, send me occasional matching property updates from [Agency]. I can unsubscribe at any time.
+
+AD PRIMARY TEXT
+See a current list of single-level, lower-maintenance homes in [Suburb]. The list shows price, location and features so you can compare your options. Request it here; [agency] will explain what happens next.
+
+HEADLINE
+Single-level homes in [Suburb]

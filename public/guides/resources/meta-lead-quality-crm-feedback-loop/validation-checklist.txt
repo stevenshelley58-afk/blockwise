@@ -1,0 +1,10 @@
+CRM feedback validation checklist
+
+[ ] Every lead is deduplicated and mapped to the correct ad account.
+[ ] Lead ID is captured where available; it is recommended, not the only possible identifier.
+[ ] Event names and timestamps come from the CRM record, not a guess.
+[ ] Qualification rules are written, repeatable and reviewed for bias.
+[ ] Consent, notice, access and retention rules are documented for the market.
+[ ] Only approved fields are sent; never passwords, tokens, free-text notes or secrets.
+[ ] Test events are visible in the selected dataset and errors are triaged.
+[ ] Reconcile CRM counts with Meta diagnostics before choosing an optimisation stage.
