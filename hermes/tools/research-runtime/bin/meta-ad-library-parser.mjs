@@ -100,7 +100,7 @@ function pageIdsIn(value, out = new Set(), parentKey = "") {
     return out;
   }
   for (const [key, child] of Object.entries(value)) {
-    if (/^(?:view_all_page_id|page_id|pageId|pageID)$/u.test(key)) {
+    if (/^(?:view_all_page_id|viewAllPageID|page_id|pageId|pageID)$/u.test(key)) {
       const pageId = numericPageId(child);
       if (pageId) out.add(pageId);
     } else if (key === "id" && /page/iu.test(parentKey)) {
@@ -119,7 +119,7 @@ function nearbyPageIds(source, start, end) {
     Math.min(source.length, end + 2048),
   );
   const pattern =
-    /\\?"(?:view_all_page_id|page_id|pageId|pageID)\\?"\s*:\s*\\?"(\d{5,})\\?"/giu;
+    /\\?"(?:view_all_page_id|viewAllPageID|page_id|pageId|pageID)\\?"\s*:\s*\\?"(\d{5,})\\?"/giu;
   for (const match of nearby.matchAll(pattern)) ids.add(match[1]);
   return ids;
 }
@@ -254,9 +254,19 @@ export function classifyMetaAdLibraryPayload(
   // Never merge edges/count/page_info from different connections: an HTML shell
   // can contain prefetches for unrelated pages. Select one correlated
   // connection only; no correlation is partial evidence, never success/zero.
-  const correlated = requested
+  let correlated = requested
     ? connections.filter(({ pageIds }) => pageIds.has(requested))
     : connections;
+  // Some Meta responses place the requested view_all_page_id in bootstrap
+  // state well before the sole result connection. Correlate that one
+  // connection only when the entire document references exactly one Page ID
+  // and it is the requested ID. Multiple connections or IDs still fail closed.
+  if (requested && correlated.length === 0 && connections.length === 1) {
+    const documentPageIds = nearbyPageIds(text, 0, text.length);
+    if (documentPageIds.size === 1 && documentPageIds.has(requested)) {
+      correlated = connections;
+    }
+  }
   if (correlated.length === 0) {
     warnings.push("requested_page_connection_not_found");
     return {

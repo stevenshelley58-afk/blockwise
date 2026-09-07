@@ -84,3 +84,24 @@ test("requested numeric page id selects only its own connection and fails closed
   assert.deepEqual(mismatch.adIds, []);
   assert.ok(mismatch.warnings.includes("requested_page_connection_not_found"));
 });
+
+
+test("sole result connection can use a unique document-level requested Page ID", () => {
+  const requested = "100063559691594";
+  const connection = JSON.stringify({
+    search_results_connection: {
+      count: 1,
+      edges: [{ node: { ad_archive_id: `${requested}_501` } }],
+      page_info: { has_next_page: false, end_cursor: null },
+    },
+  });
+  const html = `{"viewAllPageID":"${requested}"}${"x".repeat(3000)}${connection}`;
+  const result = classifyMetaAdLibraryPayload(html, { requestedPageId: requested });
+  assert.equal(result.outcome, "success");
+  assert.deepEqual(result.adIds, [`${requested}_501`]);
+  assert.equal(result.pageInfo.hasNextPage, false);
+  assert.equal(
+    classifyMetaAdLibraryPayload(html, { requestedPageId: "999999999999999" }).outcome,
+    "partial",
+  );
+});
