@@ -37,8 +37,8 @@ export function GuideCopyBlock({ title, text }: GuideCopyBlockProps) {
     <section className="bw-copy-block" aria-labelledby={titleId}>
       <div className="bw-copy-block-head">
         <h3 id={titleId}>{title}</h3>
-        <button type="button" className="bw-copy-block-button" onClick={copyText}>
-          Copy
+        <button type="button" className="bw-copy-block-button" onClick={copyText} aria-label={`Copy ${title}`}>
+          Copy text
         </button>
       </div>
       <p className="bw-copy-block-text" tabIndex={0}>
