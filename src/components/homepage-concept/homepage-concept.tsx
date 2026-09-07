@@ -493,6 +493,56 @@ function ProcessShowcase() {
   );
 }
 
+function HeroAdStack() {
+  const visualRef = useRef<HTMLDivElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onMotionChange = () => setReducedMotion(motionQuery.matches);
+    if (!("IntersectionObserver" in window)) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !motionQuery.matches) setPlaying(true);
+    }, { threshold: 0.28 });
+
+    setReducedMotion(motionQuery.matches);
+    if (visualRef.current) observer.observe(visualRef.current);
+    motionQuery.addEventListener("change", onMotionChange);
+    return () => {
+      observer.disconnect();
+      motionQuery.removeEventListener("change", onMotionChange);
+    };
+  }, []);
+
+  function replay() {
+    if (reducedMotion) return;
+    setPlaying(false);
+    window.requestAnimationFrame(() => setPlaying(true));
+  }
+
+  const example = AD_EXAMPLES[0];
+  return (
+    <div className={`hc-hero-visual${playing ? " is-playing" : ""}`} ref={visualRef}>
+      <div className="hc-hero-visual-head">
+        <span>Your next ad</span>
+        <button type="button" onClick={replay} disabled={reducedMotion} aria-label="Replay ad preview animation">Replay preview</button>
+      </div>
+      <div className="hc-hero-stack">
+        <div className="hc-hero-story">
+          <span className="hc-hero-format">Story</span>
+          <AdPreview image={example.image} postCopy={example.postCopy} linkTitle={example.linkTitle} compact />
+        </div>
+        <div className="hc-hero-feed">
+          <span className="hc-hero-format">Feed</span>
+          <AdPreview image={example.image} postCopy={example.postCopy} linkTitle={example.linkTitle} compact />
+        </div>
+      </div>
+      <p className="hc-hero-status"><i aria-hidden="true" /> Ready for your review</p>
+    </div>
+  );
+}
+
 export function HomepageConcept() {
   const [selectedExample, setSelectedExample] = useState(0);
   const activeExample = AD_EXAMPLES[selectedExample];
@@ -533,22 +583,9 @@ export function HomepageConcept() {
                 <span><Check aria-hidden="true" size={16} /> No card required.</span>
               </div>
             </div>
-            <div className="hc-hero-product">
-              <div className="hc-ready-bar"><span><i /> Ready to review</span><strong>Free appraisal ad</strong></div>
-              <AdPreview
-                image={AD_EXAMPLES[0].image}
-                postCopy={AD_EXAMPLES[0].postCopy}
-                linkTitle={AD_EXAMPLES[0].linkTitle}
-                compact
-              />
-              <div className="hc-approval-bar">
-                <span><ShieldCheck aria-hidden="true" size={18} /> Nothing spends until you approve.</span>
-                <span className="hc-approval-button">Approve</span>
-              </div>
-            </div>
+            <HeroAdStack />
           </div>
         </section>
-
         <section className="hc-process" id="how-it-works">
           <div className="hc-shell">
             <ProcessShowcase />
