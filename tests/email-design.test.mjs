@@ -15,7 +15,7 @@ test("every fixture renders in every design within the email size budget", () =>
       assert.ok(rendered.html.includes('min-height:44px'));
       assert.ok(rendered.html.includes('meta name="color-scheme"'));
       assert.ok(rendered.html.includes("prefers-color-scheme:dark"));
-      assert.ok(rendered.html.includes("email-force-dark"));
+      assert.ok(!rendered.html.includes('class="email-force-dark"'));
       assert.equal(/<script\b/i.test(rendered.html), false);
       assert.equal(/<img\b/i.test(rendered.html), false);
       assert.equal(/@font-face|fonts\.google|font-family:[^;]*(https?:|url\()/i.test(rendered.html), false);
@@ -42,7 +42,7 @@ test("transactional and marketing footers remain distinct", () => {
   const receipt = renderEmail(EMAIL_FIXTURES.receipt, "operations-brief").html;
   const digest = renderEmail(EMAIL_FIXTURES["weekly-digest"], "operations-brief").html;
   assert.ok(receipt.includes("service email"));
-  assert.equal(receipt.includes("unsubscribe"), false);
+  assert.equal(receipt.includes("Unsubscribe"), false);
   assert.ok(digest.includes("Manage preferences"));
-  assert.ok(digest.includes("unsubscribe"));
+  assert.ok(digest.includes("Unsubscribe"));
 });

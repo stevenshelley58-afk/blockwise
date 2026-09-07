@@ -14,7 +14,7 @@ export async function proxy(request: NextRequest) {
     if (request.method !== "GET" && request.method !== "HEAD") {
       return new NextResponse("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
     }
-    if (pathname === "/email-design" || pathname.startsWith("/_next/")) {
+    if (pathname === "/email-design" || pathname === "/email-library" || pathname.startsWith("/_next/")) {
       return NextResponse.next();
     }
     return new NextResponse("Not found", { status: 404 });

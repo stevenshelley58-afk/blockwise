@@ -1,0 +1,1305 @@
+{
+  "version": "1.0.0",
+  "approvedDesign": "quiet-card",
+  "templates": [
+    {
+      "id": "sign-in",
+      "category": "Account & security",
+      "label": "Sign-in link",
+      "delivery": "transactional",
+      "trigger": "The recipient requests a sign-in link",
+      "message": {
+        "kind": "sign-in",
+        "eyebrow": "SIGN-IN LINK",
+        "subject": "Your secure Blockwise sign-in link",
+        "preheader": "Use the secure link below, or enter your one-time code. Both expire in {{expiry_minutes}} minutes.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Sign in to Blockwise",
+        "intro": "Use the secure link below, or enter your one-time code. Both expire in {{expiry_minutes}} minutes.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Sign in to Blockwise",
+          "href": "{{sign_in_url}}"
+        },
+        "note": "If you did not request this email, ignore it. Never share this link or code.",
+        "oneTimeCode": "{{one_time_code}}"
+      }
+    },
+    {
+      "id": "verify-email",
+      "category": "Account & security",
+      "label": "Verify email",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "verify-email",
+        "eyebrow": "VERIFY EMAIL",
+        "subject": "Confirm your email for Blockwise",
+        "preheader": "Confirm that this is the right email address for your account. This link expires in {{expiry_minutes}} minutes.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Confirm your email",
+        "intro": "Confirm that this is the right email address for your account. This link expires in {{expiry_minutes}} minutes.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Confirm email",
+          "href": "{{verification_url}}"
+        },
+        "note": "If you did not create an account, ignore this email."
+      }
+    },
+    {
+      "id": "password-reset",
+      "category": "Account & security",
+      "label": "Reset password",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "password-reset",
+        "eyebrow": "RESET PASSWORD",
+        "subject": "Reset your Blockwise password",
+        "preheader": "We received a password-reset request. Use this link within {{expiry_minutes}} minutes to choose a new password.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Choose a new password",
+        "intro": "We received a password-reset request. Use this link within {{expiry_minutes}} minutes to choose a new password.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Reset password",
+          "href": "{{reset_url}}"
+        },
+        "note": "If this was not you, ignore this email. Your password has not been changed."
+      }
+    },
+    {
+      "id": "password-changed",
+      "category": "Account & security",
+      "label": "Password changed",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "password-changed",
+        "eyebrow": "PASSWORD CHANGED",
+        "subject": "Your Blockwise password was changed",
+        "preheader": "Your password was changed on {{event_time}}. If you made this change, no action is needed.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Password updated",
+        "intro": "Your password was changed on {{event_time}}. If you made this change, no action is needed.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Review account security",
+          "href": "{{security_url}}"
+        },
+        "note": "If this was not you, review your account security immediately."
+      }
+    },
+    {
+      "id": "email-change",
+      "category": "Account & security",
+      "label": "Confirm email change",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "email-change",
+        "eyebrow": "CONFIRM EMAIL CHANGE",
+        "subject": "Confirm your new Blockwise email address",
+        "preheader": "You requested an email-address change. Confirm it using the link below.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Confirm this email address",
+        "intro": "You requested an email-address change. Confirm it using the link below.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Confirm email change",
+          "href": "{{verification_url}}"
+        },
+        "note": "If you did not request this change, do not confirm it. Contact support instead."
+      }
+    },
+    {
+      "id": "new-sign-in",
+      "category": "Account & security",
+      "label": "New sign-in",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "new-sign-in",
+        "eyebrow": "NEW SIGN-IN",
+        "subject": "New sign-in to your Blockwise account",
+        "preheader": "A sign-in was recorded on {{event_time}}. If this was you, no action is needed.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "New sign-in detected",
+        "intro": "A sign-in was recorded on {{event_time}}. If this was you, no action is needed.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Review account security",
+          "href": "{{security_url}}"
+        },
+        "details": [
+          {
+            "label": "Device",
+            "value": "{{device}}"
+          },
+          {
+            "label": "Approximate location",
+            "value": "{{location}}"
+          }
+        ],
+        "note": "If this was not you, review your security now. Location information may be approximate."
+      }
+    },
+    {
+      "id": "team-invitation",
+      "category": "Account & security",
+      "label": "Team invitation",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "team-invitation",
+        "eyebrow": "TEAM INVITATION",
+        "subject": "{{inviter_name}} invited you to {{workspace_name}}",
+        "preheader": "{{inviter_name}} invited you to {{workspace_name}}. The invitation expires on {{expiry_date}}.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Join your team in Blockwise",
+        "intro": "{{inviter_name}} invited you to {{workspace_name}}. The invitation expires on {{expiry_date}}.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Accept invitation",
+          "href": "{{invitation_url}}"
+        },
+        "details": [
+          {
+            "label": "Workspace",
+            "value": "{{workspace_name}}"
+          },
+          {
+            "label": "Role",
+            "value": "{{role}}"
+          }
+        ],
+        "note": "Only accept invitations from a person or organisation you recognise."
+      }
+    },
+    {
+      "id": "data-export-ready",
+      "category": "Account & security",
+      "label": "Data export ready",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "data-export-ready",
+        "eyebrow": "DATA EXPORT READY",
+        "subject": "Your Blockwise data export is ready",
+        "preheader": "The export you requested is ready. The download link expires on {{expiry_date}}.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Your export is ready",
+        "intro": "The export you requested is ready. The download link expires on {{expiry_date}}.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Download export",
+          "href": "{{export_url}}"
+        },
+        "note": "Your export may contain personal information. Keep the file and link private."
+      }
+    },
+    {
+      "id": "welcome",
+      "category": "Onboarding",
+      "label": "Welcome",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "welcome",
+        "eyebrow": "WELCOME",
+        "subject": "Welcome to Blockwise, {{first_name}}",
+        "preheader": "Welcome to {{workspace_name}}. Prepare your first ad, then review it before anything goes live.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Your workspace is ready",
+        "intro": "Welcome to {{workspace_name}}. Prepare your first ad, then review it before anything goes live.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Open your workspace",
+          "href": "{{workspace_url}}"
+        },
+        "sections": [
+          {
+            "heading": "A clear place to start",
+            "bullets": [
+              "Choose the outcome you want from your ad.",
+              "Add your brand details and creative.",
+              "Review the copy, budget and destination before approval."
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "setup-reminder",
+      "category": "Onboarding",
+      "label": "Setup reminder",
+      "delivery": "marketing",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "setup-reminder",
+        "eyebrow": "SETUP REMINDER",
+        "subject": "Your next step in Blockwise",
+        "preheader": "Your workspace is waiting. {{next_step}} Take the next step whenever you are ready.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Pick up where you left off",
+        "intro": "Your workspace is waiting. {{next_step}} Take the next step whenever you are ready.",
+        "transactional": false,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Continue setup",
+          "href": "{{workspace_url}}"
+        },
+        "note": "Opening this email does not publish an ad or authorise a charge."
+      }
+    },
+    {
+      "id": "first-ad-ready",
+      "category": "Onboarding",
+      "label": "First ad ready",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "first-ad-ready",
+        "eyebrow": "FIRST AD READY",
+        "subject": "Your first ad is ready to review",
+        "preheader": "{{ad_name}} is ready. Check the details and make any changes before approving the next step.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Your first ad is ready",
+        "intro": "{{ad_name}} is ready. Check the details and make any changes before approving the next step.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Review your ad",
+          "href": "{{review_url}}"
+        },
+        "note": "Preparing an ad is not publishing it. Your approval controls still apply."
+      }
+    },
+    {
+      "id": "trial-ending",
+      "category": "Onboarding",
+      "label": "Trial ending",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "trial-ending",
+        "eyebrow": "TRIAL ENDING",
+        "subject": "Your Blockwise trial ends on {{end_date}}",
+        "preheader": "Your trial ends on {{end_date}}. Review your work and decide whether to continue with a paid plan.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Your trial is ending",
+        "intro": "Your trial ends on {{end_date}}. Review your work and decide whether to continue with a paid plan.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Review your options",
+          "href": "{{billing_url}}"
+        },
+        "note": "This is a reminder, not a payment receipt. Subscription and ad spend approvals remain separate."
+      }
+    },
+    {
+      "id": "trial-ended",
+      "category": "Onboarding",
+      "label": "Trial ended",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "trial-ended",
+        "eyebrow": "TRIAL ENDED",
+        "subject": "Your Blockwise trial has ended",
+        "preheader": "Your trial has ended. {{access_summary}} Review available plans whenever you are ready.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Your trial has ended",
+        "intro": "Your trial has ended. {{access_summary}} Review available plans whenever you are ready.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Review plans",
+          "href": "{{billing_url}}"
+        },
+        "note": "This email does not start a subscription or authorise ad spend."
+      }
+    },
+    {
+      "id": "ad-ready-review",
+      "category": "Ads & campaigns",
+      "label": "Ad ready for review",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "ad-ready-review",
+        "eyebrow": "AD READY FOR REVIEW",
+        "subject": "Ready to review: {{ad_name}}",
+        "preheader": "The latest {{ad_name}} is ready. Check the creative, copy, form and destination before approving it.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Your ad is ready to review",
+        "intro": "The latest {{ad_name}} is ready. Check the creative, copy, form and destination before approving it.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Review ad",
+          "href": "{{review_url}}"
+        },
+        "details": [
+          {
+            "label": "Campaign",
+            "value": "{{campaign_name}}"
+          },
+          {
+            "label": "Prepared",
+            "value": "{{event_time}}"
+          }
+        ],
+        "note": "Nothing in this email bypasses publishing approval."
+      }
+    },
+    {
+      "id": "changes-requested",
+      "category": "Ads & campaigns",
+      "label": "Changes requested",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "changes-requested",
+        "eyebrow": "CHANGES REQUESTED",
+        "subject": "Changes requested for {{ad_name}}",
+        "preheader": "{{reviewer_name}} requested changes to {{ad_name}}. Review the notes before submitting it again.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "A few changes are needed",
+        "intro": "{{reviewer_name}} requested changes to {{ad_name}}. Review the notes before submitting it again.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Open review notes",
+          "href": "{{review_url}}"
+        },
+        "sections": [
+          {
+            "heading": "Review notes",
+            "body": "{{review_notes}}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "campaign-live",
+      "category": "Ads & campaigns",
+      "label": "Campaign live",
+      "delivery": "transactional",
+      "trigger": "Verified provider confirmation, never a queued publish",
+      "message": {
+        "kind": "campaign-live",
+        "eyebrow": "CAMPAIGN LIVE",
+        "subject": "{{campaign_name}} is live",
+        "preheader": "The platform confirmed that {{campaign_name}} is live. Review its current status and activity in Blockwise.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Your campaign is live",
+        "intro": "The platform confirmed that {{campaign_name}} is live. Review its current status and activity in Blockwise.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "View campaign",
+          "href": "{{campaign_url}}"
+        },
+        "details": [
+          {
+            "label": "Started",
+            "value": "{{event_time}}"
+          },
+          {
+            "label": "Approved budget",
+            "value": "{{budget_summary}}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "campaign-paused",
+      "category": "Ads & campaigns",
+      "label": "Campaign paused",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "campaign-paused",
+        "eyebrow": "CAMPAIGN PAUSED",
+        "subject": "{{campaign_name}} has been paused",
+        "preheader": "{{campaign_name}} is paused. Review the reason and current platform status before deciding what to do next.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Campaign paused",
+        "intro": "{{campaign_name}} is paused. Review the reason and current platform status before deciding what to do next.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Review campaign",
+          "href": "{{campaign_url}}"
+        },
+        "details": [
+          {
+            "label": "Reason",
+            "value": "{{pause_reason}}"
+          },
+          {
+            "label": "Recorded",
+            "value": "{{event_time}}"
+          }
+        ],
+        "note": "Reporting and final charges may update after a campaign is paused."
+      }
+    },
+    {
+      "id": "campaign-completed",
+      "category": "Ads & campaigns",
+      "label": "Campaign complete",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "campaign-completed",
+        "eyebrow": "CAMPAIGN COMPLETE",
+        "subject": "{{campaign_name}} has finished",
+        "preheader": "The scheduled run has ended. Review the results and follow up with outstanding enquiries.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Your campaign has finished",
+        "intro": "The scheduled run has ended. Review the results and follow up with outstanding enquiries.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Review results",
+          "href": "{{report_url}}"
+        },
+        "details": [
+          {
+            "label": "Campaign",
+            "value": "{{campaign_name}}"
+          },
+          {
+            "label": "Reporting period",
+            "value": "{{reporting_period}}"
+          },
+          {
+            "label": "New enquiries",
+            "value": "{{lead_count}}"
+          }
+        ],
+        "note": "Results may update as the platform finalises reporting."
+      }
+    },
+    {
+      "id": "publishing-failed",
+      "category": "Ads & campaigns",
+      "label": "Publishing failed",
+      "delivery": "transactional",
+      "trigger": "Verified failed or partial publishing outcome",
+      "message": {
+        "kind": "publishing-failed",
+        "eyebrow": "PUBLISHING FAILED",
+        "subject": "Action needed: {{campaign_name}} was not published",
+        "preheader": "The latest attempt did not complete. {{failure_summary}} Review the issue before trying again.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "We could not publish this campaign",
+        "intro": "The latest attempt did not complete. {{failure_summary}} Review the issue before trying again.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Review publishing issue",
+          "href": "{{campaign_url}}"
+        },
+        "note": "Check the platform for previously live or partially created items. Do not assume everything is inactive."
+      }
+    },
+    {
+      "id": "connection-attention",
+      "category": "Ads & campaigns",
+      "label": "Connection needs attention",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "connection-attention",
+        "eyebrow": "CONNECTION NEEDS ATTENTION",
+        "subject": "Reconnect {{connection_name}} in Blockwise",
+        "preheader": "{{connection_name}} needs attention. {{connection_summary}}",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Your connection needs attention",
+        "intro": "{{connection_name}} needs attention. {{connection_summary}}",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Review connection",
+          "href": "{{connections_url}}"
+        },
+        "note": "Reconnecting does not approve publishing or spending."
+      }
+    },
+    {
+      "id": "budget-alert",
+      "category": "Ads & campaigns",
+      "label": "Budget alert",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "budget-alert",
+        "eyebrow": "BUDGET ALERT",
+        "subject": "Budget alert for {{campaign_name}}",
+        "preheader": "Your configured alert threshold has been reached. Check the latest spend before making changes.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Review your campaign budget",
+        "intro": "Your configured alert threshold has been reached. Check the latest spend before making changes.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Review spend",
+          "href": "{{campaign_url}}"
+        },
+        "details": [
+          {
+            "label": "Campaign",
+            "value": "{{campaign_name}}"
+          },
+          {
+            "label": "Reported spend",
+            "value": "{{spend}}"
+          },
+          {
+            "label": "Threshold",
+            "value": "{{threshold}}"
+          }
+        ],
+        "note": "This is an alert, not a budget increase. Reporting may lag platform activity."
+      }
+    },
+    {
+      "id": "new-lead",
+      "category": "Leads & reporting",
+      "label": "New lead",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "new-lead",
+        "eyebrow": "NEW LEAD",
+        "subject": "New enquiry: {{lead_name}}",
+        "preheader": "{{lead_name}} responded to {{campaign_name}}. Open the record to review the enquiry and contact details.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "A new enquiry is waiting",
+        "intro": "{{lead_name}} responded to {{campaign_name}}. Open the record to review the enquiry and contact details.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Review lead",
+          "href": "{{lead_url}}"
+        },
+        "details": [
+          {
+            "label": "Campaign",
+            "value": "{{campaign_name}}"
+          },
+          {
+            "label": "Received",
+            "value": "{{event_time}}"
+          }
+        ],
+        "note": "Contact details stay in the lead record, not in this notification."
+      }
+    },
+    {
+      "id": "lead-assigned",
+      "category": "Leads & reporting",
+      "label": "Lead assigned",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "lead-assigned",
+        "eyebrow": "LEAD ASSIGNED",
+        "subject": "A lead has been assigned to you",
+        "preheader": "{{lead_name}} was assigned to you in {{workspace_name}}. Check the notes and confirm the next action.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "A new lead is yours to follow up",
+        "intro": "{{lead_name}} was assigned to you in {{workspace_name}}. Check the notes and confirm the next action.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Open assigned lead",
+          "href": "{{lead_url}}"
+        },
+        "details": [
+          {
+            "label": "Assigned by",
+            "value": "{{assigner_name}}"
+          },
+          {
+            "label": "Campaign",
+            "value": "{{campaign_name}}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "follow-up-reminder",
+      "category": "Leads & reporting",
+      "label": "Follow-up reminder",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "follow-up-reminder",
+        "eyebrow": "FOLLOW-UP REMINDER",
+        "subject": "Follow up with {{lead_name}}",
+        "preheader": "Your reminder for {{lead_name}} is due on {{due_time}}. Check the latest activity before reaching out.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "A follow-up is due",
+        "intro": "Your reminder for {{lead_name}} is due on {{due_time}}. Check the latest activity before reaching out.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Review lead activity",
+          "href": "{{lead_url}}"
+        },
+        "note": "This is a team reminder. It has not sent a message to the lead."
+      }
+    },
+    {
+      "id": "daily-digest",
+      "category": "Leads & reporting",
+      "label": "Daily lead digest",
+      "delivery": "optional-service",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "daily-digest",
+        "eyebrow": "DAILY LEAD DIGEST",
+        "subject": "Your Blockwise day: {{lead_count}} new enquiries",
+        "preheader": "Here is the summary for {{workspace_name}} for {{reporting_period}}.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Your day, at a glance",
+        "intro": "Here is the summary for {{workspace_name}} for {{reporting_period}}.",
+        "transactional": false,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Review activity",
+          "href": "{{report_url}}"
+        },
+        "details": [
+          {
+            "label": "New enquiries",
+            "value": "{{lead_count}}"
+          },
+          {
+            "label": "Follow-ups due",
+            "value": "{{follow_up_count}}"
+          },
+          {
+            "label": "Items needing review",
+            "value": "{{review_count}}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "weekly-performance",
+      "category": "Leads & reporting",
+      "label": "Weekly performance",
+      "delivery": "optional-service",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "weekly-performance",
+        "eyebrow": "WEEKLY PERFORMANCE",
+        "subject": "Your Blockwise week in review",
+        "preheader": "Here is the summary for {{workspace_name}} for {{reporting_period}}. Start with the items needing attention.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Your week, in brief",
+        "intro": "Here is the summary for {{workspace_name}} for {{reporting_period}}. Start with the items needing attention.",
+        "transactional": false,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Open the full report",
+          "href": "{{report_url}}"
+        },
+        "details": [
+          {
+            "label": "New enquiries",
+            "value": "{{lead_count}}"
+          },
+          {
+            "label": "Reported spend",
+            "value": "{{spend}}"
+          },
+          {
+            "label": "Items needing review",
+            "value": "{{review_count}}"
+          }
+        ],
+        "sections": [
+          {
+            "heading": "What needs attention",
+            "body": "{{performance_note}}"
+          }
+        ],
+        "note": "This is a reporting snapshot, not a final billing record."
+      }
+    },
+    {
+      "id": "payment-receipt",
+      "category": "Billing",
+      "label": "Payment receipt",
+      "delivery": "transactional",
+      "trigger": "Confirmed successful payment, never pending authorisation",
+      "message": {
+        "kind": "payment-receipt",
+        "eyebrow": "PAYMENT RECEIPT",
+        "subject": "Your Blockwise receipt {{receipt_number}}",
+        "preheader": "Your payment for {{plan_name}} is confirmed. Keep this email for your records.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Payment received",
+        "intro": "Your payment for {{plan_name}} is confirmed. Keep this email for your records.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "View receipt",
+          "href": "{{receipt_url}}"
+        },
+        "details": [
+          {
+            "label": "Amount paid",
+            "value": "{{amount}}"
+          },
+          {
+            "label": "Receipt",
+            "value": "{{receipt_number}}"
+          },
+          {
+            "label": "Payment date",
+            "value": "{{payment_date}}"
+          },
+          {
+            "label": "Billing period",
+            "value": "{{billing_period}}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "payment-failed",
+      "category": "Billing",
+      "label": "Payment failed",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "payment-failed",
+        "eyebrow": "PAYMENT FAILED",
+        "subject": "Action needed: your Blockwise payment failed",
+        "preheader": "We could not collect the payment for {{plan_name}}. {{payment_next_step}}",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Your payment did not go through",
+        "intro": "We could not collect the payment for {{plan_name}}. {{payment_next_step}}",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Review billing",
+          "href": "{{billing_url}}"
+        },
+        "details": [
+          {
+            "label": "Amount due",
+            "value": "{{amount}}"
+          },
+          {
+            "label": "Reference",
+            "value": "{{invoice_number}}"
+          }
+        ],
+        "note": "Do not email card details. Update payment details only in the secure billing area."
+      }
+    },
+    {
+      "id": "subscription-started",
+      "category": "Billing",
+      "label": "Subscription started",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "subscription-started",
+        "eyebrow": "SUBSCRIPTION STARTED",
+        "subject": "Your {{plan_name}} subscription is active",
+        "preheader": "Your subscription to {{plan_name}} is active. Review its terms and manage it from your account.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Your subscription is active",
+        "intro": "Your subscription to {{plan_name}} is active. Review its terms and manage it from your account.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Manage subscription",
+          "href": "{{billing_url}}"
+        },
+        "details": [
+          {
+            "label": "Price",
+            "value": "{{price_summary}}"
+          },
+          {
+            "label": "Current period ends",
+            "value": "{{end_date}}"
+          }
+        ],
+        "note": "Meta advertising spend is separate from your Blockwise subscription."
+      }
+    },
+    {
+      "id": "renewal-reminder",
+      "category": "Billing",
+      "label": "Renewal reminder",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "renewal-reminder",
+        "eyebrow": "RENEWAL REMINDER",
+        "subject": "Your Blockwise subscription renews on {{renewal_date}}",
+        "preheader": "{{plan_name}} is scheduled to renew on {{renewal_date}}. Review the terms or manage your subscription before then.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Your renewal is coming up",
+        "intro": "{{plan_name}} is scheduled to renew on {{renewal_date}}. Review the terms or manage your subscription before then.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Manage subscription",
+          "href": "{{billing_url}}"
+        },
+        "details": [
+          {
+            "label": "Scheduled amount",
+            "value": "{{amount}}"
+          },
+          {
+            "label": "Renewal date",
+            "value": "{{renewal_date}}"
+          }
+        ],
+        "note": "This is a reminder, not confirmation that payment has been collected."
+      }
+    },
+    {
+      "id": "subscription-cancelled",
+      "category": "Billing",
+      "label": "Cancellation confirmed",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "subscription-cancelled",
+        "eyebrow": "CANCELLATION CONFIRMED",
+        "subject": "Your Blockwise cancellation is confirmed",
+        "preheader": "Your subscription has been cancelled. {{cancellation_summary}}",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Cancellation confirmed",
+        "intro": "Your subscription has been cancelled. {{cancellation_summary}}",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "View subscription details",
+          "href": "{{billing_url}}"
+        },
+        "details": [
+          {
+            "label": "Access until",
+            "value": "{{end_date}}"
+          }
+        ],
+        "note": "A subscription change does not itself pause live Meta campaigns. Review those separately."
+      }
+    },
+    {
+      "id": "refund-confirmed",
+      "category": "Billing",
+      "label": "Refund confirmed",
+      "delivery": "transactional",
+      "trigger": "Confirmed refund outcome from the payment provider",
+      "message": {
+        "kind": "refund-confirmed",
+        "eyebrow": "REFUND CONFIRMED",
+        "subject": "Your Blockwise refund {{reference}}",
+        "preheader": "A refund of {{amount}} has been processed. {{refund_timing}}",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Your refund has been processed",
+        "intro": "A refund of {{amount}} has been processed. {{refund_timing}}",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "View billing record",
+          "href": "{{billing_url}}"
+        },
+        "details": [
+          {
+            "label": "Amount",
+            "value": "{{amount}}"
+          },
+          {
+            "label": "Reference",
+            "value": "{{reference}}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "credits-low",
+      "category": "Billing",
+      "label": "Credit allowance low",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "credits-low",
+        "eyebrow": "CREDIT ALLOWANCE LOW",
+        "subject": "Your Blockwise credits are running low",
+        "preheader": "{{credits_remaining}} credits remain this period for {{workspace_name}}. Review usage before preparing more work.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Your credit allowance is running low",
+        "intro": "{{credits_remaining}} credits remain this period for {{workspace_name}}. Review usage before preparing more work.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Review credit usage",
+          "href": "{{billing_url}}"
+        },
+        "details": [
+          {
+            "label": "Credits remaining",
+            "value": "{{credits_remaining}}"
+          },
+          {
+            "label": "Period ends",
+            "value": "{{end_date}}"
+          }
+        ],
+        "note": "This notification does not purchase credits or change your plan."
+      }
+    },
+    {
+      "id": "support-received",
+      "category": "Support & service",
+      "label": "Support request received",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "support-received",
+        "eyebrow": "SUPPORT REQUEST RECEIVED",
+        "subject": "We received your request {{ticket_number}}",
+        "preheader": "Your request is recorded. {{response_expectation}} Track the conversation using the link below.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "We have your message",
+        "intro": "Your request is recorded. {{response_expectation}} Track the conversation using the link below.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "View support request",
+          "href": "{{support_thread_url}}"
+        },
+        "details": [
+          {
+            "label": "Reference",
+            "value": "{{ticket_number}}"
+          },
+          {
+            "label": "Subject",
+            "value": "{{request_subject}}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "support-reply",
+      "category": "Support & service",
+      "label": "Support reply",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "support-reply",
+        "eyebrow": "SUPPORT REPLY",
+        "subject": "An update on request {{ticket_number}}",
+        "preheader": "There is an update on your support request. Read the response below or open the conversation.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "An update from support",
+        "intro": "There is an update on your support request. Read the response below or open the conversation.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Open conversation",
+          "href": "{{support_thread_url}}"
+        },
+        "sections": [
+          {
+            "heading": "Our response",
+            "body": "{{support_response}}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "maintenance-notice",
+      "category": "Support & service",
+      "label": "Maintenance notice",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "maintenance-notice",
+        "eyebrow": "MAINTENANCE NOTICE",
+        "subject": "Scheduled maintenance: {{maintenance_window}}",
+        "preheader": "Maintenance is planned for {{maintenance_window}}. {{service_impact}}",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Scheduled maintenance",
+        "intro": "Maintenance is planned for {{maintenance_window}}. {{service_impact}}",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "View service updates",
+          "href": "{{status_url}}"
+        },
+        "details": [
+          {
+            "label": "Window",
+            "value": "{{maintenance_window}}"
+          },
+          {
+            "label": "Affected service",
+            "value": "{{affected_service}}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "service-incident",
+      "category": "Support & service",
+      "label": "Service incident",
+      "delivery": "transactional",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "service-incident",
+        "eyebrow": "SERVICE INCIDENT",
+        "subject": "Service update: {{affected_service}}",
+        "preheader": "{{incident_summary}} We will share confirmed updates as information becomes available.",
+        "greeting": "Hi {{first_name}},",
+        "heading": "A service issue is being investigated",
+        "intro": "{{incident_summary}} We will share confirmed updates as information becomes available.",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "View current status",
+          "href": "{{status_url}}"
+        },
+        "details": [
+          {
+            "label": "Affected service",
+            "value": "{{affected_service}}"
+          },
+          {
+            "label": "Latest update",
+            "value": "{{event_time}}"
+          }
+        ],
+        "note": "The status page has the latest confirmed information."
+      }
+    },
+    {
+      "id": "incident-resolved",
+      "category": "Support & service",
+      "label": "Incident resolved",
+      "delivery": "transactional",
+      "trigger": "Verified recovery, not a tentative fix",
+      "message": {
+        "kind": "incident-resolved",
+        "eyebrow": "INCIDENT RESOLVED",
+        "subject": "Resolved: {{affected_service}}",
+        "preheader": "The issue affecting {{affected_service}} is resolved. {{resolution_summary}}",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Service has been restored",
+        "intro": "The issue affecting {{affected_service}} is resolved. {{resolution_summary}}",
+        "transactional": true,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Read the incident update",
+          "href": "{{status_url}}"
+        },
+        "details": [
+          {
+            "label": "Resolved",
+            "value": "{{event_time}}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "weekly-newsletter",
+      "category": "Newsletters & marketing",
+      "label": "Weekly newsletter",
+      "delivery": "marketing",
+      "trigger": "An editorially approved issue for eligible subscribers only",
+      "message": {
+        "kind": "weekly-newsletter",
+        "eyebrow": "WEEKLY NEWSLETTER",
+        "subject": "Blockwise Weekly · {{issue_label}}",
+        "preheader": "{{editor_note}}",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Your weekly Blockwise brief",
+        "intro": "{{editor_note}}",
+        "transactional": false,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Read this week’s edition",
+          "href": "{{newsletter_url}}"
+        },
+        "sections": [
+          {
+            "repeat": "stories"
+          },
+          {
+            "heading": "One practical tip",
+            "body": "{{weekly_tip}}"
+          },
+          {
+            "heading": "Your next step",
+            "body": "{{next_step}}"
+          }
+        ],
+        "note": "An editorial update from Blockwise, separate from your campaign reports."
+      }
+    },
+    {
+      "id": "product-update",
+      "category": "Newsletters & marketing",
+      "label": "Product update",
+      "delivery": "marketing",
+      "trigger": "A verified released feature and an approved marketing audience",
+      "message": {
+        "kind": "product-update",
+        "eyebrow": "PRODUCT UPDATE",
+        "subject": "What is new in Blockwise: {{feature_name}}",
+        "preheader": "{{feature_summary}}",
+        "greeting": "Hi {{first_name}},",
+        "heading": "A useful update to your workflow",
+        "intro": "{{feature_summary}}",
+        "transactional": false,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "See what is new",
+          "href": "{{update_url}}"
+        },
+        "sections": [
+          {
+            "heading": "What this means for you",
+            "body": "{{feature_benefit}}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "practical-tip",
+      "category": "Newsletters & marketing",
+      "label": "Practical tip",
+      "delivery": "marketing",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "practical-tip",
+        "eyebrow": "PRACTICAL TIP",
+        "subject": "A Blockwise tip: {{tip_title}}",
+        "preheader": "{{tip_intro}}",
+        "greeting": "Hi {{first_name}},",
+        "heading": "{{tip_title}}",
+        "intro": "{{tip_intro}}",
+        "transactional": false,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Read the guide",
+          "href": "{{guide_url}}"
+        },
+        "sections": [
+          {
+            "heading": "Try this",
+            "body": "{{tip_steps}}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "re-engagement",
+      "category": "Newsletters & marketing",
+      "label": "Re-engagement",
+      "delivery": "marketing",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "re-engagement",
+        "eyebrow": "RE-ENGAGEMENT",
+        "subject": "Your next step in Blockwise",
+        "preheader": "Your workspace is here when you need it. {{next_step}}",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Ready to pick this up again?",
+        "intro": "Your workspace is here when you need it. {{next_step}}",
+        "transactional": false,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Open your workspace",
+          "href": "{{workspace_url}}"
+        },
+        "note": "No pressure to restart. You can change your email preferences below."
+      }
+    },
+    {
+      "id": "event-invitation",
+      "category": "Newsletters & marketing",
+      "label": "Event invitation",
+      "delivery": "marketing",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "event-invitation",
+        "eyebrow": "EVENT INVITATION",
+        "subject": "You are invited: {{event_name}}",
+        "preheader": "{{event_summary}}",
+        "greeting": "Hi {{first_name}},",
+        "heading": "Join us for {{event_name}}",
+        "intro": "{{event_summary}}",
+        "transactional": false,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "View event details",
+          "href": "{{event_url}}"
+        },
+        "details": [
+          {
+            "label": "When",
+            "value": "{{event_time}}"
+          },
+          {
+            "label": "Where",
+            "value": "{{event_location}}"
+          }
+        ],
+        "note": "Opening this email does not register you for the event."
+      }
+    },
+    {
+      "id": "feedback-request",
+      "category": "Newsletters & marketing",
+      "label": "Feedback request",
+      "delivery": "marketing",
+      "trigger": "Explicit product event or approved campaign",
+      "message": {
+        "kind": "feedback-request",
+        "eyebrow": "FEEDBACK REQUEST",
+        "subject": "How is Blockwise working for you?",
+        "preheader": "We would like to understand what is useful and what gets in your way. {{feedback_prompt}}",
+        "greeting": "Hi {{first_name}},",
+        "heading": "What could work better?",
+        "intro": "We would like to understand what is useful and what gets in your way. {{feedback_prompt}}",
+        "transactional": false,
+        "signOff": "The Blockwise team",
+        "action": {
+          "label": "Share feedback",
+          "href": "{{feedback_url}}"
+        },
+        "note": "Taking part is optional. Do not include passwords, payment details or private client information."
+      }
+    }
+  ]
+}

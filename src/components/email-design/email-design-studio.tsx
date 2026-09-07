@@ -1,40 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { Button } from "@/components/ui/button";
 import { EMAIL_FIXTURES, EMAIL_KIND_LABELS, EMAIL_KINDS, type EmailKind } from "@/lib/email-design/fixtures";
 import { EMAIL_DESIGNS, EMAIL_DESIGN_LABELS, renderEmail, type EmailColorMode, type EmailDesign } from "@/lib/email-design/renderer";
 
+import { EmailPreviewFrame } from "./email-preview-frame";
+
 type Device = "desktop" | "mobile";
 
 function PreviewFrame({ design, kind, theme, device, compact = false }: { design: EmailDesign; kind: EmailKind; theme: EmailColorMode; device: Device; compact?: boolean }) {
   const srcDoc = useMemo(() => renderEmail(EMAIL_FIXTURES[kind], design, theme).html, [design, kind, theme]);
-  const [frameHeight, setFrameHeight] = useState(640);
-  const sizeObserver = useRef<ResizeObserver | null>(null);
-  useEffect(() => () => sizeObserver.current?.disconnect(), []);
-  return (
-    <div className="overflow-hidden rounded-[16px] border border-border bg-white shadow-card" style={{ width: compact ? "100%" : device === "mobile" ? 320 : 632, minWidth: 0, maxWidth: "100%", height: frameHeight }}>
-      <iframe
-        title={`${EMAIL_DESIGN_LABELS[design].name}: ${EMAIL_KIND_LABELS[kind]}`}
-        sandbox="allow-same-origin"
-        tabIndex={-1}
-        onLoad={(event) => {
-          sizeObserver.current?.disconnect();
-          const body = event.currentTarget.contentDocument?.body;
-          if (!body) return;
-          const measure = () => setFrameHeight(Math.ceil(body.getBoundingClientRect().height) + 24);
-          measure();
-          sizeObserver.current = new ResizeObserver(measure);
-          sizeObserver.current.observe(body);
-        }}
-        srcDoc={srcDoc}
-        className="pointer-events-none block border-0 bg-white"
-        style={{ width: "100%", minWidth: 0, maxWidth: "100%", height: frameHeight }}
-      />
-    </div>
-  );
+  return <EmailPreviewFrame html={srcDoc} title={`${EMAIL_DESIGN_LABELS[design].name}: ${EMAIL_KIND_LABELS[kind]}`} device={device} compact={compact} />;
 }
 
 export function EmailDesignStudio() {

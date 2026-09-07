@@ -4,21 +4,8 @@ export const EMAIL_KINDS = [
 
 export type EmailKind = (typeof EMAIL_KINDS)[number];
 
-export type EmailMessage = {
-  kind: EmailKind;
-  eyebrow: string;
-  subject: string;
-  preheader: string;
-  greeting: string;
-  heading: string;
-  intro: string;
-  action: { label: string; href: string };
-  oneTimeCode?: string;
-  details?: ReadonlyArray<{ label: string; value: string }>;
-  note?: string;
-  signOff?: string;
-  transactional: boolean;
-};
+export type { EmailMessage } from "./types.ts";
+import type { EmailMessage } from "./types.ts";
 
 export const EMAIL_FIXTURES: Record<EmailKind, EmailMessage> = {
   "sign-in": {
