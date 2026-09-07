@@ -62,7 +62,7 @@ export class ResearchSupervisor {
     return {
       queue_name: "research",
       job_type: "blockwise-ad-collector",
-      dedupe_key: `ad-collector:${input.advertiserPageId}`,
+      dedupe_key: `ad-radar:collector:${input.advertiserPageId}`,
       priority: 30,
       payload: input,
       status: "pending",
@@ -74,7 +74,7 @@ export class ResearchSupervisor {
     return {
       queue_name: "research",
       job_type: "blockwise-media-collector",
-      dedupe_key: `media:${input.adCreativeId}`,
+      dedupe_key: `ad-radar:media:${input.adCreativeId}`,
       priority: 35,
       payload: input,
       status: "pending",

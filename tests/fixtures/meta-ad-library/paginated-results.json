@@ -1,0 +1,6 @@
+<script>
+// Paginated results: page_info.has_next_page === true with an end_cursor.
+// Callers must follow the cursor; a bounded result list alone never proves
+// pagination exhaustion.
+var payload = "{\"ad_library_main\":{\"search_results_connection\":{\"count\":500,\"edges\":[{\"node\":{\"ad_archive_id\":\"1106846006069434_401\",\"collation_result\":{\"ad_archive\":{\"ad_archive_id\":\"1106846006069434_401\",\"active_status\":\"active\"}}}},{\"node\":{\"ad_archive_id\":\"1106846006069434_402\",\"collation_result\":{\"ad_archive\":{\"ad_archive_id\":\"1106846006069434_402\",\"active_status\":\"active\"}}}},{\"node\":{\"ad_archive_id\":\"1106846006069434_403\",\"collation_result\":{\"ad_archive\":{\"ad_archive_id\":\"1106846006069434_403\",\"active_status\":\"inactive\"}}}}],\"page_info\":{\"end_cursor\":\"CUR.next-page-403\",\"has_next_page\":true}}}}";
+</script>
