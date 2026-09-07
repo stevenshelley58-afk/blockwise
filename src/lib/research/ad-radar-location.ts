@@ -1,5 +1,4 @@
-import { createRequire } from "node:module";
-
+import auPostcodeRows from "../../../hermes/data/au-postcodes.json";
 import { adRunningMs, type CustomerMetaAdLibraryCard } from "./customer-meta-card.ts";
 
 export type AdRadarLocationGuess = {
@@ -102,7 +101,6 @@ const FALLBACK_LOCATION: AdRadarLocationGuess = {
 };
 
 let postcodeDirectoryCache: PostcodeDirectory | null = null;
-const requireJson = createRequire(import.meta.url);
 
 export function resolveAdRadarLocationGuess(headers: HeaderReader): AdRadarLocationGuess {
   const countryCode = readHeader(headers, "x-vercel-ip-country")?.toUpperCase() ?? null;
@@ -423,14 +421,7 @@ function postcodeDirectory(): PostcodeDirectory {
 }
 
 function readAuPostcodeRows(): AuPostcodeRow[] {
-  try {
-    const parsed = requireJson("../../../hermes/data/au-postcodes.json") as unknown;
-    if (Array.isArray(parsed)) return parsed as AuPostcodeRow[];
-  } catch {
-    return [];
-  }
-
-  return [];
+  return Array.isArray(auPostcodeRows) ? (auPostcodeRows as AuPostcodeRow[]) : [];
 }
 
 function normalisePostcodeSuburb(value: unknown): string | null {
