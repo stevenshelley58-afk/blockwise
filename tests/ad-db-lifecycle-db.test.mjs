@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
 test('008 lifecycle: distinct comparable scans, miss/seen/miss reset, retention and no invented reactivation', {skip: process.env.AD_DB_SQL_TEST !== '1'}, () => {
-  const migration = readFileSync('supabase/migrations/202609050008_research_ad_db_lifecycle_retention.sql', 'utf8');
+  const migration = readFileSync('infra/research-db/migrations/202609050008_research_ad_db_lifecycle_retention.sql', 'utf8');
   const sql = `BEGIN;
 SET LOCAL lock_timeout='3s';
 SET LOCAL statement_timeout='60s';

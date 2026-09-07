@@ -13,7 +13,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const migrationsDir = join("supabase", "migrations");
+const migrationsDir = join("infra", "research-db", "migrations");
 const migration = (name) => readFileSync(join(migrationsDir, name), "utf8");
 const sha256 = (text) => createHash("sha256").update(text).digest("hex");
 

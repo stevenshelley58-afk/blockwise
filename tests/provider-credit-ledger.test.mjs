@@ -63,7 +63,7 @@ test("numeric and timestamp metadata reject null and blank values",()=>{
 });
 
 test("migration contract holds unknown charges and settles once",()=>{
-  const m=readFileSync("supabase/migrations/202609050009_research_ad_db_attempt_credits.sql","utf8");
+  const m=readFileSync("infra/research-db/migrations/202609050009_research_ad_db_attempt_credits.sql","utf8");
   assert.match(m,/attempt_id uuid primary key/);
   assert.match(m,/provider_credit_attempt_conflict/);
   assert.match(m,/provider_credit_settlement_conflict/);
