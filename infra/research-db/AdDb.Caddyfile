@@ -1,0 +1,13 @@
+{
+    admin off
+    auto_https off
+}
+:3000 {
+    handle /health {
+        respond "ad-db-gateway" 200
+    }
+    handle_path /rest/v1/* {
+        reverse_proxy ad-db-rest:3000
+    }
+    respond "Not found" 404
+}

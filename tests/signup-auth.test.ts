@@ -62,7 +62,7 @@ test("confirm route verifies token hash and only redirects to safe relative next
   assert.match(source, /type === "recovery"/);
   assert.match(source, /function sanitizeNextPath/i);
   assert.match(source, /const DEFAULT_NEXT_PATH = "\/self-serve"/);
-  assert.match(source, /new URL\(redirectPath,\s*requestUrl\.origin\)/);
+  assert.match(source, /new URL\(redirectPath,\s*publicOrigin\(requestUrl\)\)/);
   assert.match(source, /startsWith\("\/\/"\)/);
   assert.match(source, /includes\("\\\\"\)/);
   assert.match(source, /parsed\.origin !== SAFE_REDIRECT_ORIGIN/i);
@@ -130,4 +130,28 @@ test("reset and denied access flows avoid dead-end redirects", () => {
   assert.match(accessPage, /No workspace found/);
   assert.match(accessActions, /supabase\.auth\.signOut\(\)/);
   assert.match(accessActions, /router\.replace\(target === "signup" \? "\/signup" : "\/login"\)/);
+});
+
+test("verify route forwards GoTrue default-template tokens to the auth server confirm exchange", () => {
+  const source = readFileSync("src/app/verify/route.ts", "utf8");
+
+  assert.match(source, /searchParams\.get\("token"\)/);
+  assert.match(source, /searchParams\.get\("type"\)/);
+  assert.match(source, /ALLOWED_OTP_TYPES\.has\(type\)/);
+  assert.match(source, /login\?error=confirm_failed/);
+  assert.match(source, /new URL\("\/auth\/v1\/verify", supabaseBase\)/);
+  assert.match(source, /verifyTarget\.searchParams\.set\("token", token\)/);
+  assert.match(source, /verifyTarget\.searchParams\.set\("type", type\)/);
+  assert.match(source, /new URL\("\/auth\/confirm", publicOrigin\(requestUrl\)\)/);
+  assert.match(source, /confirmUrl\.searchParams\.set\("flow", type\)/);
+  assert.match(source, /verifyTarget\.searchParams\.set\("redirect_to", confirmUrl\.toString\(\)\)/);
+  assert.doesNotMatch(source, /requestUrl\.searchParams\.get\("redirect_to"\)/);
+});
+
+test("supabase clients pin the pkce auth flow so email links exchange server-side", () => {
+  const browser = readFileSync("src/lib/supabase/browser.ts", "utf8");
+  const server = readFileSync("src/lib/supabase/server.ts", "utf8");
+
+  assert.match(browser, /auth:\s*\{\s*flowType:\s*"pkce"\s*\}/);
+  assert.match(server, /auth:\s*\{\s*flowType:\s*"pkce"\s*\}/);
 });

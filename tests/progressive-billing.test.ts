@@ -21,55 +21,50 @@ import {
 
 const billingEnv: NodeJS.ProcessEnv = {
   ...process.env,
-  STRIPE_SELF_SERVE_USD_PRICE_ID: "price_self_us",
   STRIPE_SELF_SERVE_AUD_PRICE_ID: "price_self_au",
-  STRIPE_MANAGED_USD_PRICE_ID: "price_managed_us",
   STRIPE_MANAGED_AUD_PRICE_ID: "price_managed_au",
-  STRIPE_SELF_SERVE_USD_INTRO_COUPON_ID: "coupon_intro_us",
-  STRIPE_SELF_SERVE_AUD_INTRO_COUPON_ID: "coupon_intro_au",
 } as NodeJS.ProcessEnv;
 
-test("regional offer catalog encodes the approved US/AU amounts and tax behavior", () => {
-  assert.equal(BILLING_OFFERS.self_serve_US.firstInvoiceAmount, 9_900);
-  assert.equal(BILLING_OFFERS.self_serve_US.recurringAmount, 49_900);
-  assert.equal(BILLING_OFFERS.self_serve_US.discountAmount, 40_000);
-  assert.equal(BILLING_OFFERS.self_serve_US.taxBehavior, "exclusive");
+test("offer catalog encodes the approved A$ amounts and tax behavior (Australia only)", () => {
+  assert.equal(BILLING_OFFERS.self_serve_AU.firstInvoiceAmount, 24_900);
+  assert.equal(BILLING_OFFERS.self_serve_AU.recurringAmount, 24_900);
+  assert.equal(BILLING_OFFERS.self_serve_AU.trialDays, 0);
   assert.equal(BILLING_OFFERS.self_serve_AU.taxBehavior, "inclusive");
-  assert.equal(BILLING_OFFERS.managed_US.recurringAmount, 150_000);
-  assert.equal(BILLING_OFFERS.managed_AU.recurringAmount, 250_000);
-  assert.equal(currencyForMarket("US"), "USD");
+  assert.equal(BILLING_OFFERS.managed_AU.recurringAmount, 150_000);
+  assert.equal(BILLING_OFFERS.managed_AU.firstInvoiceAmount, 150_000);
+  assert.equal(BILLING_OFFERS.managed_AU.trialDays, 0);
   assert.equal(currencyForMarket("AU"), "AUD");
 });
 
-test("self-serve Checkout collects a reusable card and applies the once-only discount after a seven-day trial", () => {
+test("self-serve Checkout charges the full monthly price with no trial, discount, or coupon", () => {
   const result = buildCheckoutSessionRequest(
     {
       workspaceId: "workspace-1",
-      market: "US",
-      currency: "USD",
+      market: "AU",
+      currency: "AUD",
       product: "self_serve",
       stripeCustomerId: "cus_123",
       customerEmail: "owner@example.com",
       userId: "user-1",
       successUrl: "https://blockwise.sale/settings?billing=success",
       cancelUrl: "https://blockwise.sale/settings",
-      acceptedAt: "2026-07-27T00:00:00.000Z",
+      acceptedAt: "2026-09-06T00:00:00.000Z",
     },
     billingEnv,
   );
 
-  assert.equal(result.params["line_items[0][price]"], "price_self_us");
-  assert.equal(result.params["discounts[0][coupon]"], "coupon_intro_us");
-  assert.equal(result.params["subscription_data[trial_period_days]"], 7);
+  assert.equal(result.params["line_items[0][price]"], "price_self_au");
+  assert.equal(result.params["discounts[0][coupon]"], undefined);
+  assert.equal(result.params["subscription_data[trial_period_days]"], undefined);
   assert.equal(result.params.payment_method_collection, "always");
   assert.equal(result.params.billing_address_collection, "required");
   assert.equal(result.params["automatic_tax[enabled]"], true);
   assert.equal(result.params["tax_id_collection[enabled]"], true);
   assert.equal(result.params["consent_collection[terms_of_service]"], "required");
   assert.equal(result.params["metadata[offer_version]"], BILLING_OFFER_VERSION);
-  assert.equal(result.params["metadata[first_invoice_amount]"], 9_900);
-  assert.equal(result.params["metadata[renewal_amount]"], 49_900);
-  assert.match(String(result.params["metadata[triggering_rule]"]), /first campaign launches or seven days/);
+  assert.equal(result.params["metadata[first_invoice_amount]"], 24_900);
+  assert.equal(result.params["metadata[renewal_amount]"], 24_900);
+  assert.match(String(result.params["metadata[triggering_rule]"]), /never requires a card/);
   assert.equal(result.params["customer_update[address]"], "auto");
 });
 
@@ -91,7 +86,7 @@ test("managed Checkout uses the regional managed recurring price without a trial
   assert.equal(result.params["line_items[0][price]"], "price_managed_au");
   assert.equal(result.params["discounts[0][coupon]"], undefined);
   assert.equal(result.params["subscription_data[trial_period_days]"], undefined);
-  assert.equal(result.params["metadata[first_invoice_amount]"], 250_000);
+  assert.equal(result.params["metadata[first_invoice_amount]"], 150_000);
   assert.match(String(result.params["custom_text[submit][message]"]), /Meta ad spend is separate/);
   assert.equal(result.params["managed_payments[enabled]"], false);
 });
@@ -102,8 +97,8 @@ test("Checkout refuses a currency that does not match the confirmed workspace ma
       buildCheckoutSessionRequest(
         {
           workspaceId: "workspace-3",
-          market: "US",
-          currency: "AUD",
+          market: "AU",
+          currency: "USD" as never,
           product: "self_serve",
           customerEmail: null,
           successUrl: "https://blockwise.sale/settings",
@@ -142,10 +137,21 @@ test("billing domain applies a Checkout event once and records its accepted offe
   assert.equal(first.outcome, "applied");
   assert.equal(replay.outcome, "duplicate");
   assert.equal(mock.workspaceUpdates.length, 1);
-  assert.equal(mock.workspaceUpdates[0].patch.billing_access_state, "trialing");
+  // Current offers have no billing trial: the subscription events decide access.
+  assert.equal("billing_access_state" in mock.workspaceUpdates[0].patch, false);
   assert.equal(mock.acceptances.length, 1);
   assert.equal(mock.acceptances[0].offer_version, BILLING_OFFER_VERSION);
   assert.equal(mock.eventStatuses.get("evt_checkout"), "applied");
+});
+
+test("legacy self-serve Checkout events still mark the workspace as trialing", async () => {
+  const mock = createBillingMock();
+  const event = checkoutEvent("evt_checkout_legacy", "2026-07-27");
+
+  await applyStripeBillingEvent(mock.client as never, event);
+
+  assert.equal(mock.workspaceUpdates[0].patch.billing_access_state, "trialing");
+  assert.equal(mock.workspaceUpdates[0].patch.stripe_subscription_status, "trialing");
 });
 
 test("subscription and invoice events derive cancellation timing and payment recovery from Stripe", async () => {
@@ -450,7 +456,7 @@ test("invoice webhooks retrieve subscription metadata before applying billing st
   assert.match(route, /retrieveStripeSubscription/);
 });
 
-function checkoutEvent(id: string): StripeWebhookEvent {
+function checkoutEvent(id: string, offerVersion: string = BILLING_OFFER_VERSION): StripeWebhookEvent {
   return {
     id,
     type: "checkout.session.completed",
@@ -463,13 +469,13 @@ function checkoutEvent(id: string): StripeWebhookEvent {
         metadata: {
           workspace_id: "workspace-1",
           offer_key: "self_serve_US",
-          offer_version: BILLING_OFFER_VERSION,
-          accepted_at: "2026-07-27T00:00:00.000Z",
+          offer_version: offerVersion,
+          accepted_at: "2026-09-06T00:00:00.000Z",
           market: "US",
           currency: "USD",
-          first_invoice_amount: "9900",
-          renewal_amount: "49900",
-          triggering_rule: "campaign launch or seven days",
+          first_invoice_amount: "14900",
+          renewal_amount: "14900",
+          triggering_rule: "starts when Checkout completes",
         },
       },
     },

@@ -1,32 +1,55 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { useState } from "react";
+import { motion } from "motion/react";
 
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { CtaLink } from "@/components/landing/cta-link";
+import { entrance, useReducedMotion } from "@/lib/motion";
 
-type Market = "us" | "au";
+const PLAN_SUMMARY = [
+  {
+    id: "free",
+    name: "Free",
+    amount: 0,
+    prefix: "",
+    per: "",
+    note: "Three complete ads and one trial campaign. No card.",
+    cta: { label: "Start free", href: "/signup?offer=self-serve", location: "pricing-summary-free" },
+    featured: false,
+  },
+  {
+    id: "self-serve",
+    name: "Self-serve",
+    amount: 249,
+    prefix: "",
+    per: "/month",
+    note: "Build, publish, and track in one place.",
+    cta: { label: "Create three ads free", href: "/signup?offer=self-serve", location: "pricing-summary-self-serve" },
+    featured: true,
+  },
+  {
+    id: "managed",
+    name: "Managed",
+    amount: 1500,
+    prefix: "from",
+    per: "/month",
+    note: "Operator launch and weekly optimization. Plus Meta ad spend.",
+    cta: { label: "Book a call", href: "/#managed-setup", location: "pricing-summary-managed" },
+    featured: false,
+  },
+] as const;
 
-const OFFERS = {
-  us: {
-    name: "United States",
-    shortName: "US",
-    firstMonth: "US$99",
-    renewal: "US$499",
-    managed: "US$1,500",
-  },
-  au: {
-    name: "Australia",
-    shortName: "AU",
-    firstMonth: "A$99",
-    renewal: "A$499",
-    managed: "A$2,500",
-  },
-} as const;
+const FREE_FEATURES = [
+  "Three complete Feed + Story ads",
+  "One live trial campaign setup included",
+  "Only your email to start — no password, no card",
+  "Upgrade to self-serve whenever you choose to launch",
+] as const;
 
 const SELF_SERVE_FEATURES = [
   "Three complete Feed + Story ads before payment",
-  "One free live campaign setup",
+  "One live trial campaign before you subscribe",
   "100 render credits each paid month",
   "Up to 50 complete Feed + Story packs",
   "One Brand Pack, workspace, and primary Meta ad account",
@@ -42,54 +65,90 @@ const MANAGED_FEATURES = [
   "Monthly performance report",
 ] as const;
 
+const formatPrice = (value: number) => `A$${Math.round(value).toLocaleString("en-AU")}`;
+
 export function MarketPricing() {
-  const [market, setMarket] = useState<Market>("au");
-  const offer = OFFERS[market];
+  const reduced = useReducedMotion();
+  const { container, item } = entrance(reduced);
 
   return (
-    <section className="pricing-offers" aria-label="Plans and market pricing">
+    <section className="pricing-offers" aria-label="Plans and pricing">
       <div className="pricing-shell">
-        <fieldset className="pricing-market" aria-describedby="pricing-market-note">
-          <legend>Choose your market</legend>
-          <div className="pricing-market-switch">
-            {(Object.keys(OFFERS) as Market[]).map((value) => (
-              <button
-                key={value}
-                type="button"
-                className="pricing-market-option"
-                aria-pressed={market === value}
-                onClick={() => setMarket(value)}
+        <motion.div
+          className="pricing-summary"
+          aria-label="Plan prices at a glance"
+          variants={container}
+          initial="hidden"
+          animate="visible"
+        >
+          {PLAN_SUMMARY.map((plan) => (
+            <motion.article
+              key={plan.id}
+              className={
+                plan.featured
+                  ? "pricing-summary-card pricing-summary-card--featured"
+                  : "pricing-summary-card"
+              }
+              aria-labelledby={`summary-${plan.id}-title`}
+              variants={item}
+            >
+              <h3 id={`summary-${plan.id}-title`}>{plan.name}</h3>
+              <p className="pricing-summary-price">
+                {plan.prefix ? <span className="pricing-summary-from">{plan.prefix}</span> : null}
+                <AnimatedNumber value={plan.amount} format={formatPrice} />
+                {plan.per ? <span>{plan.per}</span> : null}
+              </p>
+              <p className="pricing-summary-note">{plan.note}</p>
+              <CtaLink
+                location={plan.cta.location}
+                href={plan.cta.href}
+                className={
+                  plan.featured
+                    ? "hw-btn hw-btn--dark"
+                    : "hw-btn hw-btn--outline"
+                }
               >
-                <span aria-hidden>{OFFERS[value].shortName}</span>
-                {OFFERS[value].name}
-              </button>
-            ))}
+                {plan.cta.label}
+              </CtaLink>
+            </motion.article>
+          ))}
+        </motion.div>
+
+        <article className="pricing-free-details" aria-labelledby="free-title">
+          <div className="pricing-free-copy">
+            <p className="pricing-kicker">Free</p>
+            <h2 id="free-title">Build the ads before you pay.</h2>
+            <p>
+              Every plan starts here. Create three complete Feed + Story ads with only your
+              email, and launch a trial campaign before adding a card.
+            </p>
           </div>
-          <p id="pricing-market-note">
-            Prices below are shown in {market === "us" ? "US dollars" : "Australian dollars"}.
-            You&rsquo;ll confirm your market before checkout.
-          </p>
-        </fieldset>
+          <ul aria-label="Free plan features">
+            {FREE_FEATURES.map((feature) => (
+              <li key={feature}>
+                <Check aria-hidden size={17} strokeWidth={2.5} />
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
+        </article>
 
         <article className="pricing-self-serve" aria-labelledby="self-serve-title">
           <div className="pricing-plan-intro">
             <p className="pricing-kicker">Self-serve with assistance</p>
             <h2 id="self-serve-title">Build, publish, and track in one place.</h2>
             <p>
-              Start without a card. When you choose to run a campaign, checkout collects a payment
+              Start without a card. When you choose to subscribe, checkout collects a payment
               method and clearly shows the renewal schedule.
             </p>
           </div>
 
-          <div className="pricing-amount" aria-label={`${offer.firstMonth} first month, then ${offer.renewal} per month`}>
+          <div className="pricing-amount" aria-label="A$249 per month">
             <div>
-              <span className="pricing-amount-label">First paid month</span>
-              <strong>{offer.firstMonth}</strong>
-            </div>
-            <span className="pricing-then" aria-hidden>then</span>
-            <div>
-              <span className="pricing-amount-label">Following months</span>
-              <strong>{offer.renewal}</strong>
+              <span className="pricing-amount-label">Monthly subscription</span>
+              <strong>
+                <AnimatedNumber value={249} format={formatPrice} startOnView={false} />
+              </strong>
               <span className="pricing-per">/month</span>
             </div>
           </div>
@@ -105,8 +164,8 @@ export function MarketPricing() {
             </ul>
             <div className="pricing-action-block">
               <CtaLink
-                location={`pricing-self-serve-${market}`}
-                href={`/signup?offer=self-serve&market=${market}`}
+                location="pricing-self-serve"
+                href="/signup?offer=self-serve"
                 className="hw-btn hw-btn--dark"
               >
                 Create three ads free
@@ -116,10 +175,9 @@ export function MarketPricing() {
           </div>
 
           <p className="pricing-consent-note">
-            One live campaign setup is free. Your Meta ad spend is separate. Your Blockwise
-            subscription starts at {offer.firstMonth} when the campaign launches or seven days
-            after checkout, whichever comes first, then renews at {offer.renewal} monthly until
-            cancelled.
+            Three complete ads and one trial campaign are free — no card. Your Meta ad spend is
+            separate. When you choose to subscribe, your Blockwise subscription starts at A$249
+            monthly until cancelled.
           </p>
         </article>
 
@@ -128,12 +186,12 @@ export function MarketPricing() {
             <p className="pricing-kicker">Managed service</p>
             <h2 id="managed-title">Strategy and weekly optimization included.</h2>
             <p>
-              From <strong>{offer.managed}/month</strong>, plus Meta ad spend. Scope beyond the
-              standard engagement is confirmed and repriced during onboarding.
+              From <strong>A$1,500/month</strong>, plus Meta ad spend. Scope beyond the standard
+              engagement is confirmed and repriced during onboarding.
             </p>
             <div className="pricing-managed-actions">
               <CtaLink
-                location={`pricing-managed-call-${market}`}
+                location="pricing-managed-call"
                 href="/#managed-setup"
                 className="hw-btn hw-btn--dark"
               >

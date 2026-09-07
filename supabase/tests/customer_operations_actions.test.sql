@@ -1,7 +1,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(58);
+select plan(69);
 
 select has_table('public', 'ops_action_capabilities', 'action capability registry exists');
 select has_table('public', 'ops_action_outbox', 'action outbox exists');
@@ -18,7 +18,8 @@ select ok(not has_table_privilege('service_role', 'public.ops_action_capabilitie
 select ok(not has_table_privilege('service_role', 'public.ops_action_capabilities', 'UPDATE'), 'service_role cannot directly update capabilities');
 select ok(not has_table_privilege('service_role', 'public.ops_action_capabilities', 'DELETE'), 'service_role cannot directly delete capabilities');
 select is((select count(*)::int from public.ops_action_capabilities), 24, 'all agreed actions have a capability entry');
-select is((select capability_state from public.ops_action_capabilities where action_type = 'team_suspend'), 'unsupported', 'suspension is explicitly unsupported');
+select is((select capability_state from public.ops_action_capabilities where action_type = 'team_suspend'), 'available', 'suspension is an owner-only available action');
+select is((select capability_state from public.ops_action_capabilities where action_type = 'team_reactivate'), 'available', 'reactivation is an owner-only available action');
 select is((select capability_state from public.ops_action_capabilities where action_type = 'team_role_change'), 'available', 'role changes are owner-only CAS protected');
 select is((select capability_state from public.ops_action_capabilities where action_type = 'billing_portal_link'), 'capability_required', 'billing portal links are explicitly gated until an executor exists');
 
@@ -153,14 +154,77 @@ select is((select last_error from public.ops_action_outbox where action_id = '88
 update public.workspace_members set role=role
   where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777';
 select lives_ok($$ select public.enqueue_ops_action(
-  '88888888-8888-4888-8888-888888888884', 'ops:test:suspend:unsupported',
+  '88888888-8888-4888-8888-888888888884', 'ops:test:suspend:available',
   '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
   'team_suspend', 'profile', '87777777-7777-4777-8777-777777777777',
   '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', (select ops_version from public.workspace_members where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777'),
-  'Suspension capability is not implemented', now() - interval '1 hour', now() + interval '2 hours', '{}'::jsonb
-) $$, 'unsupported action is recorded without execution');
-select is((select status from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888884'), 'rejected', 'unsupported action is rejected explicitly');
-select is((select last_error from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888884'), 'unsupported', 'unsupported reason is persisted safely');
+  'Suspend this member for the acceptance exercise', now() - interval '1 hour', now() + interval '2 hours', '{}'::jsonb
+) $$, 'available suspension is recorded without inventing execution');
+select is((select status from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888884'), 'pending', 'available suspension starts pending');
+select is((select last_error from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-888888888884'), null::text, 'available suspension records no error');
+
+-- The three Mautic flow actions are enqueuable with a safe flowId alias and
+-- remain capability-gated until a verified provider executor registers them.
+update public.workspace_members set role=role
+  where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777';
+select lives_ok($$ select public.enqueue_ops_action(
+  '88888888-8888-4888-8888-8888888888a1', 'ops:test:flow:enroll:gated',
+  '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
+  'flow_enroll', 'profile', '87777777-7777-4777-8777-777777777777',
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', (select ops_version from public.workspace_members where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777'),
+  'Mautic flow executor is not yet verified', now() - interval '1 hour', now() + interval '2 hours',
+  '{"flowId":"welcome-series-v1"}'::jsonb
+) $$, 'flow actions are enqueuable with safe aliases');
+select is((select status from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-8888888888a1'), 'rejected', 'flow action is capability-gated until provider verification');
+select is((select last_error from public.ops_action_outbox where action_id = '88888888-8888-4888-8888-8888888888a1'), 'capability_required', 'flow gating reason is persisted safely');
+select throws_ok($$ select public.enqueue_ops_action(
+  '88888888-8888-4888-8888-8888888888b1', 'ops:test:flow:unsafe',
+  '86666666-6666-4666-8666-666666666666', '86666666-6666-4666-8666-666666666666',
+  'flow_enroll', 'profile', '87777777-7777-4777-8777-777777777777',
+  '87777777-7777-4777-8777-777777777777', 'owner', 'aal2', (select ops_version from public.workspace_members where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777'),
+  'unsafe flow alias test', now() - interval '1 hour', now() + interval '2 hours',
+  '{"flowId":"bad id!"}'::jsonb
+) $$, '22023', 'operations action payload is invalid', 'unsafe flow alias is rejected');
+
+-- Suspension executor semantics: owner-only CAS with last-owner protection.
+update public.ops_action_outbox set status='processing', lease_token=gen_random_uuid(), lease_expires_at=now()+interval '5 minutes' where action_id='88888888-8888-4888-8888-888888888884';
+select lives_ok($$ select public.execute_ops_customer_action(
+  '88888888-8888-4888-8888-888888888884', '86666666-6666-4666-8666-666666666666', '87777777-7777-4777-8777-777777777777',
+  'team_suspend', (select ops_version from public.workspace_members where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777'),
+  '87777777-7777-4777-8777-777777777777', '{}'::jsonb
+) $$, 'available suspension executes with the leased CAS version');
+select is((select status from public.workspace_members where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777'),'suspended','suspension persists on the member row');
+insert into public.ops_action_outbox (action_id,idempotency_key,workspace_id,customer_id,actor_operator_id,actor_role,actor_aal,action_type,target_type,target_id,expected_version,reason,payload,status,lease_token,lease_expires_at,expires_at)
+values ('88888888-8888-4888-8888-8888888888c1','ops:test:reactivate:available','86666666-6666-4666-8666-666666666666','86666666-6666-4666-8666-666666666666','87777777-7777-4777-8777-777777777777','owner','aal2','team_reactivate','profile','87777777-7777-4777-8777-777777777777',
+  (select ops_version from public.workspace_members where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777'),'restore the member','{}'::jsonb,'processing',gen_random_uuid(),now()+interval '5 minutes', now() + interval '2 hours');
+select lives_ok($$ select public.execute_ops_customer_action(
+  '88888888-8888-4888-8888-8888888888c1', '86666666-6666-4666-8666-666666666666', '87777777-7777-4777-8777-777777777777',
+  'team_reactivate', (select ops_version from public.workspace_members where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777'),
+  '87777777-7777-4777-8777-777777777777', '{}'::jsonb
+) $$, 'reactivation restores the member');
+select is((select status from public.workspace_members where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777'),'active','reactivation persists on the member row');
+insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at)
+values ('00000000-0000-0000-0000-000000000000','99999999-9999-4999-8999-999999999901','authenticated','authenticated','ops-stale-probe-0905@example.test','',now(),now(),now())
+on conflict (id) do nothing;
+insert into public.profiles (id, email, full_name, is_operator, operator_role)
+values ('99999999-9999-4999-8999-999999999901','ops-stale-probe-0905@example.test','Stale Probe Operator',true,'owner')
+on conflict (id) do nothing;
+insert into public.workspace_members (workspace_id, profile_id, role)
+values ('86666666-6666-4666-8666-666666666666','99999999-9999-4999-8999-999999999901','owner')
+on conflict (workspace_id, profile_id) do nothing;
+insert into public.ops_action_outbox (action_id,idempotency_key,workspace_id,customer_id,actor_operator_id,actor_role,actor_aal,action_type,target_type,target_id,expected_version,reason,payload,status,lease_token,lease_expires_at,expires_at)
+values ('88888888-8888-4888-8888-8888888888d1','ops:test:suspend:stale','86666666-6666-4666-8666-666666666666','86666666-6666-4666-8666-666666666666','99999999-9999-4999-8999-999999999901','owner','aal2','team_suspend','profile','87777777-7777-4777-8777-777777777777',
+  (select ops_version from public.workspace_members where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777'),'stale suspension probe','{}'::jsonb,'processing',gen_random_uuid(),now()+interval '5 minutes', now() + interval '2 hours');
+select throws_ok($$ select public.execute_ops_customer_action(
+  '88888888-8888-4888-8888-8888888888d1', '86666666-6666-4666-8666-666666666666', '87777777-7777-4777-8777-777777777777',
+  'team_suspend', (select greatest(ops_version - 100, 1) from public.workspace_members where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777'),
+  '99999999-9999-4999-8999-999999999901', '{}'::jsonb
+) $$, '40001', 'operations member target is stale or not owned', 'stale-version suspension is rejected');
+select throws_ok($$ select public.execute_ops_customer_action(
+  '88888888-8888-4888-8888-8888888888e1', '86666666-6666-4666-8666-666666666666', '87777777-7777-4777-8777-777777777777',
+  'team_suspend', (select ops_version from public.workspace_members where workspace_id='86666666-6666-4666-8666-666666666666' and profile_id='87777777-7777-4777-8777-777777777777'),
+  '87777777-7777-4777-8777-777777777778', '{}'::jsonb
+) $$, '22023', 'invalid customer operations mutation', 'suspension by a non-operator is rejected');
 
 select throws_ok($$ select public.enqueue_ops_action(
   '88888888-8888-4888-8888-888888888888', 'ops:test:cross-workspace',

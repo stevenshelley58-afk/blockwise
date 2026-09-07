@@ -1,6 +1,6 @@
 create extension if not exists pgtap with schema extensions;
 begin;
-select plan(13);
+select plan(15);
 
 insert into public.workspaces(id,name,mode,region) values
  ('c8111111-1111-4111-8111-111111111111','Chatwoot adoption test','self_serve','AU') on conflict(id) do nothing;
@@ -24,4 +24,6 @@ select is((select count(*)::int from private.ops_enquiry_messages where provider
 select is(jsonb_array_length((select x->'messages' from jsonb_array_elements(public.resolve_ops_enquiry_threads()) x where (x->>'enquiry_id')=(select id::text from public.ops_enquiry_associations where source_id like 'conversation:%' and workspace_id is not null limit 1))),1,'thread resolver returns bounded message timeline');
 select is((select count(*)::int from public.ops_enquiry_associations where source_system='chatwoot' and source_id='conversation:'||encode(extensions.digest('101','sha256'),'hex')),1,'concurrent-safe source binding is unique');
 select ok(not exists(select 1 from public.ops_enquiry_associations where source_system='chatwoot' and source_id='101'),'public association never stores raw conversation id');
+select lives_ok($$ select public.record_ops_chatwoot_webhook_adopt('delivery-cross',repeat('9',64),'7','8','message_created','101','203',repeat('e',64),'v1:iv:tag:cipher','open','cross-tenant attempt',now()::text,'Other Sender','[]'::jsonb) $$,'cross-tenant claim is ignored instead of rebound');
+select is((select count(*)::int from private.ops_enquiry_messages where body='cross-tenant attempt'),0,'cross-tenant message is never stored');
 select * from finish();

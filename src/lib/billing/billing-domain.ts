@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
+import { BILLING_OFFER_VERSION } from "./offers.ts";
 import type { StripeObject, StripeWebhookEvent } from "./stripe-scaffold.ts";
 
 type BillingServiceClient = ReturnType<typeof createSupabaseServiceClient>;
@@ -115,7 +116,12 @@ async function applyCheckoutCompleted(
   if (subscriptionId) patch.stripe_subscription_id = subscriptionId;
   if (metadataString(session, "offer_key")) patch.billing_offer_key = metadataString(session, "offer_key");
   if (metadataString(session, "offer_version")) patch.billing_offer_version = metadataString(session, "offer_version");
-  if ((metadataString(session, "offer_key") ?? "").startsWith("self_serve_")) {
+  // Only legacy self-serve offers carried a card-on-file billing trial. Current
+  // offers have no trial period, so the subscription event decides the state.
+  if (
+    (metadataString(session, "offer_key") ?? "").startsWith("self_serve_") &&
+    metadataString(session, "offer_version") !== BILLING_OFFER_VERSION
+  ) {
     patch.billing_access_state = "trialing";
     patch.stripe_subscription_status = "trialing";
   }

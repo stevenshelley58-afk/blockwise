@@ -1,0 +1,18 @@
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import test from "node:test";
+import sharp from "sharp";
+import { assertSafeSourceUrl, downloadVerifiedMedia, writeVerifiedArchive } from "../hermes/tools/research-runtime/bin/media-archive.mjs";
+const allowedHosts=["cdn.example"];
+const lookupPublic=async()=>[{address:"203.0.113.10",family:4}];
+const corruptPng=Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL8xQAAAABJRU5ErkJggg==","base64");
+const png=await sharp({create:{width:2,height:2,channels:4,background:{r:50,g:100,b:150,alpha:1}}}).png().toBuffer();
+function response(bytes,type){return new Response(bytes,{headers:{"content-type":type,"content-length":String(bytes.length)}});}
+function realMp4(root){const path=join(root,"fixture.mp4");const run=spawnSync("ffmpeg",["-y","-f","lavfi","-i","color=c=black:s=16x16:d=0.1","-an","-c:v","libx264","-pix_fmt","yuv420p",path],{encoding:"utf8"});assert.equal(run.status,0,run.stderr);return readFileSync(path);}
+test("archives playable image and video bytes after source becomes unavailable",async()=>{const root=mkdtempSync(join(tmpdir(),"ad-db-archive-"));try{const mp4=realMp4(root);const image=await downloadVerifiedMedia("https://cdn.example/image",{fetchImpl:async()=>response(png,"image/png"),lookupImpl:lookupPublic,allowedHosts});const imageArchive=await writeVerifiedArchive(root,image);const video=await downloadVerifiedMedia("https://cdn.example/video",{fetchImpl:async()=>response(mp4,"video/mp4"),lookupImpl:lookupPublic,allowedHosts});const videoArchive=await writeVerifiedArchive(root,video);await assert.rejects(()=>downloadVerifiedMedia("https://cdn.example/image",{fetchImpl:async()=>new Response(null,{status:404}),lookupImpl:lookupPublic,allowedHosts}));assert.deepEqual(readFileSync(imageArchive.path),png);assert.deepEqual(readFileSync(videoArchive.path),mp4);assert.equal((await writeVerifiedArchive(root,image)).objectKey,imageArchive.objectKey);}finally{rmSync(root,{recursive:true,force:true});}});
+test("rejects non-Meta hosts, private redirects, unsafe ports, bad MIME, oversize, and corrupt ftyp",async()=>{await assert.rejects(()=>assertSafeSourceUrl("https://cdn.example/a",lookupPublic));await assert.rejects(()=>assertSafeSourceUrl("http://127.0.0.1/x",async()=>[{address:"127.0.0.1",family:4}],allowedHosts));await assert.rejects(()=>assertSafeSourceUrl("https://cdn.example:8080/x",lookupPublic,allowedHosts));await assert.rejects(()=>downloadVerifiedMedia("https://cdn.example/a",{fetchImpl:async()=>response(png,"video/mp4"),lookupImpl:lookupPublic,allowedHosts}));await assert.rejects(()=>downloadVerifiedMedia("https://cdn.example/a",{maxBytes:4,fetchImpl:async()=>response(png,"image/png"),lookupImpl:lookupPublic,allowedHosts}));await assert.rejects(()=>downloadVerifiedMedia("https://cdn.example/a",{fetchImpl:async()=>response(Buffer.from([0,0,0,20,102,116,121,112,105,115,111,109]),"video/mp4"),lookupImpl:lookupPublic,allowedHosts}));await assert.rejects(()=>downloadVerifiedMedia("https://cdn.example/a",{fetchImpl:async()=>new Response(null,{status:302,headers:{location:"http://127.0.0.1/private"}}),lookupImpl:async(name)=>[{address:name==="127.0.0.1"?"127.0.0.1":"203.0.113.1",family:4}],allowedHosts}));});
+
+test("rejects a PNG with readable metadata but corrupt pixel data", async()=>{await assert.rejects(()=>downloadVerifiedMedia("https://cdn.example/corrupt.png",{fetchImpl:async()=>response(corruptPng,"image/png"),lookupImpl:lookupPublic,allowedHosts}));});

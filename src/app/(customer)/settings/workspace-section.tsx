@@ -111,7 +111,7 @@ export function WorkspaceSection({
           </div>
           <div className="grid gap-2">
             <Label htmlFor="workspace-currency">Billing currency</Label>
-            <Input id="workspace-currency" value={country === "US" ? "USD" : "AUD"} readOnly />
+            <Input id="workspace-currency" value="AUD" readOnly />
           </div>
         </div>
         {workspace.marketBound ? (

@@ -12,7 +12,7 @@ export default function TermsOfServicePage() {
   return (
     <>
       <p style={{ color: "#475569", fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5 }}>
-        Last updated: 27 July 2026
+        Last updated: 6 September 2026
       </p>
       <h1 style={{ fontSize: 36, margin: "8px 0 24px", fontWeight: 600 }}>Terms of Service</h1>
 
@@ -74,18 +74,17 @@ export default function TermsOfServicePage() {
         5. Self-serve trial, credits, and billing
       </h2>
       <p>
-        The self-serve trial includes three complete Feed and Story ad creations before payment. A
-        complete pack normally uses two render credits. You do not need a card to create, review, or
-        edit those ads. Failed or cancelled provider work is refunded to the applicable credit
-        balance.
+        The self-serve trial includes three complete Feed and Story ad creations and one live trial
+        campaign before payment. A complete pack normally uses two render credits. You do not need a
+        card to create, review, or edit those ads, and the trial never charges you automatically.
+        You approve the trial campaign's budget and end date with Meta before it starts; the trial
+        being free means no Blockwise subscription fee, not free advertising. Failed or cancelled
+        provider work is refunded to the applicable credit balance.
       </p>
       <p>
-        When you choose to run an ad, Checkout collects a reusable payment method and starts a
-        seven-day trial. One live campaign setup is free. Your Meta ad spend is separate. Your
-        Blockwise subscription starts at US$99/A$99 when the campaign launches or seven days after
-        Checkout, whichever comes first, then renews at US$499/A$499 monthly until cancelled.
-        United States prices exclude applicable sales tax. Australian prices include GST where
-        Blockwise is required to collect it.
+        When you choose to subscribe, Checkout collects a reusable payment method and starts the
+        paid subscription. Your Blockwise subscription starts at A$249 monthly until cancelled,
+        with no introductory price. Prices include GST where Blockwise is required to collect it.
       </p>
       <p>
         A paid self-serve subscription grants 100 render credits per billing period. A Feed render,
@@ -109,9 +108,9 @@ export default function TermsOfServicePage() {
         6. Managed service
       </h2>
       <p>
-        Managed service is separate from self-serve and starts at US$1,500 per month in the United
-        States or A$2,500 per month in Australia, plus Meta ad spend. Book a call first so
-        Blockwise can confirm the service scope and onboarding plan before payment.
+        Managed service is separate from self-serve and starts at A$1,500 per month, plus Meta ad
+        spend. Book a call first so Blockwise can confirm the service scope and onboarding plan
+        before payment.
       </p>
       <p>
         The base managed engagement includes the complete self-serve product, 100 monthly render

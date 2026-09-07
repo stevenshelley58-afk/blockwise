@@ -23,7 +23,7 @@ import { pathToFileURL } from "node:url";
 import { resolveSupabaseServerCredential } from "../src/lib/supabase/credentials.ts";
 import { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
 import { reapOpsProjections, runGlobalProjectionOnce, runOpsProjectionOnce } from "./ops-projection.ts";
-import { checkChatwootActionReadiness, runOpsActionOnce } from "./ops-actions.ts";
+import { checkChatwootActionReadiness, checkSnagtimeActionReadiness, runOpsActionOnce } from "./ops-actions.ts";
 
 type ServiceSupabase = ReturnType<typeof createSupabaseServiceClient>;
 type HandlerExecutionContext = {
@@ -717,6 +717,15 @@ async function main() {
       log(`Chatwoot capability refresh failed: ${error instanceof Error ? error.message : String(error)}`);
       if (actionsEnabled) { try { await supabase.rpc("set_ops_chatwoot_capability", { p_enabled: false, p_reason: "Chatwoot worker or provider health unavailable" }); } catch { /* next refresh retries */ } }
     } finally { lastCapabilityCheck = Date.now(); }
+    try {
+      const reason = actionsEnabled ? "verified Hermes SnagTime worker and provider health" : "SnagTime action worker disabled";
+      if (actionsEnabled) await checkSnagtimeActionReadiness();
+      const result = await supabase.rpc("set_ops_snagtime_capability", { p_enabled: actionsEnabled, p_reason: reason });
+      if (result.error) throw new Error(`capability state update failed: ${result.error.message}`);
+    } catch (error) {
+      log(`SnagTime capability refresh failed: ${error instanceof Error ? error.message : String(error)}`);
+      if (actionsEnabled) { try { await supabase.rpc("set_ops_snagtime_capability", { p_enabled: false, p_reason: "SnagTime worker or provider health unavailable" }); } catch { /* next refresh retries */ } }
+    }
   };
   await refreshCapabilities();
   if (projectionsEnabled) {

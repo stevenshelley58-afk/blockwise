@@ -2,13 +2,13 @@
  * action-owned: the action is completed only after the exact provider step and
  * its receipt are durable. The web/control edge never receives provider creds.
  */
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
 import { lstatSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import type { createSupabaseServiceClient } from "../src/lib/supabase/service.ts";
 
 type Supabase = ReturnType<typeof createSupabaseServiceClient>;
-type Action = { id: string; action_id: string; workspace_id: string; action_type: string; target_id: string; expected_version: number; payload: Record<string, unknown>; lease_token: string };
+type Action = { id: string; action_id: string; workspace_id: string; customer_id: string; actor_operator_id: string; actor_role: string; action_type: string; target_id: string; expected_version: number; reason: string; payload: Record<string, unknown>; lease_token: string };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 class ProviderActionError extends Error { readonly retryable: boolean; constructor(message: string, retryable: boolean) { super(message); this.retryable = retryable; } }
 
@@ -27,6 +27,30 @@ export async function checkChatwootActionReadiness(fetchImpl: typeof fetch = fet
   await call(base, `/api/v1/accounts/${encodeURIComponent(account)}/conversations?per_page=1`, "GET", secretFile("CHATWOOT_API_TOKEN_FILE"), "chatwoot:capability-health", undefined, fetchImpl);
 }
 
+const BOOKING_ACTIONS = ["booking_cancel", "booking_reschedule"] as const;
+
+export function assertSnagtimeActionReadiness(): void {
+  httpsEnv("SNAGTIME_BASE_URL");
+  secretFile("BLOCKWISE_BOOKING_ACTION_SECRET_FILE");
+}
+
+/** Bounded provider health is part of capability truth, not a startup-only config check. */
+export async function checkSnagtimeActionReadiness(fetchImpl: typeof fetch = fetch): Promise<void> {
+  assertSnagtimeActionReadiness();
+  const base = httpsEnv("SNAGTIME_BASE_URL");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const response = await fetchImpl(new URL("/api/health", base), { method: "GET", redirect: "error", signal: controller.signal });
+    if (!response.ok) throw new ProviderActionError(`snagtime capability health failed (${response.status})`, true);
+  } catch (error) {
+    if (error instanceof ProviderActionError) throw error;
+    throw new ProviderActionError("snagtime capability health unreachable", true);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function runOpsActionOnce(supabase: Supabase, fetchImpl: typeof fetch = fetch): Promise<boolean> {
   const claimed = await Promise.resolve(supabase.rpc("claim_ops_provider_action", { p_lease_seconds: 600 }));
   if (claimed.error) throw new Error("customer operations action claim failed");
@@ -34,13 +58,126 @@ export async function runOpsActionOnce(supabase: Supabase, fetchImpl: typeof fet
   if (!action) return false;
   try {
     if (!UUID.test(action.workspace_id) || !UUID.test(action.target_id)) throw new Error("invalid action target");
-    const result = await executeChatwootAction(supabase, action, fetchImpl);
+    const result = BOOKING_ACTIONS.includes(action.action_type as (typeof BOOKING_ACTIONS)[number])
+      ? await executeSnagtimeAction(supabase, action, fetchImpl)
+      : await executeChatwootAction(supabase, action, fetchImpl);
     const completed = await Promise.resolve(supabase.rpc("complete_ops_action", { p_id: action.id, p_lease_token: action.lease_token, p_safe_result: result }));
     if (completed.error || completed.data !== true) throw new Error("action completion lease lost");
   } catch (error) {
     await Promise.resolve(supabase.rpc("fail_ops_action", { p_id: action.id, p_lease_token: action.lease_token, p_error: redact(error instanceof Error ? error.message : String(error)), p_retryable: error instanceof ProviderActionError ? error.retryable : true }));
   }
   return true;
+}
+
+/** Execute a booking mutation against SnagTime's exact private API. The
+ * request is signed per SnagTime's contract; the action completes only after
+ * the provider receipt (including calendar status) is durable. */
+async function executeSnagtimeAction(supabase: Supabase, action: Action, fetchImpl: typeof fetch): Promise<Record<string, unknown>> {
+  if (!BOOKING_ACTIONS.includes(action.action_type as (typeof BOOKING_ACTIONS)[number])) throw new Error("action provider capability unavailable");
+  const base = httpsEnv("SNAGTIME_BASE_URL");
+  const secret = secretFile("BLOCKWISE_BOOKING_ACTION_SECRET_FILE");
+  const target = await supabase.rpc("resolve_ops_booking_action_target", { p_workspace_id: action.workspace_id, p_booking_id: action.target_id });
+  if (target.error || !target.data || typeof target.data !== "object") throw new ProviderActionError("snagtime booking target unavailable", false);
+  const resolved = (Array.isArray(target.data) ? target.data[0] : target.data) as { provider_booking_id?: unknown; provider_mutation_version?: unknown };
+  const providerBookingId = typeof resolved.provider_booking_id === "string" && /^[A-Za-z0-9._:-]{1,256}$/.test(resolved.provider_booking_id) ? resolved.provider_booking_id : null;
+  const providerVersion = typeof resolved.provider_mutation_version === "number" && Number.isSafeInteger(resolved.provider_mutation_version) && resolved.provider_mutation_version >= 0 ? resolved.provider_mutation_version : null;
+  if (!providerBookingId || providerVersion === null) throw new ProviderActionError("snagtime booking identity invalid", false);
+  const operationKey = `snagtime:action:${action.action_id}`;
+  const bookingLedgerKey = `snagtime:booking:${providerBookingId}`;
+  const begun = await supabase.rpc("begin_ops_provider_operation", { p_operation_key: operationKey, p_workspace_id: action.workspace_id, p_provider: "snagtime", p_aggregate_type: "booking_action", p_aggregate_id: action.target_id, p_source_version: providerVersion + 1, p_intent: { actionId: action.action_id, action: action.action_type, providerVersion } });
+  if (begun.error) throw new ProviderActionError("snagtime action ledger unavailable", true);
+  const state = typeof begun.data === "object" && begun.data ? String((begun.data as Record<string, unknown>).state ?? "prepared") : "prepared";
+  if (state === "settled") {
+    const receipt = await supabase.from("ops_action_receipts").select("safe_result").eq("action_id", action.action_id).eq("status", "completed").maybeSingle();
+    const safe = receipt.data?.safe_result;
+    return safe && typeof safe === "object" ? safe as Record<string, unknown> : { provider: "snagtime", status: "settled", replay: true };
+  }
+  if (state === "failed") throw new ProviderActionError("snagtime action ledger is failed", false);
+  if (action.actor_role !== "owner" && action.actor_role !== "support") throw new ProviderActionError("booking action actor role unavailable", false);
+  const payload: Record<string, unknown> = {};
+  if (action.action_type === "booking_reschedule") {
+    const start = typeof action.payload.scheduledStartAt === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(action.payload.scheduledStartAt) ? action.payload.scheduledStartAt : null;
+    if (!start) throw new ProviderActionError("reschedule start time unavailable", false);
+    payload.scheduledStartAt = start;
+    if (typeof action.payload.scheduledEndAt === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(action.payload.scheduledEndAt)) payload.scheduledEndAt = action.payload.scheduledEndAt;
+  }
+  const envelope = {
+    schema: "blockwise.ops.action.v1",
+    actionId: action.action_id,
+    idempotencyKey: `ops:booking:${action.action_id}`,
+    workspaceId: action.workspace_id,
+    customerId: action.customer_id,
+    actor: { operatorId: action.actor_operator_id, role: action.actor_role, aal: "aal2" },
+    target: { type: "booking", id: providerBookingId },
+    action: action.action_type,
+    expectedVersion: providerVersion,
+    reason: action.reason,
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
+    payload,
+  };
+  const path = `/api/internal/blockwise/bookings/${encodeURIComponent(providerBookingId)}/actions`;
+  const body = JSON.stringify(envelope);
+  const response = await signedCall(base, path, "POST", body, secret, action.workspace_id, operationKey + ":mutate", fetchImpl);
+  const result = record(response.body?.data);
+  if (result.status !== "ACCEPTED") throw new ProviderActionError("snagtime booking action was not accepted", true);
+  const mutationVersion = typeof result.mutationVersion === "number" && Number.isSafeInteger(result.mutationVersion) && result.mutationVersion >= 0 ? result.mutationVersion : null;
+  if (mutationVersion === null) throw new ProviderActionError("snagtime booking receipt is missing its version", true);
+  // Receipt polling: follow the calendar effect to a terminal status, bounded.
+  let calendarStatus = typeof result.calendarStatus === "string" ? result.calendarStatus : "PENDING";
+  for (let attempt = 0; attempt < 10 && (calendarStatus === "PENDING"); attempt += 1) {
+    await sleep(2_000);
+    const query = `?actionId=${encodeURIComponent(action.action_id)}`;
+    const poll = await signedCall(base, path + query, "GET", "", secret, action.workspace_id, `${operationKey}:poll:${attempt}`, fetchImpl, query);
+    const polled = record(poll.body?.data);
+    if (typeof polled.calendarStatus === "string") calendarStatus = polled.calendarStatus;
+  }
+  await supabase.rpc("record_ops_provider_operation", { p_operation_key: operationKey, p_provider_id_ciphertext: encryptId(providerBookingId), p_provider_id_digest: digest(providerBookingId), p_status: "remote_succeeded" });
+  const stepped = await supabase.rpc("record_ops_provider_step", { p_operation_key: operationKey, p_step: "booking.mutation", p_resource: "booking", p_provider_id_ciphertext: encryptId(providerBookingId), p_provider_id_digest: digest(providerBookingId) });
+  if (stepped.error || stepped.data !== true) throw new ProviderActionError("snagtime action step could not be recorded", true);
+  const settled = await supabase.rpc("settle_ops_booking_provider_operation", { p_operation_key: bookingLedgerKey, p_expected_source_version: providerVersion + 1, p_provider_id_ciphertext: encryptId(providerBookingId), p_provider_id_digest: digest(providerBookingId), p_new_mutation_version: mutationVersion });
+  if (settled.error || settled.data !== true) throw new ProviderActionError("snagtime booking ledger could not settle", true);
+  const snapshotStatus = typeof result.bookingStatus === "string" ? result.bookingStatus : action.action_type;
+  const snapshot = await supabase.rpc("upsert_ops_provider_snapshot", { p_workspace_id: action.workspace_id, p_provider: "snagtime", p_snapshot_kind: "booking", p_aggregate_type: "booking", p_aggregate_id: action.target_id, p_status: snapshotStatus, p_stage: null, p_subject: null, p_channel: "web", p_delivery_status: calendarStatus.toLowerCase(), p_provider_record_suffix: `****${providerBookingId.slice(-4)}`, p_occurred_at: new Date().toISOString(), p_last_activity_at: new Date().toISOString(), p_source_event_id: action.action_id, p_source_version: action.expected_version, p_safe_data: { action: action.action_type, calendarStatus } });
+  if (snapshot.error) throw new Error("snagtime action snapshot failed");
+  return { provider: "snagtime", status: snapshotStatus, calendarStatus };
+}
+
+function record(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new ProviderActionError("snagtime response was invalid", true);
+  return value as Record<string, unknown>;
+}
+
+function sleep(ms: number): Promise<void> { return new Promise((resolveSleep) => setTimeout(resolveSleep, ms)); }
+
+/** Sign and send one request per SnagTime's canonical HMAC contract. */
+async function signedCall(base: URL, path: string, method: "POST" | "GET", body: string, secret: string, workspaceId: string, key: string, fetchImpl: typeof fetch, signedQuery = ""): Promise<{ body: Record<string, any> }> {
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const nonce = randomUUID().replace(/-/g, "");
+  const scope = "ops.write";
+  const canonical = ["v1", timestamp, nonce, scope, method, `${new URL(path, base).pathname}${signedQuery}`, createHash("sha256").update(body).digest("hex")].join("\n");
+  const signature = createHmac("sha256", secret).update(canonical).digest("hex");
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => { timedOut = true; controller.abort(); }, 15_000);
+  try {
+    const response = await fetchImpl(new URL(path, base), { method, redirect: "error", headers: { "x-blockwise-timestamp": timestamp, "x-blockwise-nonce": nonce, "x-blockwise-scope": scope, "x-blockwise-signature": signature, "x-blockwise-workspace-id": workspaceId, "content-type": "application/json", "x-blockwise-correlation": key }, ...(method === "POST" ? { body } : {}), signal: controller.signal });
+    if (response.status === 429 || response.status >= 500) throw new ProviderActionError(`snagtime temporary failure (${response.status})`, true);
+    const parsed = await response.json().catch(() => null);
+    if (!response.ok) {
+      const code = parsed && typeof parsed === "object" && record(parsed).error && typeof record(record(parsed).error).code === "string" ? String(record(record(parsed).error).code) : "";
+      if (code === "STALE_BOOKING_VERSION") throw new ProviderActionError("snagtime booking changed; refresh the operator view", false);
+      if (code === "ACTION_IN_PROGRESS") throw new ProviderActionError("snagtime action is already processing", true);
+      throw new ProviderActionError(`snagtime provider rejected action (${response.status})`, false);
+    }
+    if (!parsed || typeof parsed !== "object") throw new ProviderActionError("snagtime response was invalid", true);
+    return { body: parsed as Record<string, any> };
+  } catch (error) {
+    if (error instanceof ProviderActionError) throw error;
+    throw new ProviderActionError(timedOut ? "snagtime request timed out" : "snagtime transport failure", true);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function executeChatwootAction(supabase: Supabase, action: Action, fetchImpl: typeof fetch): Promise<Record<string, unknown>> {

@@ -1,0 +1,6 @@
+<!doctype html><html><body><script>
+// Real zero-ad structure (from the live 1.3MB payload that previously failed
+// to parse): count 0, empty edges, page_info present, has_next_page false.
+// The marketing "No ads" banner is NOT present in this payload.
+require=[],(function(){this.__bbox={define:[["__bbox",{"require":[["RelayPrefetchedStreamCache",null,[],{"ad_library_main":{"search_results_connection":{"count":0,"edges":[],"page_info":{"has_next_page":false}},"view_all_page_id":"100042841013992","is_captcha_required":false}}]]}}]]})()
+</script></body></html>

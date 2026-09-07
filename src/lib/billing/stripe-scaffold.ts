@@ -131,10 +131,6 @@ export function buildCheckoutSessionRequest(
   if (!priceId) {
     throw new BillingNotConfiguredError(`${offer.priceEnvKey} is not configured.`);
   }
-  const couponId = offer.couponEnvKey ? env[offer.couponEnvKey]?.trim() : null;
-  if (offer.product === "self_serve" && !couponId) {
-    throw new BillingNotConfiguredError(`${offer.couponEnvKey} is not configured.`);
-  }
 
   const customerEmail = input.customerEmail?.trim() || null;
   const userId = input.userId?.trim() || null;
@@ -184,9 +180,8 @@ export function buildCheckoutSessionRequest(
           "customer_update[name]": "auto",
         }
       : {}),
-    ...(offer.product === "self_serve"
+    ...(offer.product === "self_serve" && offer.trialDays > 0
       ? {
-          "discounts[0][coupon]": couponId,
           "subscription_data[trial_period_days]": offer.trialDays,
           "subscription_data[trial_settings][end_behavior][missing_payment_method]": "cancel",
         }

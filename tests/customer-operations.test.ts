@@ -134,7 +134,8 @@ test("operator action envelope is normalized, allowlisted, and capability-gated"
   assert.equal(parsed.schema, "blockwise.ops.action.v1");
   assert.equal((parsed.payload as { email: string }).email, "owner@example.test");
   assert.equal(OPS_ACTION_CAPABILITIES.team_invite.capability, "available");
-  assert.equal(OPS_ACTION_CAPABILITIES.team_suspend.capability, "unsupported");
+  assert.equal(OPS_ACTION_CAPABILITIES.team_suspend.capability, "available");
+  assert.equal(OPS_ACTION_CAPABILITIES.team_reactivate.capability, "available");
   assert.equal(OPS_ACTION_CAPABILITIES.team_role_change.capability, "available");
   assert.equal(OPS_ACTION_CAPABILITIES.billing_portal_link.capability, "capability_required");
   assert.equal(Object.keys(OPS_ACTION_CAPABILITIES).length, 24);

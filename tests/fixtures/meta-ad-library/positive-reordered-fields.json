@@ -1,0 +1,5 @@
+<script>
+// Reordered-field variant: page_info appears BEFORE edges, count last.
+// Field order inside the connection object must not matter.
+var payload = "{\"search_results_connection\":{\"page_info\":{\"has_next_page\":false,\"end_cursor\":\"CUR.reordered-1\"},\"edges\":[{\"node\":{\"ad_archive_id\":\"678085702054671_301\"}},{\"node\":{\"ad_archive_id\":\"678085702054671_302\"}}],\"count\":2}}";
+</script>

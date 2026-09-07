@@ -1,0 +1,7 @@
+<!doctype html><html><body><script>
+// Challenge/captcha variant: an anti-automation interstitial that embeds a
+// captcha flag. MUST classify as failure, never as a zero-ad result.
+window.location.replace("/__rd_verify_/challenge?av=0&challenge=AYiVexample");
+</script><noscript>Please complete the security check to continue.</noscript>
+<script>{"require":[["RelayPrefetchedStreamCache",null,[],{"ad_library_main":{"is_captcha_required":true}}]]}</script>
+</body></html>
