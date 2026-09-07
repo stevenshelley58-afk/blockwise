@@ -20,7 +20,6 @@ export async function resolveTemplateAssetValues(
   adId: string,
   workspaceId: string,
   service = createSupabaseServiceClient(),
-import { SaveError } from "./save-ad.ts";
 ): Promise<Record<string, Buffer>> {
   const { data: ad, error: adError } = await service.from("ad_customer_ads").select("template_id").eq("id", adId).eq("workspace_id", workspaceId).single();
   if (adError || !ad?.template_id) throw new SaveError("ad_not_found", "Ad not found");
