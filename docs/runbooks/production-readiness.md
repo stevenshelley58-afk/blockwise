@@ -4,7 +4,7 @@
 
 The coordinated candidate checkout is `/projects/blockwise-beta-release-20260907`.
 At the latest validation checkpoint its exact source revision is
-`6e000ea19813a7f1474547984de5822867a5c127`. The public app remains on
+`7563960ecbc7ac8eb83f679c310029a09a16da26`. The public app remains on
 `c02b11e452203a2d54bd278b913f410588ce6ff4`; no application deployment was
 performed by this validation task.
 
@@ -26,7 +26,7 @@ OAuth writes, email sends, worker restart, or Caddy restart were performed.
 
 ### Validation checkpoint
 
-- `npm run check:nul`: passed, scanning 1,035 text files.
+- `npm run check:nul`: passed, scanning 1,036 text files.
 - Root `npm test`: 910 passed, 0 failed.
 - Package tests: 120 passed, 1 failed, 2 skipped out of 123. The single failure is
   the pre-existing `customer-navigation.test.mjs` expectation that `/ad-radar`
