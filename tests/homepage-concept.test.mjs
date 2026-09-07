@@ -41,8 +41,8 @@ test("homepage concept includes the required mobile story and disclosures", asyn
   ].map((name) => readFile(new URL(`../src/components/homepage-concept/${name}`, import.meta.url), "utf8")))).join("\n");
 
   for (const copy of [
-    "Your competition is running ads.",
-    "More listings, less marketing stress.",
+    "Facebook &amp; Instagram ads. Built for real estate.",
+    "Create, approve and track your ads in one place.",
     "Create real estate ads for Facebook &amp; Instagram.",
     "Ready-made templates. Your photos. Your brand.",
     "Choose",
