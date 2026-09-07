@@ -66,3 +66,11 @@ export function entrance(reduced: boolean | null): {
     item: reduced ? riseReduced : rise,
   };
 }
+
+
+// Marketing-only focal reveal, explicitly requested for the reporting graph.
+// One shared clip reveals both line and fill; routine app timings stay unchanged.
+export const reportingReveal = {
+  duration: 1.2,
+  ease: [0.4, 0, 0.2, 1] as const,
+};

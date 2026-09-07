@@ -24,12 +24,10 @@ Production-built, secret-free, read-only container on a separate internal Docker
 
 See the release evidence record for compiled revision, required checks, browser measurements, form behavior and public preview acceptance.
 
-## Results reporting — motion-led graph
+## Results reporting — smooth shared reveal
 
-Sell one idea: you can see how your ads are going without waiting for an agency update. Use the exact headline “Know how your ads are going.” and the supporting line “Your dashboard. Updates when you want them.” Keep the whole server-rendered section below 70 words, including interface labels.
+Use the headline “Know how your ads are going.” with “Your personal dashboard. Emails as often as you like. Even never. We get it.”
 
-The graph is the product. It spans the section directly on the near-black canvas instead of sitting in a split layout or generic dashboard card. Three large metrics lead into one blue line graph. A small update preview connects reporting to scheduled email delivery without adding another explanatory panel.
+The chart uses smooth bounded cubic curves through the fixture points. One shared SVG clip reveals the line and fill together from left to right over 1.2 seconds, once the actual chart enters the viewport. This owner-requested marketing sequence is a deliberate exception to routine app entrance timing, using the shared reportingReveal token. Period changes morph the same-shaped paths; keyboard and reduced-motion paths stay immediate.
 
-Motion is finite and functional. The line draws once over a visible static base; changing between 7 and 30 days morphs the SVG path because both fixtures use the same number of vertices. Hover or pointer movement reveals a data tooltip. Shared-layout pills glide between periods and email frequencies. Keyboard input is immediate, reduced motion removes movement, and all timing comes from `src/lib/motion.ts`.
-
-Daily, weekly and custom email cadence remain illustrative. The preview neither saves preferences nor sends email, and says so plainly. Production scheduling must be implemented and verified separately before this concept replaces the public homepage.
+No email-frequency strip, scheduler controls, or floating email card. The email benefit lives only in the copy. Example data stays visibly labelled; no services are connected.

@@ -1066,8 +1066,7 @@
   background: var(--hc-success);
   box-shadow: 0 0 0 5px rgba(54, 194, 122, .09);
 }
-.hc-report-range,
-.hc-email-cadences {
+.hc-report-range {
   display: flex;
   position: relative;
   gap: 3px;
@@ -1076,8 +1075,7 @@
   border-radius: 999px;
   background: rgba(255, 255, 255, .055);
 }
-.hc-report-range button,
-.hc-email-cadences button {
+.hc-report-range button {
   position: relative;
   isolation: isolate;
   min-height: 40px;
@@ -1090,12 +1088,9 @@
   font-weight: 700;
   cursor: pointer;
 }
-.hc-report-range button > span:last-child,
-.hc-email-cadences button > span:last-child { position: relative; z-index: 1; }
-.hc-report-range button[aria-pressed="true"],
-.hc-email-cadences button[aria-pressed="true"] { color: #101319; }
-.hc-range-active,
-.hc-cadence-active {
+.hc-report-range button > span:last-child { position: relative; z-index: 1; }
+.hc-report-range button[aria-pressed="true"] { color: #101319; }
+.hc-range-active {
   position: absolute !important;
   z-index: 0;
   inset: 0;
@@ -1128,7 +1123,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.hc-leads-chart { margin: 22px 0 0; }
+.hc-leads-chart { margin: 28px 0 24px !important; }
 .hc-line-chart-grid {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr);
@@ -1158,15 +1153,6 @@
   vector-effect: non-scaling-stroke;
 }
 .hc-chart-area { pointer-events: none; }
-.hc-chart-line-base {
-  fill: none;
-  stroke: rgba(78, 156, 245, .2);
-  stroke-width: 4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-  pointer-events: none;
-}
 .hc-chart-line {
   fill: none;
   stroke: var(--hc-blue-bright);
@@ -1188,7 +1174,7 @@
 }
 .hc-chart-cursor::after {
   position: absolute;
-  top: 50%;
+  top: var(--point-y, 50%);
   left: 50%;
   width: 10px;
   height: 10px;
@@ -1227,80 +1213,6 @@
   font-size: 10px;
 }
 
-.hc-email-update {
-  position: absolute;
-  z-index: 2;
-  top: 12%;
-  right: clamp(12px, 3vw, 38px);
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  min-width: 182px;
-  padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, .13);
-  border-radius: 13px;
-  background: rgba(14, 17, 23, .76);
-  box-shadow: 0 16px 42px rgba(0,0,0,.28);
-  backdrop-filter: blur(14px);
-  pointer-events: none;
-}
-.hc-email-update > span {
-  display: grid;
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
-  place-items: center;
-  border-radius: 9px;
-  background: #eaf3ff;
-  color: #1f6fca;
-}
-.hc-email-update > div { display: grid; gap: 1px; }
-.hc-email-update strong { font-size: 11px; letter-spacing: -.01em; }
-.hc-email-update small { color: #96a2b2; font-size: 9px; }
-
-.hc-email-controls {
-  display: flex;
-  min-height: 78px;
-  align-items: center;
-  gap: 18px;
-  margin-top: 28px;
-  border-top: 1px solid rgba(255, 255, 255, .12);
-}
-.hc-email-label {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin-right: auto;
-  color: #d7e0eb;
-  font-size: 12px;
-  font-weight: 700;
-}
-.hc-email-label svg { color: var(--hc-blue-bright); }
-.hc-email-cadences button { min-height: 38px; padding-inline: 13px; font-size: 11px; }
-.hc-email-schedule {
-  min-width: 146px;
-  color: #788494;
-  font-size: 10px;
-  text-align: right;
-}
-.hc-custom-cadence {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: #8e99a8;
-  font-size: 10px;
-}
-.hc-custom-cadence select {
-  min-width: 58px;
-  min-height: 38px;
-  border: 1px solid rgba(255,255,255,.14);
-  border-radius: 9px;
-  padding-inline: 8px;
-  background: #151922;
-  color: #fff;
-  font: inherit;
-  cursor: pointer;
-}
 .hc-reporting-disclosure {
   margin-top: 13px !important;
   color: #586270;
@@ -1321,8 +1233,7 @@
 .hc-results button:focus-visible,
 .hc-results select:focus-visible { outline: 2px solid var(--hc-blue-bright); outline-offset: 3px; }
 @media (hover: hover) and (pointer: fine) {
-  .hc-report-range button:not([aria-pressed="true"]):hover,
-  .hc-email-cadences button:not([aria-pressed="true"]):hover { color: #fff; }
+  .hc-report-range button:not([aria-pressed="true"]):hover { color: #fff; }
 }
 
 .hc-examples { padding-block: 120px; background: #fff; }
@@ -1541,19 +1452,10 @@
   .hc-report-metrics { gap: 14px; margin-top: 28px !important; }
   .hc-report-metrics dt { font-size: 9px; }
   .hc-report-metrics dd { margin-top: 4px; font-size: clamp(26px, 8vw, 34px); }
-  .hc-leads-chart { margin-top: 18px; }
+  .hc-leads-chart { margin-top: 24px !important; }
   .hc-line-chart-grid { grid-template-columns: 18px minmax(0, 1fr); column-gap: 7px; }
   .hc-line-chart,
   .hc-chart-scale { height: 220px; }
-  .hc-email-update { top: 8%; right: 8px; min-width: 152px; padding: 9px 10px; }
-  .hc-email-update > span { width: 28px; height: 28px; flex-basis: 28px; }
-  .hc-email-update strong { font-size: 10px; }
-  .hc-email-controls { flex-wrap: wrap; gap: 10px; padding-block: 16px; }
-  .hc-email-label { width: 100%; margin-right: 0; }
-  .hc-email-cadences { order: 2; }
-  .hc-email-cadences button { padding-inline: 10px; }
-  .hc-email-schedule { order: 3; min-width: 0; margin-left: auto; }
-  .hc-custom-cadence { order: 4; width: 100%; }
   .hc-reporting-disclosure { text-align: left; }
 
   .hc-examples { padding-block: 76px; }

@@ -1,7 +1,5 @@
 /** Synthetic reporting fixtures. No customer data or email delivery. */
 export type ReportRange = "week" | "month";
-export type EmailCadence = "daily" | "weekly" | "custom";
-
 export const REPORTS = {
   week: {
     label: "Last 7 days",
@@ -15,22 +13,9 @@ export const REPORTS = {
     leads: 62,
     spend: 1116,
     points: [6, 8, 7, 9, 10, 11, 11],
-    labels: ["1 Aug", "5 Aug", "10 Aug", "15 Aug", "20 Aug", "25 Aug", "30 Aug"],
+    labels: ["Days 1–4", "Days 5–8", "Days 9–12", "Days 13–16", "Days 17–20", "Days 21–25", "Days 26–30"],
   },
 } as const;
-
-export const EMAIL_CADENCES = [
-  { id: "daily", label: "Daily" },
-  { id: "weekly", label: "Weekly" },
-  { id: "custom", label: "Custom" },
-] as const;
-
-export function emailSchedule(cadence: EmailCadence, customDays: number) {
-  const days = Number.isFinite(customDays) ? Math.min(30, Math.max(1, Math.round(customDays))) : 3;
-  if (cadence === "weekly") return "Every Monday, 8:00 am";
-  if (cadence === "daily" || days === 1) return "Every day, 8:00 am";
-  return `Every ${days} days, 8:00 am`;
-}
 
 export function formatAdSpend(value: number) {
   return `$${value.toLocaleString("en-AU")}`;
@@ -43,7 +28,14 @@ export function lineChartGeometry(points: readonly number[], maximum: number) {
     y: 188 - value / maximum * 176,
   }));
   const end = vertices[vertices.length - 1] ?? { x: 8, y: 188 };
-  const line = vertices.map(({ x, y }, index) => `${index ? "L" : "M"}${x},${y}`).join(" ");
+  // Cubic segments meet with matching horizontal tangents: smooth, bounded,
+  // and through every fixture point, with no overshoot or fabricated extrema.
+  const line = vertices.map(({ x, y }, index) => {
+    if (!index) return `M${x},${y}`;
+    const previous = vertices[index - 1];
+    const middle = (previous.x + x) / 2;
+    return `C${middle},${previous.y} ${middle},${y} ${x},${y}`;
+  }).join(" ");
   return {
     vertices,
     line,
