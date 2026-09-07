@@ -3,15 +3,15 @@
 ## Delivered
 
 - Public, unlisted/noindex preview: https://blockwise.sale/homepage-preview/concept
-- Application revision: `2e8745190b8340fe622403a0be0700bff8c6b8e3`.
-- Image: `blockwise-homepage-preview:2e8745190b83`.
-- Image ID: `sha256:b32782f5a65b3c3c396e8ccebb26b0c15259cdd24db00b2f1b4dfe2478efea92`.
-- Healthy container: `blockwise-homepage-preview-2e8745190b83`, read-only, non-root, 1 GB memory limit, no host port, separate internal Docker network, no production environment or credentials.
+- Application revision: `bb566f8523b031f5f8a16b6a1944ec6840f85945`.
+- Image: `blockwise-homepage-preview:bb566f8523b0`.
+- Image ID: `sha256:c52ec08ea531a2e8224b32a234fd96d5354ea0b0526590fa036e0d2077468055`.
+- Healthy container: `blockwise-homepage-preview-bb566f8523b0`, read-only, non-root, 1 GB memory limit, no host port, separate internal Docker network, no production environment or credentials.
 - Branch: `codex/homepage-mobile-mockup-20260906`; source worktree `/projects/blockwise-homepage-mockup-20260906`.
 
-The latest update removes the scripted workflow explainer and replaces it with a visual-first loop of eight realistic Meta placements: four Facebook Feed ads and four Instagram Story ads. Ads continuously move from the back of the deck to the front. Feed examples include sponsored page chrome, primary copy, link preview, reactions and Meta action rows. Story examples include progress bars, sponsored headers, full-bleed creative, link treatment and reply controls. The section keeps only one short heading and an icon-only pause/play control.
+The latest update moves the eight-ad Meta loop into the hero as its only product visual and removes the former standalone showcase section and heading. The four Facebook Feed and four Instagram Story examples now use clean property and agent photography without embedded promotional copy. Messaging stays in Meta's native caption, headline and CTA areas, so every placement remains legible when scaled in the moving deck. Only the front ad carries full emphasis; two quieter cards establish depth behind it.
 
-The owner requested a mockup, not a live homepage replacement. The production product was not deployed by this change. Its independent exact production-health gate passed at the then-current served revision `1cb917831da5ba351e625467b4cea440b34ec683`. No product app, database, auth, billing, email or Meta service was changed.
+The owner requested a mockup, not a live homepage replacement. The production product was not deployed by this change. Its independent exact production-health gate passed at the then-current served revision `f21043fff1af0a0ad63eff813f16dbf71952c87a`. No product app, database, auth, billing, email or Meta service was changed.
 
 ## Checks
 
@@ -28,8 +28,8 @@ Verified in Chromium through the real HTTPS preview:
 
 - Compiled revision metadata equals the application revision above.
 - At 1440, 768 and 390 px, page width equals viewport width with no horizontal overflow.
-- The deck contains eight ads and alternates visibly between Facebook Feed and Instagram Story placements at every tested width.
-- Pause holds the current ad; play resumes the deck. The loop pauses offscreen and while the page is hidden.
+- The hero contains the eight-ad deck, the former standalone section and heading are absent, and the loop alternates visibly between Facebook Feed and Instagram Story placements at every tested width.
+- Clean photography remains readable in both front and scaled background cards. Pause holds the current ad; play resumes the deck. The loop pauses offscreen and while the page is hidden.
 - Reduced-motion visitors receive a static composition and the playback control is hidden.
 - Network observation across fresh loads and interactions contained GETs only. No product API, analytics, email or other write request was made.
 - No browser console errors or failed page resources were observed.
@@ -45,7 +45,7 @@ After a product-router restart or configuration reload, reapply only if this pre
 
 ```sh
 cd /projects/blockwise-homepage-mockup-20260906
-python3 scripts/vps/homepage-preview-route.py --upstream blockwise-homepage-preview-2e8745190b83:3000 --apply
+python3 scripts/vps/homepage-preview-route.py --upstream blockwise-homepage-preview-bb566f8523b0:3000 --apply
 ```
 
 Remove only the preview route with `--remove --apply`; do not restore an old full router backup over other work. The previously routed preview container was removed after final acceptance.
