@@ -165,7 +165,7 @@ export async function validateStripePriceForOffer(
   if (price.active !== true) {
     throw new Error(`The configured Stripe price for ${offer.key} is not active.`);
   }
-  if (price.type !== "subscription" || !price.recurring) {
+  if (price.type !== "recurring" || !price.recurring) {
     throw new Error(`The configured Stripe price for ${offer.key} is not a recurring subscription price.`);
   }
   if (price.currency !== offer.currency.toLowerCase()) {

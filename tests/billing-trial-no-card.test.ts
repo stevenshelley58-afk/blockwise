@@ -160,7 +160,7 @@ function pricePayload(overrides: Record<string, unknown>) {
     active: true,
     currency: "aud",
     unit_amount: 24_900,
-    type: "subscription",
+    type: "recurring",
     recurring: { interval: "month" },
     ...overrides,
   };
@@ -209,7 +209,7 @@ test("the configured Stripe price is validated for amount, currency, interval, a
     { unit_amount: 99_00 },
     { currency: "usd" },
     { recurring: { interval: "year" } },
-    { type: "one_off", recurring: null },
+    { type: "one_time", recurring: null },
   ]) {
     await withFetch(pricePayload(overrides), async () => {
       await assert.rejects(() =>
