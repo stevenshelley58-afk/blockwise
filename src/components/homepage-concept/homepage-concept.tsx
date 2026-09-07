@@ -437,7 +437,7 @@ export function HomepageConcept() {
         <section className="hc-faq" id="faq">
           <div className="hc-shell hc-faq-grid">
             <div className="hc-section-copy">
-              <h2>Questions, answered plainly.</h2>
+              <h2>FAQ</h2>
               <p>What to expect before you start.</p>
             </div>
             <div className="hc-faq-list">
