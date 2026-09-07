@@ -607,7 +607,7 @@
 .hc-example-tabs button[aria-pressed="true"] { border-color: var(--hc-ink); background: var(--hc-ink); color: #fff; }
 .hc-examples-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 480px); align-items: center; gap: clamp(40px, 7vw, 100px); }
 .hc-examples-intro h2 { font-size: clamp(52px, 6.2vw, 82px); }
-.hc-example-tabs { max-width: 440px; }
+.hc-example-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 360px; }
 .hc-example-stage { min-width: 0; display: grid; justify-items: center; }
 
 .hc-faq { padding-block: 112px; background: #fff; }
