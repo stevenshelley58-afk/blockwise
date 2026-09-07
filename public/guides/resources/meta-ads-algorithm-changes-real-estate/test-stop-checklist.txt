@@ -1,0 +1,18 @@
+Meta algorithm briefing — test/stop checklist
+
+Date reviewed: 7 September 2026
+
+Test
+[ ] Keep the service area and current Housing-category requirements accurate.
+[ ] Write one clear homeowner problem, offer and CTA per ad.
+[ ] Run a small set of genuinely different concepts your budget can support.
+[ ] Track impressions, spend, contactability and downstream quality.
+[ ] Record the evidence and the decision date.
+
+Stop or revise
+[ ] Stop a concept when it has enough delivery for a fair review and consistently weak quality.
+[ ] Revise one variable at a time; do not call a colour change a new hypothesis.
+[ ] Pause any ad whose local claim or proof cannot be verified.
+[ ] Re-check account country, reachable markets and current Meta requirements before expansion.
+
+Meta’s engineering announcements describe platform systems, not a performance guarantee for your account.

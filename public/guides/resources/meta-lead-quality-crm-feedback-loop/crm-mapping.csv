@@ -1,0 +1,5 @@
+event_name,when,source,matching,consent_and_privacy
+lead_received,form submitted,Meta lead form,Lead ID if available; otherwise supported click or customer-data match,record notice and purpose
+contact_attempted,first outreach logged,CRM,Lead ID or approved fallback,limit access and retain only as needed
+qualified_seller,objective criteria met,CRM,Lead ID recommended; follow Meta matching rules,document lawful basis and consent status
+appraisal_booked,appointment confirmed,CRM,Lead ID recommended; fallback only when permitted,do not send free-text notes or secrets

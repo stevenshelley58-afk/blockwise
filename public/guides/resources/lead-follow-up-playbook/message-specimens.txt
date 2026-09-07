@@ -1,0 +1,23 @@
+DELIVERY EMAIL
+Subject: Your [resource] from [agency]
+Hi [first name],
+Here is the [resource] you requested: [link]. It covers [scope] and was updated [date]. Reply with a question. If you opted into updates, unsubscribe here: [link].
+Regards, [name] | [agency] | [phone] | [privacy link]
+
+FIRST SMS (ONLY WHEN CONSENT AND PREFERENCE PERMIT)
+Hi [first name], [agent] from [agency] here. Your [resource] is here: [link]. Reply with a question. Reply STOP to unsubscribe.
+
+VOICEMAIL
+Hi [first name], it’s [name] from [agency]. You requested [resource], and I’m checking that the link worked. Call [number] if a question comes up. I won’t keep calling if you prefer no further contact.
+
+NO-ANSWER FOLLOW-UP (ONLY WHEN PERMITTED)
+Hi [first name], [agent] from [agency] here. I tried to check that your requested [resource] arrived. No need to call back if you prefer no further contact; reply STOP to unsubscribe from SMS.
+
+APPOINTMENT CONFIRMATION
+Hi [first name], confirming our [date/time] appointment about [purpose]. I’ll call from [number]. Reply if you need to change it.
+
+REPLY
+Answer the question directly, confirm the next step and honour any request to stop. Do not resume the generic cadence automatically.
+
+REFUSAL OR SUPPRESSION RESPONSE
+Thanks for letting me know. I have recorded that you do not want further commercial messages from [agency]. We will not continue this sequence.
