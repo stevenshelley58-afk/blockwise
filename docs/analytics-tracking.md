@@ -19,6 +19,7 @@ configuration, not secrets, but must not be committed into environment files.
   paths.
 - External custom event properties are allow-listed. Emails, names, phones,
   free text, postcodes, URLs, IDs, query strings, and referrers are dropped.
+- Clarity uses Consent API v2. Replay is limited to home, pricing and guides without URL queries or fragments; it stops on navigation or consent withdrawal. A new full page load starts the next eligible recording.
 - Clarity receives no user identity calls. Apply data-clarity-mask="true" to
   any new field that can contain a visitor's information.
 

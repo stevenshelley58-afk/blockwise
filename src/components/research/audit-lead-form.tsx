@@ -1,5 +1,7 @@
 "use client";
 
+import { trackMarketingEvent } from "@/lib/analytics/marketing";
+
 import { useRef, useState, type FormEvent } from "react";
 
 type Metrics = {
@@ -139,7 +141,7 @@ function fireSafe(event: string, props: Record<string, string | number | boolean
     // pixel may be blocked
   }
   try {
-    w.gtag?.("event", event, props);
+    trackMarketingEvent(event, props);
   } catch {
     // gtag may be absent
   }

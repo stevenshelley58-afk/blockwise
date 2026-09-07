@@ -1,4 +1,4 @@
-import { getConsentStatus } from "@/components/consent-banner";
+import { getConsentStatus } from "./consent.ts";
 
 type MarketingValue = string | number | boolean | undefined;
 type MarketingProperties = Record<string, MarketingValue>;
@@ -19,17 +19,25 @@ const SAFE_VALUE = /^[a-z0-9_\-]{1,80}$/;
 
 declare global {
   interface Window {
-    clarity?: (action: "consent" | "event", value?: string) => void;
+    clarity?: (action: "consentv2" | "event" | "start" | "stop", value?: string | { ad_Storage: "granted" | "denied"; analytics_Storage: "granted" | "denied" }) => void;
   }
 }
 
 export function isMarketingPath(pathname: string): boolean {
-  return ![
-    "/_next", "/access-unavailable", "/ad-studio", "/api", "/auth", "/booking",
-    "/leads", "/model-control", "/onboarding", "/operator", "/results",
-    "/self-serve", "/settings", "/workforce",
-  ].some((prefix) => pathname === prefix || pathname.startsWith(prefix + "/"));
+  return ["/", "/pricing", "/signup", "/audit", "/guides", "/privacy", "/terms", "/data-deletion"].includes(pathname)
+    || /^\/guides\/[a-z0-9-]+$/.test(pathname)
+    || /^\/(audit|suburb)\/[a-z0-9-]+(?:\/[a-z0-9-]+)*$/.test(pathname);
 }
+
+export function marketingPageLocation(origin: string, pathname: string): string {
+  // Research URLs may embed a postcode or an opaque identifier.
+  const safePath = /^\/(audit|suburb)\//.test(pathname) ? "/" + pathname.split("/")[1] : pathname;
+  return origin + safePath;
+}
+
+export function validGa4Id(value?: string): value is string { return /^G-[A-Z0-9]{4,20}$/.test(value ?? ""); }
+export function validGoogleAdsId(value?: string): value is string { return /^AW-[0-9]+$/.test(value ?? ""); }
+export function validClarityId(value?: string): value is string { return /^[a-z0-9]{8,32}$/.test(value ?? ""); }
 
 function pageType(pathname: string): string {
   if (pathname === "/") return "home";
@@ -42,33 +50,34 @@ function pageType(pathname: string): string {
 }
 
 export function sanitizeMarketingProperties(properties: MarketingProperties = {}): Record<string, string | number | boolean> {
-  return Object.fromEntries(
-    Object.entries(properties).flatMap(([name, value]) => {
-      if (!SAFE_PROPERTY_NAMES.has(name) || value === undefined) return [];
-      if (typeof value === "number" || typeof value === "boolean") return [[name, value]];
-      const normalized = value.trim().toLowerCase().replace(/\s+/g, "_");
-      return SAFE_VALUE.test(normalized) ? [[name, normalized]] : [];
-    }),
-  );
+  const safe: Record<string, string | number | boolean> = {};
+  for (const [name, value] of Object.entries(properties)) {
+    if (!SAFE_PROPERTY_NAMES.has(name)) continue;
+    if (typeof value === "boolean") { safe[name] = value; continue; }
+    if (typeof value !== "string") continue;
+    const normalized = value.trim().toLowerCase().replace(/\s+/g, "_");
+    if (SAFE_VALUE.test(normalized)) safe[name] = normalized;
+  }
+  return safe;
 }
 
 function eventProperties(properties: MarketingProperties): Record<string, string | number | boolean> {
   const safe = sanitizeMarketingProperties(properties);
   if (typeof window !== "undefined" && isMarketingPath(window.location.pathname)) {
     safe.page_type = pageType(window.location.pathname);
-    safe.page_location = window.location.origin + window.location.pathname;
+    safe.page_location = marketingPageLocation(window.location.origin, window.location.pathname);
   }
   return safe;
 }
 
 /** Sends only consented, allow-listed marketing events to configured providers. */
 export function trackMarketingEvent(eventName: string, properties: MarketingProperties = {}): void {
-  if (typeof window === "undefined" || getConsentStatus() !== "granted") return;
+  if (typeof window === "undefined" || getConsentStatus() !== "granted" || !isMarketingPath(window.location.pathname)) return;
   const event = eventName.trim().toLowerCase();
   if (!SAFE_EVENT_NAME.test(event)) return;
   const safeProperties = eventProperties(properties);
   try {
-    window.gtag?.("event", event, safeProperties);
+    window.gtag?.("event", event, { ...safeProperties, page_referrer: "", page_title: safeProperties.page_type });
   } catch {
     // Analytics must never interrupt the user flow.
   }

@@ -5,11 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { getConsentStatus } from "@/components/consent-banner";
-import { isMarketingPath, trackMarketingPageView } from "@/lib/analytics/marketing";
-
-function validGoogleTagId(value: string | undefined): value is string {
-  return Boolean(value && value.length >= 8 && value.charCodeAt(1) === 45);
-}
+import { isMarketingPath, marketingPageLocation, trackMarketingPageView, validGa4Id, validGoogleAdsId } from "@/lib/analytics/marketing";
 
 export function MarketingAnalytics({
   metaPixelId,
@@ -23,7 +19,7 @@ export function MarketingAnalytics({
   const [enabled, setEnabled] = useState(false);
   const [googleReady, setGoogleReady] = useState(false);
   const pathname = usePathname();
-  const googleTagId = validGoogleTagId(ga4MeasurementId) ? ga4MeasurementId : validGoogleTagId(googleAdsId) ? googleAdsId : undefined;
+  const googleTagId = validGa4Id(ga4MeasurementId) ? ga4MeasurementId : validGoogleAdsId(googleAdsId) ? googleAdsId : undefined;
 
   useEffect(() => {
     const sync = () => setEnabled(getConsentStatus() === "granted");
@@ -33,12 +29,15 @@ export function MarketingAnalytics({
   }, []);
 
   useEffect(() => {
-    if (enabled && googleReady && validGoogleTagId(ga4MeasurementId) && pathname) {
+    if (enabled && googleReady && validGa4Id(ga4MeasurementId) && pathname) {
       trackMarketingPageView(pathname);
     }
   }, [enabled, ga4MeasurementId, googleReady, pathname]);
 
-  if (!enabled) return null;
+  if (!enabled || !pathname || !isMarketingPath(pathname)) return null;
+  const googleIds = [validGa4Id(ga4MeasurementId) ? ga4MeasurementId : undefined, validGoogleAdsId(googleAdsId) ? googleAdsId : undefined].filter(Boolean);
+  const googleConfig = { send_page_view: false, page_location: marketingPageLocation(window.location.origin, pathname), page_referrer: "", allow_google_signals: false, allow_ad_personalization_signals: false };
+
   return (
     <>
       <Script id="meta-pixel" strategy="afterInteractive">
@@ -46,9 +45,9 @@ export function MarketingAnalytics({
       </Script>
       {googleTagId ? (
         <>
-          <Script id="gtag-base" src={`https://www.googletagmanager.com/gtag/js?id=${googleTagId}`} strategy="afterInteractive" onLoad={() => setGoogleReady(true)} />
+          <Script id="gtag-base" src={`https://www.googletagmanager.com/gtag/js?id=${googleTagId}`} strategy="afterInteractive" onReady={() => setGoogleReady(true)} />
           <Script id="gtag-init" strategy="afterInteractive">
-            {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;gtag('js',new Date());gtag('consent','default',{ad_storage:'granted',ad_user_data:'granted',ad_personalization:'granted',analytics_storage:'granted'});gtag('set','send_page_view',false);gtag('config','${googleTagId}');`}
+            {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;gtag('js',new Date());gtag('consent','default',{ad_storage:'granted',ad_user_data:'granted',ad_personalization:'granted',analytics_storage:'granted'});${googleIds.map((id) => `gtag('config',${JSON.stringify(id)},${JSON.stringify(googleConfig)});`).join('')}`}
           </Script>
         </>
       ) : null}
