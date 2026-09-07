@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { decryptToken, encryptToken } from "../src/lib/providers/token-crypto.ts";
-import { fetchMetaUserIdentity } from "../src/lib/providers/oauth-handlers.ts";
+import { fetchMetaUserIdentity } from "../src/lib/providers/meta-oauth-identity.ts";
 import {
   createOAuthStatePayload,
   sanitizeOAuthCampaignId,
