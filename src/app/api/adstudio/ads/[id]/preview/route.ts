@@ -29,7 +29,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const [customerImages, templateAssets] = await Promise.all([resolveImageValues(document, access.access.workspaceId, id, service), resolveTemplateAssetValues(id, access.access.workspaceId, service)]);
     const textValues = Object.fromEntries(template.textInputs.map(input => [input.key, document.sharedTextValues[input.key] ?? input.placeholder]));
     const result = await renderPlacement({ template, imageValues: { ...templateAssets, ...customerImages.bytes }, textValues, colourMap: document.resolvedColourMap, cropOverrides: placement === "feed" ? document.feedCropOverrides : document.storyCropOverrides }, placement);
-    return new NextResponse(new Uint8Array(result.png), { headers: { "content-type": "image/png", "cache-control": "private, no-store", "x-blockwise-document-hash": sha256Hex(document), "x-blockwise-template-hash": sha256Hex(template), "x-blockwise-renderer": "blockwise-ad-template-renderer" } });
+    return new NextResponse(new Uint8Array(result.png), { headers: { "content-type": "image/png", "cache-control": "private, no-store", "x-blockwise-document-hash": sha256Hex(document), "x-blockwise-template-hash": `sha256:${sha256Hex(template)}`, "x-blockwise-renderer": "blockwise-ad-template-renderer" } });
   } catch (error) {
     console.error("Ad Studio canonical preview failed", { code: error instanceof Error ? error.name : "unknown" });
     return NextResponse.json({ error: "Preview could not be rendered.", code: "preview_failed" }, { status: 400 });
