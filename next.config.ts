@@ -18,9 +18,12 @@ function sentryIngestOrigin(dsn: string | undefined): string | null {
   }
 }
 
+const emailPreview = process.env.BLOCKWISE_EMAIL_PREVIEW === "true";
 const nextConfig: NextConfig = {
+  basePath: emailPreview ? "/email-preview" : "",
   // Embedded at build time: a mutable runtime env must not impersonate a release.
   env: {
+    BLOCKWISE_EMAIL_PREVIEW: emailPreview ? "true" : "false",
     BLOCKWISE_BUILD_REVISION: /^[a-f0-9]{40}$/i.test(process.env.BLOCKWISE_BUILD_REVISION ?? "")
       ? process.env.BLOCKWISE_BUILD_REVISION
       : "",

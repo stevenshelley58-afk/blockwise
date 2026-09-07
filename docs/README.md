@@ -2,6 +2,10 @@
 
 This index separates current operating guidance from retained history.
 
+## Design previews
+
+- [Email system options](design/email-system-options.md) — isolated concepts; outgoing mail unchanged.
+
 ## Current references
 
 - [Architecture overview](architecture/overview.md)

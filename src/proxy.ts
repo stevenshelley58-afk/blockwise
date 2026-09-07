@@ -9,6 +9,18 @@ const AUTHENTICATED_API_PREFIXES = ["/api/adstudio/", "/api/operator/"] as const
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Isolated, read-only design review: no auth refresh or product endpoints.
+  if (process.env.BLOCKWISE_EMAIL_PREVIEW === "true") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      return new NextResponse("Method not allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
+    }
+    if (pathname === "/email-design" || pathname.startsWith("/_next/")) {
+      return NextResponse.next();
+    }
+    return new NextResponse("Not found", { status: 404 });
+  }
+
+
   if (process.env.NODE_ENV === "production" && pathname.startsWith("/api/dev/")) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

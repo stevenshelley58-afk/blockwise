@@ -31,6 +31,8 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+const EMAIL_PREVIEW = process.env.BLOCKWISE_EMAIL_PREVIEW === "true";
+
 const META_PIXEL_ID = "1699948581050851";
 const META_APP_ID = process.env.META_APP_ID;
 const GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID;
@@ -77,7 +79,7 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
   },
   facebook: META_APP_ID ? { appId: META_APP_ID } : undefined,
-  robots: { index: true, follow: true },
+  robots: { index: !EMAIL_PREVIEW, follow: !EMAIL_PREVIEW },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -95,11 +97,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </Script>
       </head>
       <body>
-        <MarketingAnalytics metaPixelId={META_PIXEL_ID} googleAdsId={GOOGLE_ADS_ID} />
+        {!EMAIL_PREVIEW && <MarketingAnalytics metaPixelId={META_PIXEL_ID} googleAdsId={GOOGLE_ADS_ID} />}
         {children}
-        <ServiceWorkerRegistrar />
-        <PageViewTracker />
-        <ConsentBanner />
+        {!EMAIL_PREVIEW && <ServiceWorkerRegistrar />}
+        {!EMAIL_PREVIEW && <PageViewTracker />}
+        {!EMAIL_PREVIEW && <ConsentBanner />}
       </body>
     </html>
   );
