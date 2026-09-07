@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+const page = fs.readFileSync("src/app/pricing/page.tsx", "utf8");
+const market = fs.readFileSync("src/components/pricing/market-pricing.tsx", "utf8");
+const faq = fs.readFileSync("src/components/pricing/pricing-faq.tsx", "utf8");
+assert.match(market, /price: "A\$0"/);
+assert.match(market, /price: "A\$249"/);
+assert.match(market, /price: "from A\$1,500"/);
+assert.equal((market.match(/id: "(?:free|self-serve|managed)-details"/g) ?? []).length, 3);
+assert.match(page, /Meta ad spend is separate/);
+assert.match(faq, /What if I don’t have a Meta ad account/);
+assert.match(faq, /<details[\s\S]*className="pricing-faq-item"/);
+console.log("pricing regression checks passed");

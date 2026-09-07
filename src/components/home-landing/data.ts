@@ -106,7 +106,7 @@ export const START_TEMPLATES = [
     id: "seller-consult",
     label: "Seller consult",
     imageSrc:
-      "/adstudio-thumbnails/meta/e5f5c79cf1406642a592ca040d4b93a2ac7dca8d79e0ac4c437c2a8f70a337ec-preview.webp",
+      "/adstudio-thumbnails/meta/6b49016814ffdb9e64eb33943667efda84f3f55e0020d0fc00cbab4f121754d3-preview.webp",
     copy: "Curious what buyers would pay for your home? Get a free, no-obligation consultation.",
     footHeading: "Free seller consultation",
     footSub: "Local market expertise",
