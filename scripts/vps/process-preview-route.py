@@ -39,6 +39,7 @@ def main():
                     "X-Robots-Tag": ["noindex, nofollow, noarchive"],
                     "Cache-Control": ["no-store"]
                 }}}]},
+                {"handle": [{"handler": "rewrite", "uri_substring": [{"find": "/homepage-preview/process-iteration", "replace": "/homepage-preview"}]}]},
                 {"match": [{"method": ["GET", "HEAD"]}], "handle": [{
                     "handler": "reverse_proxy", "upstreams": [{"dial": args.upstream}],
                     "headers": {"request": {"delete": ["Cookie", "Authorization"]}}
