@@ -35,7 +35,7 @@ test("homepage concept is isolated, noindex and uses the mock adapter", async ()
   assert.match(content, /NEXT_PUBLIC_BASE_PATH/);
 });
 
-test("homepage concept includes the Meta ad loop and disclosures", async () => {
+test("homepage concept uses a clean Meta ad loop as the hero visual", async () => {
   const component = (await Promise.all([
     "homepage-concept.tsx", "results-walkthrough.tsx",
   ].map((name) => readFile(new URL(`../src/components/homepage-concept/${name}`, import.meta.url), "utf8")))).join("\n");
@@ -43,7 +43,6 @@ test("homepage concept includes the Meta ad loop and disclosures", async () => {
   for (const copy of [
     "Your competition is running ads.",
     "More listings, less marketing stress.",
-    "Real estate ads that look native on Meta.",
     "Facebook Feed",
     "Instagram Story",
     "Sponsored",
@@ -63,6 +62,11 @@ test("homepage concept includes the Meta ad loop and disclosures", async () => {
   }
   assert.equal((component.match(/format: "feed",/g) ?? []).length, 4);
   assert.equal((component.match(/format: "story",/g) ?? []).length, 4);
+  assert.match(component, /className="hc-hero-visual">\s*<ProcessShowcase \/>/);
+  assert.match(component, /\/home\/home-dusk\.webp/);
+  assert.match(component, /\/hero\/hero-tall\.jpg/);
+  assert.doesNotMatch(component, /Real estate ads that look native on Meta\./);
+  assert.doesNotMatch(component, /className="hc-process"/);
   assert.match(component, /META_SHOWCASE_ADS/);
   assert.match(component, /IntersectionObserver/);
   assert.match(component, /visibilitychange/);

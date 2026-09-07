@@ -128,7 +128,7 @@ const META_SHOWCASE_ADS: readonly MetaShowcaseAd[] = [
     page: "Blockwise Realty",
     initials: "BR",
     tone: "navy",
-    image: "/adstudio-thumbnails/meta/0899efc11fc68e177c731321421454f0001a393bbc8b0211dafad4a7f3b89347-preview.webp",
+    image: "/home/home-dusk.webp",
     copy: "Just listed in Mount Lawley. View the photos, floorplan and inspection times.",
     headline: "A new address worth seeing",
     domain: "BLOCKWISEREALTY.COM.AU",
@@ -141,7 +141,7 @@ const META_SHOWCASE_ADS: readonly MetaShowcaseAd[] = [
     page: "West & Co Property",
     initials: "W&C",
     tone: "blue",
-    image: "/adstudio-thumbnails/meta/050567bfb9034fb5d5fc3974a13f030e8e82c288eea1f5ddec6b93057a18635b-preview.webp",
+    image: "/hero/hero-tall.jpg",
     copy: "Qualified buyers are looking now.",
     headline: "See buyer demand",
     domain: "WESTANDCO.COM.AU",
@@ -154,7 +154,7 @@ const META_SHOWCASE_ADS: readonly MetaShowcaseAd[] = [
     page: "Jordan Lee Property",
     initials: "JL",
     tone: "charcoal",
-    image: "/adstudio-thumbnails/meta/064232d2ec7ec7131301c2cdc77f00a7bc4b250598050e1af0fb78a4824a7a76-preview.webp",
+    image: "/home/open-home-living.webp",
     copy: "Local advice. Clear next steps. Talk with Jordan about your property plans.",
     headline: "Book a no-pressure property call",
     domain: "JORDANLEE.COM.AU",
@@ -167,7 +167,7 @@ const META_SHOWCASE_ADS: readonly MetaShowcaseAd[] = [
     page: "Mia Calloway Real Estate",
     initials: "MC",
     tone: "gold",
-    image: "/adstudio-thumbnails/meta/0bc3d7223f7856c4116c275b42faf9447a13f7abd10f778c6d6c5bff6ba76482-preview.webp",
+    image: "/ads/ad-coastline.jpg",
     copy: "Find out what your home could be worth.",
     headline: "Request an appraisal",
     domain: "MIACALLOWAY.COM.AU",
@@ -180,7 +180,7 @@ const META_SHOWCASE_ADS: readonly MetaShowcaseAd[] = [
     page: "Northside Property",
     initials: "NP",
     tone: "navy",
-    image: "/adstudio-thumbnails/meta/3728e44b6eb934e232f8a271e60286ff955cd39d6ef92cb8e4170ab5a59d61bf-preview.webp",
+    image: "/home/mt-lawley-federation.webp",
     copy: "Buying your first home? Start with the questions that make every inspection easier.",
     headline: "A smarter first-home checklist",
     domain: "NORTHSIDEPROPERTY.COM.AU",
@@ -193,7 +193,7 @@ const META_SHOWCASE_ADS: readonly MetaShowcaseAd[] = [
     page: "Alex Morgan Property",
     initials: "AM",
     tone: "blue",
-    image: "/adstudio-thumbnails/meta/17987becc85c6e0fc32c737a5685a48e006da709a1dade9625e958f780f6e92f-preview.webp",
+    image: "/home/workspace-hero/agent-ad.png",
     copy: "Your local property appraisal, made simple.",
     headline: "Book an appraisal",
     domain: "ALEXMORGAN.COM.AU",
@@ -206,7 +206,7 @@ const META_SHOWCASE_ADS: readonly MetaShowcaseAd[] = [
     page: "Harbourline Realty",
     initials: "HR",
     tone: "charcoal",
-    image: "/adstudio-thumbnails/meta/6e5c79a445561f96d5e580b42c78fc53342d083db4c29941f0b31d974c36c0fe-preview.webp",
+    image: "/home/home-pool.webp",
     copy: "Prices, recent sales and buyer activity—see what changed in your local market.",
     headline: "Your suburb market report",
     domain: "HARBOURLINE.COM.AU",
@@ -219,7 +219,7 @@ const META_SHOWCASE_ADS: readonly MetaShowcaseAd[] = [
     page: "Oak & Key Property",
     initials: "O&K",
     tone: "gold",
-    image: "/adstudio-thumbnails/meta/0d8bd8b9ee1737615e2023050eb26699d568a2cfa857dc4e2608eeca9f446d8c-preview.webp",
+    image: "/ads/ad-hillview.jpg",
     copy: "Plan your next move with a clearer property checklist.",
     headline: "Get the checklist",
     domain: "OAKANDKEY.COM.AU",
@@ -230,13 +230,13 @@ const META_SHOWCASE_ADS: readonly MetaShowcaseAd[] = [
 
 const META_DECK_POSITIONS = [
   { x: "0%", y: 0, scale: 1, rotate: 0, opacity: 1 },
-  { x: "34%", y: 22, scale: 0.92, rotate: 3.2, opacity: 0.9 },
-  { x: "-38%", y: 38, scale: 0.84, rotate: -4.2, opacity: 0.72 },
-  { x: "55%", y: 58, scale: 0.76, rotate: 6, opacity: 0.48 },
-  { x: "-58%", y: 72, scale: 0.69, rotate: -6.5, opacity: 0.28 },
-  { x: "20%", y: 86, scale: 0.64, rotate: 4, opacity: 0 },
-  { x: "-18%", y: 92, scale: 0.61, rotate: -3, opacity: 0 },
-  { x: "0%", y: 96, scale: 0.58, rotate: 0, opacity: 0 },
+  { x: "28%", y: 18, scale: 0.91, rotate: 3, opacity: 0.66 },
+  { x: "-28%", y: 30, scale: 0.82, rotate: -4, opacity: 0.38 },
+  { x: "12%", y: 50, scale: 0.74, rotate: 2, opacity: 0 },
+  { x: "-12%", y: 62, scale: 0.69, rotate: -2, opacity: 0 },
+  { x: "8%", y: 72, scale: 0.65, rotate: 2, opacity: 0 },
+  { x: "-8%", y: 80, scale: 0.62, rotate: -2, opacity: 0 },
+  { x: "0%", y: 88, scale: 0.6, rotate: 0, opacity: 0 },
 ] as const;
 
 const META_DECK_TRANSITION = { duration: 0.72, ease: [0.16, 1, 0.3, 1] as const };
@@ -327,7 +327,6 @@ function ProcessShowcase() {
 
   return (
     <div className="hc-meta-showcase" ref={sectionRef}>
-      <h2>Real estate ads that look native on Meta.</h2>
       <div className="hc-meta-stage" aria-label="Examples of Facebook Feed and Instagram Story ads">
         <button
           className="hc-meta-loop-control"
@@ -387,7 +386,7 @@ export function HomepageConcept() {
           <img src={withBasePath("/brand/blockwise-logo-white.svg")} alt="Blockwise" width="142" height="32" />
         </a>
         <nav aria-label="Primary navigation">
-          <a href="#how-it-works">How it works</a>
+          <a href="#results">How it works</a>
           <a href="#examples">Examples</a>
           <a href="#faq">FAQ</a>
         </nav>
@@ -405,27 +404,12 @@ export function HomepageConcept() {
                 <span><Check aria-hidden="true" size={16} /> No card required.</span>
               </div>
             </div>
-            <div className="hc-hero-product">
-              <div className="hc-ready-bar"><span><i /> Ready to review</span><strong>Free appraisal ad</strong></div>
-              <AdPreview
-                image={AD_EXAMPLES[0].image}
-                postCopy={AD_EXAMPLES[0].postCopy}
-                linkTitle={AD_EXAMPLES[0].linkTitle}
-                compact
-              />
-              <div className="hc-approval-bar">
-                <span><ShieldCheck aria-hidden="true" size={18} /> Nothing spends until you approve.</span>
-                <span className="hc-approval-button">Approve</span>
-              </div>
+            <div className="hc-hero-visual">
+              <ProcessShowcase />
             </div>
           </div>
         </section>
 
-        <section className="hc-process" id="how-it-works">
-          <div className="hc-shell">
-            <ProcessShowcase />
-          </div>
-        </section>
 
         <ResultsWalkthrough />
 
