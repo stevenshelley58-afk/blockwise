@@ -1,28 +1,22 @@
 "use client";
 
 import {
-  ArrowRight,
-  BarChart3,
   Check,
   ChevronRight,
-  CircleDollarSign,
-  Clock3,
   Globe2,
   MessageCircle,
   MoreHorizontal,
-  MousePointer2,
   Send,
   Share2,
   ThumbsUp,
-  ShieldCheck,
-  Sparkles,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
-import { AdPreview } from "@/components/homepage-concept/ad-preview";
+import { CreativeEditPreview } from "@/components/homepage-concept/creative-edit-preview";
+import { CREATIVE_EDIT_EXAMPLES } from "@/lib/homepage-concept/creative-edit";
 import { ResultsReporting } from "@/components/homepage-concept/results-reporting";
-import { AD_EXAMPLES, FAQS, withBasePath } from "@/lib/homepage-concept/content";
+import { FAQS, withBasePath } from "@/lib/homepage-concept/content";
 import { requestMockTrial, validateTrialEmail } from "@/lib/homepage-concept/mock-trial";
 
 type FormState = "idle" | "loading" | "success" | "error";
@@ -36,6 +30,8 @@ function PrimaryLink({ children, className = "" }: { children: React.ReactNode; 
 }
 
 function TrialForm() {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   const [email, setEmail] = useState("");
   const [state, setState] = useState<FormState>("idle");
   const [message, setMessage] = useState("");
@@ -65,6 +61,7 @@ function TrialForm() {
 
   return (
     <form className="hc-trial-form" onSubmit={handleSubmit} noValidate>
+      <noscript><p className="hc-form-note">Enable JavaScript to try the preview form.</p></noscript>
       <label htmlFor="trial-email">Work email</label>
       <div className="hc-trial-row">
         <input
@@ -77,7 +74,7 @@ function TrialForm() {
           value={email}
           aria-invalid={state === "error"}
           aria-describedby="trial-note trial-status"
-          disabled={state === "loading"}
+          disabled={!hydrated || state === "loading"}
           onChange={(event) => {
             setEmail(event.target.value);
             if (state !== "idle") {
@@ -86,9 +83,9 @@ function TrialForm() {
             }
           }}
         />
-        <button className="hc-button hc-button--light" type="submit" disabled={state === "loading"}>
+        <button className="hc-button hc-button--light" type="submit" disabled={!hydrated || state === "loading"}>
           {state === "loading" ? "Preparing demo…" : "Start free trial"}
-          {state === "loading" ? <span className="hc-spinner" aria-hidden="true" /> : <ArrowRight aria-hidden="true" size={17} />}
+          {state === "loading" ? <span className="hc-spinner" aria-hidden="true" /> : null}
         </button>
       </div>
       <p id="trial-note" className="hc-form-note">No card required. Ad spend is separate.</p>
@@ -98,7 +95,7 @@ function TrialForm() {
         role={state === "error" ? "alert" : "status"}
         aria-live="polite"
       >
-        {message || "Preview form only — nothing will be sent or saved."}
+        {message || "Preview only. Your email is not sent or saved."}
       </p>
     </form>
   );
@@ -204,7 +201,7 @@ const META_SHOWCASE_ADS: readonly MetaShowcaseAd[] = [
     initials: "HR",
     tone: "charcoal",
     image: "/home/home-pool.webp",
-    copy: "Prices, recent sales and buyer activity—see what changed in your local market.",
+    copy: "Prices, recent sales and buyer activity. See what changed in your local market.",
     headline: "Your suburb market report",
     domain: "HARBOURLINE.COM.AU",
     reactions: "57",
@@ -293,7 +290,7 @@ function MetaStoryAd({ ad }: { ad: MetaShowcaseAd }) {
   );
 }
 
-function ProcessShowcase() {
+function MetaAdShowcase() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const reduceMotion = Boolean(useReducedMotion());
   const [order, setOrder] = useState(() => META_SHOWCASE_ADS.map((_, index) => index));
@@ -324,7 +321,7 @@ function ProcessShowcase() {
   return (
     <div className="hc-meta-showcase" ref={sectionRef}>
       <div className="hc-meta-stage" aria-label="Examples of Facebook Feed and Instagram Story ads">
-        <p className="hc-sr-only" aria-live="polite">
+        <p className="hc-sr-only">
           Showing {META_SHOWCASE_ADS[order[0]].format === "feed" ? "Facebook Feed" : "Instagram Story"} ad from {META_SHOWCASE_ADS[order[0]].page}
         </p>
         <div className="hc-meta-deck">
@@ -335,6 +332,7 @@ function ProcessShowcase() {
               <div className="hc-meta-card-positioner" key={ad.id}>
                 <motion.div
                   className={`hc-meta-card hc-meta-card--${ad.format}${position === 0 ? " is-front" : ""}`}
+                  aria-hidden={position !== 0}
                   style={{ zIndex: META_SHOWCASE_ADS.length - position }}
                   animate={pose}
                   transition={reduceMotion ? { duration: 0 } : META_DECK_TRANSITION}
@@ -352,18 +350,6 @@ function ProcessShowcase() {
 
 export function HomepageConcept() {
   const [selectedExample, setSelectedExample] = useState(0);
-  const activeExample = AD_EXAMPLES[selectedExample];
-  const exampleDetails = useRef<HTMLDetailsElement>(null);
-
-  useEffect(() => {
-    const phone = window.matchMedia("(max-width: 600px)");
-    const syncDisclosure = () => {
-      if (exampleDetails.current) exampleDetails.current.open = !phone.matches;
-    };
-    syncDisclosure();
-    phone.addEventListener("change", syncDisclosure);
-    return () => phone.removeEventListener("change", syncDisclosure);
-  }, []);
 
   return (
     <div className="hc-root">
@@ -372,8 +358,9 @@ export function HomepageConcept() {
           <img src={withBasePath("/brand/blockwise-logo-white.svg")} alt="Blockwise" width="142" height="32" />
         </a>
         <nav aria-label="Primary navigation">
-          <a href="#results">How it works</a>
           <a href="#examples">Examples</a>
+          <a href="#results">Results</a>
+          <a href="https://blockwise.sale/pricing">Pricing</a>
           <a href="#faq">FAQ</a>
         </nav>
         <a className="hc-header-cta" href="#trial">Start free trial</a>
@@ -391,84 +378,43 @@ export function HomepageConcept() {
               </div>
             </div>
             <div className="hc-hero-visual">
-              <ProcessShowcase />
+              <MetaAdShowcase />
             </div>
           </div>
         </section>
 
+
+        <section className="hc-examples" id="examples" aria-labelledby="examples-heading">
+          <div className="hc-shell hc-examples-layout">
+            <div className="hc-section-copy hc-examples-intro">
+              <h2 id="examples-heading">Your brand.<br />Your ads.</h2>
+              <div className="hc-example-tabs" role="group" aria-label="Choose an ad example">
+                {CREATIVE_EDIT_EXAMPLES.map((example, index) => (
+                  <button
+                    key={example.id}
+                    type="button"
+                    id={`example-tab-${example.id}`}
+                    aria-pressed={selectedExample === index}
+                    aria-controls="example-panel"
+                    onClick={() => setSelectedExample(index)}
+                  >
+                    {example.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div id="example-panel" className="hc-example-stage" role="region" aria-label={`${CREATIVE_EDIT_EXAMPLES[selectedExample].label} ad example`}>
+              <CreativeEditPreview selectedExample={selectedExample} />
+            </div>
+          </div>
+        </section>
 
         <ResultsReporting />
-
-        <section className="hc-examples" id="examples">
-          <div className="hc-shell">
-            <div className="hc-section-copy hc-section-copy--wide">
-              <h2>Your brand. Your ads.</h2>
-              <p>Choose an objective, then adapt the creative and message to your agency.</p>
-            </div>
-            <div className="hc-example-tabs" role="group" aria-label="Choose an ad example">
-              {AD_EXAMPLES.map((example, index) => (
-                <button
-                  key={example.id}
-                  type="button"
-                  id={`example-tab-${example.id}`}
-                  aria-pressed={selectedExample === index}
-                  onClick={() => setSelectedExample(index)}
-                >
-                  {example.label}
-                </button>
-              ))}
-            </div>
-            <div
-              className="hc-example-stage"
-              id="example-panel"
-            >
-              <details ref={exampleDetails} className="hc-example-copy hc-example-details" open>
-                <summary>About this ad <ChevronRight aria-hidden="true" size={18} /></summary>
-                <h3>{activeExample.title}</h3>
-                <p>{activeExample.body}</p>
-                <dl>
-                  <div><dt>Objective</dt><dd>Lead generation</dd></div>
-                  <div><dt>Format</dt><dd>Facebook &amp; Instagram feed</dd></div>
-                  <div><dt>Approval</dt><dd>Required before launch</dd></div>
-                </dl>
-              </details>
-              <AdPreview image={activeExample.image} postCopy={activeExample.postCopy} linkTitle={activeExample.linkTitle} />
-            </div>
-          </div>
-        </section>
-
-        <section className="hc-control" id="control">
-          <div className="hc-shell hc-control-grid">
-            <div className="hc-section-copy">
-              <h2>You&rsquo;re in control.</h2>
-              <p>Creative, budget, status and reporting—when you need the detail.</p>
-            </div>
-            <div className="hc-detail-list">
-              <details open>
-                <summary><span><MousePointer2 aria-hidden="true" size={20} /> Creative control</span><ChevronRight aria-hidden="true" size={20} /></summary>
-                <p>Change the property, offer, copy, call to action and brand details before approval.</p>
-              </details>
-              <details>
-                <summary><span><CircleDollarSign aria-hidden="true" size={20} /> Budget control</span><ChevronRight aria-hidden="true" size={20} /></summary>
-                <p>Review the daily budget and schedule. Meta ad spend is separate and paid from your connected ad account.</p>
-              </details>
-              <details>
-                <summary><span><BarChart3 aria-hidden="true" size={20} /> Campaign detail</span><ChevronRight aria-hidden="true" size={20} /></summary>
-                <p>See status, spend and lead activity, with deeper campaign detail available when needed.</p>
-              </details>
-              <details>
-                <summary><span><Clock3 aria-hidden="true" size={20} /> Helpful updates</span><ChevronRight aria-hidden="true" size={20} /></summary>
-                <p>Use the dashboard for the full view or receive a short optional email update.</p>
-              </details>
-            </div>
-          </div>
-        </section>
 
         <section className="hc-faq" id="faq">
           <div className="hc-shell hc-faq-grid">
             <div className="hc-section-copy">
               <h2>FAQ</h2>
-              <p>What to expect before you start.</p>
             </div>
             <div className="hc-faq-list">
               {FAQS.map((faq) => (
@@ -485,12 +431,7 @@ export function HomepageConcept() {
           <div className="hc-shell hc-trial-grid">
             <div>
               <h2>Start with your email.</h2>
-              <p>Try the guided setup in this homepage concept.</p>
-              <div className="hc-trial-points">
-                <span><Sparkles aria-hidden="true" size={18} /> Polished templates</span>
-                <span><ShieldCheck aria-hidden="true" size={18} /> Approval before launch</span>
-                <span><BarChart3 aria-hidden="true" size={18} /> Results in one place</span>
-              </div>
+
             </div>
             <TrialForm />
           </div>
@@ -500,9 +441,9 @@ export function HomepageConcept() {
       <footer className="hc-footer">
         <div className="hc-shell">
           <img src={withBasePath("/brand/blockwise-logo.svg")} alt="Blockwise" width="134" height="30" />
-          <p>Real estate ads, made manageable.</p>
           <nav aria-label="Footer navigation">
-            <a href="https://blockwise.sale/pricing" target="_blank" rel="noreferrer">Pricing</a>
+            <a href="https://blockwise.sale/pricing">Pricing</a>
+            <a href="https://blockwise.sale/guides">Guides</a>
             <a href="#top">Back to top</a>
           </nav>
         </div>

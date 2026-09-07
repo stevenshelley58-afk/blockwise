@@ -30,6 +30,6 @@ export async function requestMockTrial(
   return {
     ok: true,
     email: value.trim().toLowerCase(),
-    message: "Demo complete — your email was not sent or saved.",
+    message: "Demo complete. Your email was not sent or saved.",
   };
 }

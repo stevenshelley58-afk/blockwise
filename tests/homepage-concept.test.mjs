@@ -14,7 +14,7 @@ test("homepage concept trial adapter validates email without a backend", async (
   assert.deepEqual(result, {
     ok: true,
     email: "agent@example.com",
-    message: "Demo complete — your email was not sent or saved.",
+    message: "Demo complete. Your email was not sent or saved.",
   });
 });
 
@@ -29,6 +29,7 @@ test("homepage concept is isolated, noindex and uses the mock adapter", async ()
   assert.match(page, /index:\s*false/);
   assert.match(page, /follow:\s*false/);
   assert.match(component, /requestMockTrial/);
+  assert.match(component, /disabled=\{!hydrated \|\| state === "loading"\}/);
   assert.doesNotMatch(component, /fetch\(|analytics|gtag|pixel/i);
   assert.doesNotMatch(adapter, /fetch\(|database|localStorage|sessionStorage/i);
   assert.match(adapter, /no network request, persistence or analytics/i);
@@ -56,13 +57,13 @@ test("homepage concept uses a clean Meta ad loop as the hero visual", async () =
     "No card required.",
     "Ad spend is separate.",
     "Example data",
-    "nothing will be sent or saved",
+    "Your email is not sent or saved",
   ]) {
     assert.match(component, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
   assert.equal((component.match(/format: "feed",/g) ?? []).length, 4);
   assert.equal((component.match(/format: "story",/g) ?? []).length, 4);
-  assert.match(component, /className="hc-hero-visual">\s*<ProcessShowcase \/>/);
+  assert.match(component, /className="hc-hero-visual">\s*<MetaAdShowcase \/>/);
   assert.match(component, /\/home\/home-dusk\.webp/);
   assert.match(component, /\/hero\/hero-tall\.jpg/);
   assert.doesNotMatch(component, /Real estate ads that look native on Meta\./);
@@ -79,7 +80,6 @@ test("homepage concept uses a clean Meta ad loop as the hero visual", async () =
 test("homepage FAQ keeps setup first and explains separate spend and data ownership", async () => {
   const component = await readFile(new URL("../src/components/homepage-concept/homepage-concept.tsx", import.meta.url), "utf8");
   assert.match(component, /<h2>FAQ<\/h2>/);
-  assert.match(component, /<p>What to expect before you start\.<\/p>/);
   assert.equal(FAQS[0].question, "What if I don't have a Meta ad account?");
   assert.match(FAQS[0].answer, /help you set one up in your name and connect it to Blockwise/);
   const spend = FAQS.find((faq) => faq.question === "Is ad spend included?");
@@ -92,4 +92,23 @@ test("homepage FAQ keeps setup first and explains separate spend and data owners
   assert.match(trial.answer, /Meta ad spend is still separate/);
   assert.match(trial.answer, /monthly plan or a managed account/);
   assert.equal(FAQS.length, 6);
+});
+
+
+test("complete homepage keeps approved sections without superseded explanatory panels", async () => {
+  const component = await readFile(new URL("../src/components/homepage-concept/homepage-concept.tsx", import.meta.url), "utf8");
+  assert.match(component, /<CreativeEditPreview selectedExample=\{selectedExample\}/);
+  assert.match(component, /aria-controls="example-panel"/);
+  assert.ok(component.indexOf('id="examples"') < component.indexOf('<ResultsReporting />'));
+  assert.doesNotMatch(component, /id="control"|id="how-it-works"|About this ad|Try the guided setup|Choose an objective/);
+  assert.match(component, /href="https:\/\/blockwise.sale\/pricing"/);
+  assert.match(component, /href="https:\/\/blockwise.sale\/guides"/);
+  assert.doesNotMatch(component, /aria-live="polite">\s*Showing/);
+  assert.match(component, /aria-hidden=\{position !== 0\}/);
+  const visibleSources = await Promise.all([
+    "../src/components/homepage-concept/homepage-concept.tsx",
+    "../src/lib/homepage-concept/content.ts",
+    "../src/lib/homepage-concept/mock-trial.ts",
+  ].map((name) => readFile(new URL(name, import.meta.url), "utf8")));
+  assert.doesNotMatch(visibleSources.join("\n"), /\u2014/);
 });

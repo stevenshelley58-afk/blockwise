@@ -31,3 +31,33 @@ Use the headline “Know how your ads are going.” with “Your personal dashbo
 The chart uses smooth bounded cubic curves through the fixture points. One shared SVG clip reveals the line and fill together from left to right over 1.5 seconds whenever the chart enters the viewport or the reporting period changes. It resets immediately after leaving the viewport so the next entry redraws cleanly. This owner-requested marketing sequence is a deliberate exception to routine app entrance timing, using the shared reportingReveal token. Keyboard switches replay the reveal; reduced-motion paths stay immediate.
 
 No email-frequency strip, scheduler controls, or floating email card. The email benefit lives only in the copy. Example data stays visibly labelled; no services are connected.
+
+## Consolidated direction, 7 September
+
+The complete preview is based on `e69e4d78`, including the `bac4d137` reporting
+replay update. It consolidates recent decisions rather than reverting to an
+older whole-page iteration:
+
+- Hero: retain the exact competition headline and approved tagline, clean
+  eight-placement Meta ad deck, automatic cycling, and no playback control or
+  trial-button arrow (`bb566f85`, `0923b4c1`).
+- Examples: retain four objective choices. Bring the separate process preview's
+  obvious selection-and-text-replacement animation into this existing section,
+  using a different property image. Do not restore the superseded standalone
+  workflow explainer or its approval simulation (`b88ba2d7`, `118f6707`).
+- Reporting: preserve the smooth line/fill reveal, replay on viewport entry and
+  range changes, 1.5-second timing, full weekday labels, responsive month labels,
+  and requested dashboard/email sentence (`d5d2039f`, `70a61899`, `bac4d137`).
+- FAQ: preserve setup help first, approval control, separate Meta spend,
+  customer account/data ownership and free self-management after the trial.
+  Remove the redundant FAQ introduction, not the answers.
+- Remove the old example explanation panel, duplicate control accordion and
+  repeated trial feature copy. Link to current pricing and guides rather than
+  copying independently maintained pages into this preview.
+- Keep the email form and its validation/loading/success states explicitly
+  mock-only. Nothing is saved, sent or connected to live services.
+
+Page order: hero, editable ad examples, results, FAQ, email form, footer.
+Existing Next.js, Motion and shared design tokens are reused. No additional
+library or live integration is needed. New code is limited to adapting the
+existing isolated animation to the retained examples surface.
