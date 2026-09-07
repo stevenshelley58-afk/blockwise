@@ -5,6 +5,7 @@ This index separates current operating guidance from retained history.
 ## Design previews
 
 - [Email system options](design/email-system-options.md) — isolated concepts; outgoing mail unchanged.
+- [Email preview verification](releases/2026-09-07-email-options.md)
 
 ## Current references
 
