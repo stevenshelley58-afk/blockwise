@@ -14,6 +14,8 @@ This index separates current operating guidance from retained history.
 
 ## Design previews
 
+- [Complete consolidated homepage](releases/2026-09-07-homepage-complete.md): current preview, combined decisions, verification and rollback.
+
 - [Homepage concept](design/homepage-concept.md) — isolated mobile/desktop mockup; not a production homepage release.
 - [Reporting chart axis fix](releases/2026-09-07-homepage-reporting-axis.md) — complete point labels on desktop with a readable narrow-screen month scale.
 - [Motion-led reporting graph](releases/2026-09-07-homepage-reporting-motion.md) — full-width line graph, minimal copy and smooth reporting interactions.
