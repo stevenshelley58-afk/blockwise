@@ -15,10 +15,11 @@ function includesCopy(source: string, copy: string) {
 
 test("Terms state the exact self-serve trigger, credit, seat, and Meta-spend rules", () => {
   for (const required of [
-    "three complete Feed and Story ad creations",
+    "three complete Feed and Story ad packs",
     "one live trial campaign",
-    "the trial never charges you automatically",
-    "A$249 monthly until",
+    "The trial never charges you automatically",
+    "start when Meta first reports actual delivery",
+    "A$249 per month, recurring until you cancel",
     "no introductory price",
     "100 render credits per billing period",
     "Credits expire at the end of the",
