@@ -17,8 +17,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const body = await request.json().catch(() => ({})) as { document?: unknown; placement?: unknown };
   const placement = body.placement === "story" ? "story" : body.placement === "feed" ? "feed" : null;
   if (!placement) return NextResponse.json({ error: "Invalid preview request.", code: "invalid_preview" }, { status: 400 });
-  const service = createSupabaseServiceClient();
   try {
+    const service = createSupabaseServiceClient();
     const output = await handleCanonicalPreview({
       adId: id,
       workspaceId: access.access.workspaceId,
@@ -40,18 +40,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
         },
       },
     });
-    const template = await getTemplateForInternalInspection(service, (body.document as { templateId?: string })?.templateId ?? "");
-    return new NextResponse(new Uint8Array(output.png), {
+    return new NextResponse(new Uint8Array(output.render.png), {
       headers: {
         "content-type": "image/png",
         "cache-control": "private, no-store",
-        "x-blockwise-document-hash": sha256Hex(body.document),
-        "x-blockwise-template-hash": template ? `sha256:${sha256Hex(template)}` : "",
+        "x-blockwise-document-hash": output.documentHash,
+        "x-blockwise-template-hash": `sha256:${output.templateHash}`,
         "x-blockwise-renderer": "blockwise-ad-template-renderer",
       },
     });
   } catch (error) {
-    const code = error instanceof Error ? error.message : "preview_failed";
+    const code = error instanceof Error const code = error instanceof Error ? error.message : "preview_failed";const code = error instanceof Error ? error.message : "preview_failed"; ["invalid_preview", "image_upload_required", "ad_not_found", "template_not_found"].includes(error.message) ? error.message : "preview_failed";
     const status = code === "ad_not_found" || code === "template_not_found" ? 404 : code === "image_upload_required" || code === "invalid_preview" ? 400 : 500;
     return NextResponse.json({ error: status === 500 ? "Preview could not be rendered." : code, code }, { status });
   }

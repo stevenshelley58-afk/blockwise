@@ -23,14 +23,12 @@ const template = {
 
 describe("canonical preview service", () => {
   it("renders actual canonical PNG bytes without writes", async () => {
-    let writes = 0;
     const output = await handleCanonicalPreview({ adId: "ad-1", workspaceId: "ws-1", placement: "feed", document, deps: {
       loadAd: async () => ({ templateId: template.templateId }),
       loadTemplate: async () => template,
       resolveImages: async () => ({}),
     }});
-    assert.equal(output.png.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
-    assert.equal(writes, 0);
+    assert.equal(output.render.png.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
   });
 
   it("rejects inline images before any dependency I/O", async () => {
