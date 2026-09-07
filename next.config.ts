@@ -19,7 +19,7 @@ function sentryIngestOrigin(dsn: string | undefined): string | null {
 }
 
 const homepagePreview = process.env.BLOCKWISE_HOMEPAGE_PREVIEW === "true";
-const previewBasePath = homepagePreview ? "/homepage-preview" : "";
+const previewBasePath = homepagePreview ? (process.env.BLOCKWISE_PREVIEW_BASE_PATH === "/homepage-preview/process-iteration" ? "/homepage-preview/process-iteration" : "/homepage-preview") : "";
 
 const nextConfig: NextConfig = {
   basePath: previewBasePath,
