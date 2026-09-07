@@ -7,6 +7,21 @@ import {dirname,join} from 'node:path';
 const source=readFileSync('hermes/tools/research-runtime/bin/supabase-supervisor.mjs','utf8').replace(/\r\n/g,'\n');
 function load(name,next,context){const start=source.indexOf('async function '+name+'('),end=source.indexOf('\nasync function '+next+'(',start)>=0?source.indexOf('\nasync function '+next+'(',start):source.indexOf('\nfunction '+next+'(',start);assert.ok(start>=0&&end>start);const code=source.slice(start,end).replaceAll('import.meta.url',JSON.stringify('file:///srv/test/supabase-supervisor.mjs'));return vm.runInNewContext(code+';'+name,{...context});}
 const creative='11111111-1111-4111-8111-111111111111',ad='22222222-2222-4222-8222-222222222222',asset='33333333-3333-4333-8333-333333333333';
+test('primary ScrapingBee failure fails closed without legacy browser fallback',async()=>{
+  let fallbackCalls=0;
+  const fn=load('runMetaPageCapture','failedCaptureOutcome',{
+    configuredMetaFallbackSourceProvider:()=> 'hermes_meta_page_capture',
+    scrapingBeeEnabled:true,scrapingBeeOrder:'primary',metaOfficialApiEnabled:false,
+    runScrapingBeePageCapture:async()=>({status:'FAILED',errorMessage:'provider failed',metadata:{charge_known:true}}),
+    runFallbackMetaPageCapture:async()=>{fallbackCalls+=1;throw Error('legacy fallback must not run')},
+    log:()=>{},META_SCRAPINGBEE_SOURCE_PROVIDER:'scrapingbee_meta_ad_library',
+    captureModeForSourceProvider:()=> 'scrapingbee_auto',
+  });
+  const result=await fn({advertiserPageId:ad,metaPageId:'42'});
+  assert.equal(result.outcome.status,'FAILED');
+  assert.equal(result.sourceProvider,'scrapingbee_meta_ad_library');
+  assert.equal(fallbackCalls,0);
+});
 test('media collector uses verified archive without legacy overwrite or AI follow-up',async()=>{
   const captures=[],patches=[];
   const fn=load('handleMediaCollector','loadCreativeForMediaCapture',{rest:async()=>[{id:asset,observed_ad_id:ad}],captureMediaAsset:async a=>captures.push(a.id),patchMediaAsset:async(...a)=>patches.push(a),enqueueFollowUp:()=>{throw Error('AI must not be queued')},refreshCreativeStoredMedia:()=>{throw Error('legacy public URL path must not run')}});

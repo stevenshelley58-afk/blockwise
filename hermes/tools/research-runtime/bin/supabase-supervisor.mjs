@@ -3058,7 +3058,7 @@ async function runMetaPageCapture(input) {
   // attempt is never followed by a second paid attempt for the same page.
   let scrapingBeeAttempted = false;
 
-  const tryScrapingBee = async (metadataExtras = {}) => {
+  const tryScrapingBee = async (metadataExtras = {}, preserveFailure = false) => {
     if (!scrapingBeeEnabled || scrapingBeeAttempted) return null;
     scrapingBeeAttempted = true;
     const spb = await runScrapingBeePageCapture(input);
@@ -3074,19 +3074,19 @@ async function runMetaPageCapture(input) {
       meta_page_id: input.metaPageId,
       error: spb.errorMessage,
     }, "warn");
-    return null;
+    return preserveFailure
+      ? {
+          outcome: { ...spb, metadata: { ...(spb.metadata || {}), ...metadataExtras } },
+          sourceProvider: META_SCRAPINGBEE_SOURCE_PROVIDER,
+          captureMode: captureModeForSourceProvider(META_SCRAPINGBEE_SOURCE_PROVIDER),
+        }
+      : null;
   };
 
   if (scrapingBeeEnabled && scrapingBeeOrder === "primary") {
-    const primary = await tryScrapingBee();
-    if (primary) return primary;
-    const fallback = await runFallbackMetaPageCapture(input, fallbackSourceProvider);
-    const sourceProvider = fallback.provider || fallbackSourceProvider;
-    return {
-      outcome: fallback,
-      sourceProvider,
-      captureMode: captureModeForSourceProvider(sourceProvider, "after_scrapingbee_failure"),
-    };
+    // Primary paid collection fails closed. A provider error must not invoke
+    // an unrelated browser path or make a second provider request.
+    return tryScrapingBee({}, true);
   }
 
   if (metaOfficialApiEnabled) {
@@ -4324,7 +4324,20 @@ async function handleAdCollector(job) {
       resolution: { advertiser_page_id: payload.advertiserPageId, meta_page_id: payload.metaPageId, provider: sourceProvider, error: outcome.errorMessage },
       resolved_advertiser_page_id: payload.advertiserPageId,
     });
-    throw new Error(outcome.errorMessage || "Meta capture failed");
+    return {
+      status: "blocked",
+      blocked_reason: "collector_capture_failed",
+      result: {
+        handler: "blockwise-ad-collector",
+        advertiser_page_id: payload.advertiserPageId,
+        meta_page_id: payload.metaPageId,
+        provider: sourceProvider,
+        capture_mode,
+        collection_failed: true,
+        error: outcome.errorMessage || "Meta capture failed",
+        ingest_tables: ingestTables,
+      },
+    };
   }
   const checkedAt = now();
   // Coverage contract: a run is complete/comparable only when pagination ran
