@@ -1634,7 +1634,7 @@
   .hc-hero-grid { padding-block: 72px 24px; }
   .hc-hero-stack { min-height: 500px; }
   .hc-hero-feed { width: min(100% - 80px, 390px); }
-  .hc-hero-feed .hc-ad-preview--compact .hc-ad-image-wrap { aspect-ratio: 4 / 4.5; }
+  .hc-hero-feed .hc-ad-preview--compact .hc-ad-image-wrap { aspect-ratio: 4 / 5; }
 }
 
 
