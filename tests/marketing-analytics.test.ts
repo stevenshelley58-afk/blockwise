@@ -18,6 +18,9 @@ test("marketing analytics rejects missing consent and private routes", () => {
       trackMarketingEvent("generate_lead");
     }
     assert.equal(calls.length, 0);
+    stub.location.pathname = "/ad-reports/opaque-recipient-token";
+    trackMarketingEvent("generate_lead");
+    assert.equal(calls.length, 0);
     stub.location.pathname = "/audit/private-id";
     trackMarketingEvent("generate_lead", { form_type: "demo", email: "private@example.com", postcode: "6000", url: "https://example.com" });
     assert.deepEqual(calls, [["event", "generate_lead", { form_type: "demo", page_type: "audit", page_location: "https://blockwise.sale/audit", page_referrer: "", page_title: "audit" }]]);

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import { classifyDevice, externalReferrerHost, isTrackablePath, normalizeTrackedPath } from "../src/lib/analytics/events.ts";
+import { classifyDevice, externalReferrerHost, isAnalyticsExcludedPath, isTrackablePath, normalizeTrackedPath } from "../src/lib/analytics/events.ts";
 import { summarizePageViews, type PageViewEvent } from "../src/lib/analytics/summarize.ts";
 import { dailyVisitorHash } from "../src/lib/analytics/visitor.ts";
 
@@ -31,6 +31,14 @@ test("isTrackablePath excludes operator, api, and internal asset paths", () => {
   assert.equal(isTrackablePath("/_next/static/x.js"), false);
   // Prefix matching must not swallow legitimate marketing paths.
   assert.equal(isTrackablePath("/operators-guide"), true);
+});
+
+test("report links are excluded from every first-party page-view path", () => {
+  assert.equal(isAnalyticsExcludedPath("/ad-reports"), true);
+  assert.equal(isAnalyticsExcludedPath("/ad-reports/opaque-recipient-token"), true);
+  assert.equal(isTrackablePath("/ad-reports"), false);
+  assert.equal(isTrackablePath("/ad-reports/opaque-recipient-token"), false);
+  assert.equal(isTrackablePath("/ad-reports-public"), true);
 });
 
 test("normalizeTrackedPath validates input and preserves only the PWA source marker", () => {

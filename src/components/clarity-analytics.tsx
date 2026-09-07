@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useState } from "react";
 
 import { getConsentStatus } from "@/components/consent-banner";
+import { isAnalyticsExcludedPath } from "@/lib/analytics/events";
 import { validClarityId } from "@/lib/analytics/marketing";
 
 export function ClarityAnalytics({ projectId }: { projectId?: string }) {
@@ -20,7 +21,7 @@ export function ClarityAnalytics({ projectId }: { projectId?: string }) {
 
   useLayoutEffect(() => () => { window.clarity?.("stop"); }, [enabled, pathname]);
 
-  if (!enabled || !pathname || !(pathname === "/" || pathname === "/pricing" || pathname === "/guides" || pathname.startsWith("/guides/")) || !validClarityId(projectId) || (typeof window !== "undefined" && (window.location.search || window.location.hash))) return null;
+  if (!enabled || !pathname || isAnalyticsExcludedPath(pathname) || !(pathname === "/" || pathname === "/pricing" || pathname === "/guides" || pathname.startsWith("/guides/")) || !validClarityId(projectId) || (typeof window !== "undefined" && (window.location.search || window.location.hash))) return null;
 
   return (
     <>

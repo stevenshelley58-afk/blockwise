@@ -1,4 +1,5 @@
 import { getConsentStatus } from "./consent.ts";
+import { isAnalyticsExcludedPath } from "./events.ts";
 
 type MarketingValue = string | number | boolean | undefined;
 type MarketingProperties = Record<string, MarketingValue>;
@@ -25,9 +26,10 @@ declare global {
 }
 
 export function isMarketingPath(pathname: string): boolean {
-  return ["/", "/pricing", "/signup", "/audit", "/guides", "/privacy", "/terms", "/data-deletion"].includes(pathname)
+  return !isAnalyticsExcludedPath(pathname)
+    && (["/", "/pricing", "/signup", "/audit", "/guides", "/privacy", "/terms", "/data-deletion"].includes(pathname)
     || /^\/guides\/[a-z0-9-]+$/.test(pathname)
-    || /^\/(audit|suburb)\/[a-z0-9-]+(?:\/[a-z0-9-]+)*$/.test(pathname);
+    || /^\/(audit|suburb)\/[a-z0-9-]+(?:\/[a-z0-9-]+)*$/.test(pathname));
 }
 
 export function marketingPageLocation(origin: string, pathname: string): string {

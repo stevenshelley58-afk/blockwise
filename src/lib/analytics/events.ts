@@ -3,8 +3,14 @@ export type DeviceClass = "desktop" | "mobile" | "tablet" | "bot" | "unknown";
 /** Operator/internal surfaces are never tracked; neither are API or asset paths. */
 const UNTRACKED_PREFIXES = ["/operator", "/workforce", "/model-control", "/api", "/_next"];
 
+/** Report links may contain an opaque recipient token; keep them out of analytics entirely. */
+export function isAnalyticsExcludedPath(path: string): boolean {
+  return path === "/ad-reports" || path.startsWith("/ad-reports/");
+}
+
 export function isTrackablePath(path: string): boolean {
-  return !UNTRACKED_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+  return !isAnalyticsExcludedPath(path)
+    && !UNTRACKED_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 
 /** Validates a client-supplied path and strips query strings except the PWA launch source. */
