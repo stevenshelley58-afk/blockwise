@@ -5,6 +5,7 @@ import { saveAd, SaveError } from "@/lib/adstudio/save-ad";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { adDocumentSchema, type AdDocumentParsed } from "../../../../../../../packages/ad-template-contract/src/schema.ts";
 import { containsInlineImageData, } from "@/lib/adstudio/persisted-document";
+import { CustomerImageStorageError } from "@/lib/adstudio/customer-image-storage";
 import { resolveImageValues as resolveImageValuesShared, resolveTemplateAssetValues as resolveTemplateAssetValuesShared } from "@/lib/adstudio/render-assets";
 import { metaCopyLimitIssues } from "@/lib/adstudio/types";
 
