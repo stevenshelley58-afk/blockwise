@@ -14,7 +14,7 @@ test("homepage concept trial adapter validates email without a backend", async (
   assert.deepEqual(result, {
     ok: true,
     email: "agent@example.com",
-    message: "Demo complete — your email was not sent or saved.",
+    message: "Demo complete. Your email was not sent or saved.",
   });
 });
 
@@ -56,17 +56,17 @@ test("homepage concept uses a clean Meta ad loop as the hero visual", async () =
     "No card required.",
     "Ad spend is separate.",
     "Example data",
-    "nothing will be sent or saved",
+    "Nothing will be sent or saved",
   ]) {
     assert.match(component, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
   assert.equal((component.match(/format: "feed",/g) ?? []).length, 4);
   assert.equal((component.match(/format: "story",/g) ?? []).length, 4);
-  assert.match(component, /className="hc-hero-visual">\s*<ProcessShowcase \/>/);
+  assert.match(component, /className="hc-hero-visual">\s*<MetaAdShowcase \/>/);
   assert.match(component, /\/home\/home-dusk\.webp/);
   assert.match(component, /\/hero\/hero-tall\.jpg/);
   assert.doesNotMatch(component, /Real estate ads that look native on Meta\./);
-  assert.doesNotMatch(component, /className="hc-process"/);
+  assert.match(component, /className="hc-process" id="how-it-works"/);
   assert.match(component, /META_SHOWCASE_ADS/);
   assert.match(component, /IntersectionObserver/);
   assert.match(component, /visibilitychange/);
@@ -92,4 +92,31 @@ test("homepage FAQ keeps setup first and explains separate spend and data owners
   assert.match(trial.answer, /Meta ad spend is still separate/);
   assert.match(trial.answer, /monthly plan or a managed account/);
   assert.equal(FAQS.length, 6);
+});
+
+
+test("homepage reconciliation preserves approved sections and their order", async () => {
+  const component = await readFile(new URL("../src/components/homepage-concept/homepage-concept.tsx", import.meta.url), "utf8");
+  const sections = ['id="top"', 'id="how-it-works"', '<ResultsReporting />', 'id="examples"', 'id="control"', 'id="faq"', 'id="trial"'];
+  const positions = sections.map((section) => component.indexOf(section));
+  assert.ok(positions.every((position) => position >= 0), "All approved sections remain present");
+  assert.deepEqual([...positions].sort((a, b) => a - b), positions);
+  assert.match(component, /href="#how-it-works">How it works/);
+  assert.match(component, /className="hc-login"[^>]*href="https:\/\/blockwise\.sale\/login"/);
+  assert.match(component, /https:\/\/blockwise\.sale\/pricing/);
+  assert.match(component, /Creative control/);
+  assert.match(component, /Budget control/);
+  assert.match(component, /Campaign detail/);
+  assert.match(component, /Helpful updates/);
+  assert.match(component, /hc-example-tabs/);
+  assert.doesNotMatch(component, /EditingPreview/);
+});
+
+
+test("preview form cannot submit before its mock handler is hydrated", async () => {
+  const component = await readFile(new URL("../src/components/homepage-concept/homepage-concept.tsx", import.meta.url), "utf8");
+  assert.match(component, /useState\(false\)/);
+  assert.match(component, /useEffect\(\(\) => setHydrated\(true\), \[\]\)/);
+  assert.equal((component.match(/disabled=\{!hydrated \|\| state === "loading"\}/g) ?? []).length, 2);
+  assert.match(component, /<noscript>/);
 });

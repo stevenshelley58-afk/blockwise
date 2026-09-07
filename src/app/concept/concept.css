@@ -108,6 +108,7 @@
 }
 
 .hc-header nav a,
+.hc-login,
 .hc-header-cta {
   display: inline-flex;
   min-height: 48px;
@@ -119,7 +120,10 @@
   transition: color 180ms ease;
 }
 
-.hc-header nav a:hover { color: #fff; }
+.hc-header nav a:hover,
+.hc-login:hover { color: #fff; }
+
+.hc-login { flex-shrink: 0; white-space: nowrap; }
 
 .hc-header-cta {
   min-width: 132px;
@@ -754,7 +758,8 @@
   .hc-logo { min-width: 0; }
   .hc-logo img { width: 122px; }
   .hc-header nav { display: none; }
-  .hc-header-cta { min-width: 124px; min-height: 48px; margin-left: auto; font-size: 12px; }
+  .hc-login { margin-left: auto; font-size: 12px; }
+  .hc-header-cta { min-width: 124px; min-height: 48px; font-size: 12px; }
 
   .hc-hero,
   .hc-hero-grid { min-height: 100svh; }
@@ -861,7 +866,8 @@
 }
 
 @media (max-width: 370px) {
-  .hc-header-cta { min-width: 116px; padding-inline: 12px; }
+  .hc-header { gap: 10px; }
+  .hc-header-cta { min-width: 110px; padding-inline: 8px; }
   .hc-logo img { width: 112px; }
   .hc-hero-copy h1 { font-size: 36px; }
   .hc-ad-preview--compact { grid-template-columns: 125px 1fr; }

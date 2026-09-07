@@ -22,6 +22,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { AdPreview } from "@/components/homepage-concept/ad-preview";
 import { ResultsReporting } from "@/components/homepage-concept/results-reporting";
+import { WorkflowShowcase } from "@/components/homepage-concept/workflow-showcase";
 import { AD_EXAMPLES, FAQS, withBasePath } from "@/lib/homepage-concept/content";
 import { requestMockTrial, validateTrialEmail } from "@/lib/homepage-concept/mock-trial";
 
@@ -36,6 +37,8 @@ function PrimaryLink({ children, className = "" }: { children: React.ReactNode; 
 }
 
 function TrialForm() {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   const [email, setEmail] = useState("");
   const [state, setState] = useState<FormState>("idle");
   const [message, setMessage] = useState("");
@@ -65,6 +68,7 @@ function TrialForm() {
 
   return (
     <form className="hc-trial-form" onSubmit={handleSubmit} noValidate>
+      <noscript><p className="hc-form-note">Enable JavaScript to try the preview form.</p></noscript>
       <label htmlFor="trial-email">Work email</label>
       <div className="hc-trial-row">
         <input
@@ -77,7 +81,7 @@ function TrialForm() {
           value={email}
           aria-invalid={state === "error"}
           aria-describedby="trial-note trial-status"
-          disabled={state === "loading"}
+          disabled={!hydrated || state === "loading"}
           onChange={(event) => {
             setEmail(event.target.value);
             if (state !== "idle") {
@@ -86,7 +90,7 @@ function TrialForm() {
             }
           }}
         />
-        <button className="hc-button hc-button--light" type="submit" disabled={state === "loading"}>
+        <button className="hc-button hc-button--light" type="submit" disabled={!hydrated || state === "loading"}>
           {state === "loading" ? "Preparing demo…" : "Start free trial"}
           {state === "loading" ? <span className="hc-spinner" aria-hidden="true" /> : <ArrowRight aria-hidden="true" size={17} />}
         </button>
@@ -98,7 +102,7 @@ function TrialForm() {
         role={state === "error" ? "alert" : "status"}
         aria-live="polite"
       >
-        {message || "Preview form only — nothing will be sent or saved."}
+        {message || "Preview form only. Nothing will be sent or saved."}
       </p>
     </form>
   );
@@ -204,7 +208,7 @@ const META_SHOWCASE_ADS: readonly MetaShowcaseAd[] = [
     initials: "HR",
     tone: "charcoal",
     image: "/home/home-pool.webp",
-    copy: "Prices, recent sales and buyer activity—see what changed in your local market.",
+    copy: "Prices, recent sales and buyer activity. See what changed in your local market.",
     headline: "Your suburb market report",
     domain: "HARBOURLINE.COM.AU",
     reactions: "57",
@@ -293,7 +297,7 @@ function MetaStoryAd({ ad }: { ad: MetaShowcaseAd }) {
   );
 }
 
-function ProcessShowcase() {
+function MetaAdShowcase() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const reduceMotion = Boolean(useReducedMotion());
   const [order, setOrder] = useState(() => META_SHOWCASE_ADS.map((_, index) => index));
@@ -372,10 +376,11 @@ export function HomepageConcept() {
           <img src={withBasePath("/brand/blockwise-logo-white.svg")} alt="Blockwise" width="142" height="32" />
         </a>
         <nav aria-label="Primary navigation">
-          <a href="#results">How it works</a>
+          <a href="#how-it-works">How it works</a>
           <a href="#examples">Examples</a>
           <a href="#faq">FAQ</a>
         </nav>
+        <a className="hc-login" href="https://blockwise.sale/login">Log in</a>
         <a className="hc-header-cta" href="#trial">Start free trial</a>
       </header>
 
@@ -391,11 +396,16 @@ export function HomepageConcept() {
               </div>
             </div>
             <div className="hc-hero-visual">
-              <ProcessShowcase />
+              <MetaAdShowcase />
             </div>
           </div>
         </section>
 
+        <section className="hc-process" id="how-it-works">
+          <div className="hc-shell">
+            <WorkflowShowcase />
+          </div>
+        </section>
 
         <ResultsReporting />
 
@@ -441,7 +451,7 @@ export function HomepageConcept() {
           <div className="hc-shell hc-control-grid">
             <div className="hc-section-copy">
               <h2>You&rsquo;re in control.</h2>
-              <p>Creative, budget, status and reporting—when you need the detail.</p>
+              <p>Creative, budget, status and reporting, when you need the detail.</p>
             </div>
             <div className="hc-detail-list">
               <details open>
