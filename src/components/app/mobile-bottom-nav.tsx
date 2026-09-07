@@ -35,9 +35,7 @@ const mobileLabels: Record<string, string> = {
 function mobileItemsForVariant(variant: SidebarVariant): { primaryItems: MobileNavItem[]; overflowItems: MobileNavItem[] } {
   const allItems = navByVariant[variant];
   const configuredMobileLabels = new Map(
-    niche.nav.mobileTabs
-      .filter((item) => !item.feature || niche.features[item.feature])
-      .map((item) => [item.href, item.label]),
+    allItems.filter((item) => item.mobileLabel).map((item) => [item.href, item.mobileLabel]),
   );
   const primaryHrefs = variant === "self_serve"
     ? [...configuredMobileLabels.keys()]
@@ -95,7 +93,7 @@ export function MobileBottomNav({ variant, account }: MobileBottomNavProps) {
       <nav className="mobile-bottom-nav" aria-label="Primary mobile navigation">
         {primaryItems.map((item) => {
           const Icon = item.icon;
-          const active = isItemActive(pathname, item.href);
+          const active = isItemActive(pathname, item.href, navByVariant[variant]);
 
           return (
             <Link
@@ -147,7 +145,7 @@ export function MobileBottomNav({ variant, account }: MobileBottomNavProps) {
               <div className="mobile-more-links">
                 {overflowItems.map((item) => {
                   const Icon = item.icon;
-                  const active = isItemActive(pathname, item.href);
+                  const active = isItemActive(pathname, item.href, navByVariant[variant]);
                   return (
                     <Link
                       className={active ? "mobile-more-link active" : "mobile-more-link"}

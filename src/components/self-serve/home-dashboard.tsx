@@ -6,8 +6,8 @@
  * plain `HomeData` payload — this component owns layout, motion and copy
  * (all of it from the niche config; customer pages carry zero niche nouns).
  *
- * Data honesty: KPIs render live Meta numbers or honest zeros. Demo/sample
- * data never reaches Home.
+ * Data honesty: KPIs render live Meta numbers only. Demo/sample data never
+ * reaches Home, and unavailable reporting stays visibly unavailable.
  */
 
 import { useEffect, useState } from "react";
@@ -22,7 +22,7 @@ import {
   UsersRound,
 } from "lucide-react";
 
-import { selfServeIcons } from "@/components/sidebar-nav";
+import { navByVariant } from "@/components/sidebar-nav";
 import { AnimatedGroup } from "@/components/ui/animated-group";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { niche } from "@/config/niche";
@@ -43,12 +43,25 @@ export type HomeData = ActivationCardData & {
     previousLeads: number | null;
     previousCpl: number | null;
     daily: HomeDailyPoint[];
+    lastSyncedAt: string | null;
   } | null;
 };
 
 const COUNT_SPRING = { ...springs.slow, duration: countUpDuration };
 
 const money = (value: number) => `$${value.toFixed(2)}`;
+
+function reportingFoot(lastSyncedAt: string | null): string {
+  if (!lastSyncedAt || !Number.isFinite(Date.parse(lastSyncedAt))) {
+    return "Provider time unavailable";
+  }
+  const formatted = new Intl.DateTimeFormat("en-AU", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }).format(new Date(lastSyncedAt));
+  return `Last known provider data: ${formatted} UTC`;
+}
 
 /** Period-over-period delta badge (mockup pattern). Hidden without a prior period. */
 function DeltaBadge({
@@ -159,7 +172,10 @@ export function HomeDashboard({ data }: { data: HomeData }) {
 
   return (
     <div className="mx-auto w-full max-w-[1120px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
-      <AnimatedGroup className="grid gap-3.5">
+      {/* Explicit minmax(0,1fr) tracks: without them a single nowrap leaf
+          (e.g. a truncated subtitle) inflates the auto track and the whole
+          column overflows <main> on small screens. */}
+      <AnimatedGroup className="grid grid-cols-1 gap-3.5">
         {/* Page head */}
         <div>
           <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
@@ -172,6 +188,14 @@ export function HomeDashboard({ data }: { data: HomeData }) {
             <p className="mt-1 text-[13.5px] text-muted-foreground">{data.workspaceName}</p>
           </div>
         </div>
+        <p
+          className="rounded-(--r-card) border border-(--line) bg-(--surface-subtle) px-4 py-3 text-[12.5px] text-muted-foreground"
+          role="status"
+        >
+          {performance
+            ? `Reporting for the last 30 days. ${reportingFoot(performance.lastSyncedAt)}.`
+            : "Reporting for the last 30 days is unavailable."}
+        </p>
 
         {/* KPI row */}
         <AnimatedGroup className="grid grid-cols-2 gap-3.5 xl:grid-cols-4" itemClassName="h-full">
@@ -180,19 +204,23 @@ export function HomeDashboard({ data }: { data: HomeData }) {
             icon={<UsersRound size={15} strokeWidth={1.8} />}
             foot={
               <>
-                <span>{copy.kpis.vsPrior}</span>
+                <span>{performance?.previousLeads != null ? copy.kpis.vsPrior : "Last 30 days"}</span>
                 <Sparkline points={sparkPoints} />
               </>
             }
           >
-            <AnimatedNumber value={performance?.leads ?? 0} springOptions={COUNT_SPRING} />
-            <DeltaBadge current={performance?.leads ?? 0} previous={performance?.previousLeads ?? null} />
+            {performance ? (
+              <AnimatedNumber value={performance.leads} springOptions={COUNT_SPRING} />
+            ) : (
+              <span aria-label="Enquiry reporting unavailable">—</span>
+            )}
+            <DeltaBadge current={performance?.leads ?? null} previous={performance?.previousLeads ?? null} />
           </StatCard>
 
           <StatCard
             label={copy.kpis.costPerLead}
             icon={<CircleDollarSign size={15} strokeWidth={1.8} />}
-            foot={<span>{copy.kpis.vsPrior}</span>}
+            foot={<span>Last 30 days</span>}
           >
             {performance?.cpl != null ? (
               <AnimatedNumber value={performance.cpl} format={money} springOptions={COUNT_SPRING} />
@@ -244,20 +272,20 @@ export function HomeDashboard({ data }: { data: HomeData }) {
         </AnimatedGroup>
 
         {/* One server-resolved activation card remains dominant; performance is secondary. */}
-        <AnimatedGroup className="grid gap-3.5 lg:grid-cols-[3fr_2fr]" itemClassName="h-full">
+        <AnimatedGroup className="grid grid-cols-1 gap-3.5 lg:grid-cols-[3fr_2fr]" itemClassName="h-full">
           <ActivationCard data={data} />
           <HomePerformanceChart daily={performance?.daily ?? null} />
         </AnimatedGroup>
 
         {/* Quick actions */}
-        <AnimatedGroup className="grid gap-3.5 sm:grid-cols-2" itemClassName="h-full">
+        <AnimatedGroup className="grid grid-cols-1 gap-3.5 sm:grid-cols-2" itemClassName="h-full">
           {quickActions.map((action) => {
-            const Icon = selfServeIcons[action.href] ?? ArrowRight;
+            const Icon = navByVariant.self_serve.find((item) => item.href === action.href)?.icon ?? ArrowRight;
             return (
               <Link
                 key={action.href}
                 href={action.href}
-                className="group flex items-center gap-3.5 rounded-(--r-card) bg-card px-5 py-[18px] shadow-card transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-float motion-reduce:hover:translate-y-0"
+                className="group flex min-w-0 items-center gap-3.5 rounded-(--r-card) bg-card px-5 py-[18px] shadow-card transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-float motion-reduce:hover:translate-y-0"
               >
                 <span
                   aria-hidden

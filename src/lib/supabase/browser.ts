@@ -21,5 +21,7 @@ export function createSupabaseBrowserClient() {
     throw new Error("Supabase browser environment is missing.");
   }
 
-  return createBrowserClient(supabaseUrl, supabaseAnonKey);
+  return createBrowserClient(supabaseUrl, supabaseAnonKey, {
+    auth: { flowType: "pkce" },
+  });
 }

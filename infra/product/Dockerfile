@@ -8,6 +8,9 @@ RUN npm ci --ignore-scripts
 
 FROM node:22-slim AS builder
 WORKDIR /app
+ARG GIT_SHA
+RUN printf '%s' "$GIT_SHA" | grep -Eq '^[a-f0-9]{40}$'
+ENV BLOCKWISE_BUILD_REVISION=$GIT_SHA
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ARG NEXT_PUBLIC_APP_URL=https://blockwise.sale
@@ -29,10 +32,12 @@ ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
 ENV NEXT_PUBLIC_GOOGLE_ADS_ID=$NEXT_PUBLIC_GOOGLE_ADS_ID
 ENV NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA=$NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build:packages
+# npm prebuild builds both workspace packages before Next.
 RUN npm run build
 
 FROM node:22-slim AS runner
+ARG GIT_SHA
+LABEL org.opencontainers.image.revision=$GIT_SHA
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

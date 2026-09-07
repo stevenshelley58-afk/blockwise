@@ -4,6 +4,8 @@ export const TRIAL_UPGRADE_HREF = "/settings#billing";
 
 export type TrialStatus = {
   isTrial: true;
+  /** pending_delivery until Meta first reports actual delivery, then active. */
+  trialState: "pending_delivery" | "active" | null;
   includedRenders: number;
   usedRenders: number;
   remainingRenders: number;
@@ -76,8 +78,16 @@ function normalizeTrialStatus(value: unknown): TrialStatus | null {
     return null;
   }
 
+  const trialState =
+    row.trial_state === "pending_delivery" || row.trialState === "pending_delivery"
+      ? "pending_delivery"
+      : row.trial_state === "active" || row.trialState === "active"
+        ? "active"
+        : null;
+
   return {
     isTrial: true,
+    trialState,
     includedRenders,
     usedRenders: Math.min(includedRenders, Math.max(0, usedRenders)),
     remainingRenders: Math.min(

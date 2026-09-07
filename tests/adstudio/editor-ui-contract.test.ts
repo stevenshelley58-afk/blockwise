@@ -54,8 +54,12 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(canvas, /const w = geometry\.width, h = geometry\.height/);
     assert.match(geometry, /values\.every\(\(value\) => Math\.abs\(value\) <= 1\.001\)/);
     assert.doesNotMatch(canvas, /new fabric\.Rect\(\{ \.\.\.geometry/);
-    assert.match(canvas, /ensureLocalFont/);
-    assert.match(canvas, /fontStem\(layer\.font\.file\)/);
+    assert.match(canvas, /ensureTemplateFont/);
+    assert.match(canvas, /templateAssetProxyUrl\(templateId, assetKey, existingAdId\)/);
+    assert.match(canvas, /could not be loaded from the template asset/);
+    assert.match(canvas, /templateFontFamily\(templateId, layer\.font\.file\)/);
+    assert.match(canvas, /loadedFontFaces.delete\(cacheKey\)/);
+    // Font identity and failed-load recovery are exercised in template-font-loader.test.ts.
     assert.match(canvas, /layer\.shape === "notched"/);
     assert.match(canvas, /layer\.shape === "wave"/);
     assert.match(canvas, /layer\.shape === "ring"/);
@@ -80,6 +84,11 @@ describe("customer Ad Studio workbench contract", () => {
     const command = readFileSync("src/components/adstudio/home-command.tsx", "utf8");
     assert.match(home, /<li key=\{template\.templateId\} className="min-w-0">/);
     assert.match(home, /<HomeCommand/);
+    assert.match(command, /Create your next ad/);
+    assert.match(command, /aria-label="Create a new ad from a reviewed template"/);
+    assert.match(command, />Create ad <ArrowRight/);
+    assert.doesNotMatch(command, /Or search templates by goal or format|studio-command/);
+    assert.doesNotMatch(command, /Find a starting point/);
     assert.match(command, /formatLastEdited\(ad\.updatedAt, timeZone, dateLocale\)/);
     assert.match(home, /timeZone/);
     assert.match(home, /resolveTimeZone\(auth\.claims\?\.user_metadata\?\.timezone, access\.region\)/);
@@ -101,8 +110,13 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(inputs, /rounded-\(--r-card\)/);
     assert.match(copy, /id="meta-copy-cta"/);
     assert.match(copy, /border border-input/);
-    assert.match(shell, /AI brief/);
+    assert.match(shell, /AI Copy Assist/);
     assert.match(shell, /Generate copy/);
+    assert.match(shell, /Review generated copy/);
+    assert.match(shell, /Use all/);
+    assert.match(shell, /aria-label=\{`Use \$\{label\}`\}/);
+    assert.match(shell, /setProposal\(\{ onImage:/);
+    assert.doesNotMatch(shell, /if \(!response\.ok \|\| !body\.copy\)[\s\S]{0,180}applyGeneratedCopy/);
     assert.match(shell, /"design" \| "meta" \| "split"/);
     assert.match(shell, /TabsTrigger value="both"/);
     assert.match(shell, /aria-label="Canvas tools"/);

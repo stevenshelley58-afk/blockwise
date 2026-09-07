@@ -115,7 +115,7 @@ test("editor and preview keep the clarity and fidelity contracts visible", () =>
   const aiBrief = shell.indexOf("<ProposalPanel");
   const copyFields = shell.indexOf("<MetaCopyPanel");
   assert.ok(aiBrief >= 0 && aiBrief < copyFields, "AI brief must precede editable Meta fields");
-  assert.match(shell, /label: "Visual"/);
+  assert.match(shell, /label: "Media"/);
   assert.match(shell, /grid-rows-\[auto_auto_auto\]/);
   assert.match(shell, /col-span-3 row-start-2 flex min-w-0 justify-center/);
   assert.match(shell, /col-span-2 row-start-3/);

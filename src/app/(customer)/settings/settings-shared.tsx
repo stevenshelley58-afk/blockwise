@@ -5,11 +5,10 @@ import type { useRouter } from "next/navigation";
 
 import type { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-export const REGION_CURRENCY: Record<string, string> = { AU: "AUD", US: "USD" };
+export const REGION_CURRENCY: Record<string, string> = { AU: "AUD" };
 
 export const REGION_NAMES: Record<string, string> = {
   AU: "Australia",
-  US: "United States",
 };
 
 export const ASSIGNABLE_ROLES = ["owner", "admin", "member", "viewer"];
@@ -72,6 +71,8 @@ export type SettingsViewProps = {
     stripeCustomerId: string | null;
     subscriptionStatus: string | null;
     billingAccessState: string;
+    trialState: string | null;
+    trialEndsAt: string | null;
     billingPeriodStart: string | null;
     billingPeriodEnd: string | null;
     cancelAtPeriodEnd: boolean;

@@ -11,12 +11,17 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./text-layout": {
+      "import": "./dist/text-layout.js",
+      "types": "./dist/text-layout.d.ts",
+      "default": "./dist/text-layout.js"
     }
   },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/**/*.test.ts"
+    "test": "node --import tsx --test src/*.test.ts"
   },
   "dependencies": {
     "@blockwise/ad-template-contract": "file:../ad-template-contract",

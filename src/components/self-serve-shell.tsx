@@ -9,7 +9,7 @@ import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { StudioShell } from "@/components/adstudio/studio-shell";
 import { CommandMenu } from "@/components/command-menu";
 import { SidebarThemeToggle } from "@/components/sidebar-theme-toggle";
-import { isItemActive, navByVariant, selfServeIcons, type NavItem } from "@/components/sidebar-nav";
+import { isItemActive, navByVariant, type NavItem } from "@/components/sidebar-nav";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -43,7 +43,6 @@ import {
 } from "@/components/ui/sidebar";
 import { niche } from "@/config/niche";
 import { cssSpring } from "@/lib/motion";
-import { useSmartPrefetch } from "@/lib/navigation/use-smart-prefetch";
 import { purgeLocalReadModels, syncReadModelIdentity } from "@/lib/read-models/browser-store";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -179,7 +178,6 @@ export function SelfServeShell({
   metaConnectionStatus,
 }: SelfServeShellProps) {
   const pathname = usePathname() ?? "";
-  const { prefetchNow } = useSmartPrefetch();
   const groups = useMemo(() => groupNavItems(navByVariant.self_serve), []);
   const pageTitle = pageTitleForPath(pathname);
 
@@ -223,18 +221,11 @@ export function SelfServeShell({
               <SidebarMenu>
                 {group.items.map((item) => {
                   const Icon = item.icon;
-                  const active = isItemActive(pathname, item.href);
+                  const active = isItemActive(pathname, item.href, navByVariant.self_serve);
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
-                        <Link
-                          href={item.href}
-                          prefetch={false}
-                          aria-current={active ? "page" : undefined}
-                          onPointerEnter={() => prefetchNow(item.href)}
-                          onFocus={() => prefetchNow(item.href)}
-                          onTouchStart={() => prefetchNow(item.href)}
-                        >
+                        <Link href={item.href} aria-current={active ? "page" : undefined}>
                           <Icon aria-hidden />
                           <span>{item.label}</span>
                         </Link>
@@ -307,15 +298,12 @@ function SelfServeMobileNav({ account }: { account: Account }) {
   const pathname = usePathname() ?? "";
   const [moreOpen, setMoreOpen] = useState(false);
   const { signOut, isSigningOut } = useSignOut();
-  const { prefetchNow } = useSmartPrefetch();
 
   const copy = niche.copy.shell;
 
   const { tabItems, overflowItems } = useMemo(() => {
     const allItems = navByVariant.self_serve;
-    const tabs = niche.nav.mobileTabs
-      .map((tab) => allItems.find((item) => item.href === tab.href))
-      .filter((item): item is NavItem => Boolean(item));
+    const tabs = allItems.filter((item) => item.mobileLabel);
     const tabSet = new Set(tabs.map((item) => item.href));
     return { tabItems: tabs, overflowItems: allItems.filter((item) => !tabSet.has(item.href)) };
   }, []);
@@ -331,18 +319,13 @@ function SelfServeMobileNav({ account }: { account: Account }) {
         className={`fixed inset-x-0 bottom-0 z-40 grid ${tabItems.length >= 5 ? "grid-cols-6" : "grid-cols-5"} gap-0.5 border-t border-border bg-card/95 px-1.5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur-2xl md:hidden`}
       >
         {tabItems.map((item) => {
-          const Icon = selfServeIcons[item.href];
-          const active = isItemActive(pathname, item.href);
-          const tab = niche.nav.mobileTabs.find((entry) => entry.href === item.href);
+          const Icon = item.icon;
+          const active = isItemActive(pathname, item.href, navByVariant.self_serve);
           return (
             <Link
               key={item.href}
               href={item.href}
-              prefetch={false}
               aria-current={active ? "page" : undefined}
-              onPointerEnter={() => prefetchNow(item.href)}
-              onFocus={() => prefetchNow(item.href)}
-              onTouchStart={() => prefetchNow(item.href)}
               style={{ transitionTimingFunction: cssSpring }}
               className={cn(
                 "grid min-h-12 min-w-0 place-items-center gap-[3px] rounded-xl px-0.5 py-1 text-[9.5px] leading-[1.1] font-bold transition-[color,transform,background-color] duration-150 active:scale-[0.94] motion-reduce:transition-none",
@@ -350,7 +333,7 @@ function SelfServeMobileNav({ account }: { account: Account }) {
               )}
             >
               {Icon ? <Icon aria-hidden size={19} /> : null}
-              <span className="max-w-full truncate">{tab?.label ?? item.label}</span>
+              <span className="max-w-full truncate">{item.mobileLabel ?? item.label}</span>
             </Link>
           );
         })}
@@ -385,16 +368,12 @@ function SelfServeMobileNav({ account }: { account: Account }) {
             <div className="grid gap-1 px-3">
               {overflowItems.map((item) => {
                 const Icon = item.icon;
-                const active = isItemActive(pathname, item.href);
+                const active = isItemActive(pathname, item.href, navByVariant.self_serve);
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    prefetch={false}
                     aria-current={active ? "page" : undefined}
-                    onPointerEnter={() => prefetchNow(item.href)}
-                    onFocus={() => prefetchNow(item.href)}
-                    onTouchStart={() => prefetchNow(item.href)}
                     onClick={() => setMoreOpen(false)}
                     className={cn(
                       "flex min-h-11 items-center gap-3 rounded-(--r-card) px-3 text-sm font-semibold",

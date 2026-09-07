@@ -56,7 +56,6 @@ type ExtractedBrandKit = {
 
 const MARKETS: Array<{ value: Market; name: string; currency: string }> = [
   { value: "AU", name: "Australia", currency: "AUD" },
-  { value: "US", name: "United States", currency: "USD" },
 ];
 
 export function OnboardingWizard({ workspaceId, country, brandKit, canConfirmMarket }: WizardProps) {

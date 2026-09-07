@@ -6,6 +6,7 @@ import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstu
 import { checkRateLimit } from "@/lib/rate-limit";
 import { adTemplateSchema } from "@/lib/adstudio/ingest-artifact";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { loadAdStudioBrandDefaults } from "@/lib/adstudio/brand-defaults";
 
 export const runtime = "nodejs";
 
@@ -60,6 +61,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   const rawPack = packRow?.template_json && typeof packRow.template_json === "object" ? packRow.template_json as Record<string, unknown> : {};
   const metadata = rawPack.metadata && typeof rawPack.metadata === "object" ? rawPack.metadata as Record<string, unknown> : {};
   const guidance = normalizeAdStudioAiWritingGuidance(metadata.aiWritingGuidance);
+  const brand = await loadAdStudioBrandDefaults(access.supabase, access.access.workspaceId);
   const copy = body.copy && typeof body.copy === "object" ? body.copy as Record<string, string> : {};
   const providerEnabled = Boolean(process.env.OPENAI_API_KEY || process.env.AZURE_OPENAI_API_KEY || process.env.DEEPSEEK_API_KEY);
   if (!providerEnabled) {
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       userId: access.access.userId,
       description: brief,
       fields,
-      context: { templateName: pack.metadata.title, aiWritingGuidance: guidance },
+      context: { templateName: pack.metadata.title, aiWritingGuidance: guidance, businessName: brand.businessName, voice: brand.voice },
     });
     return NextResponse.json(result);
   } catch (error) {

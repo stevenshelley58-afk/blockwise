@@ -19,6 +19,12 @@ function sentryIngestOrigin(dsn: string | undefined): string | null {
 }
 
 const nextConfig: NextConfig = {
+  // Embedded at build time: a mutable runtime env must not impersonate a release.
+  env: {
+    BLOCKWISE_BUILD_REVISION: /^[a-f0-9]{40}$/i.test(process.env.BLOCKWISE_BUILD_REVISION ?? "")
+      ? process.env.BLOCKWISE_BUILD_REVISION
+      : "",
+  },
   poweredByHeader: false,
   reactStrictMode: true,
   typedRoutes: true,

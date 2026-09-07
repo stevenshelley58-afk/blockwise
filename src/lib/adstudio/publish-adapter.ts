@@ -55,6 +55,7 @@ export interface PublishLoadResult {
     metaHeadline: string;
     metaDescription: string;
     metaCta: string;
+    destinationUrl: string;
   };
   revision: {
     id: string;
@@ -173,7 +174,7 @@ export async function loadPublishState(
   // 2. Load active revision
   const { data: revision, error: revError } = await supabase
     .from("ad_revisions")
-    .select("id, revision_number, document_hash, feed_png_hash, feed_png_path, story_png_hash, story_png_path, created_at")
+    .select("id, revision_number, document_hash, document_json, feed_png_hash, feed_png_path, story_png_hash, story_png_path, created_at")
     .eq("id", ad.active_revision_id)
     .single();
 
@@ -201,16 +202,33 @@ export async function loadPublishState(
     .maybeSingle();
 
   const form = formRow ? (formRow.form_json as InstantForm) : null;
+  const savedDocument = revision.document_json && typeof revision.document_json === "object"
+    ? revision.document_json as Record<string, unknown>
+    : null;
+  const destinationUrl = typeof savedDocument?.destinationUrl === "string"
+    ? savedDocument.destinationUrl
+    : "";
+
+  // The ad-row meta columns are legacy denormalizations that current save
+  // paths no longer write. Fall back to the active revision document, the
+  // same source of truth manual publishing uses.
+  const documentString = (key: string, fallback: unknown): string =>
+    typeof fallback === "string" && fallback.length > 0
+      ? fallback
+      : typeof savedDocument?.[key] === "string"
+        ? (savedDocument[key] as string)
+        : "";
 
   return {
     ad: {
       id: ad.id,
       templateId: ad.template_id,
       colourMode: ad.colour_mode,
-      metaPrimaryText: ad.meta_primary_text,
-      metaHeadline: ad.meta_headline,
-      metaDescription: ad.meta_description,
-      metaCta: ad.meta_cta,
+      metaPrimaryText: documentString("metaPrimaryText", ad.meta_primary_text),
+      metaHeadline: documentString("metaHeadline", ad.meta_headline),
+      metaDescription: documentString("metaDescription", ad.meta_description),
+      metaCta: documentString("metaCta", ad.meta_cta),
+      destinationUrl,
     },
     revision: {
       id: revision.id,
@@ -271,7 +289,10 @@ export function validatePublishState(
       ? "Missing valid HTTPS destination URL/article — add the article or website URL before publishing"
       : "Missing valid HTTPS destination URL — add the Instant Form thank-you website URL before publishing");
   }
-  if (requirements.requiredCtaTypes.length > 0 && !requirements.requiredCtaTypes.includes(mappedCta)) {
+  // Template publish requirements may declare CTA tokens in either case
+  // (e.g. "learn_more"); the app enum is uppercase, so compare normalized.
+  const normalizedRequiredCtas = requirements.requiredCtaTypes.map(value => value.trim().toLowerCase());
+  if (normalizedRequiredCtas.length > 0 && !normalizedRequiredCtas.includes(mappedCta.toLowerCase())) {
     issues.push(`CTA must be one of: ${requirements.requiredCtaTypes.join(", ")}`);
   }
   if (mode === "instant_form") {

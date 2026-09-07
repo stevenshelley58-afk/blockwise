@@ -127,12 +127,12 @@ export function StudioShell({
           <header className="flex min-h-14 items-center border-b border-border bg-(--ink) px-4 text-(--surface) md:hidden">
             <Link
               href="/self-serve"
-              className="grid size-8 shrink-0 place-items-center rounded-lg bg-transparent text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-              aria-label="Back to Blockwise"
+              className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-1 text-[12px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
-              <BlockwiseLogo tokens showWordmark={false} />
+              <ArrowLeft size={16} aria-hidden />
+              <span>Blockwise</span>
             </Link>
-            <span className="min-w-0 truncate font-display text-[15.5px] font-extrabold">
+            <span className="ml-3 min-w-0 truncate font-display text-[15.5px] font-extrabold">
               Ad Studio
             </span>
             <span

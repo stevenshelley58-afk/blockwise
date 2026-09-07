@@ -45,9 +45,9 @@ const DISPLAY_MILESTONES = [
   ["brand_pack_approved", "Brand Pack approved"],
   ["first_template_selected", "Template selected"],
   ["first_ad_pack_generated", "First ad created"],
-  ["meta_connected", "Meta connected"],
-  ["checkout_completed", "Payment method added"],
-  ["first_campaign_live", "First campaign live"],
+  ["meta_connected", "Connection step completed"],
+  ["checkout_completed", "Checkout completed"],
+  ["first_campaign_live", "First ad live"],
   ["intro_invoice_paid", "First invoice paid"],
 ] as const;
 
@@ -70,7 +70,7 @@ export function ActivationCard({ data }: { data: ActivationCardData }) {
           <p className="mt-1 text-[13px] text-muted-foreground">
             {isComplete
               ? "Your activation is complete. Create, publish, and manage the workspace from here."
-              : "Continue from the last server-confirmed step. Completed work will not be repeated."}
+              : "Pick up from the last completed step. You will not need to repeat finished work."}
           </p>
         </div>
         <StatusPill tone={isComplete ? "green" : "blue"}>
@@ -97,9 +97,9 @@ export function ActivationCard({ data }: { data: ActivationCardData }) {
         />
         <StatusCell
           icon={<CircleDot size={16} aria-hidden />}
-          label="Meta"
+          label="Direct Meta connection"
           value={metaLabel(meta.state)}
-          foot={meta.accountName ?? "Connect only when you are ready to run an ad."}
+          foot={meta.accountName ?? "Direct connection and assisted partner access are tracked separately."}
         />
         <StatusCell
           icon={<CalendarClock size={16} aria-hidden />}
@@ -145,7 +145,7 @@ export function ActivationCard({ data }: { data: ActivationCardData }) {
           </ul>
         ) : (
           <p className="mt-2 text-xs text-muted-foreground">
-            Your server-confirmed milestones will appear here as you complete them.
+            Completed setup steps will appear here.
           </p>
         )}
       </div>
@@ -178,7 +178,7 @@ function StatusCell({
 
 function planLabel(state: string): string {
   if (state === "paid") return "Self-serve paid";
-  if (state === "trialing") return "Seven-day billing trial";
+  if (state === "trialing") return "Billing trial (legacy)";
   if (state === "payment_recovery") return "Payment needs attention";
   if (state === "canceled") return "Canceled";
   return "Free creation trial";
@@ -186,12 +186,12 @@ function planLabel(state: string): string {
 
 function billingTiming(plan: ActivationCardData["plan"]): string {
   if (plan.accessState === "unbilled") {
-    return `${plan.currency === "USD" ? "US$" : "A$"}99 first month when you launch or seven days after Checkout.`;
+    return "Subscribe for A$249 monthly whenever you're ready. Your free trial never requires a card.";
   }
   if (!plan.periodEnd) return "Billing timing will appear after Stripe confirms the subscription.";
   const date = formatDate(plan.periodEnd);
   if (plan.cancelAtPeriodEnd) return `Credits and access remain available until ${date}.`;
-  return `Next ${plan.currency === "USD" ? "US$" : "A$"}499 renewal: ${date}.`;
+  return `Next A$249 renewal: ${date}.`;
 }
 
 function metaLabel(state: string): string {

@@ -1,6 +1,7 @@
 import type { HomeData } from "@/components/self-serve/home-dashboard";
 import { resolveCustomerActivation } from "@/lib/activation/customer-activation";
 import { loadReportingSnapshot } from "@/lib/meta-monitor/reporting-snapshots";
+import type { MetaMonitorPayload } from "@/lib/meta-monitor/types";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -94,17 +95,7 @@ export async function loadHomeDashboardData(input: {
   const creditsUsed = walletRow?.credits_consumed ?? 0;
   const creditsExpired = walletRow?.credits_expired ?? 0;
   const workspaceRow = (workspace.data ?? {}) as Record<string, unknown>;
-  const live =
-    results && results.source === "live" && results.connected && results.summary
-      ? {
-          leads: results.summary.leads,
-          spend: results.summary.spend,
-          previousLeads: results.summary.previousPeriod?.leads ?? null,
-          previousSpend: results.summary.previousPeriod?.spend ?? null,
-          daily: results.daily.map((point: { date: string; leads: number }) => ({ date: point.date, leads: point.leads })),
-          adsLive: results.ads.filter((ad: { status: string }) => ad.status === "ACTIVE").length,
-        }
-      : null;
+  const live = homePerformanceFromReporting(results);
 
   const safe: HomeSafeReadModel = {
     workspaceName,
@@ -140,18 +131,7 @@ export async function loadHomeDashboardData(input: {
         return Number.isFinite(createdAt) && createdAt >= weekAgo;
       }).length,
     },
-    performance: live
-      ? {
-          leads: live.leads,
-          cpl: live.leads > 0 ? live.spend / live.leads : null,
-          previousLeads: live.previousLeads,
-          previousCpl:
-            live.previousLeads && live.previousLeads > 0 && live.previousSpend != null
-              ? live.previousSpend / live.previousLeads
-              : null,
-          daily: live.daily,
-        }
-      : null,
+    performance: live?.performance ?? null,
   };
   const periodEnd =
     typeof workspaceRow.stripe_current_period_end === "string"
@@ -210,5 +190,49 @@ export function homeSafeReadModelFromData(data: HomeData): HomeSafeReadModel {
     booking: data.booking,
     ads: data.ads,
     performance: data.performance,
+  };
+}
+
+export function homePerformanceFromReporting(
+  results: MetaMonitorPayload | null,
+): { adsLive: number; performance: NonNullable<HomeData["performance"]> } | null {
+  const summary = results?.summary;
+  if (
+    !results ||
+    results.source !== "live" ||
+    !results.connected ||
+    !summary ||
+    results.range.key !== "last_30" ||
+    summary.dateRange.start !== results.range.since ||
+    summary.dateRange.end !== results.range.until
+  ) {
+    return null;
+  }
+
+  const providerLeads = results.ads.reduce(
+    (total, ad) => total + ad.metrics.leads,
+    0,
+  );
+  const providerSpend = results.ads.reduce(
+    (total, ad) => total + ad.metrics.spend,
+    0,
+  );
+  const totalsMatch =
+    providerLeads === summary.leads &&
+    Math.abs(providerSpend - summary.spend) < 0.01;
+
+  return {
+    adsLive: results.ads.filter((ad) => ad.status === "ACTIVE").length,
+    performance: {
+      leads: summary.leads,
+      cpl: totalsMatch && providerLeads > 0 ? summary.spend / providerLeads : null,
+      previousLeads: summary.previousPeriod?.leads ?? null,
+      previousCpl: null,
+      daily: results.daily.map((point) => ({
+        date: point.date,
+        leads: point.leads,
+      })),
+      lastSyncedAt: summary.lastSyncedAt,
+    },
   };
 }

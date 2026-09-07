@@ -26,6 +26,7 @@ import { META_COPY_CONSTRAINTS } from "../../../lib/adstudio/meta-copy-contract"
 export interface MetaPreviewProps {
   templateId: string;
   existingAdId: string;
+  assets: AdTemplate["assets"];
   layout: Layout;
   colours: AdTemplate["semanticColours"];
   textValues: Record<string, string>;
@@ -78,6 +79,7 @@ export function BusinessAvatar({
 export function FeedPreview({
   templateId,
   existingAdId,
+  assets,
   layout,
   colours,
   textValues,
@@ -116,6 +118,7 @@ export function FeedPreview({
         <LayeredCanvas
           templateId={templateId}
           existingAdId={existingAdId}
+          assets={assets}
           layout={layout}
           colours={colours}
           imageValues={imageValues}
@@ -158,6 +161,7 @@ export function FeedPreview({
 export function StoryPreview({
   templateId,
   existingAdId,
+  assets,
   layout,
   colours,
   textValues,
@@ -177,6 +181,7 @@ export function StoryPreview({
       <LayeredCanvas
         templateId={templateId}
         existingAdId={existingAdId}
+        assets={assets}
         layout={layout}
         colours={colours}
         imageValues={imageValues}

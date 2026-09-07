@@ -1,13 +1,13 @@
 "use client";
 
-import { Images, Info, Search, Upload, X } from "lucide-react";
+import { Images, Info, Upload, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchField, SearchFilterPanel, SearchFilterRow, filterChipClassName, sortControlClassName } from "@/components/adstudio/search-filter-controls";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Toaster } from "@/components/ui/sonner";
 import { AD_IMAGE_MAX_BYTES, AD_IMAGE_UPLOAD_TYPES, validateAssetUploadFile } from "@/lib/upload/asset-file";
@@ -125,19 +125,20 @@ export function MediaLibrary({ workspaceId, brandKitId, assets, nextAssetCursor:
       </header> : null}
       <input ref={inputRef} type="file" accept={AD_IMAGE_UPLOAD_TYPES.join(",")} multiple hidden aria-label="Upload assets" onChange={(event) => chooseFiles(event.target.files ?? [])} />
 
-      <section className={`${embedded ? "mt-0" : "mt-8"} rounded-(--r-panel) border border-(--line) bg-(--surface) p-3 shadow-card`} aria-label="Asset library controls">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <label className="relative min-w-0 flex-1"><Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search filenames" aria-label="Search filenames" className="h-11 rounded-(--r-card) pl-9" /></label>
+      <SearchFilterPanel className={embedded ? "mt-0" : "mt-8"} label="Asset library controls">
+        <SearchField id="asset-library-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search assets" label="Search assets" />
+        <SearchFilterRow action={
+          <Select value={sort} onValueChange={(value) => setSort(value as SortMode)}>
+            <SelectTrigger aria-label="Sort assets" className={sortControlClassName}><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="recent">Recently used</SelectItem><SelectItem value="name">Name</SelectItem><SelectItem value="role">Role</SelectItem></SelectContent>
+          </Select>
+        }>
           <div className="flex min-w-0 flex-wrap items-center gap-1" role="group" aria-label="Filter assets by role">
             <RoleButton active={filter === "all"} count={allAssets.length} onClick={() => setFilter("all")}>All</RoleButton>
             {ROLE_ORDER.map((role) => <RoleButton key={role} active={filter === role} count={counts[role]} onClick={() => setFilter(role)}>{ROLE_META[role].plural}</RoleButton>)}
           </div>
-          <Select value={sort} onValueChange={(value) => setSort(value as SortMode)}>
-            <SelectTrigger aria-label="Sort assets" className="h-11 w-full rounded-(--r-card) border-(--line-heavy) bg-(--surface) text-sm font-semibold text-foreground lg:w-auto"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="recent">Recently used</SelectItem><SelectItem value="name">Name</SelectItem><SelectItem value="role">Role</SelectItem></SelectContent>
-          </Select>
-        </div>
-      </section>
+        </SearchFilterRow>
+      </SearchFilterPanel>
 
       {(activeUploads.length || uploadErrors.length || duplicates.length) ? <UploadSummary items={uploadItems} onRetry={() => void processUploads(uploadItems.filter((item) => item.state === "error"))} onDismiss={() => setUploadItems([])} /> : null}
       <div className="mt-5 flex items-center justify-between gap-3 text-xs text-muted-foreground"><p aria-live="polite">{visibleAssets.length} {visibleAssets.length === 1 ? "asset" : "assets"}</p><p className="hidden sm:block">Private workspace media</p></div>
@@ -155,7 +156,7 @@ export function MediaLibrary({ workspaceId, brandKitId, assets, nextAssetCursor:
   );
 }
 
-function RoleButton({ active, count, children, onClick }: { active: boolean; count: number; children: React.ReactNode; onClick: () => void }) { return <button type="button" aria-pressed={active} onClick={onClick} className={`min-h-11 rounded-full px-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-(--surface-subtle)"}`}>{children}<span className={active ? "ml-1 opacity-70" : "ml-1 text-muted-foreground"}>{count}</span></button>; }
+function RoleButton({ active, count, children, onClick }: { active: boolean; count: number; children: React.ReactNode; onClick: () => void }) { return <button type="button" aria-pressed={active} onClick={onClick} className={filterChipClassName(active)}>{children}<span className={active ? "ml-1 opacity-70" : "ml-1 text-muted-foreground"}>{count}</span></button>; }
 
 function Dropzone({ dragging, setDragging, onBrowse, onFiles }: { dragging: boolean; setDragging: (value: boolean) => void; onBrowse: () => void; onFiles: (files: FileList | File[]) => void }) {
   return <div onDragEnter={(event) => { event.preventDefault(); setDragging(true); }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { if (event.currentTarget === event.target) setDragging(false); }} onDrop={(event) => { event.preventDefault(); setDragging(false); onFiles(event.dataTransfer.files); }} className={`flex aspect-square flex-col items-center justify-center rounded-(--r-card) border border-dashed p-4 text-center transition ${dragging ? "border-(--accent) bg-(--surface-subtle)" : "border-(--line-heavy) bg-(--surface)"}`}><span className="mb-3 grid size-10 place-items-center rounded-full bg-(--surface-subtle)"><Upload className="size-4" aria-hidden /></span><p className="text-sm font-semibold">Drop files to upload</p><p className="mt-1 text-xs leading-5 text-muted-foreground">JPG, PNG, or WebP · up to 8 MB</p><button type="button" onClick={onBrowse} className="mt-3 min-h-11 rounded px-2 text-xs font-bold underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Browse files</button></div>;

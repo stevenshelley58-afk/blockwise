@@ -2,13 +2,8 @@
  * White-label niche layer. This directory is the ONLY place niche identity —
  * product nouns, industry copy, the vivid data hue, nav labels, and feature
  * flags — may live. Customer pages and components reference `niche.*` instead
- * of writing niche nouns inline, so cloning the product for a new vertical
- * means writing a sibling config folder and flipping the export in
- * `index.ts`. See docs/REBUILD-PLAN.md §5.
- *
- * Keep values plain data where possible; the few functions exist only for
- * pluralisation/interpolation and are safe because both server and client
- * code import this module directly (config is never serialised as props).
+ * of embedding product-specific copy. A new vertical means writing a sibling config folder and flipping the export in index.ts.
+ * See docs/architecture/extension-guide.md for the extension path.
  */
 
 export type NicheFeatures = {
@@ -25,6 +20,10 @@ export type NicheFeatures = {
 export type NicheNavItem = {
   href: string;
   label: string;
+  /** Structural icon name, rendered by the shared customer shell. */
+  icon: "home" | "studio" | "performance" | "radar" | "property" | "leads" | "brand" | "settings";
+  /** Include this destination in the mobile tab bar, using this shorter label. */
+  mobileLabel?: string;
   /** Grouping label rendered above the item (starts a new section). */
   section?: string;
   /** Feature flag that must be on for the item to render. */
@@ -263,11 +262,6 @@ export type NicheConfig = {
   };
   nav: {
     items: NicheNavItem[];
-    /**
-     * Primary mobile tabs (bottom tab bar). Five maximum — the shell appends a
-     * sixth "More" button, and six 9.5px labels is the limit at 360px.
-     */
-    mobileTabs: NicheNavItem[];
   };
   features: NicheFeatures;
   copy: {
