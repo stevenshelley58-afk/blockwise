@@ -4,53 +4,53 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { readFile } from "node:fs/promises";
 import { ResultsReporting } from "../src/components/homepage-concept/results-reporting.tsx";
-import { REPORTS, EMAIL_CADENCES, exampleEmail } from "../src/lib/homepage-concept/reporting.ts";
+import { REPORTS, EMAIL_CADENCES, emailSchedule, lineChartGeometry } from "../src/lib/homepage-concept/reporting.ts";
 
-test("reporting sells visibility and email control without another creation walkthrough", () => {
+test("reporting explains dashboard and email control in fewer than 80 words", () => {
   const html = renderToStaticMarkup(createElement(ResultsReporting));
-  for (const copy of ["No guesswork.", "No chasing updates.", "waiting for an agency report", "Your ad overview", "Or just check your inbox.", "Example data", "Nothing is saved or sent.", "No card required."]) assert.ok(html.includes(copy), copy);
+  for (const copy of ["No more", "chasing updates.", "Your dashboard.", "Emails on your schedule.", "Example data", "Nothing sent or saved.", "No card required."]) assert.ok(html.includes(copy), copy);
   for (const option of EMAIL_CADENCES) assert.ok(html.includes(`value="${option.id}"`));
+  const words = html.replace(/<[^>]+>/g, " ").trim().split(/\s+/);
+  assert.ok(words.length < 80, `${words.length} words is too much copy`);
   assert.match(html, /href="#trial"/);
   assert.match(html, /id="results"/);
   assert.match(html, /aria-label="Dashboard reporting period"/);
-  assert.match(html, /role="img" aria-label="Last 7 days:/);
-  assert.doesNotMatch(html, /style="opacity:0(?:;|")/);
-  assert.doesNotMatch(html, /Approve example budget|Create your ad|mailto:|tel:/);
+  assert.match(html, /<svg[^>]*role="img"[^>]*aria-label="Last 7 days:/);
+  assert.match(html, /class="hc-chart-line"/);
+  assert.doesNotMatch(html, /hc-chart-bars|<table|hc-email-signoff|style="opacity:0(?:;|")|mailto:|tel:/);
 });
 
-test("dashboard chart, campaigns and metrics agree for both periods", () => {
-  for (const report of Object.values(REPORTS)) {
+test("line chart faithfully represents both reporting periods", () => {
+  for (const [id, report] of Object.entries(REPORTS)) {
     assert.equal(report.points.reduce((sum, n) => sum + n, 0), report.leads);
-    assert.equal(report.campaigns.reduce((sum, item) => sum + item.leads, 0), report.leads);
-    assert.equal(report.campaigns.reduce((sum, item) => sum + item.spend, 0), report.spend);
     assert.equal(report.labels.length, report.points.length);
     assert.equal(report.spend / report.leads, 18);
+    const maximum = id === "week" ? 4 : 24;
+    const chart = lineChartGeometry(report.points, maximum);
+    assert.match(chart.line, /^M8,/);
+    assert.equal((chart.line.match(/L/g) ?? []).length, report.points.length - 1);
+    assert.equal(chart.end.x, 592);
+    assert.equal(chart.end.y, 188 - report.points[report.points.length - 1] / maximum * 176);
+    assert.ok(chart.area.endsWith("L8,188 Z"));
   }
+  assert.equal(lineChartGeometry([], 4).area, "");
 });
 
-test("email preview changes cadence, uses matching figures and bounds custom intervals", () => {
-  const weekly = exampleEmail("weekly", 3);
-  assert.equal(weekly.leads, REPORTS.week.leads);
-  assert.equal(weekly.spend, REPORTS.week.spend);
-  assert.equal(weekly.schedule, "Every Monday, 8:00 am");
-  assert.equal(exampleEmail("daily", 3).schedule, "Every day, 8:00 am");
-  assert.equal(exampleEmail("custom", 14).schedule, "Every 14 days, 8:00 am");
-  assert.equal(exampleEmail("custom", 14).period, "Last 14 days");
-  assert.equal(exampleEmail("custom", 7).leads, weekly.leads);
-  assert.equal(exampleEmail("custom", 30).leads, REPORTS.month.leads);
-  for (const days of [0, 1, 3, 14, 30, 99, NaN]) {
-    const email = exampleEmail("custom", days);
-    assert.ok(email.leads >= 3 && email.leads <= 62);
-    assert.equal(email.spend / email.leads, 18);
-  }
+test("email schedule supports daily, weekly and bounded custom intervals", () => {
+  assert.equal(emailSchedule("weekly", 3), "Every Monday, 8:00 am");
+  assert.equal(emailSchedule("daily", 3), "Every day, 8:00 am");
+  assert.equal(emailSchedule("custom", 14), "Every 14 days, 8:00 am");
+  assert.equal(emailSchedule("custom", 0), "Every day, 8:00 am");
+  assert.equal(emailSchedule("custom", 99), "Every 30 days, 8:00 am");
+  assert.equal(emailSchedule("custom", NaN), "Every 3 days, 8:00 am");
 });
 
-test("reporting remains an isolated, reduced-motion-aware client illustration", async () => {
+test("reporting stays isolated, initially visible and reduced-motion aware", async () => {
   const source = await readFile(new URL("../src/components/homepage-concept/results-reporting.tsx", import.meta.url), "utf8");
   const fixture = await readFile(new URL("../src/lib/homepage-concept/reporting.ts", import.meta.url), "utf8");
   assert.doesNotMatch(source + fixture, /fetch\s*\(|localStorage|sessionStorage|supabase|sendBeacon|setInterval/);
   assert.match(source, /useReducedMotion/);
-  assert.match(source, /initial=\{false\}/);
+  assert.match(source, /initial=\{reducedMotion \|\| instant \? false/);
   assert.match(source, /setInstant\(event.detail === 0\)/);
   assert.match(source, /onKeyDown=\{\(\) => setInstant\(true\)\}/);
 });

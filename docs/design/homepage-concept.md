@@ -24,12 +24,12 @@ Production-built, secret-free, read-only container on a separate internal Docker
 
 See the release evidence record for compiled revision, required checks, browser measurements, form behavior and public preview acceptance.
 
-## Results reporting — corrected owner brief
+## Results reporting — minimal layout
 
-Persuade agents that they can know how their ads are going without guessing or waiting for agency updates. The rest of the homepage already explains ad creation; this section must not repeat that workflow.
+Persuade through the visual, not explanatory copy. The owner explicitly requested a line graph, a substantially simpler layout and as few words as possible.
 
-A full-width dark section pairs a legible personal dashboard with a scheduled email preview. Leads, spend and cost per lead answer the visitor's practical questions. The 7/30-day dashboard switch updates consistent synthetic chart and campaign data. Daily, weekly and custom 1–30-day email controls visibly change the illustrative summary and schedule. Both benefits are visible without interaction; no carousel, stage gate or continuous animation hides the message.
+One dashboard sits beside a five-word headline and seven-word supporting line. Its metrics lead into a true line graph; email frequency lives in a compact footer instead of a second full email card. Campaign rows, repeated captions, email greetings/signoffs and the closing slogan are removed. Daily/weekly/custom controls and a short example-data/no-send disclosure remain. The server-rendered section has a regression budget of fewer than 80 words including interface labels.
 
-Reuse incumbent Manrope/Inter, near-black/white and blue, installed Motion and Lucide. Small authored chart markup is appropriate for this labelled, fixed demonstration, avoiding additional chart machinery. Pointer changes use finite ease-out chart/email transitions; keyboard and reduced-motion changes are immediate. Mobile stacks dashboard then email with 44px controls. All data is explicitly synthetic and nothing sends or saves.
+Inherit the established dark/white/blue marketing world and typography. Reuse Motion for finite user-triggered line drawing; SSR, keyboard and reduced-motion paths remain immediate. A small deterministic SVG geometry helper is sufficient for the fixed fixture series, so no additional chart dependency is needed. The rest of the homepage is untouched.
 
-Product boundary: current customer settings expose a weekly-digest toggle, not a general configurable reporting scheduler. The owner's requested flexible cadence is demonstrated here as a concept only, not activated or claimed as shipped scheduling. Production email scheduling must be implemented and verified separately before this concept replaces the public homepage.
+Product boundary: flexible email cadence is still an owner-requested concept, not a connected delivery scheduler. Nothing is sent or saved. Production scheduling must be implemented and verified separately before this concept replaces the public homepage.
