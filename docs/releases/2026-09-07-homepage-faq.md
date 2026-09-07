@@ -33,3 +33,15 @@ python3 scripts/vps/homepage-preview-route.py --upstream blockwise-homepage-prev
 ```
 
 The route utility preserves production routes and saves the current router configuration before changing the preview. The new container keeps the existing non-root, read-only, secret-free, internal-network posture. No product service, provider-write gate or shared Frank edge configuration was changed.
+
+## Follow-up: accurate post-trial options
+
+The user clarified that customers may continue running and managing ads themselves for free, choose a monthly plan, or choose a managed account. The post-trial answer now names all three choices and keeps Meta ad spend explicitly separate.
+
+- Serving application revision: `671e945c70a37acc858e3f607e7c55b51d58726b`.
+- Image/container: `blockwise-homepage-preview:671e945c70a3` / `blockwise-homepage-preview-671e945c70a3`.
+- Required NUL, full test suite (935 tests, 934 passed, zero failures, one unchanged root-specific skip), typecheck, production preview build and Git whitespace checks passed again.
+- Candidate and routed HTTPS responses verified the exact compiled revision and corrected answer. Chromium on the public preview verified native expansion and the visible answer with all three choices and separate Meta spend.
+- Production readiness verified the same unchanged live revision `6ee635b3416ee694badc3d5b8f2ea99a9981be13`.
+- The previous `blockwise-homepage-preview-32ff67e4f894` container is retained as the immediate rollback; use the existing preview route utility with that upstream. Logs are under `work/trial-*.log` in the source worktree.
+- No billing functionality, entitlements, production services, integrations or styling changed.
