@@ -328,26 +328,35 @@ function normalizeProviderConnectionRow(row: ProviderConnectionRow): ProviderCon
   };
 }
 
-/**
- * Remove a workspace provider's credentials from the private vault. Keeping
- * this operation beside token reads makes it difficult for disconnect flows
- * to update only the public connection row and accidentally leave a usable
- * credential behind.
- */
+/** Ensure a provider connection belongs to the requested workspace and is usable. */
 export async function assertProviderConnectionActive(
   serviceSupabase: SupabaseServiceClient,
-  input: { connectionId: string; provider: MonitorProvider },
+  input: { connectionId: string; workspaceId: string; provider: MonitorProvider },
 ): Promise<void> {
   const { data, error } = await serviceSupabase
     .from("provider_connections")
     .select("id,status")
     .eq("id", input.connectionId)
+    .eq("workspace_id", input.workspaceId)
     .eq("provider", input.provider)
     .in("status", ["connected", "needs_attention"])
     .maybeSingle();
 
   if (error) throw new Error(`provider connection lookup failed: ${error.message}`);
   if (!data) throw new Error(`The ${input.provider} provider connection is disconnected or unavailable.`);
+}
+
+export function shouldRevokeMetaOAuthGrant(metadata: Record<string, unknown> | null): boolean {
+  return metadata?.connectionMethod !== "partner_access";
+}
+
+export async function clearStoredProviderTokenSet(
+  serviceSupabase: SupabaseServiceClient,
+  connectionIds: string[],
+): Promise<void> {
+  for (const connectionId of connectionIds) {
+    await clearStoredProviderTokens(serviceSupabase, connectionId);
+  }
 }
 
 export async function clearStoredProviderTokens(

@@ -3,7 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { canManageProviderConnections } from "@/lib/auth/access-control";
 import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { DEFAULT_META_GRAPH_VERSION } from "@/lib/providers/meta-graph-version";
-import { clearStoredProviderTokens, loadStoredProviderTokens } from "@/lib/providers/provider-connections";
+import {
+  clearStoredProviderTokenSet,
+  loadStoredProviderTokens,
+  shouldRevokeMetaOAuthGrant,
+} from "@/lib/providers/provider-connections";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -49,23 +53,15 @@ export async function POST(request: NextRequest) {
   const rows = (connections ?? []) as MetaConnection[];
   const latest = rows[0];
 
-  // Best-effort: revoke an OAuth app grant via Meta Graph API. Partner access
-  // uses a shared system-user token, so /me/permissions is not a workspace-
-  // scoped customer grant and must not be called during a workspace disconnect.
-  if (latest && latest.metadata_json?.connectionMethod !== "partner_access") {
+  // Capture an OAuth token for best-effort remote revocation, but do not call
+  // Meta until local credentials and public status have been cleared. Partner
+  // access uses a shared system-user token and is never remotely revoked here.
+  let revokeAccessToken: string | null = null;
+  if (latest && shouldRevokeMetaOAuthGrant(latest.metadata_json)) {
     try {
-      const tokens = await loadStoredProviderTokens(serviceSupabase, latest.id);
-      if (tokens.accessToken) {
-        const revokeUrl = new URL(`https://graph.facebook.com/${DEFAULT_META_GRAPH_VERSION}/me/permissions`);
-        revokeUrl.searchParams.set("access_token", tokens.accessToken);
-        const revokeRes = await fetch(revokeUrl.toString(), { method: "DELETE" });
-        if (!revokeRes.ok) {
-          const responseBody = await revokeRes.text().catch(() => "");
-          console.error("[meta/disconnect] Meta revoke failed:", revokeRes.status, responseBody);
-        }
-      }
+      revokeAccessToken = (await loadStoredProviderTokens(serviceSupabase, latest.id)).accessToken;
     } catch (err) {
-      console.error("[meta/disconnect] revoke error:", err);
+      console.error("[meta/disconnect] revoke token lookup error:", err);
     }
   }
 
@@ -73,9 +69,7 @@ export async function POST(request: NextRequest) {
   // revoked rows, and a vault failure is surfaced rather than claiming a
   // disconnected workspace is safe while its credential may still work.
   try {
-    for (const row of rows) {
-      await clearStoredProviderTokens(serviceSupabase, row.id);
-    }
+    await clearStoredProviderTokenSet(serviceSupabase, rows.map((row) => row.id));
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not clear the Meta token vault.";
     console.error("[meta/disconnect] token vault clear failed:", message);
@@ -92,6 +86,24 @@ export async function POST(request: NextRequest) {
   if (updateErr) {
     console.error("[meta/disconnect] status update failed:", updateErr.message);
     return NextResponse.json({ error: updateErr.message }, { status: 500 });
+  }
+
+  // Best-effort remote revocation after local safety boundaries are complete.
+  // A timeout prevents a provider outage from holding the disconnect request.
+  if (revokeAccessToken) {
+    try {
+      const revokeUrl = new URL(`https://graph.facebook.com/${DEFAULT_META_GRAPH_VERSION}/me/permissions`);
+      revokeUrl.searchParams.set("access_token", revokeAccessToken);
+      const revokeRes = await fetch(revokeUrl.toString(), {
+        method: "DELETE",
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!revokeRes.ok) {
+        console.error("[meta/disconnect] Meta revoke failed with status:", revokeRes.status);
+      }
+    } catch (err) {
+      console.error("[meta/disconnect] revoke error:", err instanceof Error ? err.message : "unknown error");
+    }
   }
 
   return NextResponse.json({ success: true });

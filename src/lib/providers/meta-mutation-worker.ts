@@ -66,6 +66,7 @@ export async function executeMetaMutationById(input: {
     await resolveWorkspaceMetaConnectionId(input.serviceSupabase, input.workspaceId);
   await assertProviderConnectionActive(input.serviceSupabase, {
     connectionId: providerConnectionId,
+    workspaceId: input.workspaceId,
     provider: "meta",
   });
 
