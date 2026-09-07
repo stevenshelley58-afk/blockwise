@@ -7,6 +7,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { adDocumentSchema, type AdDocumentParsed } from "../../../../../../../packages/ad-template-contract/src/schema.ts";
 import { containsInlineImageData, } from "@/lib/adstudio/persisted-document";
 import { CustomerImageStorageError, resolveCustomerImageValues } from "@/lib/adstudio/customer-image-storage";
+import { resolveImageValues as resolveImageValuesShared, resolveTemplateAssetValues as resolveTemplateAssetValuesShared } from "@/lib/adstudio/render-assets";
 import { metaCopyLimitIssues } from "@/lib/adstudio/types";
 
 export const runtime = "nodejs";
@@ -74,8 +75,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
   try {
     const serviceSupabase = createSupabaseServiceClient();
     const [customerImages, templateAssets] = await Promise.all([
-      resolveImageValues(document, access.access.workspaceId, id, serviceSupabase),
-      resolveTemplateAssetValues(id, access.access.workspaceId, serviceSupabase),
+      resolveImageValuesShared(document, access.access.workspaceId, id, serviceSupabase),
+      resolveTemplateAssetValuesShared(id, access.access.workspaceId, serviceSupabase),
     ]);
     const persistedDocument = ({ ...document, sharedImageValues: customerImages.refs });
     const output = await saveAd({

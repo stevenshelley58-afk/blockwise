@@ -3,7 +3,7 @@ import { adDocumentSchema, type AdDocumentParsed } from "../../../../../../../pa
 import { renderPlacement } from "../../../../../../../packages/ad-template-renderer/src/renderer.ts";
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
 import { containsInlineImageData } from "@/lib/adstudio/persisted-document";
-import { resolveImageValues, resolveTemplateAssetValues } from "../save/route";
+import { resolveImageValues, resolveTemplateAssetValues } from "@/lib/adstudio/render-assets";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { sha256Hex } from "@/lib/adstudio/document-token";
 export const runtime = "nodejs";
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const [customerImages, templateAssets] = await Promise.all([resolveImageValues(document, access.access.workspaceId, id, service), resolveTemplateAssetValues(id, access.access.workspaceId, service)]);
     const textValues = Object.fromEntries(template.textInputs.map(input => [input.key, document.sharedTextValues[input.key] ?? input.placeholder]));
     const result = await renderPlacement({ template, imageValues: { ...templateAssets, ...customerImages.bytes }, textValues, colourMap: document.resolvedColourMap, cropOverrides: placement === "feed" ? document.feedCropOverrides : document.storyCropOverrides }, placement);
-    return new NextResponse(result.png, { headers: { "content-type": "image/png", "cache-control": "private, no-store", "x-blockwise-document-hash": sha256Hex(document), "x-blockwise-template-hash": sha256Hex(template), "x-blockwise-renderer": "blockwise-ad-template-renderer" } });
+    return new NextResponse(new Uint8Array(result.png), { headers: { "content-type": "image/png", "cache-control": "private, no-store", "x-blockwise-document-hash": sha256Hex(document), "x-blockwise-template-hash": sha256Hex(template), "x-blockwise-renderer": "blockwise-ad-template-renderer" } });
   } catch (error) {
     console.error("Ad Studio canonical preview failed", { code: error instanceof Error ? error.name : "unknown" });
     return NextResponse.json({ error: "Preview could not be rendered.", code: "preview_failed" }, { status: 400 });
