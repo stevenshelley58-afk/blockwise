@@ -20,7 +20,7 @@ import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/r
 import { useEffect, useRef, useState } from "react";
 
 import { AdPreview } from "@/components/homepage-concept/ad-preview";
-import { ResultsWalkthrough } from "@/components/homepage-concept/results-walkthrough";
+import { ResultsReporting } from "@/components/homepage-concept/results-reporting";
 import { AD_EXAMPLES, FAQS, withBasePath } from "@/lib/homepage-concept/content";
 import { requestMockTrial, validateTrialEmail } from "@/lib/homepage-concept/mock-trial";
 
@@ -592,7 +592,7 @@ export function HomepageConcept() {
           </div>
         </section>
 
-        <ResultsWalkthrough />
+        <ResultsReporting />
 
         <section className="hc-examples" id="examples">
           <div className="hc-shell">
