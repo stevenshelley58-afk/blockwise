@@ -11,8 +11,6 @@ import {
   MessageCircle,
   MoreHorizontal,
   MousePointer2,
-  Pause,
-  Play,
   Send,
   Share2,
   ThumbsUp,
@@ -33,7 +31,6 @@ function PrimaryLink({ children, className = "" }: { children: React.ReactNode; 
   return (
     <a className={`hc-button hc-button--primary ${className}`} href="#trial">
       {children}
-      <ArrowRight aria-hidden="true" size={17} />
     </a>
   );
 }
@@ -300,10 +297,9 @@ function ProcessShowcase() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const reduceMotion = Boolean(useReducedMotion());
   const [order, setOrder] = useState(() => META_SHOWCASE_ADS.map((_, index) => index));
-  const [paused, setPaused] = useState(false);
   const [inView, setInView] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
-  const shouldPlay = !paused && inView && pageVisible && !reduceMotion;
+  const shouldPlay = inView && pageVisible && !reduceMotion;
 
   useEffect(() => {
     const syncVisibility = () => setPageVisible(document.visibilityState === "visible");
@@ -328,16 +324,6 @@ function ProcessShowcase() {
   return (
     <div className="hc-meta-showcase" ref={sectionRef}>
       <div className="hc-meta-stage" aria-label="Examples of Facebook Feed and Instagram Story ads">
-        <button
-          className="hc-meta-loop-control"
-          type="button"
-          aria-label={paused ? "Play ad showcase" : "Pause ad showcase"}
-          aria-pressed={paused}
-          hidden={reduceMotion}
-          onClick={() => setPaused((current) => !current)}
-        >
-          {paused ? <Play aria-hidden="true" size={16} /> : <Pause aria-hidden="true" size={16} />}
-        </button>
         <p className="hc-sr-only" aria-live="polite">
           Showing {META_SHOWCASE_ADS[order[0]].format === "feed" ? "Facebook Feed" : "Instagram Story"} ad from {META_SHOWCASE_ADS[order[0]].page}
         </p>

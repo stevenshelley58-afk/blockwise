@@ -71,8 +71,8 @@ test("homepage concept uses a clean Meta ad loop as the hero visual", async () =
   assert.match(component, /IntersectionObserver/);
   assert.match(component, /visibilitychange/);
   assert.match(component, /useReducedMotion/);
-  assert.match(component, /Pause ad showcase/);
-  assert.match(component, /Play ad showcase/);
+  assert.doesNotMatch(component, /hc-meta-loop-control|Pause ad showcase|Play ad showcase/);
+  assert.doesNotMatch(component, /<PrimaryLink>Start free trial<\/PrimaryLink>\s*<ArrowRight/);
   assert.doesNotMatch(component, /Property Check\b|three free ads|3 free ads/i);
 });
 
