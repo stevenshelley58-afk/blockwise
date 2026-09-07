@@ -1592,7 +1592,7 @@
   .hc-hero-status { margin-top: 13px; font-size: 11px; }
 }
 @media (max-width: 370px) {
-  .hc-hero-grid { padding-inline: 20px; }
+  .hc-hero-grid { padding-inline: 0; }
   .hc-hero-copy h1 { font-size: 36px; }
   .hc-hero-stack { min-height: 390px; }
   .hc-hero-story { width: 127px; }
