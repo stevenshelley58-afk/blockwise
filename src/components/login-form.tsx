@@ -8,6 +8,7 @@ import { ButtonSpinner } from "@/components/app/button-spinner";
 import { hasTurnstileSiteKey, TurnstileVerification } from "@/components/auth/turnstile-verification";
 import { testUsers } from "@/lib/auth/test-users";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { validateLoginCredentials } from "@/lib/auth/form-validation";
 
 type LoginFormProps = {
   showTestProfiles?: boolean;
@@ -28,16 +29,9 @@ export function LoginForm({ showTestProfiles = false, testProfilePassword = "" }
     setError(null);
 
     const normalizedEmail = targetEmail.trim();
-    if (!normalizedEmail) {
-      setError("Enter your email.");
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-      setError("Enter a valid email.");
-      return;
-    }
-    if (!targetPassword) {
-      setError("Enter your password.");
+    const credentialError = validateLoginCredentials(normalizedEmail, targetPassword);
+    if (credentialError) {
+      setError(credentialError);
       return;
     }
 

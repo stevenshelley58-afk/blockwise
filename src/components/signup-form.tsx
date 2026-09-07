@@ -9,6 +9,7 @@ import {
   TurnstileVerification,
 } from "@/components/auth/turnstile-verification";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { validateEmail } from "@/lib/auth/form-validation";
 
 export function SignupForm() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -39,13 +40,9 @@ export function SignupForm() {
       return;
     }
 
-    if (!email) {
-      setError("Enter your work email.");
-      return;
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Enter a valid work email.");
+    const emailError = validateEmail(email, "work email");
+    if (emailError) {
+      setError(emailError);
       return;
     }
 
