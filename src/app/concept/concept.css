@@ -1371,6 +1371,7 @@
 }
 
 @media (max-width: 370px) {
+  .hc-report-metrics dd { font-size: 20px; }
   .hc-header-cta { min-width: 116px; padding-inline: 12px; }
   .hc-logo img { width: 112px; }
   .hc-hero-copy h1 { font-size: 36px; }
