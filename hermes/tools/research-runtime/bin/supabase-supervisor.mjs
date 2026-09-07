@@ -166,6 +166,9 @@ const scrapingBeeOrder = String(env.HERMES_SCRAPINGBEE_ORDER || "fallback").toLo
 const scrapingBeeMaxCostPerCapture = Math.min(positiveInt("HERMES_SCRAPINGBEE_MAX_CREDITS_PER_CAPTURE", 25), 100);
 const scrapingBeeMonthlyCreditCap = positiveInt("HERMES_SCRAPINGBEE_MONTHLY_CREDIT_CAP", 200_000);
 const scrapingBeeTimeoutMs = positiveInt("HERMES_SCRAPINGBEE_TIMEOUT_MS", 120_000);
+// Auto-Mode chooses proxy/rendering tiers but does not wait for page-specific
+// asynchronous results. Meta Ad Library needs a short post-render settle time.
+const scrapingBeeWaitMs = Math.min(positiveInt("HERMES_SCRAPINGBEE_WAIT_MS", 5_000), 35_000);
 const RAW_EVIDENCE_BUCKET = env.HERMES_RESEARCH_RAW_EVIDENCE_BUCKET || "research-raw-evidence";
 const META_BROWSER_CHALLENGE_DISABLED_UNTIL_SETTING = "meta_browser_challenge_disabled_until";
 const META_BROWSER_CHALLENGE_RESUME_SPREAD_MS = 15 * 60 * 1000;
@@ -2895,6 +2898,7 @@ async function runScrapingBeePageCapture(input) {
     url,
     mode: "auto",
     max_cost: String(runCreditCap),
+    wait: String(scrapingBeeWaitMs),
   });
 
   try {
@@ -2917,7 +2921,7 @@ async function runScrapingBeePageCapture(input) {
         provider_credit_attempt_id: attemptId,
         tier: "auto_mode",
         request_url_host: "app.scrapingbee.com",
-        request_params: { mode: "auto", max_cost: runCreditCap, target_host: new URL(url).host },
+        request_params: { mode: "auto", max_cost: runCreditCap, wait_ms: scrapingBeeWaitMs, target_host: new URL(url).host },
         outcome: "error",
         error: "reserved_before_provider_request",
         started_at: new Date(requestStartedAt).toISOString(),

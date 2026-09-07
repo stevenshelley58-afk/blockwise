@@ -7,6 +7,11 @@ import {dirname,join} from 'node:path';
 const source=readFileSync('hermes/tools/research-runtime/bin/supabase-supervisor.mjs','utf8').replace(/\r\n/g,'\n');
 function load(name,next,context){const start=source.indexOf('async function '+name+'('),end=source.indexOf('\nasync function '+next+'(',start)>=0?source.indexOf('\nasync function '+next+'(',start):source.indexOf('\nfunction '+next+'(',start);assert.ok(start>=0&&end>start);const code=source.slice(start,end).replaceAll('import.meta.url',JSON.stringify('file:///srv/test/supabase-supervisor.mjs'));return vm.runInNewContext(code+';'+name,{...context});}
 const creative='11111111-1111-4111-8111-111111111111',ad='22222222-2222-4222-8222-222222222222',asset='33333333-3333-4333-8333-333333333333';
+test('ScrapingBee Auto-Mode includes a bounded Meta render wait',()=>{
+  assert.match(source,/HERMES_SCRAPINGBEE_WAIT_MS[^\n]+5_000/);
+  assert.match(source,/wait: String\(scrapingBeeWaitMs\)/);
+  assert.match(source,/Math\.min\([^\n]+35_000\)/);
+});
 test('primary ScrapingBee failure fails closed without legacy browser fallback',async()=>{
   let fallbackCalls=0;
   const fn=load('runMetaPageCapture','failedCaptureOutcome',{
