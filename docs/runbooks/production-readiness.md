@@ -28,13 +28,10 @@ OAuth writes, email sends, worker restart, or Caddy restart were performed.
 
 - `npm run check:nul`: passed, scanning 1,036 text files.
 - Root `npm test`: 910 passed, 0 failed.
-- Package tests: 120 passed, 1 failed, 2 skipped out of 123. The single failure is
-  the pre-existing `customer-navigation.test.mjs` expectation that `/ad-radar`
-  is disabled; the coordinated candidate intentionally enables the canonical
-  Ad Radar surface. This is not release sign-off and needs reconciliation by
-  the product owner.
-- `npm run typecheck -- --pretty false`: run separately after the candidate
-  checkout is updated; record its exact result here before image construction.
+- Package tests: 124 passed, 0 failed, 2 skipped out of 126. The skips are the
+  lifecycle comparison test and the root-only unwritable-directory typecheck
+  test. No package test failed.
+- `npm run typecheck -- --pretty false`: passed after package builds; no diagnostics.
 - No final image was built while product E2E and operations follow-up remained
   in progress.
 

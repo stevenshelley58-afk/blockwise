@@ -24,12 +24,11 @@ authorisation. The public app remains on
 
 - `npm run check:nul` passed, scanning 1,036 text files.
 - Root tests passed: 910/910.
-- Package tests: 120/123 passed, 1 failed, 2 skipped. The failure is
-  `customer-navigation.test.mjs`, which still expects `/ad-radar` to be absent
-  from active navigation. The candidate deliberately enables canonical Ad Radar,
-  so this is an outstanding product-test reconciliation, not a silent pass.
-- Typecheck and final build evidence are required after all product and ops
-  commits are integrated.
+- Package tests: 124/126 passed, 0 failed, 2 skipped. The skips are the
+  lifecycle comparison test and the root-only unwritable-directory typecheck
+  test. No package test failed.
+- Typecheck passed after package builds. Final immutable build evidence remains
+  pending.
 
 ## Outstanding release gates
 
