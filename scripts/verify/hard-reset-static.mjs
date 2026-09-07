@@ -230,7 +230,7 @@ function checkHermesQueueWorkerContract() {
     failures.push("Hermes ResearchSupervisor must include a media queue planner between collector and classifier");
   }
 
-  const collectorRuntime = `${schemaBlock(runtimeText.types, "adCollectorPayloadSchema", "locationSearchGateSchema")}\n${captureRuntime}`;
+  const collectorRuntime = `${schemaBlock(runtimeText.types, "adCollectorPayloadSchema", "mediaCollectorPayloadSchema")}\n${captureRuntime}`;
   const forbiddenCollectionInputs = [/\bsearchQuery\b/i, /\bsearch_query\b/i, /\bradius\b/i, /\bgeo\b/i, /\blocation\b/i]
     .filter((pattern) => pattern.test(collectorRuntime)).map(String);
   if (forbiddenCollectionInputs.length > 0) {
