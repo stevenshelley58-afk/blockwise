@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { createCanvas } from "@napi-rs/canvas";
 import { describe, it } from "node:test";
 import { renderPlacement } from "../../packages/ad-template-renderer/src/renderer.ts";
 import { handleCanonicalPreview } from "../../src/lib/adstudio/canonical-preview.ts";
+import { saveAd } from "../../src/lib/adstudio/save-ad.ts";
 
 const colours = { background: "#ffffff", primary: "#111111", secondary: "#222222", accent: "#ff0000", mainText: "#000000", inverseText: "#ffffff" };
 const base = { schema: "blockwise.ad-template", templateId: "fixture-template", createdAt: "2026-09-07T00:00:00.000Z", imageInputs: [{ key: "hero", label: "Hero", required: true, acceptedTypes: ["image/png"] }], textInputs: [{ key: "headline", label: "Headline", placeholder: "Default", maxLength: 80 }], semanticColours: colours, assets: {}, fonts: [{ file: "manrope-800.woff2" }], metadata: { title: "Fixture", description: "", gallerySamples: {}, metaCopyDefaults: { primaryText: [], headlines: [], descriptions: [], cta: "LEARN_MORE" }, aiWritingGuidance: { summary: "", fields: {} }, publishRequirements: { objective: "LEAD_GENERATION", specialAdCategory: null, instantForm: { required: false, dependency: null }, destination: { required: false, kind: "none", dependency: null }, requiredCtaTypes: [] }, replacementAssets: [], realAssetRefs: [] } };
@@ -17,11 +19,57 @@ describe("canonical preview replacement fixture", () => {
   it("matches direct save renderer bytes and changes with text/crop edits", async () => {
     const deps = { loadAd: async () => ({ templateId: template.templateId }), loadTemplate: async () => template, resolveImages: async () => ({ hero: imageBytes }) };
     const previewFeed = await handleCanonicalPreview({ adId: "ad", workspaceId: "ws", placement: "feed", document, deps });
-    const saveFeed = await renderPlacement({ template, imageValues: { hero: imageBytes }, textValues: document.sharedTextValues, colourMap: colours, cropOverrides: document.feedCropOverrides }, "feed");
-    assert.deepEqual(previewFeed.render.png, saveFeed.png);
+    const uploads = new Map<string, Buffer>();
+    const supabase = {
+      from(table: string) {
+        const query: any = {};
+        query.select = () => query;
+        query.eq = () => query;
+        query.single = async () => table === "ad_customer_ads"
+          ? { data: { id: "ad", active_revision_id: null, template_id: template.templateId }, error: null }
+          : { data: { template_json: template }, error: null };
+        return query;
+      },
+      storage: {
+        from() {
+          return {
+            async upload(path: string, bytes: Buffer) {
+              uploads.set(path, bytes);
+              return { error: null };
+            },
+          };
+        },
+      },
+      async rpc() {
+        return { data: { id: "revision", revision_number: 1 }, error: null };
+      },
+    };
+    await saveAd({
+      supabase: supabase as never,
+      workspaceId: "ws",
+      adId: "ad",
+      document,
+      expectedRevision: 0,
+      colourMap: colours,
+      imageValues: { hero: imageBytes },
+      renderPlacement: async placement => {
+        const rendered = await renderPlacement({
+          template,
+          imageValues: { hero: imageBytes },
+          textValues: document.sharedTextValues,
+          colourMap: colours,
+          cropOverrides: placement === "feed" ? document.feedCropOverrides : document.storyCropOverrides,
+        }, placement);
+        return { sha256: createHash("sha256").update(rendered.png).digest("hex"), png: rendered.png };
+      },
+    });
+    const savedFeed = [...uploads.entries()].find(([path]) => path.includes("/feed-"))?.[1];
+    const savedStory = [...uploads.entries()].find(([path]) => path.includes("/story-"))?.[1];
+    assert.ok(savedFeed);
+    assert.ok(savedStory);
+    assert.deepEqual(previewFeed.render.png, savedFeed);
     const previewStory = await handleCanonicalPreview({ adId: "ad", workspaceId: "ws", placement: "story", document, deps });
-    const saveStory = await renderPlacement({ template, imageValues: { hero: imageBytes }, textValues: document.sharedTextValues, colourMap: colours, cropOverrides: document.storyCropOverrides }, "story");
-    assert.deepEqual(previewStory.render.png, saveStory.png);
+    assert.deepEqual(previewStory.render.png, savedStory);
     const edited = await handleCanonicalPreview({ adId: "ad", workspaceId: "ws", placement: "feed", document: { ...document, sharedTextValues: { headline: "A different edited headline" } }, deps });
     assert.notDeepEqual(edited.render.png, previewFeed.render.png);
   });
