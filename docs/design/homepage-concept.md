@@ -28,6 +28,6 @@ See the release evidence record for compiled revision, required checks, browser 
 
 Use the headline “Know how your ads are going.” with “Your personal dashboard. Emails as often as you like. Even never. We get it.”
 
-The chart uses smooth bounded cubic curves through the fixture points. One shared SVG clip reveals the line and fill together from left to right over 1.2 seconds, once the actual chart enters the viewport. This owner-requested marketing sequence is a deliberate exception to routine app entrance timing, using the shared reportingReveal token. Period changes morph the same-shaped paths; keyboard and reduced-motion paths stay immediate.
+The chart uses smooth bounded cubic curves through the fixture points. One shared SVG clip reveals the line and fill together from left to right over 1.5 seconds whenever the chart enters the viewport or the reporting period changes. It resets immediately after leaving the viewport so the next entry redraws cleanly. This owner-requested marketing sequence is a deliberate exception to routine app entrance timing, using the shared reportingReveal token. Keyboard switches replay the reveal; reduced-motion paths stay immediate.
 
 No email-frequency strip, scheduler controls, or floating email card. The email benefit lives only in the copy. Example data stays visibly labelled; no services are connected.

@@ -50,11 +50,16 @@ test("reporting stays isolated and follows the shared motion rules", async () =>
   assert.doesNotMatch(source + fixture, /fetch\s*\(|localStorage|sessionStorage|supabase|sendBeacon|setInterval/);
   assert.match(source, /useReducedMotion/);
   assert.match(source, /durations\.entrance/);
-  assert.match(source, /useInView\(chartRef, \{ once: true, amount: 0.4 \}\)/);
+  assert.match(source, /useInView\(chartRef, \{ once: false, amount: 0.4 \}\)/);
   assert.match(source, /animate=\{\{ d: chart\.line \}\}/);
   assert.match(source, /layoutId="active-range"/);
   assert.match(source, /reportingReveal.duration/);
   assert.match(source, /setInstant\(event\.detail === 0\)/);
   assert.match(source, /report\.labels\.map/);
+  assert.match(source, /key=\{range\}/);
+  assert.match(source, /duration: reducedMotion \|\| !inView \? 0 : reportingReveal\.duration/);
   assert.match(source, /width: reducedMotion \|\| inView \? 608 : 0/);
+
+  const motionSource = await readFile(new URL("../src/lib/motion.ts", import.meta.url), "utf8");
+  assert.match(motionSource, /reportingReveal = \{\s*duration: 1\.5,/);
 });

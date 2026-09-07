@@ -21,7 +21,7 @@ export function ResultsReporting() {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const reducedMotion = useReducedMotion();
   const chartRef = useRef<HTMLDivElement>(null);
-  const inView = useInView(chartRef, { once: true, amount: 0.4 });
+  const inView = useInView(chartRef, { once: false, amount: 0.4 });
   const gradientId = useId();
   const revealId = useId();
   const report = REPORTS[range];
@@ -103,11 +103,12 @@ export function ResultsReporting() {
                     </linearGradient>
                     <clipPath id={revealId}>
                       <motion.rect
+                        key={range}
                         className="hc-chart-reveal"
                         x="-4" y="-12" height="224"
                         initial={reducedMotion ? false : { width: 0 }}
                         animate={{ width: reducedMotion || inView ? 608 : 0 }}
-                        transition={{ duration: reducedMotion ? 0 : reportingReveal.duration, ease: reportingReveal.ease }}
+                        transition={{ duration: reducedMotion || !inView ? 0 : reportingReveal.duration, ease: reportingReveal.ease }}
                       />
                     </clipPath>
                   </defs>
