@@ -31,3 +31,7 @@ Use the headline “Know how your ads are going.” with “Your personal dashbo
 The chart uses smooth bounded cubic curves through the fixture points. One shared SVG clip reveals the line and fill together from left to right over 1.5 seconds whenever the chart enters the viewport or the reporting period changes. It resets immediately after leaving the viewport so the next entry redraws cleanly. This owner-requested marketing sequence is a deliberate exception to routine app entrance timing, using the shared reportingReveal token. Keyboard switches replay the reveal; reduced-motion paths stay immediate.
 
 No email-frequency strip, scheduler controls, or floating email card. The email benefit lives only in the copy. Example data stays visibly labelled; no services are connected.
+
+## Current consolidated structure, 7 September 2026
+
+The owner rejected the first consolidation for missing and invented sections. The [chat reconciliation](homepage-chat-reconciliation.md) is the current structural authority: retain the distinct hero gallery and full workflow, reporting, original examples and control details, exact FAQ subheading and trial form. See [release verification](../releases/2026-09-07-homepage-chat-reconciled.md) for the corrected preview revision and acceptance checks.
