@@ -163,9 +163,17 @@ export function ResultsReporting() {
                 </AnimatePresence>
 
               </div>
-              <div className="hc-chart-dates" aria-hidden="true">
-                <span>{report.labels[0]}</span>
-                <span>{report.labels[report.labels.length - 1]}</span>
+              <div className={`hc-chart-dates hc-chart-dates--${range}`} aria-hidden="true">
+                {report.labels.map((label, index) => (
+                  <span
+                    key={label}
+                    style={{
+                      "--label-position": `${index / Math.max(1, report.labels.length - 1) * 100}%`,
+                    } as React.CSSProperties}
+                  >
+                    {label}
+                  </span>
+                ))}
               </div>
             </div>
           </figure>

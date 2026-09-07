@@ -55,5 +55,6 @@ test("reporting stays isolated and follows the shared motion rules", async () =>
   assert.match(source, /layoutId="active-range"/);
   assert.match(source, /reportingReveal.duration/);
   assert.match(source, /setInstant\(event\.detail === 0\)/);
+  assert.match(source, /report\.labels\.map/);
   assert.match(source, /width: reducedMotion \|\| inView \? 608 : 0/);
 });

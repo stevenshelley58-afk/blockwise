@@ -1080,13 +1080,21 @@
 .hc-chart-tooltip span { color: #8f9aaa; font-size: 10px; }
 .hc-chart-dates {
   grid-column: 2;
-  display: flex;
-  justify-content: space-between;
+  position: relative;
+  height: 13px;
   padding-inline: 4px;
   margin-top: 7px;
   color: #667181;
   font-size: 10px;
 }
+.hc-chart-dates span {
+  position: absolute;
+  left: var(--label-position);
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+.hc-chart-dates span:first-child { transform: none; }
+.hc-chart-dates span:last-child { transform: translateX(-100%); }
 
 .hc-reporting-disclosure {
   margin-top: 13px !important;
@@ -1134,5 +1142,9 @@
   .hc-line-chart,
   .hc-chart-scale { height: 220px; }
   .hc-reporting-disclosure { text-align: left; }
+  .hc-chart-dates--month span { display: none; }
+  .hc-chart-dates--month span:first-child,
+  .hc-chart-dates--month span:nth-child(4),
+  .hc-chart-dates--month span:last-child { display: block; }
 
 }
