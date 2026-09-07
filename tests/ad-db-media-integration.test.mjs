@@ -13,6 +13,19 @@ test('media collector uses verified archive without legacy overwrite or AI follo
   const result=await fn({payload:{adCreativeId:creative,observedAdId:ad}});
   assert.equal(result.result.captured,1);assert.equal(result.result.model_calls,0);assert.deepEqual(captures,[asset]);assert.equal(patches.length,0);
 });
+test('media collector captures a large carousel in one canonical job',async()=>{
+  const assets=Array.from({length:37},(_,index)=>({id:`asset-${index}`,observed_ad_id:ad})),captures=[],queries=[];
+  const fn=load('handleMediaCollector','loadCreativeForMediaCapture',{
+    rest:async(_schema,query)=>{queries.push(query);return assets;},
+    captureMediaAsset:async asset=>captures.push(asset.id),
+    patchMediaAsset:async()=>{throw Error('successful assets must not be patched as failed')},
+  });
+  const result=await fn({payload:{adCreativeId:creative,observedAdId:ad}});
+  assert.equal(result.result.captured,37);
+  assert.equal(result.result.failed,0);
+  assert.equal(captures.length,37);
+  assert.ok(queries[0].includes('&limit=250'));
+});
 test('media collector rejects invalid scope without querying or spawning',async()=>{
  const fn=load('handleMediaCollector','loadCreativeForMediaCapture',{rest:()=>{throw Error('must not query')}});
  assert.equal((await fn({payload:{adCreativeId:'bad',observedAdId:ad}})).status,'blocked');
