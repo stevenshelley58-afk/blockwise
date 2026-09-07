@@ -12,17 +12,14 @@ const PLAN_SUMMARY = [
     name: "Free",
     price: "A$0",
     billing: "No Blockwise subscription fee",
-    bestFor: "Trying the workflow before committing",
-    outcome: "Create, review, and optionally run your first ads.",
+    bestFor: "Trying Blockwise",
+    outcome: "Create your first ads. No card needed.",
     features: [
-      "Three complete Feed + Story ads",
-      "One live trial campaign setup",
-      "14-day trial starts when your first ad delivers",
-      "Email-only start — no card",
-      "Keep running and managing ads yourself",
+      "Three Feed + Story ads",
+      "One trial campaign",
+      "Keep managing your ads for free",
     ],
-    terms:
-      "Meta ad spend is separate. The trial never charges you automatically.",
+    terms: "Ad spend is paid separately to Meta.",
     cta: {
       label: "Start free",
       href: "/signup?offer=self-serve",
@@ -35,16 +32,15 @@ const PLAN_SUMMARY = [
     name: "Self-serve",
     price: "A$249",
     billing: "per month · until cancelled",
-    bestFor: "Agents who want to run the work themselves",
-    outcome: "Build, publish, and track campaigns in one place.",
+    bestFor: "Running your own ads",
+    outcome: "Create, publish and track your ads.",
     features: [
-      "100 render credits each billing period",
-      "Up to 50 complete Feed + Story packs",
-      "One brand, workspace, and primary ad account",
-      "Five named, email-verified team members",
+      "Up to 50 Feed + Story packs/month",
+      "Five team members",
+      "One brand and Meta ad account",
+      "Help when you need it",
     ],
-    terms:
-      "Meta ad spend is separate. Prices include GST where Blockwise is required to collect it.",
+    terms: "Ad spend is separate. GST included where required.",
     cta: {
       label: "Create three ads free",
       href: "/signup?offer=self-serve",
@@ -57,17 +53,15 @@ const PLAN_SUMMARY = [
     name: "Managed",
     price: "from A$1,500",
     billing: "per month · plus Meta ad spend",
-    bestFor: "Teams that want launch and optimization help",
-    outcome:
-      "An operator launches and reviews up to four live campaigns weekly.",
+    bestFor: "Getting it done for you",
+    outcome: "We set up and manage your ads.",
     features: [
       "Everything in self-serve",
-      "Operator launch and weekly optimization",
       "Up to four live campaigns",
-      "Monthly performance report",
+      "Weekly improvements",
+      "Monthly report",
     ],
-    terms:
-      "Scope is confirmed and repriced for additional brands, accounts, or campaign volume.",
+    terms: "We agree the scope before you pay.",
     cta: {
       label: "Book a call",
       href: "/#managed-setup",
@@ -81,75 +75,41 @@ const DETAIL_SECTIONS = [
   {
     id: "free-details",
     kicker: "Free",
-    title: "Keep exploring without a subscription.",
+    title: "Try it free.",
     intro:
-      "Start with only your email. Create three complete Feed + Story ads, review them, and set up one live trial campaign. The 14-day trial starts when your first ad delivers. You approve the campaign budget and end date with Meta before anything runs.",
+      "Make three Feed + Story ads and try one campaign. Your 14 days start when your first ad runs on Meta.",
     rows: [
       [
-        "Process",
-        "Create → review → optionally connect Meta and approve the trial campaign.",
-      ],
-      [
-        "You provide",
-        "Your email, the ad inputs and assets you want to use, plus final review before launch.",
-      ],
-      [
-        "What is not included",
-        "Meta media spend is paid directly to Meta. There is no Blockwise subscription fee, but free does not mean free advertising.",
-      ],
-      [
         "After the trial",
-        "You can keep running and managing ads yourself for free, choose the A$249/month self-serve plan, or ask about managed service.",
+        "Keep managing your ads for free, or choose a paid plan.",
       ],
+      ["Your control", "You approve the ads and budget before launch."],
     ],
   },
   {
     id: "self-serve-details",
     kicker: "Self-serve",
-    title: "The operating plan for your own team.",
-    intro:
-      "Build on the free creation flow, then subscribe only when you choose. Checkout collects a reusable payment method and starts the A$249 monthly subscription; there is no automatic charge at the end of the free trial.",
+    title: "Run your own ads.",
+    intro: "Create ads, manage campaigns and see your results in one place.",
     rows: [
+      ["Each month", "100 render credits—up to 50 Feed + Story packs."],
       [
-        "Process",
-        "Create and review → subscribe in Checkout → connect your Meta account when you are ready to publish → monitor status, spend, clicks and leads.",
-      ],
-      [
-        "You provide",
-        "Your brand and property inputs, connected Meta access for live publishing, and your team’s final review of claims, pricing language and export.",
-      ],
-      [
-        "What is not included",
-        "Meta media spend is separate and paid from your connected account. Additional brands or unrelated client accounts need another workspace or a managed agreement.",
-      ],
-      [
-        "Support and ownership",
-        "Support is available when you are blocked. Your Meta ad account and ad data remain yours; Blockwise does not take ownership of your Meta assets.",
+        "Your team",
+        "One brand, one Meta ad account and five email-verified members.",
       ],
     ],
   },
   {
     id: "managed-details",
-    kicker: "Managed service",
-    title: "Hands-on launch, with the scope agreed first.",
+    kicker: "Managed",
+    title: "Let us handle the ads.",
     intro:
-      "Book a call so Blockwise can understand the account, confirm the onboarding plan and agree the service scope before payment. A booking request is not a confirmed meeting until Blockwise responds.",
+      "We set up your campaigns, improve them weekly and send you a monthly report.",
     rows: [
+      ["Included", "Self-serve tools and up to four live campaigns."],
       [
-        "Process",
-        "Request a call → confirm scope and onboarding → provide the required account and brand inputs → operator launch and weekly optimization.",
-      ],
-      [
-        "You provide",
-        "Your goals, brand and campaign context, access to the Meta ad account, and timely review of customer-facing claims and creative.",
-      ],
-      [
-        "What is included",
-        "The complete self-serve product, 100 monthly render credits, one brand, one Meta ad account, up to four live campaigns and a monthly report.",
-      ],
-      [
-        "What is not included",
-        "Meta media spend is separate. Additional brands, ad accounts, campaign volume or other work require a written scope change and may be repriced.",
+        "Getting started",
+        "We agree the work and price on a call before you pay.",
       ],
     ],
   },
@@ -285,13 +245,6 @@ export function MarketPricing() {
                   {section.id === "managed-details"
                     ? "Book a call"
                     : "Start free"}
-                </a>
-                <a className="pricing-details-link" href="#pricing-summary">
-                  Back to plans{" "}
-                  <ChevronRight aria-hidden size={15} strokeWidth={2} />
-                </a>
-                <a className="pricing-details-link" href="/#managed-setup">
-                  Talk it through
                 </a>
               </div>
             </article>
