@@ -22,6 +22,7 @@ test("the walkthrough explains the complete workflow before any interaction", ()
   assert.match(html, /href="#trial"/);
   assert.match(html, /No card required/);
   assert.match(html, /id="results"/);
+  assert.doesNotMatch(html, /style="opacity:0(?:;|")/);
   assert.doesNotMatch(html, /href="(?:mailto:|tel:)/);
 });
 

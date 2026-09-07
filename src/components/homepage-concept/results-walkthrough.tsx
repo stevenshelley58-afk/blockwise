@@ -210,7 +210,7 @@ export function ResultsWalkthrough() {
   const [creativeIndex, setCreativeIndex] = useState(0);
   const [dailyBudget, setDailyBudget] = useState<number>(EXAMPLE_BUDGET.initialDaily);
   const [approved, setApproved] = useState(false);
-  const [instant, setInstant] = useState(false);
+  const [instant, setInstant] = useState(true);
   const reducedMotion = useReducedMotion();
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const activeStep = WALKTHROUGH_STEPS.find((step) => step.id === activeId) ?? WALKTHROUGH_STEPS[0];
