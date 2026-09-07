@@ -15,6 +15,7 @@ This index separates current operating guidance from retained history.
 ## Design previews
 
 - [Homepage concept](design/homepage-concept.md) — isolated mobile/desktop mockup; not a production homepage release.
+- [Reporting chart axis fix](releases/2026-09-07-homepage-reporting-axis.md) — complete point labels on desktop with a readable narrow-screen month scale.
 - [Motion-led reporting graph](releases/2026-09-07-homepage-reporting-motion.md) — full-width line graph, minimal copy and smooth reporting interactions.
 - [Minimal reporting revision](releases/2026-09-07-homepage-reporting-minimal.md) — line graph, one dashboard and 73% fewer words.
 - [Homepage reporting redesign](releases/2026-09-07-homepage-reporting.md) — personal dashboard, scheduled-email concept and release evidence.
