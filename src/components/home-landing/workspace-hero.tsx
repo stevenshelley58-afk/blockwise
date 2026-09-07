@@ -57,12 +57,12 @@ export function WorkspaceHero() {
       <div className="hw-wide hw-ws__inner">
         <div className="hw-ws__copy">
           <h1 className="hw-ws__title">
-            <span className="hw-ws__title-line">Your competitors</span>
-            <span className="hw-ws__title-line">are advertising.</span>
+            <span className="hw-ws__title-line">Your competition</span>
+            <span className="hw-ws__title-line">is running ads.</span>
             <span className="hw-ws__title-line hw-ws__title-line--accent">Are you?</span>
           </h1>
           <p className="hw-ws__lede">
-            Create, approve and track Meta ads from one beautifully simple workspace.
+            More listings, less marketing stress.
           </p>
           <CtaLink location="hero" href="/signup" className="hw-btn hw-btn--light hw-ws__cta">
             Start free trial
