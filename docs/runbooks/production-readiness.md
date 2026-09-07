@@ -18,6 +18,22 @@ missing/invalid status under `readiness.providers` without marking the core
 deployment unhealthy. Configure real values only when enabling the relevant
 provider; never use example or fake credentials.
 
+## Current release (6 September 2026, billing and trial)
+
+The public app serves `f35a041563d4c5e257e323a97f851ec8c447fb3b` from
+`blockwise-app:f35a041563d4c5e257e323a97f851ec8c447fb3b`. This release ships
+the no-card 14-day trial anchored to first Meta-reported delivery, ad-pack
+credit consumption, and hardened Checkout, with migration
+`20260906010000_no_card_trial_delivery_start.sql` applied. See the
+[release record](../releases/2026-09-06-billing-trial.md) for checks, the
+rehearsal evidence, live-Stripe verification scope, and the retained
+bc2b1f3b rollback image. No test-mode payment flows were run (no test
+credentials in the deployment environment), and no customer was charged.
+
+The earlier same-day release `3b2770eb4dec62217589b074be999ae9fa9fda06`
+(template editor and customer usability) remains recorded below.
+
+
 The application may use `@supabase/supabase-js` as a protocol client only. It
 must point to the self-hosted Caddy origin through `NEXT_PUBLIC_SUPABASE_URL`;
 the client library must not be read as evidence that a managed Supabase

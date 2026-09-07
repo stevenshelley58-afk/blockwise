@@ -9,6 +9,7 @@ This index separates current operating guidance from retained history.
 - [Extension guide](architecture/extension-guide.md)
 - [Production readiness](runbooks/production-readiness.md)
 - [6 September release evidence](releases/2026-09-06-template-editor.md)
+- [6 September billing and trial release](releases/2026-09-06-billing-trial.md)
 - [VPS SSH](runbooks/vps-ssh.md)
 - [Rollback](runbooks/rollback.md)
 
