@@ -4,19 +4,22 @@ import {
   ArrowRight,
   BarChart3,
   Check,
-  CheckCircle2,
   ChevronRight,
   CircleDollarSign,
   Clock3,
+  Globe2,
+  MessageCircle,
   MoreHorizontal,
   MousePointer2,
   Pause,
   Play,
-  RotateCcw,
+  Send,
+  Share2,
+  ThumbsUp,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
 import { AdPreview } from "@/components/homepage-concept/ad-preview";
@@ -104,295 +107,207 @@ function TrialForm() {
   );
 }
 
-const PROCESS_STEPS = [
-  { label: "Choose", description: "Pick a ready-made ad." },
-  { label: "Customise", description: "Edit the words and creative." },
-  { label: "Review", description: "Set the campaign and approve." },
+type MetaShowcaseAd = {
+  id: string;
+  format: "feed" | "story";
+  page: string;
+  initials: string;
+  tone: "navy" | "blue" | "gold" | "charcoal";
+  image: string;
+  copy: string;
+  headline: string;
+  domain: string;
+  reactions: string;
+  comments: string;
+};
+
+const META_SHOWCASE_ADS: readonly MetaShowcaseAd[] = [
+  {
+    id: "just-listed-feed",
+    format: "feed",
+    page: "Blockwise Realty",
+    initials: "BR",
+    tone: "navy",
+    image: "/home/home-dusk.webp",
+    copy: "Just listed in Mount Lawley. View the photos, floorplan and inspection times.",
+    headline: "A new address worth seeing",
+    domain: "BLOCKWISEREALTY.COM.AU",
+    reactions: "36",
+    comments: "5",
+  },
+  {
+    id: "buyers-story",
+    format: "story",
+    page: "West & Co Property",
+    initials: "W&C",
+    tone: "blue",
+    image: "/hero/hero-tall.jpg",
+    copy: "Qualified buyers are looking now.",
+    headline: "See buyer demand",
+    domain: "WESTANDCO.COM.AU",
+    reactions: "21",
+    comments: "3",
+  },
+  {
+    id: "local-advice-feed",
+    format: "feed",
+    page: "Jordan Lee Property",
+    initials: "JL",
+    tone: "charcoal",
+    image: "/home/open-home-living.webp",
+    copy: "Local advice. Clear next steps. Talk with Jordan about your property plans.",
+    headline: "Book a no-pressure property call",
+    domain: "JORDANLEE.COM.AU",
+    reactions: "48",
+    comments: "7",
+  },
+  {
+    id: "appraisal-story",
+    format: "story",
+    page: "Mia Calloway Real Estate",
+    initials: "MC",
+    tone: "gold",
+    image: "/ads/ad-coastline.jpg",
+    copy: "Find out what your home could be worth.",
+    headline: "Request an appraisal",
+    domain: "MIACALLOWAY.COM.AU",
+    reactions: "29",
+    comments: "4",
+  },
+  {
+    id: "first-home-feed",
+    format: "feed",
+    page: "Northside Property",
+    initials: "NP",
+    tone: "navy",
+    image: "/home/mt-lawley-federation.webp",
+    copy: "Buying your first home? Start with the questions that make every inspection easier.",
+    headline: "A smarter first-home checklist",
+    domain: "NORTHSIDEPROPERTY.COM.AU",
+    reactions: "63",
+    comments: "11",
+  },
+  {
+    id: "mobile-appraisal-story",
+    format: "story",
+    page: "Alex Morgan Property",
+    initials: "AM",
+    tone: "blue",
+    image: "/home/workspace-hero/agent-ad.png",
+    copy: "Your local property appraisal, made simple.",
+    headline: "Book an appraisal",
+    domain: "ALEXMORGAN.COM.AU",
+    reactions: "34",
+    comments: "6",
+  },
+  {
+    id: "market-report-feed",
+    format: "feed",
+    page: "Harbourline Realty",
+    initials: "HR",
+    tone: "charcoal",
+    image: "/home/home-pool.webp",
+    copy: "Prices, recent sales and buyer activity—see what changed in your local market.",
+    headline: "Your suburb market report",
+    domain: "HARBOURLINE.COM.AU",
+    reactions: "57",
+    comments: "9",
+  },
+  {
+    id: "planning-story",
+    format: "story",
+    page: "Oak & Key Property",
+    initials: "O&K",
+    tone: "gold",
+    image: "/ads/ad-hillview.jpg",
+    copy: "Plan your next move with a clearer property checklist.",
+    headline: "Get the checklist",
+    domain: "OAKANDKEY.COM.AU",
+    reactions: "42",
+    comments: "8",
+  },
 ] as const;
 
-const STORY_PHASE_DELAYS = [950, 950, 1050, 700, 1550, 2100, 2100, 1300, 1600, 420] as const;
-const STORY_STEP_PHASES = [0, 5, 8] as const;
-const STORY_PHASE_TO_STEP = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2] as const;
-const STORY_TEMPLATE_SEQUENCE = [0, 1, 2, 0] as const;
-const STORY_STATUS = [
-  "Browsing ready-made templates",
-  "Browsing ready-made templates",
-  "Browsing ready-made templates",
-  "Template selected",
-  "Opening the selected template",
-  "Editing the post copy",
-  "Editing text on the creative",
-  "Moving the finished ad to review",
-  "Adding campaign details",
-  "Approving the campaign",
-  "Campaign approved",
+const META_DECK_POSITIONS = [
+  { x: "0%", y: 0, scale: 1, rotate: 0, opacity: 1 },
+  { x: "28%", y: 18, scale: 0.91, rotate: 3, opacity: 0.66 },
+  { x: "-28%", y: 30, scale: 0.82, rotate: -4, opacity: 0.38 },
+  { x: "12%", y: 50, scale: 0.74, rotate: 2, opacity: 0 },
+  { x: "-12%", y: 62, scale: 0.69, rotate: -2, opacity: 0 },
+  { x: "8%", y: 72, scale: 0.65, rotate: 2, opacity: 0 },
+  { x: "-8%", y: 80, scale: 0.62, rotate: -2, opacity: 0 },
+  { x: "0%", y: 88, scale: 0.6, rotate: 0, opacity: 0 },
 ] as const;
 
-const STORY_EASE = [0.22, 1, 0.36, 1] as const;
-const STORY_MOVE = { duration: 0.62, ease: STORY_EASE };
-const STORY_ENTER = { duration: 0.42, ease: STORY_EASE };
-const STORY_EXIT = { duration: 0.22, ease: [0.4, 0, 1, 1] as const };
+const META_DECK_TRANSITION = { duration: 0.72, ease: [0.16, 1, 0.3, 1] as const };
 
-function StoryCursor({ pressed = false }: { pressed?: boolean }) {
+function MetaAvatar({ ad }: { ad: MetaShowcaseAd }) {
+  return <span className={`hc-meta-avatar hc-meta-avatar--${ad.tone}`}>{ad.initials}</span>;
+}
+
+function MetaFeedAd({ ad }: { ad: MetaShowcaseAd }) {
   return (
-    <motion.span
-      layoutId="story-cursor"
-      className="hc-story-cursor"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0, scale: pressed ? 0.88 : 1 }}
-      exit={{ opacity: 0, y: 4 }}
-      transition={pressed ? { duration: 0.14, ease: "easeInOut" } : STORY_ENTER}
-    >
-      <MousePointer2 aria-hidden="true" size={22} strokeWidth={2.2} />
-    </motion.span>
+    <article className="hc-meta-ad hc-meta-feed" aria-label={`${ad.page} sponsored Facebook Feed ad`}>
+      <header className="hc-meta-feed-head">
+        <MetaAvatar ad={ad} />
+        <span><strong>{ad.page}</strong><small>Sponsored · <Globe2 aria-hidden="true" size={9} /></small></span>
+        <MoreHorizontal aria-hidden="true" size={19} />
+      </header>
+      <p className="hc-meta-feed-copy">{ad.copy}</p>
+      <img className="hc-meta-feed-image" src={withBasePath(ad.image)} alt="" width="1080" height="1350" />
+      <div className="hc-meta-link-preview">
+        <span><small>{ad.domain}</small><strong>{ad.headline}</strong></span>
+        <b>Learn more</b>
+      </div>
+      <div className="hc-meta-social-proof">
+        <span><i><ThumbsUp aria-hidden="true" size={9} fill="currentColor" /></i>{ad.reactions}</span>
+        <span>{ad.comments} comments</span>
+      </div>
+      <div className="hc-meta-actions">
+        <span><ThumbsUp aria-hidden="true" size={15} />Like</span>
+        <span><MessageCircle aria-hidden="true" size={15} />Comment</span>
+        <span><Share2 aria-hidden="true" size={15} />Share</span>
+      </div>
+    </article>
   );
 }
 
-function StoryAd({ phase, review = false }: { phase: number; review?: boolean }) {
-  const copyEdited = phase >= 5;
-  const creativeEdited = phase >= 6;
-  const example = AD_EXAMPLES[0];
-
+function MetaStoryAd({ ad }: { ad: MetaShowcaseAd }) {
   return (
-    <motion.article layoutId="story-ad" className={`hc-story-ad${review ? " is-review" : ""}`} transition={STORY_MOVE}>
-      <div className="hc-ad-account">
-        <span className="hc-ad-avatar" aria-hidden="true">N&amp;C</span>
-        <span><strong>North &amp; Co</strong><small>Sponsored</small></span>
-        <MoreHorizontal aria-hidden="true" size={18} />
+    <article className="hc-meta-ad hc-meta-story" aria-label={`${ad.page} sponsored Instagram Story ad`}>
+      <img className="hc-meta-story-image" src={withBasePath(ad.image)} alt="" width="1080" height="1920" />
+      <div className="hc-meta-story-shade" />
+      <div className="hc-meta-story-progress"><i /><i /><i /></div>
+      <header className="hc-meta-story-head">
+        <MetaAvatar ad={ad} />
+        <span><strong>{ad.page}</strong><small>Sponsored</small></span>
+        <MoreHorizontal aria-hidden="true" size={19} />
+      </header>
+      <div className="hc-meta-story-cta">
+        <strong>{ad.headline}</strong>
+        <span>Learn more <ChevronRight aria-hidden="true" size={13} /></span>
       </div>
-      <motion.p
-        className={`hc-ad-copy${phase === 5 ? " is-editing" : ""}`}
-        key={copyEdited ? "edited-copy" : "starting-copy"}
-        initial={{ opacity: 0.35, y: 3 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={STORY_ENTER}
-      >
-        {copyEdited
-          ? "Thinking of selling in Mt Lawley? See what buyers could pay for your home."
-          : example.postCopy}
-        {phase === 5 ? <span className="hc-story-caret" /> : null}
-      </motion.p>
-      <motion.div layoutId="story-template-image" className="hc-ad-image-wrap hc-story-ad-image" transition={STORY_MOVE}>
-        <img src={withBasePath(example.image)} alt="" width="1080" height="1350" />
-        <motion.span
-          className={`hc-story-creative-overlay${phase === 6 ? " is-editing" : ""}`}
-          key={creativeEdited ? "edited-creative" : "starting-creative"}
-          initial={{ opacity: 0, y: 8, filter: "blur(4px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          transition={STORY_ENTER}
-        >
-          {creativeEdited ? "What could your home be worth?" : "Free property appraisal"}
-          {phase === 6 ? <span className="hc-story-caret" /> : null}
-        </motion.span>
-      </motion.div>
-      <div className="hc-ad-link">
-        <span><small>NORTHANDCO.COM.AU</small><strong>Book a free property appraisal</strong></span>
-        <span className="hc-ad-link-button">Learn more</span>
+      <div className="hc-meta-story-reply">
+        <span>Send message</span>
+        <ThumbsUp aria-hidden="true" size={18} />
+        <Send aria-hidden="true" size={18} />
       </div>
-    </motion.article>
-  );
-}
-
-function TemplateBrowser({ phase }: { phase: number }) {
-  const activeTemplate = STORY_TEMPLATE_SEQUENCE[Math.min(phase, STORY_TEMPLATE_SEQUENCE.length - 1)];
-  const selected = phase === 3;
-
-  return (
-    <motion.div
-      key="templates"
-      className="hc-story-scene hc-story-browser"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0, x: -34, filter: "blur(3px)" }}
-      transition={{ ...STORY_EXIT, opacity: { duration: 0.18 } }}
-    >
-      <div className="hc-story-scene-heading">
-        <span>Ready-made ads</span>
-        <strong>{selected ? "Template selected" : "Choose a starting point"}</strong>
-      </div>
-      <div className="hc-story-template-window">
-        <motion.div
-          className="hc-story-template-track"
-          animate={{ x: `-${[0, 15, 31, 0][phase]}%` }}
-          transition={STORY_MOVE}
-        >
-          {AD_EXAMPLES.slice(0, 3).map((example, index) => {
-            const active = index === activeTemplate;
-            return (
-              <motion.div
-                className={`hc-story-template-card${active ? " is-active" : ""}${selected && active ? " is-selected" : ""}`}
-                key={example.id}
-                animate={{ opacity: active ? 1 : 0.62, scale: active ? 1 : 0.965 }}
-                transition={STORY_MOVE}
-              >
-                <motion.div
-                  layoutId={selected && active ? "story-template-image" : undefined}
-                  className="hc-story-template-image"
-                  transition={STORY_MOVE}
-                >
-                  <img src={withBasePath(example.image)} alt="" width="1080" height="1350" />
-                  {selected && active ? <span className="hc-story-selected"><Check aria-hidden="true" size={13} /> Selected</span> : null}
-                </motion.div>
-                <span><strong>{example.label}</strong><small>Facebook &amp; Instagram</small></span>
-                {active ? <StoryCursor pressed={selected} /> : null}
-              </motion.div>
-            );
-          })}
-        </motion.div>
-      </div>
-    </motion.div>
-  );
-}
-
-function EditorScene({ phase }: { phase: number }) {
-  const copyActive = phase === 5;
-  const creativeActive = phase === 6;
-
-  return (
-    <motion.div
-      key="editor"
-      className="hc-story-scene hc-story-editor"
-      initial={{ opacity: 0, x: 38 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -30, filter: "blur(3px)" }}
-      transition={STORY_ENTER}
-    >
-      <aside className="hc-story-mini-rail">
-        <span>Templates</span>
-        {AD_EXAMPLES.slice(0, 3).map((example, index) => (
-          <div className={index === 0 ? "is-selected" : ""} key={example.id}>
-            <img src={withBasePath(example.image)} alt="" width="1080" height="1350" />
-          </div>
-        ))}
-      </aside>
-
-      <div className="hc-story-ad-workspace">
-        <StoryAd phase={phase} />
-      </div>
-
-      <div className="hc-story-edit-panel">
-        <span>Customise</span>
-        <h3>Make it yours</h3>
-        <label className={copyActive ? "is-active" : ""}>
-          <span>Post copy</span>
-          <motion.strong
-            key={phase >= 5 ? "new-post-copy" : "old-post-copy"}
-            initial={{ opacity: 0.35 }}
-            animate={{ opacity: 1 }}
-            transition={STORY_ENTER}
-          >
-            {phase >= 5
-              ? "Thinking of selling in Mt Lawley? See what buyers could pay..."
-              : "Thinking of selling? Find out what your home could be worth..."}
-            {copyActive ? <span className="hc-story-caret" /> : null}
-          </motion.strong>
-        </label>
-        <label className={creativeActive ? "is-active" : ""}>
-          <span>Text on creative</span>
-          <motion.strong
-            key={phase >= 6 ? "new-creative-copy" : "old-creative-copy"}
-            initial={{ opacity: 0.35 }}
-            animate={{ opacity: 1 }}
-            transition={STORY_ENTER}
-          >
-            {phase >= 6 ? "What could your home be worth?" : "Free property appraisal"}
-            {creativeActive ? <span className="hc-story-caret" /> : null}
-          </motion.strong>
-        </label>
-        <div className="hc-story-saved">
-          <CheckCircle2 aria-hidden="true" size={14} />
-          {creativeActive ? "Creative updated" : copyActive ? "Copy updated" : "Ready to edit"}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-function ReviewScene({ phase }: { phase: number }) {
-  const valuesFilled = phase >= 8;
-  const pressing = phase === 9;
-  const approved = phase >= 10;
-
-  return (
-    <motion.div
-      key="review"
-      className="hc-story-scene hc-story-review"
-      initial={{ opacity: 0, x: 38 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0 }}
-      transition={STORY_ENTER}
-    >
-      <div className="hc-story-review-preview">
-        <span>Finished ad</span>
-        <StoryAd phase={phase} review />
-      </div>
-
-      <motion.div className="hc-story-review-panel" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ ...STORY_ENTER, delay: 0.14 }}>
-        <span className="hc-story-ready"><CheckCircle2 aria-hidden="true" size={14} /> Ready for approval</span>
-        <h3>Review campaign</h3>
-        <dl>
-          {[
-            ["Audience", "Mt Lawley +15 km"],
-            ["Budget", "$20 / day"],
-            ["Duration", "14 days"],
-          ].map(([label, value], index) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd>
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.span
-                    key={valuesFilled ? value : `${label}-empty`}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ ...STORY_ENTER, delay: valuesFilled ? index * 0.12 : 0 }}
-                  >
-                    {valuesFilled ? value : "—"}
-                  </motion.span>
-                </AnimatePresence>
-              </dd>
-            </div>
-          ))}
-        </dl>
-        <motion.strong
-          className={`hc-story-approve${approved ? " is-approved" : ""}`}
-          animate={{ scale: pressing ? 0.97 : 1 }}
-          transition={{ duration: 0.15, ease: "easeInOut" }}
-        >
-          {approved ? <Check aria-hidden="true" size={15} /> : <ShieldCheck aria-hidden="true" size={15} />}
-          {approved ? "Approved" : "Approve campaign"}
-          {pressing ? <StoryCursor pressed /> : null}
-        </motion.strong>
-        <small>Nothing spends until you approve.</small>
-      </motion.div>
-    </motion.div>
+    </article>
   );
 }
 
 function ProcessShowcase() {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const hasStarted = useRef(false);
   const reduceMotion = Boolean(useReducedMotion());
-  const [phase, setPhase] = useState(0);
-  const [playing, setPlaying] = useState(false);
+  const [order, setOrder] = useState(() => META_SHOWCASE_ADS.map((_, index) => index));
+  const [paused, setPaused] = useState(false);
   const [inView, setInView] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
-  const activeStep = STORY_PHASE_TO_STEP[phase];
+  const shouldPlay = !paused && inView && pageVisible && !reduceMotion;
 
   useEffect(() => {
     const syncVisibility = () => setPageVisible(document.visibilityState === "visible");
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setInView(entry.isIntersecting);
-        if (entry.isIntersecting && !reduceMotion && !hasStarted.current) {
-          hasStarted.current = true;
-          setPhase(0);
-          setPlaying(true);
-        }
-      },
-      { threshold: 0.3 },
-    );
-
+    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), { threshold: 0.25 });
     syncVisibility();
     if (sectionRef.current) observer.observe(sectionRef.current);
     document.addEventListener("visibilitychange", syncVisibility);
@@ -400,145 +315,51 @@ function ProcessShowcase() {
       observer.disconnect();
       document.removeEventListener("visibilitychange", syncVisibility);
     };
-  }, [reduceMotion]);
-
-  useEffect(() => {
-    if (reduceMotion) {
-      setPhase(STORY_STATUS.length - 1);
-      setPlaying(false);
-    }
-  }, [reduceMotion]);
-
-  useEffect(() => {
-    if (!playing || !inView || !pageVisible || reduceMotion) return;
-    if (phase >= STORY_STATUS.length - 1) {
-      setPlaying(false);
-      return;
-    }
-
-    const timer = window.setTimeout(
-      () => setPhase((current) => Math.min(current + 1, STORY_STATUS.length - 1)),
-      STORY_PHASE_DELAYS[phase],
-    );
-    return () => window.clearTimeout(timer);
-  }, [inView, pageVisible, phase, playing, reduceMotion]);
-
-  function selectStep(nextStep: number) {
-    setPhase(STORY_STEP_PHASES[nextStep]);
-    setPlaying(false);
-  }
-
-  function togglePlayback() {
-    if (playing) {
-      setPlaying(false);
-      return;
-    }
-    if (phase >= STORY_STATUS.length - 1) setPhase(0);
-    setPlaying(!reduceMotion);
-  }
-
-  const scene = phase <= 3 ? "browse" : phase <= 6 ? "edit" : "review";
-
-  return (
-    <div className="hc-process-layout" ref={sectionRef}>
-      <div className="hc-process-copy">
-        <h2>Create real estate ads for Facebook &amp; Instagram.</h2>
-        <p>Ready-made templates. Your photos. Your brand.</p>
-
-        <div className="hc-process-steps" aria-label="How Blockwise works">
-          {PROCESS_STEPS.map((item, index) => (
-            <button
-              key={item.label}
-              type="button"
-              aria-pressed={activeStep === index}
-              onClick={() => selectStep(index)}
-            >
-              <span className="hc-process-step-mark" aria-hidden="true" />
-              <span><strong>{item.label}</strong><small>{item.description}</small></span>
-            </button>
-          ))}
-        </div>
-
-        <div className="hc-process-actions">
-          <PrimaryLink>Start free trial</PrimaryLink>
-          <span><ShieldCheck aria-hidden="true" size={16} /> You approve before spending.</span>
-        </div>
-      </div>
-
-      <div className="hc-process-demo" data-scene={scene} aria-label="Animated example of creating and approving an ad">
-        <div className="hc-process-demo-topbar">
-          <span><i aria-hidden="true" /> Blockwise Ad Studio</span>
-          <ol aria-hidden="true">
-            {PROCESS_STEPS.map((item, index) => <li className={activeStep === index ? "is-active" : ""} key={item.label}>{item.label}</li>)}
-          </ol>
-          <button type="button" onClick={togglePlayback} hidden={reduceMotion}>
-            {playing ? <Pause aria-hidden="true" size={15} /> : phase >= STORY_STATUS.length - 1 ? <RotateCcw aria-hidden="true" size={15} /> : <Play aria-hidden="true" size={15} />}
-            {playing ? "Pause" : phase >= STORY_STATUS.length - 1 ? "Replay" : "Resume"}
-          </button>
-        </div>
-
-        <p className="hc-sr-only" aria-live="polite">{STORY_STATUS[phase]}</p>
-        <LayoutGroup id="blockwise-story">
-          <div className="hc-story-viewport" aria-hidden="true">
-            <AnimatePresence mode="sync" initial={false}>
-              {scene === "browse" ? <TemplateBrowser phase={phase} /> : null}
-              {scene === "edit" ? <EditorScene phase={phase} /> : null}
-              {scene === "review" ? <ReviewScene phase={phase} /> : null}
-            </AnimatePresence>
-          </div>
-        </LayoutGroup>
-        <p className="hc-process-demo-caption">Example only · Review before launch</p>
-      </div>
-    </div>
-  );
-}
-
-function HeroAdStack() {
-  const visualRef = useRef<HTMLDivElement>(null);
-  const [playing, setPlaying] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
-
-  useEffect(() => {
-    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const onMotionChange = () => setReducedMotion(motionQuery.matches);
-    if (!("IntersectionObserver" in window)) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && !motionQuery.matches) setPlaying(true);
-    }, { threshold: 0.28 });
-
-    setReducedMotion(motionQuery.matches);
-    if (visualRef.current) observer.observe(visualRef.current);
-    motionQuery.addEventListener("change", onMotionChange);
-    return () => {
-      observer.disconnect();
-      motionQuery.removeEventListener("change", onMotionChange);
-    };
   }, []);
 
-  function replay() {
-    if (reducedMotion) return;
-    setPlaying(false);
-    window.requestAnimationFrame(() => setPlaying(true));
-  }
+  useEffect(() => {
+    if (!shouldPlay) return;
+    const timer = window.setTimeout(() => {
+      setOrder((current) => [current[current.length - 1], ...current.slice(0, -1)]);
+    }, 1850);
+    return () => window.clearTimeout(timer);
+  }, [order, shouldPlay]);
 
-  const example = AD_EXAMPLES[0];
   return (
-    <div className={`hc-hero-visual${playing ? " is-playing" : ""}`} ref={visualRef}>
-      <div className="hc-hero-visual-head">
-        <span>Your next ad</span>
-        <button type="button" onClick={replay} disabled={reducedMotion} aria-label="Replay ad preview animation">Replay preview</button>
-      </div>
-      <div className="hc-hero-stack">
-        <div className="hc-hero-story">
-          <span className="hc-hero-format">Story</span>
-          <AdPreview image={example.image} postCopy={example.postCopy} linkTitle={example.linkTitle} compact />
+    <div className="hc-meta-showcase" ref={sectionRef}>
+      <div className="hc-meta-stage" aria-label="Examples of Facebook Feed and Instagram Story ads">
+        <button
+          className="hc-meta-loop-control"
+          type="button"
+          aria-label={paused ? "Play ad showcase" : "Pause ad showcase"}
+          aria-pressed={paused}
+          hidden={reduceMotion}
+          onClick={() => setPaused((current) => !current)}
+        >
+          {paused ? <Play aria-hidden="true" size={16} /> : <Pause aria-hidden="true" size={16} />}
+        </button>
+        <p className="hc-sr-only" aria-live="polite">
+          Showing {META_SHOWCASE_ADS[order[0]].format === "feed" ? "Facebook Feed" : "Instagram Story"} ad from {META_SHOWCASE_ADS[order[0]].page}
+        </p>
+        <div className="hc-meta-deck">
+          {META_SHOWCASE_ADS.map((ad, index) => {
+            const position = order.indexOf(index);
+            const pose = META_DECK_POSITIONS[position];
+            return (
+              <div className="hc-meta-card-positioner" key={ad.id}>
+                <motion.div
+                  className={`hc-meta-card hc-meta-card--${ad.format}${position === 0 ? " is-front" : ""}`}
+                  style={{ zIndex: META_SHOWCASE_ADS.length - position }}
+                  animate={pose}
+                  transition={reduceMotion ? { duration: 0 } : META_DECK_TRANSITION}
+                >
+                  {ad.format === "feed" ? <MetaFeedAd ad={ad} /> : <MetaStoryAd ad={ad} />}
+                </motion.div>
+              </div>
+            );
+          })}
         </div>
-        <div className="hc-hero-feed">
-          <span className="hc-hero-format">Feed</span>
-          <AdPreview image={example.image} postCopy={example.postCopy} linkTitle={example.linkTitle} compact />
-        </div>
       </div>
-      <p className="hc-hero-status"><i aria-hidden="true" /> Ready for your review</p>
     </div>
   );
 }
@@ -565,7 +386,7 @@ export function HomepageConcept() {
           <img src={withBasePath("/brand/blockwise-logo-white.svg")} alt="Blockwise" width="142" height="32" />
         </a>
         <nav aria-label="Primary navigation">
-          <a href="#how-it-works">How it works</a>
+          <a href="#results">How it works</a>
           <a href="#examples">Examples</a>
           <a href="#faq">FAQ</a>
         </nav>
@@ -583,14 +404,12 @@ export function HomepageConcept() {
                 <span><Check aria-hidden="true" size={16} /> No card required.</span>
               </div>
             </div>
-            <HeroAdStack />
+            <div className="hc-hero-visual">
+              <ProcessShowcase />
+            </div>
           </div>
         </section>
-        <section className="hc-process" id="how-it-works">
-          <div className="hc-shell">
-            <ProcessShowcase />
-          </div>
-        </section>
+
 
         <ResultsReporting />
 
