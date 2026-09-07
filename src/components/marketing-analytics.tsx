@@ -2,10 +2,10 @@
 
 import Script from "next/script";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 
 import { getConsentStatus } from "@/components/consent-banner";
-import { isMarketingPath, marketingPageLocation, trackMarketingPageView, validGa4Id, validGoogleAdsId } from "@/lib/analytics/marketing";
+import { isMarketingPath, marketingPageLocation, setGa4Collection, trackMarketingPageView, validGa4Id, validGoogleAdsId } from "@/lib/analytics/marketing";
 
 export function MarketingAnalytics({
   metaPixelId,
@@ -28,6 +28,11 @@ export function MarketingAnalytics({
     return () => window.removeEventListener("blockwise:consent-changed", sync);
   }, []);
 
+  useLayoutEffect(() => {
+    setGa4Collection(ga4MeasurementId, enabled && !!pathname && isMarketingPath(pathname));
+    return () => setGa4Collection(ga4MeasurementId, false);
+  }, [enabled, ga4MeasurementId, pathname]);
+
   useEffect(() => {
     if (enabled && googleReady && validGa4Id(ga4MeasurementId) && pathname) {
       trackMarketingPageView(pathname);
@@ -36,7 +41,7 @@ export function MarketingAnalytics({
 
   if (!enabled || !pathname || !isMarketingPath(pathname)) return null;
   const googleIds = [validGa4Id(ga4MeasurementId) ? ga4MeasurementId : undefined, validGoogleAdsId(googleAdsId) ? googleAdsId : undefined].filter(Boolean);
-  const googleConfig = { send_page_view: false, page_location: marketingPageLocation(window.location.origin, pathname), page_referrer: "", allow_google_signals: false, allow_ad_personalization_signals: false };
+  const googleConfig = { send_page_view: false, page_location: marketingPageLocation(window.location.origin, pathname), page_referrer: "", page_title: "Blockwise", allow_google_signals: false, allow_ad_personalization_signals: false };
 
   return (
     <>

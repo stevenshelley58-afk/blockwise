@@ -1,4 +1,5 @@
 import { getConsentStatus } from "./consent.ts";
+import { isAnalyticsExcludedPath } from "./events.ts";
 
 type MarketingValue = string | number | boolean | undefined;
 type MarketingProperties = Record<string, MarketingValue>;
@@ -19,14 +20,16 @@ const SAFE_VALUE = /^[a-z0-9_\-]{1,80}$/;
 
 declare global {
   interface Window {
+    [key: `ga-disable-${string}`]: boolean | undefined;
     clarity?: (action: "consentv2" | "event" | "start" | "stop", value?: string | { ad_Storage: "granted" | "denied"; analytics_Storage: "granted" | "denied" }) => void;
   }
 }
 
 export function isMarketingPath(pathname: string): boolean {
-  return ["/", "/pricing", "/signup", "/audit", "/guides", "/privacy", "/terms", "/data-deletion"].includes(pathname)
+  return !isAnalyticsExcludedPath(pathname)
+    && (["/", "/pricing", "/signup", "/audit", "/guides", "/privacy", "/terms", "/data-deletion"].includes(pathname)
     || /^\/guides\/[a-z0-9-]+$/.test(pathname)
-    || /^\/(audit|suburb)\/[a-z0-9-]+(?:\/[a-z0-9-]+)*$/.test(pathname);
+    || /^\/(audit|suburb)\/[a-z0-9-]+(?:\/[a-z0-9-]+)*$/.test(pathname));
 }
 
 export function marketingPageLocation(origin: string, pathname: string): string {
@@ -91,4 +94,10 @@ export function trackMarketingEvent(eventName: string, properties: MarketingProp
 export function trackMarketingPageView(pathname: string): void {
   if (!isMarketingPath(pathname)) return;
   trackMarketingEvent("page_view", { page_type: pageType(pathname) });
+}
+
+/** Google's supported opt-out also stops an already-loaded tag on private routes. */
+export function setGa4Collection(measurementId: string | undefined, enabled: boolean): void {
+  if (typeof window === "undefined" || !validGa4Id(measurementId)) return;
+  window[`ga-disable-${measurementId}`] = !enabled;
 }

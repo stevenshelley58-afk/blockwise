@@ -31,9 +31,27 @@ configuration, not secrets, but must not be committed into environment files.
 | cta_clicked | Marketing CTA selected | cta_location, page_type |
 | demo_requested | Managed-setup CTA selected | cta_location, page_type |
 | generate_lead | Confirmed managed-setup lead save | form_type, page_type |
-| sign_up | Email signup confirmation | method |
+| sign_up | Pending: confirmation currently lands on excluded private self-serve route | Not launch-verified |
 
 After deployment, verify a consented session in GA4 DebugView and Clarity,
-then mark generate_lead and sign_up as GA4 key events. Provider account
+then mark generate_lead as a GA4 key event after a verified save. Do not mark sign_up ready until its private-route handoff is implemented and tested. Provider account
 creation, environment setup, and release are operational steps; code alone does
 not mean measurement is live.
+
+## GA4 activation - 2026-09-07
+
+Approved Blockwise account: 407072065. Property: 553012529 (Perth, AUD).
+Web stream: Blockwise website, https://blockwise.sale.
+Public measurement ID: G-PX6NWGX9B5, configured through the protected VPS environment.
+Optional account data sharing and enhanced measurement are off. Page views are
+manual to prevent duplicate history tracking or accidental query/form capture.
+A loaded GA4 tag is opted out on private routes, consent withdrawal, and unmount.
+Initial automatic-event page title is fixed to Blockwise; explicit events use safe page types.
+Clarity remains disabled until a project is connected. No private-product analytics
+or completed-registration measurement is claimed by this activation.
+
+References: [manual page views](https://developers.google.com/analytics/devguides/collection/ga4/views),
+[Google opt-out](https://developers.google.com/tag-platform/security/guides/privacy).
+
+Visitors can reopen the existing consent banner with **Change cookie preferences**
+on `/privacy`. This uses the same stored consent and provider update path as first visit.

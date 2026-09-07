@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import { getConsentStatus } from "../src/lib/analytics/consent.ts";
-import { isMarketingPath, marketingPageLocation, sanitizeMarketingProperties, trackMarketingEvent, validGa4Id, validClarityId } from "../src/lib/analytics/marketing.ts";
+import { isMarketingPath, marketingPageLocation, setGa4Collection, sanitizeMarketingProperties, trackMarketingEvent, validGa4Id, validClarityId } from "../src/lib/analytics/marketing.ts";
 
 test("marketing analytics rejects missing consent and private routes", () => {
   const calls: unknown[][] = [];
@@ -17,6 +17,9 @@ test("marketing analytics rejects missing consent and private routes", () => {
       stub.location.pathname = path;
       trackMarketingEvent("generate_lead");
     }
+    assert.equal(calls.length, 0);
+    stub.location.pathname = "/ad-reports/opaque-recipient-token";
+    trackMarketingEvent("generate_lead");
     assert.equal(calls.length, 0);
     stub.location.pathname = "/audit/private-id";
     trackMarketingEvent("generate_lead", { form_type: "demo", email: "private@example.com", postcode: "6000", url: "https://example.com" });
@@ -51,4 +54,26 @@ test("production build and runtime forward the launch switches", () => {
     assert.ok(compose.includes(`${name}: `));
   }
   assert.ok(compose.includes("EMAIL_OUTBOX_DELIVERY_ENABLED: ${EMAIL_OUTBOX_DELIVERY_ENABLED:-false}"));
+});
+
+test("GA4 opt-out stops a loaded tag and can re-enable only its configured property", () => {
+  const stub: Record<string, boolean> = {};
+  Object.defineProperty(globalThis, "window", { configurable: true, value: stub });
+  try {
+    setGa4Collection("G-AB12345678", false);
+    assert.equal(stub["ga-disable-G-AB12345678"], true);
+    setGa4Collection("G-AB12345678", true);
+    assert.equal(stub["ga-disable-G-AB12345678"], false);
+    setGa4Collection(undefined, true);
+    setGa4Collection("not-a-property", true);
+    assert.deepEqual(Object.keys(stub), ["ga-disable-G-AB12345678"]);
+  } finally { Reflect.deleteProperty(globalThis, "window"); }
+});
+
+test("CSP permits regional GA4 collection without broad HTTPS access", () => {
+  const config = readFileSync("next.config.ts", "utf8");
+  const connect = config.split("const connectSrc = [")[1].split("]")[0];
+  assert.ok(connect.includes('"https://*.google-analytics.com"'));
+  assert.ok(connect.includes('"https://*.analytics.google.com"'));
+  assert.ok(!connect.includes('"https:"'));
 });
