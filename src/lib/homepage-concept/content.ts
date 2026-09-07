@@ -46,28 +46,33 @@ export const AD_EXAMPLES = [
 
 export const FAQS = [
   {
+    question: "What if I don't have a Meta ad account?",
+    answer:
+      "No problem. We can help you set one up in your name and connect it to Blockwise.",
+  },
+  {
     question: "Do I need to know Meta Ads Manager?",
     answer:
-      "No. Blockwise keeps the creative, approval, campaign status, leads and reporting in one guided workflow.",
+      "Not at all. Blockwise guides you through creating and approving ads, with campaign updates, leads and reports in one place.",
   },
   {
     question: "Will an ad go live without my approval?",
     answer:
-      "No. You review the creative, copy, destination, budget and schedule before launch.",
+      "No. You approve the design, wording, destination, budget and schedule before anything goes live.",
   },
   {
     question: "Is ad spend included?",
     answer:
-      "No. Your Meta ad spend is separate from Blockwise and is paid through your own connected Meta ad account.",
+      "No. You pay Meta separately through your own ad account. We do it this way so your ad data stays yours, even if you leave Blockwise.",
   },
   {
     question: "What happens after the trial?",
     answer:
-      "The product will show the applicable plan and terms before any paid commitment. No card is required to start the trial.",
+      "You'll see the plan and terms before committing to anything paid. No card is needed to start your trial.",
   },
   {
     question: "Can my team review ads?",
     answer:
-      "Yes. The workflow is designed so the right person can review the finished ad before it launches.",
+      "Yes. Your team can review the finished ad before it goes live.",
   },
 ] as const;

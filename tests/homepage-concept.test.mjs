@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { FAQS } from "../src/lib/homepage-concept/content.ts";
 import { requestMockTrial, validateTrialEmail } from "../src/lib/homepage-concept/mock-trial.ts";
 
 test("homepage concept trial adapter validates email without a backend", async () => {
@@ -62,4 +63,17 @@ test("homepage concept includes the required mobile story and disclosures", asyn
   assert.match(component, /Pause/);
   assert.match(component, /Replay/);
   assert.doesNotMatch(component, /Property Check|three free ads|3 free ads/i);
+});
+
+test("homepage FAQ keeps setup first and explains separate spend and data ownership", async () => {
+  const component = await readFile(new URL("../src/components/homepage-concept/homepage-concept.tsx", import.meta.url), "utf8");
+  assert.match(component, /<h2>FAQ<\/h2>/);
+  assert.match(component, /<p>What to expect before you start\.<\/p>/);
+  assert.equal(FAQS[0].question, "What if I don't have a Meta ad account?");
+  assert.match(FAQS[0].answer, /help you set one up in your name and connect it to Blockwise/);
+  const spend = FAQS.find((faq) => faq.question === "Is ad spend included?");
+  assert.ok(spend);
+  assert.match(spend.answer, /pay Meta separately through your own ad account/);
+  assert.match(spend.answer, /your ad data stays yours, even if you leave Blockwise/);
+  assert.equal(FAQS.length, 6);
 });
