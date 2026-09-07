@@ -3,15 +3,15 @@
 ## Delivered
 
 - Public, unlisted/noindex preview: https://blockwise.sale/homepage-preview/concept
-- Application revision: `7bbe60b7bb4827fbebe981741dbcd2f4702512ad`.
-- Image: `blockwise-homepage-preview:7bbe60b7bb48`.
-- Image ID: `sha256:3fa87878f0080cd5168aebe25a41fe013e076832d5967f28246f8185d6c1fc83`.
-- Healthy container: `blockwise-homepage-preview-7bbe60b7bb48`, read-only, non-root, 1 GB memory limit, no host port, separate internal Docker network, no production environment or credentials.
+- Application revision: `2e8745190b8340fe622403a0be0700bff8c6b8e3`.
+- Image: `blockwise-homepage-preview:2e8745190b83`.
+- Image ID: `sha256:b32782f5a65b3c3c396e8ccebb26b0c15259cdd24db00b2f1b4dfe2478efea92`.
+- Healthy container: `blockwise-homepage-preview-2e8745190b83`, read-only, non-root, 1 GB memory limit, no host port, separate internal Docker network, no production environment or credentials.
 - Branch: `codex/homepage-mobile-mockup-20260906`; source worktree `/projects/blockwise-homepage-mockup-20260906`.
 
-The latest update replaces the previous explainer animation with one continuous, legible workflow. It browses several templates, selects one, carries that creative into a smaller editor, visibly updates both post copy and text on the creative, moves the finished ad into campaign review, fills audience/budget/duration, presses approval, and finishes with a green `Approved` state. Choose, Customise and Review remain keyboard-operable manual controls.
+The latest update removes the scripted workflow explainer and replaces it with a visual-first loop of eight realistic Meta placements: four Facebook Feed ads and four Instagram Story ads. Ads continuously move from the back of the deck to the front. Feed examples include sponsored page chrome, primary copy, link preview, reactions and Meta action rows. Story examples include progress bars, sponsored headers, full-bleed creative, link treatment and reply controls. The section keeps only one short heading and an icon-only pause/play control.
 
-The owner requested a mockup, not a live homepage replacement. The production product was not deployed by this change. Its independent exact production-health gate passed at the then-current served revision `447d05568b22bfb4ae138b70b083d74c12d67b6c`. No product app, database, auth, billing, email or Meta service was changed.
+The owner requested a mockup, not a live homepage replacement. The production product was not deployed by this change. Its independent exact production-health gate passed at the then-current served revision `1cb917831da5ba351e625467b4cea440b34ec683`. No product app, database, auth, billing, email or Meta service was changed.
 
 ## Checks
 
@@ -19,7 +19,7 @@ The owner requested a mockup, not a live homepage replacement. The production pr
 - `npm run test`: all tests passed with one existing root-only permission-semantics skip; no test was weakened.
 - `npm run typecheck`: passed.
 - `npm run build`: passed with `BLOCKWISE_HOMEPAGE_PREVIEW=true`, `NEXT_PUBLIC_BASE_PATH=/homepage-preview`, and the exact application revision above.
-- Impeccable detector completed once after the UI implementation. Its findings were advisory design-token drift; the new explainer's stray literal colours were replaced with the established palette where applicable.
+- Impeccable detector completed once after the UI implementation. Its relevant font and colour warnings are intentional: the ad chrome uses Meta-like system typography and interface colours rather than the surrounding Blockwise brand treatment.
 - Git whitespace checks passed.
 
 ## Public browser acceptance
@@ -28,9 +28,9 @@ Verified in Chromium through the real HTTPS preview:
 
 - Compiled revision metadata equals the application revision above.
 - At 1440, 768 and 390 px, page width equals viewport width with no horizontal overflow.
-- The complete template → copy → creative → review → approval sequence reaches the green `Approved` state at every tested width.
-- Choose, Customise and Review respond to pointer and keyboard activation. Pause, resume and replay remain available for ordinary motion preferences.
-- Reduced-motion visitors receive the completed static state and the playback control is hidden.
+- The deck contains eight ads and alternates visibly between Facebook Feed and Instagram Story placements at every tested width.
+- Pause holds the current ad; play resumes the deck. The loop pauses offscreen and while the page is hidden.
+- Reduced-motion visitors receive a static composition and the playback control is hidden.
 - Network observation across fresh loads and interactions contained GETs only. No product API, analytics, email or other write request was made.
 - No browser console errors or failed page resources were observed.
 - Public preview GET returns 200 with noindex headers; POST returns 405.
@@ -45,13 +45,13 @@ After a product-router restart or configuration reload, reapply only if this pre
 
 ```sh
 cd /projects/blockwise-homepage-mockup-20260906
-python3 scripts/vps/homepage-preview-route.py --upstream blockwise-homepage-preview-7bbe60b7bb48:3000 --apply
+python3 scripts/vps/homepage-preview-route.py --upstream blockwise-homepage-preview-2e8745190b83:3000 --apply
 ```
 
-Remove only the preview route with `--remove --apply`; do not restore an old full router backup over other work. The previous routed and intermediate containers were stopped after final acceptance and retained for rollback.
+Remove only the preview route with `--remove --apply`; do not restore an old full router backup over other work. The previously routed preview container was removed after final acceptance.
 
 ## Integration seam
 
 The email demo adapter is `src/lib/homepage-concept/mock-trial.ts`; replace it with an approved signup or lead-capture service only when live integration is requested. Ad examples and FAQs remain isolated in `content.ts`; reusable components and route CSS do not require backend credentials.
 
-The explainer motion follows Emil Kowalski's interaction principles: one purposeful sequence, shared-element continuity, fast exits, eased movement, visible manual controls, offscreen pausing and a reduced-motion path. Impeccable guided the visual and responsive quality pass.
+The deck motion follows Emil Kowalski's interaction principles: one purposeful focal loop, transform/opacity movement, confident easing, visible pause control, offscreen and hidden-tab pausing, and a reduced-motion path. Impeccable guided the visual and responsive quality pass.
