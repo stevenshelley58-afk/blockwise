@@ -18,6 +18,8 @@ BEGIN
     WHERE namespace.nspname = 'public'
       AND class.relkind IN ('r', 'p')
       AND class.relrowsecurity
+      -- Outreach contains private CRM data and is server-only, even with RLS.
+      AND class.relname NOT IN ('outreach_area_snapshots', 'outreach_prospects', 'outreach_campaign_drafts')
   LOOP
     EXECUTE format(
       'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE %I.%I TO authenticated',
