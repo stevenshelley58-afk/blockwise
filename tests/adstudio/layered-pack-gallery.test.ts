@@ -212,6 +212,7 @@ describe("Ad Studio direct layered template gallery", () => {
     const assetRoute = readFileSync("src/app/api/adstudio/templates/[templateId]/assets/[assetKey]/route.ts", "utf8");
     const sampleRoute = readFileSync("src/app/api/adstudio/templates/[templateId]/sample/route.ts", "utf8");
     const saveRoute = readFileSync("src/app/api/adstudio/ads/[id]/save/route.ts", "utf8");
+    const renderAssets = readFileSync("src/lib/adstudio/render-assets.ts", "utf8");
     const copyRoute = readFileSync("src/app/api/adstudio/ads/[id]/copy-proposal/route.ts", "utf8");
     const formRoute = readFileSync("src/app/api/adstudio/ads/[id]/instant-form/route.ts", "utf8");
     const publishRoute = readFileSync("src/app/api/adstudio/ads/[id]/publish/route.ts", "utf8");
@@ -221,8 +222,10 @@ describe("Ad Studio direct layered template gallery", () => {
     assert.match(publishPage, /templateSupabase: serviceSupabase/);
     assert.match(assetRoute, /requestedAdId[\s\S]*getTemplateForExistingCustomerAd/);
     assert.match(sampleRoute, /requestedAdId[\s\S]*getTemplateForExistingCustomerAd/);
-    assert.match(saveRoute, /getTemplateForInternalInspection/);
-    assert.match(saveRoute, /templateSupabase: serviceSupabase/);
+    assert.match(renderAssets, /getTemplateForInternalInspection/);
+    assert.match(renderAssets, /templateAssetStoragePath/);
+    assert.match(saveRoute, /resolveTemplateAssetValuesShared/);
+    assert.match(saveRoute, /render-assets/);
     assert.match(copyRoute, /createSupabaseServiceClient/);
     assert.match(formRoute, /createSupabaseServiceClient/);
     assert.match(publishRoute, /templateSupabase: serviceSupabase/);

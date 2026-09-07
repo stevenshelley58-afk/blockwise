@@ -55,10 +55,10 @@ export function validateMetaCopyForSave(copy: Pick<AdDocumentParsed, "metaPrimar
 
 /**
  * `ad_revisions.template_hash` predates direct templates and remains NOT NULL
- * for compatibility with immutable historical revisions. Direct templates do
- * not have a pack/content hash: their ingest contract makes `templateId`
- * create-only and replay-safe. Store that stable identity explicitly instead
- * of inventing a hash or weakening the revision constraint.
+ * for compatibility with immutable historical revisions. Direct templates use
+ * the sha256 identity of their immutable canonical JSON, so preview, save, and
+ * export can refer to the exact same template. The legacy ID identity remains
+ * only for callers that do not have the template instance available.
  */
 export function directTemplateRevisionIdentity(templateId: string, template?: AdTemplate): string {
   return template ? `sha256:${sha256Hex(template)}` : `blockwise.ad-template:${templateId}`;
