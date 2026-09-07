@@ -85,7 +85,8 @@ const nextConfig: NextConfig = {
     //   rendered by Ad Radar/creative viewer (*.fbcdn.net,
     //   *.cdninstagram.com), Facebook page images.
     // - connect: self, Supabase REST/auth, Sentry ingest, Vercel analytics,
-    //   Google Analytics/gtag collect endpoints.
+    //   Google Analytics/gtag collect endpoints, including regional collection:
+    //   https://developers.google.com/tag-platform/security/guides/csp
     const supabaseOrigin = safeOrigin(process.env.NEXT_PUBLIC_SUPABASE_URL);
     const researchStorageOrigin = safeOrigin(process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL);
     const sentryOrigin = sentryIngestOrigin(process.env.NEXT_PUBLIC_SENTRY_DSN);
@@ -94,7 +95,8 @@ const nextConfig: NextConfig = {
       supabaseOrigin,
       sentryOrigin,
       "https://va.vercel-scripts.com",
-      "https://www.google-analytics.com",
+      "https://*.google-analytics.com",
+      "https://*.analytics.google.com",
       "https://analytics.google.com",
       "https://www.googletagmanager.com",
       "https://www.clarity.ms",
@@ -104,6 +106,8 @@ const nextConfig: NextConfig = {
       .join(" ");
     const imgSrc = [
       "'self'",
+      "https://*.google-analytics.com",
+      "https://www.googletagmanager.com",
       "data:",
       "blob:",
       researchStorageOrigin,

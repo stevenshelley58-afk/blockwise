@@ -66,3 +66,11 @@ test("GA4 opt-out stops a loaded tag and can re-enable only its configured prope
     assert.deepEqual(Object.keys(stub), ["ga-disable-G-AB12345678"]);
   } finally { Reflect.deleteProperty(globalThis, "window"); }
 });
+
+test("CSP permits regional GA4 collection without broad HTTPS access", () => {
+  const config = readFileSync("next.config.ts", "utf8");
+  const connect = config.split("const connectSrc = [")[1].split("]")[0];
+  assert.ok(connect.includes('"https://*.google-analytics.com"'));
+  assert.ok(connect.includes('"https://*.analytics.google.com"'));
+  assert.ok(!connect.includes('"https:"'));
+});
