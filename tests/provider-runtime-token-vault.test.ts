@@ -3,7 +3,9 @@ import test from "node:test";
 
 import {
   assertProviderConnectionActive,
+  clearStoredProviderTokenSet,
   clearStoredProviderTokens,
+  shouldRevokeMetaOAuthGrant,
   ensureRuntimeProviderToken,
   loadRuntimeProviderToken,
   upsertRuntimeProviderToken,
@@ -29,10 +31,26 @@ test("provider execution rejects a revoked connection before token use", async (
   } as unknown as Parameters<typeof assertProviderConnectionActive>[0];
 
   await assert.rejects(
-    assertProviderConnectionActive(service, { connectionId: "revoked-connection", provider: "meta" }),
+    assertProviderConnectionActive(service, { connectionId: "revoked-connection", workspaceId: "workspace-123", provider: "meta" }),
     /disconnected or unavailable/,
   );
   assert.deepEqual(statuses, [["connected", "needs_attention"]]);
+});
+
+
+test("Meta disconnect clears all historical vault rows and skips partner grant revocation", async () => {
+  const ids: string[] = [];
+  const service = {
+    async rpc(name: string, args: Record<string, unknown>) {
+      assert.equal(name, "provider_token_vault_clear");
+      ids.push(String(args.p_provider_connection_id));
+      return { data: null, error: null };
+    },
+  } as unknown as Parameters<typeof clearStoredProviderTokenSet>[0];
+  await clearStoredProviderTokenSet(service, ["new-row", "old-row"]);
+  assert.deepEqual(ids, ["new-row", "old-row"]);
+  assert.equal(shouldRevokeMetaOAuthGrant({ connectionMethod: "partner_access" }), false);
+  assert.equal(shouldRevokeMetaOAuthGrant({}), true);
 });
 
 test("workspace provider disconnect clears the private token vault and surfaces failures", async () => {

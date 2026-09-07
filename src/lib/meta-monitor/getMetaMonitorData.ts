@@ -70,7 +70,7 @@ export async function getMetaMonitorData(input: {
 
   const connections = await listProviderConnections(input.supabase, input.workspaceId);
   const metaConnection = connections.find(
-    (connection) => connection.provider === "meta" && connection.status !== "not_connected",
+    (connection) => connection.provider === "meta" && (connection.status === "connected" || connection.status === "needs_attention"),
   );
 
   if (!metaConnection) {

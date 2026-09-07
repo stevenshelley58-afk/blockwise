@@ -4,7 +4,7 @@ import type { createSupabaseServiceClient } from "../supabase/service.ts";
 import { buildLeadDedupeKey } from "../leads/dedupe.ts";
 import { loadMetaPublishPlan } from "./meta-execution.ts";
 import { syncMetaLeads, type LeadDeliveryAction, type MetaLeadRepository, type NormalizedMetaLead } from "./meta-leads.ts";
-import { loadStoredProviderTokens } from "./provider-connections.ts";
+import { assertProviderConnectionActive, loadStoredProviderTokens } from "./provider-connections.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 
@@ -18,6 +18,11 @@ export async function syncMetaLeadsForPlanById(input: {
   const plan = await loadMetaPublishPlan(input.serviceSupabase, {
     workspaceId: input.workspaceId,
     planId: input.planId,
+  });
+  await assertProviderConnectionActive(input.serviceSupabase, {
+    connectionId: plan.providerConnectionId,
+    workspaceId: input.workspaceId,
+    provider: "meta",
   });
   const tokens = await loadStoredProviderTokens(input.serviceSupabase, plan.providerConnectionId);
   const formIds = Object.values(plan.reconciledObjects.leadFormIds);

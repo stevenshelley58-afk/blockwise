@@ -89,7 +89,9 @@ export async function syncProviderWorkspace(input: {
 
   try {
     const connections = await listProviderConnections(input.supabase, input.workspaceId);
-    const connection = connections.find((item) => item.provider === input.provider);
+    const connection = connections.find((item) =>
+      item.provider === input.provider && (item.status === "connected" || item.status === "needs_attention")
+    );
 
     if (!connection) {
       throw new Error(`${input.provider} provider connection was not found.`);

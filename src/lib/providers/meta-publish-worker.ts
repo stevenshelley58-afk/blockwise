@@ -167,6 +167,7 @@ export async function executeMetaPublishPlan(input: {
 
   await assertProviderConnectionActive(input.serviceSupabase, {
     connectionId: input.plan.providerConnectionId,
+    workspaceId: input.plan.workspaceId,
     provider: "meta",
   });
 
