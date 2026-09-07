@@ -43,7 +43,7 @@ export const blockwise: NicheConfig = {
     ],
   },
   features: {
-    adRadar: false,
+    adRadar: true,
     propertyCheck: false,
     suburbPages: false,
     guides: true,
