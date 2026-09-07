@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
+import { mediaDownloadHeaders } from "@/lib/adstudio/media-download";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(data, {
     headers: {
       "content-type": data.type || "application/octet-stream",
-      ...(download ? { "content-disposition": "attachment; filename=blockwise-ad.png" } : {}),
+      ...mediaDownloadHeaders(download, request.nextUrl.searchParams.get("filename") ?? ""),
       // Storage paths are content-addressed (UUID per upload) and never change,
       // so the browser can cache aggressively instead of re-pulling the bytes
       // through this function on every view.

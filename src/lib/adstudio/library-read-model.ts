@@ -6,6 +6,16 @@ import { isExampleBrandKitSourceUrl } from "./persistence.ts";
 import { adFormatLabel, deriveAdLibraryStatus, type AdLibraryStatus } from "./library-contract.ts";
 export { adFormatLabel, deriveAdLibraryStatus } from "./library-contract.ts";
 
+export function savedAdDownloadPaths(revision: Record<string, unknown> | undefined): {
+  feed: string | null;
+  story: string | null;
+} {
+  return {
+    feed: typeof revision?.feed_png_path === "string" ? revision.feed_png_path : null,
+    story: typeof revision?.story_png_path === "string" ? revision.story_png_path : null,
+  };
+}
+
 // Inlined from deleted asset-roles.ts
 export type AssetRole = "property" | "person" | "logo" | "background";
 
@@ -166,8 +176,9 @@ export async function loadAdStudioLibraryPage(input: {
     for (const row of pageRows) {
       const revision = revisionByAd.get(String(row.id));
       const metaPlan = metaPlanByAd.get(String(row.id));
-      const feedPath = typeof revision?.feed_png_path === "string" ? revision.feed_png_path : null;
-      const storyPath = typeof revision?.story_png_path === "string" ? revision.story_png_path : null;
+      const downloadPaths = savedAdDownloadPaths(revision);
+      const feedPath = downloadPaths.feed;
+      const storyPath = downloadPaths.story;
       const raw = firstPreviewPath(revision);
       const path = storagePathFromSource(input.workspaceId, raw);
       const src = path ? (signed[path]?.grid ?? null) : null;
