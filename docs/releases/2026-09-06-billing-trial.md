@@ -2,8 +2,9 @@
 
 Deployed 6 September 2026 (Australia/Perth), app plus one database migration.
 
-- Serving source: `f35a041563d4c5e257e323a97f851ec8c447fb3b`.
-- Image: `blockwise-app:f35a041563d4c5e257e323a97f851ec8c447fb3b`.
+- Serving source: `2c452beda14adb3c821246fe6c1ffba04876806b` (includes the
+  Stripe price-type fix found during test-mode verification).
+- Image: `blockwise-app:2c452beda14adb3c821246fe6c1ffba04876806b`.
 - Previous serving source: `bc2b1f3ba681727c9f4261ddce90466cb170fc41` (image retained for rollback).
 - Branch: `feat/billing-trial-20260906` (pushed to origin).
 
@@ -51,6 +52,26 @@ Trial state backfill preserved the one existing verification-started trial as
 - New regression coverage: `tests/billing-trial-no-card.test.ts` (12 tests)
   covering delivery-anchored trial start and idempotency, checkout policy gates,
   price validation, session reuse/expiry, and the delivery predicate.
+
+## Test-mode verification (7 September 2026)
+
+Stripe test-mode credentials were provided and stored at
+`/srv/blockwise/product-test/.env` (not in git). Verified against real Stripe
+test mode: test prices created and validated through the app's own
+`validateStripePriceForOffer` (A$249 and A$1,500, active/AUD/monthly, and a
+tampered amount fails closed); a real Checkout session created through the
+app's session parameters (hosted page renders, idempotent replay returns the
+same session, expiry works); webhook signature verification exercised with the
+real test signing secret (valid accepted, tampered rejected, wrong secret
+rejected); the live endpoint rejects test-mode signatures (cross-mode
+separation). This found and fixed a real bug: the Prices API returns
+`type: "recurring"`, not `"subscription"` — the earlier check would have
+rejected every valid price.
+
+Still open: the full browser-paid flow (4242 card through hosted Checkout to
+`checkout.session.completed` granting paid access) and the ToS consent step
+— the Stripe account has no Terms of service URL configured, which blocks
+Checkout sessions that request ToS consent in BOTH test and live mode.
 
 ## Payment verification status
 
