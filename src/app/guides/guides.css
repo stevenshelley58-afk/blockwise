@@ -1121,21 +1121,15 @@
   position: relative;
 }
 .bw-guides-feature-list li::before {
-  align-items: center;
-  background: var(--blue-soft);
-  border: 1px solid #c5d9e8;
+  background: var(--blue);
   border-radius: 50%;
-  color: var(--blue);
-  content: "✓";
-  display: inline-flex;
-  font-size: .7rem;
-  font-weight: 900;
-  height: 19px;
-  justify-content: center;
-  left: 0;
+  box-shadow: 0 0 0 5px var(--blue-soft);
+  content: "";
+  height: 7px;
+  left: 6px;
   position: absolute;
-  top: .12em;
-  width: 19px;
+  top: .55em;
+  width: 7px;
 }
 .bw-guides-topic-nav {
   display: flex;
