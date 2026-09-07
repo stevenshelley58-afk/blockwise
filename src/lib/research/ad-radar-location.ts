@@ -1,4 +1,4 @@
-import auPostcodeRows from "../../../hermes/data/au-postcodes.json";
+import auPostcodeRows from "../../../hermes/data/au-postcodes.json" with { type: "json" };
 import { adRunningMs, type CustomerMetaAdLibraryCard } from "./customer-meta-card.ts";
 
 export type AdRadarLocationGuess = {
