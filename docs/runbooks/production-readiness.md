@@ -1,10 +1,58 @@
 # Blockwise production readiness
 
-## Current release (7 September 2026, canonical template previews)
+## Release candidate (7 September 2026, beta readiness)
 
-The public app serves `447d05568b22bfb4ae138b70b083d74c12d67b6c`.
-See the [release record](../releases/2026-09-07-ad-template-canonical.md) for
-preview/save parity checks, generator compatibility, retained rollback and deployment evidence.
+The coordinated candidate checkout is `/projects/blockwise-beta-release-20260907`.
+At the latest validation checkpoint its exact source revision is
+`6e000ea19813a7f1474547984de5822867a5c127`. The public app remains on
+`c02b11e452203a2d54bd278b913f410588ce6ff4`; no application deployment was
+performed by this validation task.
+
+Release scaffolding is isolated under `/srv/blockwise/beta-release-20260907/`:
+`build-image.sh` builds an immutable SHA-labelled image, `deploy-app.sh` keeps
+the expected-live, ancestry, clean-source, image-label, protected-env, and
+provider-write guards, and `rollback-app.sh` is the guarded app-only rollback
+command. Before any rollback, export the current serving SHA and use a retained
+image only:
+
+```bash
+export EXPECTED_LIVE_REVISION=$(curl -fsS https://blockwise.sale/api/health | jq -er .revision)
+/srv/blockwise/beta-release-20260907/rollback-app.sh --revision <retained-full-sha> --apply
+```
+
+The protected product environment was not changed. `BLOCKWISE_ENABLE_PROVIDER_WRITES`
+remains `false`, and no provider writes, customer-data mutations, payments,
+OAuth writes, email sends, worker restart, or Caddy restart were performed.
+
+### Validation checkpoint
+
+- `npm run check:nul`: passed, scanning 1,035 text files.
+- Root `npm test`: 910 passed, 0 failed.
+- Package tests: 120 passed, 1 failed, 2 skipped out of 123. The single failure is
+  the pre-existing `customer-navigation.test.mjs` expectation that `/ad-radar`
+  is disabled; the coordinated candidate intentionally enables the canonical
+  Ad Radar surface. This is not release sign-off and needs reconciliation by
+  the product owner.
+- `npm run typecheck -- --pretty false`: run separately after the candidate
+  checkout is updated; record its exact result here before image construction.
+- No final image was built while product E2E and operations follow-up remained
+  in progress.
+
+### Required gates before deployment
+
+1. Re-run `check:nul`, the complete test suite, typecheck, and build from the
+   final clean candidate SHA. Resolve the package navigation expectation or
+   document an approved intentional update.
+2. Run `/srv/blockwise/beta-release-20260907/build-image.sh --revision <sha>
+   --source /projects/blockwise-beta-release-20260907` only after coordinated
+   code and E2E acceptance. Verify the OCI revision label and retain build log.
+3. Set `EXPECTED_LIVE_REVISION` to the freshly verified `/api/health` revision
+   and use `deploy-app.sh --revision <sha> --apply`. It is app-only and must
+   preserve the protected environment fields.
+4. Run the candidate health check and smoke evidence. Provider writes remain
+   disabled unless separately approved with an exact workspace allowlist.
+5. Record external Meta OAuth/deauthorize/partner-account and Stripe evidence
+   separately. Fixture tests do not prove external account configuration.
 
 ## Historical release (6 September 2026, billing and trial)
 

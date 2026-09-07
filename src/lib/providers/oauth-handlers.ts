@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import type { MonitorProvider } from "@/lib/monitor/dashboard-data";
 import { fetchGoogleAccessibleCustomers } from "@/lib/providers/google-reporting";
 import { DEFAULT_META_GRAPH_VERSION } from "@/lib/providers/meta-graph-version";
+import { fetchMetaUserIdentity } from "./meta-oauth-identity.ts";
 import { fetchMetaAdAccounts } from "@/lib/providers/meta-reporting";
 
 export type OAuthTokenExchange = {
