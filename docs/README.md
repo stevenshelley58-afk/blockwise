@@ -10,6 +10,7 @@ This index separates current operating guidance from retained history.
 - [Production readiness](runbooks/production-readiness.md)
 - [Transactional email outbox](runbooks/transactional-email.md)
 - [Postcode outreach drafts and sample previews](runbooks/postcode-outreach.md)
+- [7 September guides editorial redesign](releases/2026-09-07-guides-editorial.md)
 - [6 September release evidence](releases/2026-09-06-template-editor.md)
 - [6 September billing and trial release](releases/2026-09-06-billing-trial.md)
 - [VPS SSH](runbooks/vps-ssh.md)

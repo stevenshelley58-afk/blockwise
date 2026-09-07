@@ -24,19 +24,19 @@ test("legacy public content links redirect permanently to guides", () => {
 
 test("guides hub is text-first, grouped, and actionable", () => {
   assert.doesNotMatch(guidesPage, /next\/image/u);
-  assert.match(guidesPage, /Better real-estate leads\. A clear next step\./u);
+  assert.match(guidesPage, /Practical notes for real-estate advertising\./u);
   assert.match(guidesPage, /sample sold-price resource/u);
   assert.match(guidesPage, /delivery email/u);
   assert.match(guidesPage, /review plan/u);
-  assert.match(guidesPage, /Start with the sold-price list/u);
-  assert.match(guidesPage, /Flagship guide/u);
+  assert.match(guidesPage, /Browse by topic/u);
+  assert.match(guidesPage, /Featured guide/u);
   assert.match(guidesPage, /Choose the offer/u);
   assert.match(guidesPage, /Build the campaign/u);
   assert.match(guidesPage, /Improve what happens next/u);
   assert.match(guidesPage, /\/guides\/sold-price-list-seller-leads/u);
   const guideHrefs = [...guidesPage.matchAll(/href:\s*"((?:\/guides\/)[^"]+)"/gu)].map((match) => match[1]);
   assert.equal(new Set(guideHrefs).size, 8);
-  assert.equal((guidesPage.match(/Start with the sold-price list/gu) ?? []).length, 1);
+  assert.equal((guidesPage.match(/Browse by topic/gu) ?? []).length, 1);
   assert.match(guidesStyles, /\.bw-guide-list\s*\{/u);
   assert.match(guidesStyles, /\.bw-guides-index \{[\s\S]*margin:\s*0 auto/u);
   assert.match(guidesStyles, /\.bw-guides-feature \{[\s\S]*color:\s*var\(--white\)/u);
