@@ -106,11 +106,11 @@ test("landing page anchors, sections, and claims stay connected", () => {
     previousIndex = index;
   }
 
-  assert.match(combined, /Your competitors<\/span>\s*<span[^>]*>are advertising\.<\/span>\s*<span[^>]*>Are you\?<\/span>/);
+  assert.match(combined, /Your competition<\/span>\s*<span[^>]*>is running ads\.<\/span>\s*<span[^>]*>Are you\?<\/span>/);
   assert.doesNotMatch(combined, /hw-ws__eyebrow/);
   assert.match(
     combined,
-    /Create, approve and track Meta ads from one beautifully simple workspace\./,
+    /More listings, less marketing stress\./,
   );
   assert.match(combined, /Know the property before the call/);
   assert.match(combined, /Run a property check/);
