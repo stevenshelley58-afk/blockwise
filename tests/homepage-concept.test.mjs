@@ -44,7 +44,6 @@ test("homepage concept includes the required mobile story and disclosures", asyn
     "Your competition is running ads.",
     "More listings, less marketing stress.",
     "Create real estate ads for Facebook &amp; Instagram.",
-    "Ready-made templates. Your photos. Your brand.",
     "Choose",
     "Customise",
     "Review",
@@ -52,8 +51,6 @@ test("homepage concept includes the required mobile story and disclosures", asyn
     "Text on creative",
     "Review campaign",
     "Approve campaign",
-    "Approved",
-    "You approve before spending.",
     "No guesswork.",
     "No chasing updates.",
     "Your own dashboard. Clear email updates. On your schedule.",
@@ -67,10 +64,12 @@ test("homepage concept includes the required mobile story and disclosures", asyn
   }
   assert.match(component, /IntersectionObserver/);
   assert.match(component, /STORY_PHASE_DELAYS/);
-  assert.match(component, /layoutId="story-template-image"/);
+  assert.match(component, /data-editing-target="creative"/);
   assert.match(component, /useReducedMotion/);
   assert.match(component, /Pause/);
-  assert.match(component, /Replay/);
+  assert.match(component, /Pause preview/);
+  assert.match(component, /current >= STORY_STATUS.length - 1 \? 0 : current \+ 1/);
+  assert.doesNotMatch(component, /Finished ad|Ready for approval|Example only|You approve before spending/);
   assert.doesNotMatch(component, /Property Check|three free ads|3 free ads/i);
 });
 

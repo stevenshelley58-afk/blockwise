@@ -4,7 +4,6 @@ import {
   ArrowRight,
   BarChart3,
   Check,
-  CheckCircle2,
   ChevronRight,
   CircleDollarSign,
   Clock3,
@@ -12,7 +11,6 @@ import {
   MousePointer2,
   Pause,
   Play,
-  RotateCcw,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
@@ -105,28 +103,36 @@ function TrialForm() {
 }
 
 const PROCESS_STEPS = [
-  { label: "Choose", description: "Pick a ready-made ad." },
-  { label: "Customise", description: "Edit the words and creative." },
-  { label: "Review", description: "Set the campaign and approve." },
+  { label: "Choose" },
+  { label: "Customise" },
+  { label: "Review" },
 ] as const;
 
-const STORY_PHASE_DELAYS = [950, 950, 1050, 700, 1550, 2100, 2100, 1300, 1600, 420] as const;
-const STORY_STEP_PHASES = [0, 5, 8] as const;
-const STORY_PHASE_TO_STEP = [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2] as const;
+const STORY_PHASE_DELAYS = [950, 900, 900, 950, 1100, 1750, 1050] as const;
+const STORY_STEP_PHASES = [1, 2, 5] as const;
+const STORY_PHASE_TO_STEP = [0, 0, 1, 1, 1, 2, 2] as const;
 const STORY_TEMPLATE_SEQUENCE = [0, 1, 2, 0] as const;
 const STORY_STATUS = [
-  "Browsing ready-made templates",
-  "Browsing ready-made templates",
-  "Browsing ready-made templates",
+  "Choose a template",
   "Template selected",
-  "Opening the selected template",
+  "Customise the ad",
   "Editing the post copy",
   "Editing text on the creative",
-  "Moving the finished ad to review",
-  "Adding campaign details",
-  "Approving the campaign",
-  "Campaign approved",
+  "Review campaign",
+  "Review campaign",
 ] as const;
+
+const STORY_CREATIVE = {
+  image: "/home/home-pool.webp",
+  account: "West Coast Home Co",
+  avatar: "WCH",
+  startingCopy: "A better way to spend summer starts at home.",
+  editedCopy: "A better way to spend summer starts at home. Explore the new guide.",
+  startingOverlay: "POOL DAYS START HERE",
+  editedOverlay: "YOUR SUMMER ADDRESS",
+  domain: "WESTCOASTHOME.CO",
+  linkTitle: "Get the suburb property guide",
+} as const;
 
 const STORY_EASE = [0.22, 1, 0.36, 1] as const;
 const STORY_MOVE = { duration: 0.62, ease: STORY_EASE };
@@ -148,45 +154,67 @@ function StoryCursor({ pressed = false }: { pressed?: boolean }) {
   );
 }
 
-function StoryAd({ phase, review = false }: { phase: number; review?: boolean }) {
-  const copyEdited = phase >= 5;
-  const creativeEdited = phase >= 6;
-  const example = AD_EXAMPLES[0];
+function StoryOverlayText({ editing, edited }: { editing: boolean; edited: boolean }) {
+  if (!editing) return <>{edited ? STORY_CREATIVE.editedOverlay : STORY_CREATIVE.startingOverlay}</>;
 
   return (
-    <motion.article layoutId="story-ad" className={`hc-story-ad${review ? " is-review" : ""}`} transition={STORY_MOVE}>
+    <>
+      <span className="hc-story-selection">{STORY_CREATIVE.startingOverlay}</span>
+      <span className="hc-story-replacement" aria-label={STORY_CREATIVE.editedOverlay}>
+        {Array.from(STORY_CREATIVE.editedOverlay).map((character, index) => (
+          <motion.span
+            key={`${character}-${index}`}
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: "auto" }}
+            transition={{ delay: index * 0.045, duration: 0.08, ease: "linear" }}
+          >
+            {character === " " ? "\u00a0" : character}
+          </motion.span>
+        ))}
+      </span>
+      <span className="hc-story-caret" />
+    </>
+  );
+}
+
+function StoryAd({ phase, review = false }: { phase: number; review?: boolean }) {
+  const copyEdited = phase >= 3;
+  const creativeEdited = phase >= 4;
+
+  return (
+    <motion.article className={`hc-story-ad${review ? " is-review" : ""}`} transition={STORY_MOVE}>
       <div className="hc-ad-account">
-        <span className="hc-ad-avatar" aria-hidden="true">N&amp;C</span>
-        <span><strong>North &amp; Co</strong><small>Sponsored</small></span>
+        <span className="hc-ad-avatar" aria-hidden="true">{STORY_CREATIVE.avatar}</span>
+        <span><strong>{STORY_CREATIVE.account}</strong><small>Sponsored</small></span>
         <MoreHorizontal aria-hidden="true" size={18} />
       </div>
       <motion.p
-        className={`hc-ad-copy${phase === 5 ? " is-editing" : ""}`}
+        className={`hc-ad-copy${phase === 3 ? " is-editing" : ""}`}
         key={copyEdited ? "edited-copy" : "starting-copy"}
         initial={{ opacity: 0.35, y: 3 }}
         animate={{ opacity: 1, y: 0 }}
         transition={STORY_ENTER}
       >
-        {copyEdited
-          ? "Thinking of selling in Mt Lawley? See what buyers could pay for your home."
-          : example.postCopy}
-        {phase === 5 ? <span className="hc-story-caret" /> : null}
+        {copyEdited ? STORY_CREATIVE.editedCopy : STORY_CREATIVE.startingCopy}{phase === 3 ? <span className="hc-story-caret" /> : null}
       </motion.p>
-      <motion.div layoutId="story-template-image" className="hc-ad-image-wrap hc-story-ad-image" transition={STORY_MOVE}>
-        <img src={withBasePath(example.image)} alt="" width="1080" height="1350" />
+      <motion.div className="hc-ad-image-wrap hc-story-ad-image" transition={STORY_MOVE}>
+        <img src={withBasePath(STORY_CREATIVE.image)} alt="" width="1080" height="1350" />
         <motion.span
-          className={`hc-story-creative-overlay${phase === 6 ? " is-editing" : ""}`}
+          className={`hc-story-creative-overlay${phase === 4 ? " is-editing" : ""}`}
+          role="textbox"
+          aria-label="Text on creative"
+          aria-readonly="true"
+          data-editing-target="creative"
           key={creativeEdited ? "edited-creative" : "starting-creative"}
           initial={{ opacity: 0, y: 8, filter: "blur(4px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           transition={STORY_ENTER}
         >
-          {creativeEdited ? "What could your home be worth?" : "Free property appraisal"}
-          {phase === 6 ? <span className="hc-story-caret" /> : null}
+          <StoryOverlayText editing={phase === 4} edited={creativeEdited} />
         </motion.span>
       </motion.div>
       <div className="hc-ad-link">
-        <span><small>NORTHANDCO.COM.AU</small><strong>Book a free property appraisal</strong></span>
+        <span><small>{STORY_CREATIVE.domain}</small><strong>{STORY_CREATIVE.linkTitle}</strong></span>
         <span className="hc-ad-link-button">Learn more</span>
       </div>
     </motion.article>
@@ -195,7 +223,7 @@ function StoryAd({ phase, review = false }: { phase: number; review?: boolean })
 
 function TemplateBrowser({ phase }: { phase: number }) {
   const activeTemplate = STORY_TEMPLATE_SEQUENCE[Math.min(phase, STORY_TEMPLATE_SEQUENCE.length - 1)];
-  const selected = phase === 3;
+  const selected = phase === 1;
 
   return (
     <motion.div
@@ -213,7 +241,7 @@ function TemplateBrowser({ phase }: { phase: number }) {
       <div className="hc-story-template-window">
         <motion.div
           className="hc-story-template-track"
-          animate={{ x: `-${[0, 15, 31, 0][phase]}%` }}
+          animate={{ x: `-${[0, 15, 31, 0][Math.min(phase, 3)]}%` }}
           transition={STORY_MOVE}
         >
           {AD_EXAMPLES.slice(0, 3).map((example, index) => {
@@ -230,10 +258,10 @@ function TemplateBrowser({ phase }: { phase: number }) {
                   className="hc-story-template-image"
                   transition={STORY_MOVE}
                 >
-                  <img src={withBasePath(example.image)} alt="" width="1080" height="1350" />
+                  <img src={withBasePath(selected && active ? STORY_CREATIVE.image : example.image)} alt="" width="1080" height="1350" />
                   {selected && active ? <span className="hc-story-selected"><Check aria-hidden="true" size={13} /> Selected</span> : null}
                 </motion.div>
-                <span><strong>{example.label}</strong><small>Facebook &amp; Instagram</small></span>
+                <span><strong>{selected && active ? "Poolside guide" : example.label}</strong><small>Facebook &amp; Instagram</small></span>
                 {active ? <StoryCursor pressed={selected} /> : null}
               </motion.div>
             );
@@ -245,8 +273,8 @@ function TemplateBrowser({ phase }: { phase: number }) {
 }
 
 function EditorScene({ phase }: { phase: number }) {
-  const copyActive = phase === 5;
-  const creativeActive = phase === 6;
+  const copyActive = phase === 3;
+  const creativeActive = phase === 4;
 
   return (
     <motion.div
@@ -259,11 +287,9 @@ function EditorScene({ phase }: { phase: number }) {
     >
       <aside className="hc-story-mini-rail">
         <span>Templates</span>
-        {AD_EXAMPLES.slice(0, 3).map((example, index) => (
-          <div className={index === 0 ? "is-selected" : ""} key={example.id}>
-            <img src={withBasePath(example.image)} alt="" width="1080" height="1350" />
-          </div>
-        ))}
+        <div className="is-selected">
+          <img src={withBasePath(STORY_CREATIVE.image)} alt="" width="1080" height="1350" />
+        </div>
       </aside>
 
       <div className="hc-story-ad-workspace">
@@ -276,42 +302,35 @@ function EditorScene({ phase }: { phase: number }) {
         <label className={copyActive ? "is-active" : ""}>
           <span>Post copy</span>
           <motion.strong
-            key={phase >= 5 ? "new-post-copy" : "old-post-copy"}
+            key={phase >= 3 ? "new-post-copy" : "old-post-copy"}
             initial={{ opacity: 0.35 }}
             animate={{ opacity: 1 }}
             transition={STORY_ENTER}
           >
-            {phase >= 5
-              ? "Thinking of selling in Mt Lawley? See what buyers could pay..."
-              : "Thinking of selling? Find out what your home could be worth..."}
+            {phase >= 3 ? STORY_CREATIVE.editedCopy : STORY_CREATIVE.startingCopy}
             {copyActive ? <span className="hc-story-caret" /> : null}
           </motion.strong>
         </label>
         <label className={creativeActive ? "is-active" : ""}>
           <span>Text on creative</span>
           <motion.strong
-            key={phase >= 6 ? "new-creative-copy" : "old-creative-copy"}
+            key={phase >= 4 ? "new-creative-copy" : "old-creative-copy"}
             initial={{ opacity: 0.35 }}
             animate={{ opacity: 1 }}
             transition={STORY_ENTER}
           >
-            {phase >= 6 ? "What could your home be worth?" : "Free property appraisal"}
+            {phase >= 4 ? STORY_CREATIVE.editedOverlay : STORY_CREATIVE.startingOverlay}
             {creativeActive ? <span className="hc-story-caret" /> : null}
           </motion.strong>
         </label>
-        <div className="hc-story-saved">
-          <CheckCircle2 aria-hidden="true" size={14} />
-          {creativeActive ? "Creative updated" : copyActive ? "Copy updated" : "Ready to edit"}
-        </div>
       </div>
     </motion.div>
   );
 }
 
 function ReviewScene({ phase }: { phase: number }) {
-  const valuesFilled = phase >= 8;
-  const pressing = phase === 9;
-  const approved = phase >= 10;
+  const valuesFilled = phase >= 5;
+  const pressing = phase === 6;
 
   return (
     <motion.div
@@ -323,12 +342,10 @@ function ReviewScene({ phase }: { phase: number }) {
       transition={STORY_ENTER}
     >
       <div className="hc-story-review-preview">
-        <span>Finished ad</span>
         <StoryAd phase={phase} review />
       </div>
 
       <motion.div className="hc-story-review-panel" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ ...STORY_ENTER, delay: 0.14 }}>
-        <span className="hc-story-ready"><CheckCircle2 aria-hidden="true" size={14} /> Ready for approval</span>
         <h3>Review campaign</h3>
         <dl>
           {[
@@ -355,15 +372,14 @@ function ReviewScene({ phase }: { phase: number }) {
           ))}
         </dl>
         <motion.strong
-          className={`hc-story-approve${approved ? " is-approved" : ""}`}
+          className="hc-story-approve"
           animate={{ scale: pressing ? 0.97 : 1 }}
           transition={{ duration: 0.15, ease: "easeInOut" }}
         >
-          {approved ? <Check aria-hidden="true" size={15} /> : <ShieldCheck aria-hidden="true" size={15} />}
-          {approved ? "Approved" : "Approve campaign"}
+          <ShieldCheck aria-hidden="true" size={15} />
+          Approve campaign
           {pressing ? <StoryCursor pressed /> : null}
         </motion.strong>
-        <small>Nothing spends until you approve.</small>
       </motion.div>
     </motion.div>
   );
@@ -411,13 +427,9 @@ function ProcessShowcase() {
 
   useEffect(() => {
     if (!playing || !inView || !pageVisible || reduceMotion) return;
-    if (phase >= STORY_STATUS.length - 1) {
-      setPlaying(false);
-      return;
-    }
 
     const timer = window.setTimeout(
-      () => setPhase((current) => Math.min(current + 1, STORY_STATUS.length - 1)),
+      () => setPhase((current) => current >= STORY_STATUS.length - 1 ? 0 : current + 1),
       STORY_PHASE_DELAYS[phase],
     );
     return () => window.clearTimeout(timer);
@@ -437,13 +449,12 @@ function ProcessShowcase() {
     setPlaying(!reduceMotion);
   }
 
-  const scene = phase <= 3 ? "browse" : phase <= 6 ? "edit" : "review";
+  const scene = phase <= 1 ? "browse" : phase <= 4 ? "edit" : "review";
 
   return (
     <div className="hc-process-layout" ref={sectionRef}>
       <div className="hc-process-copy">
         <h2>Create real estate ads for Facebook &amp; Instagram.</h2>
-        <p>Ready-made templates. Your photos. Your brand.</p>
 
         <div className="hc-process-steps" aria-label="How Blockwise works">
           {PROCESS_STEPS.map((item, index) => (
@@ -454,14 +465,13 @@ function ProcessShowcase() {
               onClick={() => selectStep(index)}
             >
               <span className="hc-process-step-mark" aria-hidden="true" />
-              <span><strong>{item.label}</strong><small>{item.description}</small></span>
+              <span><strong>{item.label}</strong></span>
             </button>
           ))}
         </div>
 
         <div className="hc-process-actions">
           <PrimaryLink>Start free trial</PrimaryLink>
-          <span><ShieldCheck aria-hidden="true" size={16} /> You approve before spending.</span>
         </div>
       </div>
 
@@ -471,9 +481,8 @@ function ProcessShowcase() {
           <ol aria-hidden="true">
             {PROCESS_STEPS.map((item, index) => <li className={activeStep === index ? "is-active" : ""} key={item.label}>{item.label}</li>)}
           </ol>
-          <button type="button" onClick={togglePlayback} hidden={reduceMotion}>
-            {playing ? <Pause aria-hidden="true" size={15} /> : phase >= STORY_STATUS.length - 1 ? <RotateCcw aria-hidden="true" size={15} /> : <Play aria-hidden="true" size={15} />}
-            {playing ? "Pause" : phase >= STORY_STATUS.length - 1 ? "Replay" : "Resume"}
+          <button type="button" onClick={togglePlayback} hidden={reduceMotion} aria-label={playing ? "Pause preview" : "Play preview"} title={playing ? "Pause preview" : "Play preview"}>
+            {playing ? <Pause aria-hidden="true" size={15} /> : <Play aria-hidden="true" size={15} />}
           </button>
         </div>
 
@@ -487,7 +496,6 @@ function ProcessShowcase() {
             </AnimatePresence>
           </div>
         </LayoutGroup>
-        <p className="hc-process-demo-caption">Example only · Review before launch</p>
       </div>
     </div>
   );
