@@ -182,7 +182,7 @@ describe("email outbox", () => {
     const supabase = makeSupabase();
     await scheduleFollowUpEmail({
       to: "customer@example.com", from: "hello@blockwise.sale", subject: "Follow up", text: "Tomorrow",
-      scheduledAt: "2099-01-01T09:00:00.000Z", leadId: "lead-1", supabase,
+      scheduledAt: "2099-01-01T09:00:00.000Z", leadId: "lead-1", authorization: { legalBasis: "express_consent", approvedRecipientAt: "2026-09-07T00:00:00.000Z", approvedContentId: "content-1", approvedAt: "2026-09-07T00:00:00.000Z" }, supabase,
     });
     assert.equal(supabase.outbox[0].next_attempt_at, "2099-01-01T09:00:00.000Z");
   });

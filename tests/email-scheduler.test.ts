@@ -20,6 +20,7 @@ test("email drain scheduler fails closed and signs the internal request", () => 
   assert.match(source, /node -e/);
   assert.doesNotMatch(source, /openssl dgst -sha256 -hmac/);
   assert.match(source, /BLOCKWISE_INTERNAL_AUTH_SECRET/);
+  assert.match(source, /EMAIL_OUTBOX_DELIVERY_ENABLED/);
   const unit = readFileSync("infra/product/systemd/blockwise-email-outbox-drain.timer", "utf8");
   assert.match(unit, /OnUnitActiveSec=1min/);
   assert.match(unit, /Persistent=true/);
