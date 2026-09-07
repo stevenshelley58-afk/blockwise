@@ -3,7 +3,7 @@ import { createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import { parseAndVerifySignedRequest } from "../src/lib/meta/data-deletion.ts";
+import { metadataMatchesMetaUserId, parseAndVerifySignedRequest } from "../src/lib/meta/data-deletion.ts";
 
 function base64UrlEncode(value: Buffer | string) {
   return Buffer.from(value).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/u, "");
@@ -35,6 +35,14 @@ test("Meta data deletion signed_request verification rejects tampered signatures
   const result = parseAndVerifySignedRequest(`bad.${signedRequest.split(".")[1]}`, "secret");
 
   assert.deepEqual(result, { ok: false, error: "signed_request signature is invalid." });
+});
+
+
+test("Meta deauthorization matches only the persisted app-scoped user id", () => {
+  assert.equal(metadataMatchesMetaUserId({ metaUserId: "app_user_123" }, "app_user_123"), true);
+  assert.equal(metadataMatchesMetaUserId({ meta: { metaUserId: "app_user_123" } }, "app_user_123"), true);
+  assert.equal(metadataMatchesMetaUserId({ metaUserId: "other_user" }, "app_user_123"), false);
+  assert.equal(metadataMatchesMetaUserId({ metaAdAccountId: "123" }, "app_user_123"), false);
 });
 
 test("Meta connection revocation only writes columns that exist on provider_connections", () => {
