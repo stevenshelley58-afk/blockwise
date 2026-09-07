@@ -16,6 +16,7 @@ do $$ begin create role authenticated nologin; exception when duplicate_object t
 do $$ begin create role service_role nologin bypassrls; exception when duplicate_object then null; end $$;
 SQL
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < "$migration"
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < "$root/infra/product/post-migrate-api-grants.sql"
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d postgres <<'SQL'
 do $$ declare r text; acl text[]; begin
   foreach r in array array['outreach_area_snapshots','outreach_prospects','outreach_campaign_drafts'] loop
