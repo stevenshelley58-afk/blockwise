@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AdDocumentParsed } from "../../../packages/ad-template-contract/src/schema";
 import type { AdTemplate } from "../../../packages/ad-template-contract/src/types";
-import { documentToken } from "./document-token.ts";
+import { documentToken, sha256Hex } from "./document-token.ts";
 import { metaCopyLimitIssues } from "./meta-copy-contract.ts";
 
 // ---------------------------------------------------------------------------
@@ -55,13 +55,13 @@ export function validateMetaCopyForSave(copy: Pick<AdDocumentParsed, "metaPrimar
 
 /**
  * `ad_revisions.template_hash` predates direct templates and remains NOT NULL
- * for compatibility with immutable historical revisions. Direct templates do
- * not have a pack/content hash: their ingest contract makes `templateId`
- * create-only and replay-safe. Store that stable identity explicitly instead
- * of inventing a hash or weakening the revision constraint.
+ * for compatibility with immutable historical revisions. Direct templates use
+ * the sha256 identity of their immutable canonical JSON, so preview, save, and
+ * export can refer to the exact same template. The legacy ID identity remains
+ * only for callers that do not have the template instance available.
  */
-export function directTemplateRevisionIdentity(templateId: string): string {
-  return `blockwise.ad-template:${templateId}`;
+export function directTemplateRevisionIdentity(templateId: string, template?: AdTemplate): string {
+  return template ? `sha256:${sha256Hex(template)}` : `blockwise.ad-template:${templateId}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -146,7 +146,7 @@ export async function saveAd(input: SaveAdInput): Promise<SaveAdOutput> {
       feed_png_path: feedResult.path,
       story_png_hash: storyResult.hash,
       story_png_path: storyResult.path,
-      template_hash: directTemplateRevisionIdentity(templatePack.templateId),
+      template_hash: directTemplateRevisionIdentity(templatePack.templateId, templatePack),
       renderer_version: String.fromCharCode(98,108,111,99,107,119,105,115,101,45,97,100,45,116,101,109,112,108,97,116,101,45,114,101,110,100,101,114,101,114),
     },
     p_attempts: [
@@ -247,7 +247,7 @@ async function renderPlacementSafe(
   } else {
     // Production — full render via @blockwise/ad-template-renderer.
     // Renders the pack with customer image/text values and colour map.
-    const renderer = await import("../../../packages/ad-template-renderer/src/renderer");
+    const renderer = await import("../../../packages/ad-template-renderer/src/renderer.ts");
     const result = await renderer.renderPlacement(
       {
         template: pack,

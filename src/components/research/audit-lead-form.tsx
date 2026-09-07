@@ -1,5 +1,7 @@
 "use client";
 
+import { trackMarketingEvent } from "@/lib/analytics/marketing";
+
 import { useRef, useState, type FormEvent } from "react";
 
 type Metrics = {
@@ -82,7 +84,7 @@ export function AuditLeadForm({ area, label, signupHref, metrics, analytics }: A
   }
 
   return (
-    <form onSubmit={onSubmit} onFocusCapture={onFirstInteraction}>
+    <form onSubmit={onSubmit} onFocusCapture={onFirstInteraction} data-clarity-mask="true">
       <div className="form-row">
         <label>
           Work email
@@ -139,7 +141,7 @@ function fireSafe(event: string, props: Record<string, string | number | boolean
     // pixel may be blocked
   }
   try {
-    w.gtag?.("event", event, props);
+    trackMarketingEvent(event, props);
   } catch {
     // gtag may be absent
   }

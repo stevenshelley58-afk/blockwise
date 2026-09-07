@@ -1,0 +1,13 @@
+SOLD-PRICE LIST LEAD AD COPY
+
+Primary text:
+See recent disclosed sale prices for [home type] in [Suburb], covering [start date] to [end date]. Request the list for addresses, sale dates and factual descriptions. It is market context, not a valuation. [Agency] will deliver the list and explain what happens next.
+
+Headline:
+Recent [home type] sales in [Suburb]
+
+Call to action:
+Learn more
+
+Form promise:
+Request the list. Optional marketing updates are a separate choice.

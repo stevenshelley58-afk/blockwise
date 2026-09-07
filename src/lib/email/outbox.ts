@@ -201,6 +201,25 @@ export async function drainEmailOutbox(
       continue;
     }
 
+    if (row.message_type === "lead_followup") {
+      if (!hasFollowUpAuthorization(row.payload)) {
+        const finalized = await finalizeRow(supabase, row.id, leaseToken, { status: "dead", lastError: "follow_up_authorization_missing", projection });
+        if (finalized) summary.dead += 1; else summary.failed += 1;
+        continue;
+      }
+      try {
+        if (await isFollowUpStopped(supabase, row.recipient)) {
+          const finalized = await finalizeRow(supabase, row.id, leaseToken, { status: "suppressed", lastError: "follow_up_stopped_by_lifecycle", projection });
+          if (finalized) summary.suppressed += 1; else summary.failed += 1;
+          continue;
+        }
+      } catch {
+        await finalizeRow(supabase, row.id, leaseToken, { status: "failed", lastError: "follow_up_lifecycle_check_unavailable", nextAttemptAt: retryAt(row.attempts), projection });
+        summary.failed += 1;
+        continue;
+      }
+    }
+
     const message = toMessage(row);
     if (!message) {
       // Enqueue without content: dead-letter, never deliver a broken body.
@@ -251,6 +270,22 @@ export async function drainEmailOutbox(
 
   await projectPendingEmailSettlements(supabase);
   return summary;
+}
+
+function hasFollowUpAuthorization(payload: Record<string, unknown> | null): boolean {
+  const value = payload?.followUpAuthorization;
+  if (!value || typeof value !== "object") return false;
+  const authorization = value as Record<string, unknown>;
+  return (authorization.legalBasis === "express_consent" || authorization.legalBasis === "existing_customer") &&
+    typeof authorization.approvedRecipientAt === "string" && !Number.isNaN(Date.parse(authorization.approvedRecipientAt)) &&
+    typeof authorization.approvedContentId === "string" && authorization.approvedContentId.trim().length > 0 &&
+    typeof authorization.approvedAt === "string" && !Number.isNaN(Date.parse(authorization.approvedAt));
+}
+
+async function isFollowUpStopped(supabase: SupabaseClient, email: string): Promise<boolean> {
+  const { data, error } = await supabase.from("email_lifecycle_events").select("id").eq("email", email.toLowerCase().trim()).in("event_type", ["lead.replied", "lead.converted"]).limit(1);
+  if (error) throw new Error("email_lifecycle_events check failed: " + error.message);
+  return Array.isArray(data) && data.length > 0;
 }
 
 function retryAt(attempts: number): string {

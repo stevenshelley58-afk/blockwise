@@ -1,0 +1,4 @@
+address,suburb,property_type,sale_price,sale_date,description,fictional_example
+"14 Examplegum Way","Dianella","single-storey detached","742000","2026-05-12","3 bed; 512 m2; example only",true
+"8 Placeholder Street","Dianella","single-storey detached","765000","2026-06-28","3 bed; 488 m2; example only",true
+"2 Samplegum Crescent","Dianella","single-storey detached","718000","2026-07-03","2 bed; 460 m2; example only",true

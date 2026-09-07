@@ -97,6 +97,8 @@ const nextConfig: NextConfig = {
       "https://www.google-analytics.com",
       "https://analytics.google.com",
       "https://www.googletagmanager.com",
+      "https://www.clarity.ms",
+      "https://c.clarity.ms",
     ]
       .filter((value): value is string => Boolean(value))
       .join(" ");
@@ -132,7 +134,7 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://www.googletagmanager.com https://va.vercel-scripts.com",
+              "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://www.googletagmanager.com https://www.clarity.ms https://va.vercel-scripts.com",
               "style-src 'self' 'unsafe-inline'",
               "img-src " + imgSrc,
               "media-src " + mediaSrc,

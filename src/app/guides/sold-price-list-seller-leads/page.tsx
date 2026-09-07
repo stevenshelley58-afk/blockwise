@@ -1,29 +1,22 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 
 import { ArticleProgress } from "@/components/guides/article-progress";
+import { GuideCopyBlock } from "@/components/guides/guide-copy-block";
 import { GuidesShell } from "@/components/guides/guides-shell";
 
 import "../guides.css";
 
 const title = "How to win seller leads with a suburb sold-price list";
-const description =
-  "Build a suburb-specific sold-price resource, promote it with a Meta lead ad, and use the follow-up to identify homeowners considering a sale.";
+const description = "Build a suburb-specific sold-price resource, promote it with a Meta lead ad, and use the follow-up to identify homeowners considering a sale.";
 const canonical = "/guides/sold-price-list-seller-leads";
 
 export const metadata: Metadata = {
   title,
   description,
   alternates: { canonical },
-  openGraph: {
-    type: "article",
-    title,
-    description,
-    url: canonical,
-    images: [{ url: "/guides/sold-price-list/hero.webp", width: 1920, height: 1080, alt: "Established homes along a tree-lined suburban street" }],
-  },
-  twitter: { card: "summary_large_image", title, description, images: ["/guides/sold-price-list/hero.webp"] },
+  openGraph: { type: "article", title, description, url: canonical },
+  twitter: { card: "summary", title, description },
 };
 
 const articleSchema = {
@@ -32,338 +25,110 @@ const articleSchema = {
   headline: title,
   description,
   datePublished: "2026-07-15",
-  dateModified: "2026-07-24",
+  dateModified: "2026-09-07",
   author: { "@type": "Organization", name: "Blockwise" },
   publisher: { "@type": "Organization", name: "Blockwise", url: "https://blockwise.sale" },
-  image: "https://blockwise.sale/guides/sold-price-list/hero.webp",
   mainEntityOfPage: `https://blockwise.sale${canonical}`,
 };
+
+const faqItems = [
+  ["Is a sold-price list the same as a property valuation?", "No. It is recent, disclosed market evidence for a defined group of properties, not a valuation of one home."],
+  ["Should I use an instant form or a website form?", "An instant form is a sensible first test for a fast mobile submission. A website form suits a flow that needs more explanation or an on-site action."],
+  ["How often should I update the list?", "Choose a frequency you can maintain. Monthly may suit an active suburb; a slower market may need a longer interval. Show the last-updated date."],
+];
 
 const faqSchema = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
-  mainEntity: [
-    {
-      "@type": "Question",
-      name: "Is a sold-price list the same as a property valuation?",
-      acceptedAnswer: { "@type": "Answer", text: "No. It provides recent local market evidence for a defined group of properties, not a valuation of a specific home." },
-    },
-    {
-      "@type": "Question",
-      name: "Should I use an instant form or a website form?",
-      acceptedAnswer: { "@type": "Answer", text: "An instant form is a sensible first test for a fast mobile submission. A website form suits flows that need more explanation or an on-site action." },
-    },
-    {
-      "@type": "Question",
-      name: "How often should I update the list?",
-      acceptedAnswer: { "@type": "Answer", text: "Choose a frequency you can maintain. Monthly can suit an active suburb, while slower markets may need a longer interval." },
-    },
-  ],
+  mainEntity: faqItems.map(([name, text]) => ({ "@type": "Question", name, acceptedAnswer: { "@type": "Answer", text } })),
 };
 
 export default function SoldPriceListGuidePage() {
   return (
     <GuidesShell>
       <ArticleProgress />
-      <main id="main-content">
-        <article className="bw-article">
-          <header className="bw-article-hero">
-            <div className="bw-article-hero-copy">
-              <div className="bw-article-breadcrumbs">
-                <Link href="/guides">Guides</Link>
-                <span aria-hidden>/</span>
-                <span>Seller leads</span>
-              </div>
-              <p className="bw-guides-label">The practical playbook</p>
-              <h1>{title}</h1>
-              <p className="bw-article-deck">
-                Build a suburb-specific sold-price resource, promote it with a Meta lead ad, and use the follow-up to identify homeowners considering a sale.
-              </p>
-              <div className="bw-article-byline">
-                <span>By Blockwise</span>
-                <span>15 July 2026</span>
-                <span>12 minute read</span>
-              </div>
-            </div>
-            <div className="bw-article-hero-media">
-              <Image
-                src="/guides/sold-price-list/hero.webp"
-                alt="Established homes along a tree-lined suburban street"
-                fill
-                priority
-                sizes="100vw"
-              />
-              <div className="bw-hero-map-key" aria-hidden>
-                <span>One suburb</span>
-                <span>One home type</span>
-                <span>One useful list</span>
-              </div>
-              <div className="bw-hero-pin bw-hero-pin-one" aria-hidden><span /></div>
-              <div className="bw-hero-pin bw-hero-pin-two" aria-hidden><span /></div>
-              <div className="bw-hero-pin bw-hero-pin-three" aria-hidden><span /></div>
-            </div>
-          </header>
-
-          <div className="bw-article-at-glance">
-            <h2>At a glance</h2>
-            <dl>
-              <div><dt>Offer</dt><dd>Recent sold prices in one suburb</dd></div>
-              <div><dt>Setup time</dt><dd>60 to 90 minutes</dd></div>
-              <div><dt>Initial test</dt><dd>A$25 to A$30 daily for 14 days</dd></div>
-              <div><dt>Primary metric</dt><dd>Cost per valid homeowner lead</dd></div>
-              <div><dt>Review point</dt><dd>After enough leads to assess quality</dd></div>
-              <div><dt>Compliance</dt><dd>Data rights, consent, unsubscribe</dd></div>
-            </dl>
+      <main id="main-content"><article className="bw-article">
+        <header className="bw-article-hero">
+          <div className="bw-article-hero-copy">
+            <div className="bw-article-breadcrumbs"><Link href="/guides">Guides</Link><span aria-hidden>/</span><span>Seller leads</span></div>
+            <p className="bw-guides-label">The practical playbook</p>
+            <h1>{title}</h1>
+            <p className="bw-article-deck">{description}</p>
+            <div className="bw-article-byline"><span>Blockwise</span><span>Updated 7 September 2026</span><span>6 minute read</span></div>
           </div>
+        </header>
 
-          <div className="bw-article-body">
-            <aside className="bw-article-toc" aria-label="On this page">
-              <strong>On this page</strong>
-              <a href="#why">Why it works</a>
-              <a href="#list-framework">The LIST framework</a>
-              <a href="#campaign">Build the campaign</a>
-              <a href="#follow-up">Follow up</a>
-              <a href="#measure">Measure the test</a>
-            </aside>
+        <div className="bw-article-at-glance"><h2>At a glance</h2><dl>
+          <div><dt>Offer</dt><dd>Recent disclosed sales for one suburb and home type</dd></div>
+          <div><dt>Setup</dt><dd>60–90 minutes, after data and image rights are confirmed</dd></div>
+          <div><dt>Example test</dt><dd>A$25–A$30 daily for 14 days</dd></div>
+          <div><dt>Measure</dt><dd>Cost per valid, contactable homeowner</dd></div>
+          <div><dt>Compliance</dt><dd>Data rights, privacy notice and separate marketing consent</dd></div>
+        </dl></div>
 
-            <div className="bw-article-prose">
-              <section className="bw-opening" id="why">
-                <p className="bw-drop-intro">
-                  <span>Most seller ads ask for too much, too soon.</span> “What is your home worth?” sounds useful, but it also signals an appraisal call. An owner at the beginning of the decision may not be ready for that conversation. They may be ready to see what comparable homes nearby have sold for.
-                </p>
+        <div className="bw-article-body"><aside className="bw-article-toc" aria-label="On this page">
+          <strong>On this page</strong><a href="#why">Why this offer</a><a href="#build">Build the list</a><a href="#campaign">Set up the campaign</a><a href="#form">Form and consent</a><a href="#delivery">Deliver and follow up</a><a href="#measure">Measure it</a>
+        </aside><div className="bw-article-prose">
+          <section id="why" className="bw-opening">
+            <p className="bw-drop-intro"><span>Make the first ask useful and small.</span> “What is your home worth?” can sound like an appraisal request. A defined list of comparable, disclosed sales gives a homeowner local context before they are ready for a valuation conversation.</p>
+            <p>A sold-price list is an early-intent resource, not a promise of a listing. The ad introduces the list; the list earns the next conversation.</p>
+            <figure className="bw-stat-spread"><div className="bw-stat-ring" aria-label="75 percent"><strong>75%</strong></div><figcaption><p>In a 2024 realestate.com.au survey of sellers using online sources (n=1,023), 75% reported looking at sold-property listings when finding an agent.</p><span className="bw-stat-source">External survey context; not evidence that this campaign will perform.</span><a href="https://customer.realestate.com.au/agent-resources/agency-marketplace/seller-leads-best-practice/" target="_blank" rel="noreferrer">Source: realestate.com.au seller-leads guidance</a></figcaption></figure>
+          </section>
 
-                <figure className="bw-stat-spread">
-                  <div className="bw-stat-ring" aria-label="75 percent">
-                    <svg viewBox="0 0 180 180" role="img" aria-labelledby="seller-stat-title seller-stat-desc">
-                      <title id="seller-stat-title">75% of sellers look at sold property listings</title>
-                      <desc id="seller-stat-desc">Three quarters of the circle is highlighted.</desc>
-                      <circle cx="90" cy="90" r="70" pathLength="100" className="bw-stat-ring-track" />
-                      <circle cx="90" cy="90" r="70" pathLength="100" className="bw-stat-ring-value" />
-                    </svg>
-                    <strong>75%</strong>
-                  </div>
-                  <figcaption>
-                    <p>of sellers look at sold-property listings to help them find an agent.</p>
-                    <span className="bw-stat-source">External benchmark · realestate.com.au seller-leads guidance, accessed July 2026</span>
-                    <a href="https://customer.realestate.com.au/resource-hub/agency-marketplace/how-to-agency-marketplace/articles/seller-leads-best-practice/" target="_blank" rel="noreferrer">
-                      Source: realestate.com.au seller-leads guidance
-                    </a>
-                  </figcaption>
-                </figure>
-
-                <p>
-                  A focused sold-price list meets that behaviour with a clear offer instead of a generic promise about service. The list is the offer. The ad only introduces it.
-                </p>
-              </section>
-
-              <section className="bw-flow-section" aria-labelledby="flow-title">
-                <div className="bw-section-heading">
-                  <span>What the campaign actually does</span>
-                  <h2 id="flow-title">Turn quiet research into a useful conversation.</h2>
-                </div>
-                <div className="bw-signal-flow" role="img" aria-label="A five-step flow from local sold evidence to a homeowner conversation">
-                  <div><b>01</b><strong>Sold evidence</strong><span>Current, disclosed local results</span></div>
-                  <span className="bw-flow-arrow" aria-hidden>→</span>
-                  <div><b>02</b><strong>Focused ad</strong><span>One suburb, one property type</span></div>
-                  <span className="bw-flow-arrow" aria-hidden>→</span>
-                  <div><b>03</b><strong>Short form</strong><span>A clear request, not an appraisal</span></div>
-                  <span className="bw-flow-arrow" aria-hidden>→</span>
-                  <div><b>04</b><strong>Fast delivery</strong><span>The list arrives immediately</span></div>
-                  <span className="bw-flow-arrow" aria-hidden>→</span>
-                  <div><b>05</b><strong>Conversation</strong><span>Offer context on comparable sales</span></div>
-                </div>
-                <p className="bw-article-note">This is an early-intent campaign. Its job is to identify owners who care enough about comparable sales to ask for the detail, not to manufacture an immediate listing.</p>
-              </section>
-
-              <section id="list-framework" className="bw-list-section">
-                <div className="bw-section-heading bw-section-heading-split">
-                  <span>The Blockwise LIST framework</span>
-                  <h2>Four checks before you spend a dollar.</h2>
-                  <p>Specificity is the qualification mechanism. If the right owner cannot recognise themselves in the offer, the campaign is too broad.</p>
-                </div>
-
-                <div className="bw-field-image">
-                  <Image
-                    src="/guides/sold-price-list/field-notes.webp"
-                    alt="Printed photos of homes arranged with a map and working notes"
-                    fill
-                    sizes="(max-width: 800px) 100vw, 64vw"
-                  />
-                  <span>Build the evidence before the ad</span>
-                </div>
-
-                <div className="bw-list-grid">
-                  <div className="bw-list-item"><b>L</b><div><h3>Localise</h3><p>Pick one suburb, or two adjoining suburbs when sales volume is thin.</p><span>Good: Recent sales in Scarborough</span></div></div>
-                  <div className="bw-list-item"><b>I</b><div><h3>Isolate</h3><p>Choose one property characteristic an owner can recognise instantly.</p><span>Good: Villas in Yokine</span></div></div>
-                  <div className="bw-list-item"><b>S</b><div><h3>Source</h3><p>Use current, disclosed results and media you are licensed to republish.</p><span>Good: Date, price, address, approved photo</span></div></div>
-                  <div className="bw-list-item"><b>T</b><div><h3>Tie to follow-up</h3><p>Connect delivery, consent, lead ownership and the next useful message.</p><span>Good: Immediate delivery, named owner, clear opt-out</span></div></div>
-                </div>
-              </section>
-
-              <section className="bw-text-section">
-                <h2>1. Pick the patch you want to win</h2>
-                <p>Start with the suburb where you want more listings, not simply the area with the largest number of transactions.</p>
-                <p>One suburb is usually enough. If it has too few disclosed sales, extend the reporting period before expanding the geography. Six months of coherent local results is a clearer offer than three months of scattered sales across five suburbs.</p>
-                <div className="bw-contrast-row">
-                  <div><span>Focused</span><strong>Single-storey homes sold in Dianella</strong></div>
-                  <div><span>Too broad</span><strong>Perth property market update</strong></div>
-                </div>
-              </section>
-
-              <section className="bw-text-section">
-                <h2>2. Build a list worth requesting</h2>
-                <p>The lead magnet has to keep the promise made by the ad. Include the address, disclosed sale price, sale date, a factual property description, a permitted image and the date the list was last updated.</p>
-                <div className="bw-source-checklist">
-                  <h3>The source check</h3>
-                  <ul>
-                    <li><span aria-hidden>✓</span> Use agency records or an authorised data provider.</li>
-                    <li><span aria-hidden>✓</span> Confirm the terms allow republication.</li>
-                    <li><span aria-hidden>✓</span> Leave withheld prices out.</li>
-                    <li><span aria-hidden>✓</span> Use images the agency owns or is licensed to use.</li>
-                  </ul>
-                </div>
-                <p>Do not assume that because a result or image is visible on a property portal, it is free to copy into your page or advertising.</p>
-              </section>
-
-              <section id="campaign" className="bw-campaign-section">
-                <div className="bw-section-heading">
-                  <span>The controlled test</span>
-                  <h2>Build one campaign you can read clearly.</h2>
-                </div>
-                <div className="bw-campaign-settings">
-                  <dl>
-                    <div><dt>Objective</dt><dd>Leads</dd></div>
-                    <div><dt>Special Ad Category</dt><dd>Housing, when applicable</dd></div>
-                    <div><dt>Conversion location</dt><dd>Instant form</dd></div>
-                    <div><dt>Placements</dt><dd>Advantage+ unless evidence says otherwise</dd></div>
-                    <div><dt>Schedule</dt><dd>14 days with a named review date</dd></div>
-                  </dl>
-                </div>
-
-                <figure className="bw-budget-chart">
-                  <figcaption>
-                    <span>Planning example</span>
-                    <strong>A$350–A$420</strong>
-                    <p>A$25–A$30 a day across a 14-day test. This is a planning range, not a universal benchmark.</p>
-                  </figcaption>
-                  <div className="bw-budget-bars" aria-label="Fourteen daily budget bars from A$25 to A$30">
-                    {Array.from({ length: 14 }, (_, index) => (
-                      <div key={index}><span style={{ height: `${54 + (index % 4) * 7}%` }} /><b>{index + 1}</b></div>
-                    ))}
-                  </div>
-                  <div className="bw-budget-axis"><span>Day 1</span><span>Review on day 14</span></div>
-                </figure>
-
-                <p>
-                  Use a lifetime budget if you need a hard campaign cap. With a daily budget, Meta describes the amount as an average and may spend more on an individual day while balancing spend across the week.
-                </p>
-              </section>
-
-              <section className="bw-creative-section">
-                <div className="bw-section-heading bw-section-heading-split">
-                  <span>The creative</span>
-                  <h2>Explain the list before you explain yourself.</h2>
-                  <p>Use a local home that matches the property type. Keep the visual ordinary and recognisable. This is market evidence, not a trophy-home advertisement.</p>
-                </div>
-                <div className="bw-copy-specimen">
-                  <div className="bw-copy-specimen-labels"><span>Primary text</span><span>Copy specimen</span></div>
-                  <blockquote>See the latest disclosed sale prices for single-storey homes in <mark>[Suburb]</mark>. The list covers the past <mark>[period]</mark>, includes photos and sale dates, and is updated <mark>[frequency]</mark>.</blockquote>
-                  <div className="bw-copy-specimen-foot"><strong>Recent single-storey sales in [Suburb]</strong><span>Learn more</span></div>
-                </div>
-                <p>Avoid presenting the list as a valuation. Comparable sales provide market context; they do not establish what a specific property will sell for.</p>
-              </section>
-
-              <section id="follow-up" className="bw-followup-section">
-                <div className="bw-section-heading">
-                  <span>Delivery and consent</span>
-                  <h2>Keep the promise before starting the pitch.</h2>
-                </div>
-                <p>The thank-you screen and first email should link directly to the list. Delivering the requested resource is one action. Adding someone to ongoing marketing is another.</p>
-                <div className="bw-timeline">
-                  <div><b>Now</b><span /><section><h3>Deliver the list</h3><p>Put the resource on the thank-you screen and in the first email.</p></section></div>
-                  <div><b>Same day</b><span /><section><h3>Offer context</h3><p>Ask whether they want help identifying the closest comparable sales.</p></section></div>
-                  <div><b>Day 2–3</b><span /><section><h3>Add one local observation</h3><p>Share something useful, not a disguised appraisal demand.</p></section></div>
-                  <div><b>Next update</b><span /><section><h3>Send only with consent</h3><p>Identify the sender and include a working opt-out.</p></section></div>
-                </div>
-                <aside className="bw-compliance-note">
-                  <strong>Consent check</strong>
-                  <p>Commercial email and SMS require consent, accurate sender identification and a working unsubscribe method. ACMA says unsubscribe requests must be honoured within five working days.</p>
-                  <a href="https://www.acma.gov.au/avoid-sending-spam" target="_blank" rel="noreferrer">Read the ACMA guidance →</a>
-                </aside>
-              </section>
-
-              <section id="measure" className="bw-measure-section">
-                <div className="bw-section-heading">
-                  <span>At the review date</span>
-                  <h2>Measure the path, not just the form submit.</h2>
-                </div>
-                <div className="bw-measure-table" role="table" aria-label="Measures for reviewing the campaign">
-                  <div role="row" className="bw-measure-head"><span role="columnheader">Measure</span><span role="columnheader">What it tells you</span></div>
-                  {[
-                    ["Form completion", "Whether the offer and form are easy to understand"],
-                    ["Cost per lead", "What Meta charged for each submitted form"],
-                    ["Owner-qualified rate", "Whether the offer attracted the people it named"],
-                    ["Contactable rate", "Whether the details and review step did their job"],
-                    ["Conversation rate", "Whether follow-up continued the promise of the ad"],
-                    ["Appraisal and listing outcomes", "What progressed commercially, and how long it took"],
-                  ].map(([measure, meaning]) => (
-                    <div role="row" key={measure}><strong role="cell">{measure}</strong><span role="cell">{meaning}</span></div>
-                  ))}
-                </div>
-                <div className="bw-decision-strip">
-                  <div><b>Continue</b><span>The right owners are responding and the follow-up works.</span></div>
-                  <div><b>Revise</b><span>The offer is relevant but the creative, form or delivery is weak.</span></div>
-                  <div><b>Stop</b><span>The audience, data maintenance or economics do not support another test.</span></div>
-                </div>
-              </section>
-
-              <section className="bw-blockwise-cta">
-                <div>
-                  <span>Where Blockwise fits</span>
-                  <h2>Bring the ad, form, approval and lead path together.</h2>
-                  <p>You still own the data source and permission to use it. Blockwise helps turn the offer into on-brand creative, prepare the campaign and form, show publishing readiness and bring incoming Meta leads into one review path.</p>
-                </div>
-                <Link href="/signup">Build the campaign <span aria-hidden>→</span></Link>
-              </section>
-
-              <section className="bw-faq-section">
-                <div className="bw-section-heading">
-                  <span>Questions</span>
-                  <h2>The practical details.</h2>
-                </div>
-                <details><summary>Is a sold-price list the same as a property valuation?</summary><p>No. It shows disclosed results for a defined group of properties. It gives an owner local market evidence, but it does not account for every feature or factor affecting their home.</p></details>
-                <details><summary>Should the ad show the sold prices?</summary><p>It can show a verified example if you have the right to use it, but the ad does not need to reveal the full list. Make clear that the requested resource contains the disclosed results.</p></details>
-                <details><summary>Should I use an instant form or a website form?</summary><p>An instant form is a sensible first test for a fast mobile submission. A website form may suit a flow that needs more explanation or an on-site action.</p></details>
-                <details><summary>How often should I update the list?</summary><p>Choose a frequency you can maintain. Monthly can suit an active suburb, while a slower market may need a longer interval. Always show the last-updated date.</p></details>
-              </section>
-
-              <footer className="bw-article-sources">
-                <h2>Sources and further reading</h2>
-                <ol>
-                  <li><a href="https://customer.realestate.com.au/resource-hub/agency-marketplace/how-to-agency-marketplace/articles/seller-leads-best-practice/" target="_blank" rel="noreferrer">Seller Leads Best Practice Guide, realestate.com.au</a> <span className="bw-source-claim">— supports the 75% sold-price listing statistic</span></li>
-                  <li><a href="https://www.facebook.com/business/ads/ad-objectives/lead-generation/lead-ads-with-forms" target="_blank" rel="noreferrer">Lead ads with forms, Meta for Business</a> <span className="bw-source-claim">— supports instant form setup</span></li>
-                  <li><a href="https://www.facebook.com/business/ads/meta-advantage-plus/leads" target="_blank" rel="noreferrer">Advantage+ leads campaigns, Meta for Business</a> <span className="bw-source-claim">— supports Advantage+ default setup</span></li>
-                  <li><a href="https://www.facebook.com/business/ads/pricing" target="_blank" rel="noreferrer">Facebook and Instagram ad budgets, Meta for Business</a> <span className="bw-source-claim">— supports daily budget averaging</span></li>
-                  <li><a href="https://www.acma.gov.au/avoid-sending-spam" target="_blank" rel="noreferrer">Avoid sending spam, Australian Communications and Media Authority</a> <span className="bw-source-claim">— supports consent and unsubscribe requirements</span></li>
-                  <li><a href="https://www.oaic.gov.au/privacy/privacy-guidance-for-organisations-and-government-agencies/organisations/direct-marketing" target="_blank" rel="noreferrer">Direct marketing, Office of the Australian Information Commissioner</a> <span className="bw-source-claim">— supports direct marketing and privacy obligations</span></li>
-                </ol>
-                <p className="bw-last-reviewed">Last reviewed: 24 July 2026</p>
-              </footer>
-
-              <nav className="bw-guide-nav" aria-label="More guides">
-                <Link href="/guides/downsizing-ad-seller-leads" className="bw-guide-nav-link">
-                  <span>Next guide</span>
-                  <strong>How to use a downsizer campaign to uncover seller intent</strong>
-                </Link>
-                <Link href="/guides/lead-follow-up-playbook" className="bw-guide-nav-link">
-                  <span>Related guide</span>
-                  <strong>A practical follow-up cadence for real estate leads</strong>
-                </Link>
-              </nav>
+          <section id="build" className="bw-list-section"><div className="bw-section-heading"><span>Before the ad</span><h2>Build evidence you have the right to share.</h2><p>Data rights are a prerequisite, not a 60–90 minute shortcut. Confirm source terms, permission for every image and the lawful basis for any personal information before estimating setup time.</p></div>
+            <div className="bw-list-grid">
+              <div className="bw-list-item"><b>1</b><div><h3>Choose a patch</h3><p>One suburb, reporting period and recognisable home type.</p><span>Example: detached, single-storey homes in Dianella sold in the last six months</span></div></div>
+              <div className="bw-list-item"><b>2</b><div><h3>Verify each row</h3><p>Address, disclosed price, sale date, factual description and last-updated date.</p><span>Leave withheld prices out; do not pad the list</span></div></div>
+              <div className="bw-list-item"><b>3</b><div><h3>Clear media rights</h3><p>Use an agency-owned image or a licence that allows this page and ad.</p><span>Portal visibility is not permission to republish</span></div></div>
+              <div className="bw-list-item"><b>4</b><div><h3>Make it usable</h3><p>Publish a mobile-friendly PDF or page with the scope and update date.</p><span>Include a plain “not a valuation” note</span></div></div>
             </div>
-          </div>
-        </article>
-      </main>
+          </section>
+
+          <section className="bw-text-section"><h2>Synthetic sample: what a row looks like</h2><p>These addresses and figures are fictional examples for teaching. They are not real sales, listings or market evidence.</p>
+            <div className="bw-measure-table" role="table" aria-label="Synthetic sold-price list"><div role="row" className="bw-measure-head"><span role="columnheader">Address</span><span role="columnheader">Sold</span><span role="columnheader">Date</span><span role="columnheader">Description</span></div>
+              <div role="row"><span role="cell">14 Examplegum Way, Dianella WA 6000</span><span role="cell">A$742,000</span><span role="cell">12 May 2026</span><span role="cell">3 bed, single-storey, 512 m² (fictional)</span></div>
+              <div role="row"><span role="cell">8 Placeholder Street, Dianella WA 6000</span><span role="cell">A$765,000</span><span role="cell">28 June 2026</span><span role="cell">3 bed, single-storey, 488 m² (fictional)</span></div>
+              <div role="row"><span role="cell">2 Samplegum Crescent, Dianella WA 6000</span><span role="cell">A$718,000</span><span role="cell">3 July 2026</span><span role="cell">2 bed, single-storey, 460 m² (fictional)</span></div>
+            </div>
+            <a href="/guides/resources/sold-price-list-seller-leads/synthetic-sold-price-list.csv" download>Download the synthetic CSV template</a>
+          </section>
+
+          <section id="campaign" className="bw-campaign-section"><div className="bw-section-heading"><span>Controlled test</span><h2>One offer, one readable campaign.</h2></div>
+            <div className="bw-campaign-settings"><dl><div><dt>Objective</dt><dd>Leads</dd></div><div><dt>Housing category</dt><dd>Check the current account requirement for housing-related ads</dd></div><div><dt>Conversion</dt><dd>Instant form or a website form; choose one for the first test</dd></div><div><dt>Budget example</dt><dd>A$25–A$30 daily for 14 days, A$350–A$420 before account charges</dd></div><div><dt>Review</dt><dd>Broken links and delivery promptly; quality and economics at the named review date</dd></div></dl></div>
+            <GuideCopyBlock title="Lead ad copy" text="Primary text: See recent disclosed sale prices for [home type] in [Suburb], covering [start date] to [end date]. Request the list for addresses, sale dates and factual descriptions. It is market context, not a valuation. [Agency] will deliver the list and explain what happens next. Headline: Recent [home type] sales in [Suburb]. Call to action: Learn more."/><a href="/guides/resources/sold-price-list-seller-leads/seller-ad-copy.txt" download>Download the lead ad copy</a><p>Audience and location rules vary with account country and markets reached. Meta’s Special Ad Category restrictions can apply when an ad is based in the US or reaches the US, Canada or Europe. Australian domestic campaigns are not universally subject to one radius rule. Check the current account settings and never use targeting to discriminate.</p>
+          </section>
+
+          <section id="form" className="bw-creative-section"><div className="bw-section-heading"><span>Form copy</span><h2>Qualify the homeowner without hiding the purpose.</h2></div>
+            <p>Ask only what you will use. Make list delivery separate from optional ongoing marketing.</p>
+            <GuideCopyBlock title="Homeowner qualification question" text="Do you own a home of this type in [Suburb]? Yes / No / Prefer not to say" />
+            <GuideCopyBlock title="Separate marketing consent" text="Optional: Yes, send me occasional [Suburb] property updates from [Agency]. I understand I can unsubscribe at any time. This is separate from receiving the sold-price list." />
+            <div className="bw-source-checklist"><h3>Form checklist</h3><ul><li>Full name and email for delivery.</li><li>Mobile only if phone follow-up is explained and permitted.</li><li>Privacy policy link and what happens next.</li><li>Record consent wording, timestamp, source and opt-out status.</li></ul></div>
+            <a href="/guides/resources/sold-price-list-seller-leads/seller-qualification-form.txt" download>Download the form and consent draft</a>
+          </section>
+
+          <section id="delivery" className="bw-text-section"><h2>Deliver first, then offer context</h2><p>Link the list on the thank-you screen and send it by email. Assign a named person. A same-day response is a practical operating target; there is no universal success cutoff.</p>
+            <GuideCopyBlock title="Complete delivery email" text={`Subject: Your [Suburb] sold-price list
+
+Hi [first name],
+
+Here is the [Suburb] sold-price list you requested: [link]. It covers [home type] with disclosed sales from [start date] to [end date]. Last updated: [date].
+
+This list is market context, not a valuation of your home. If you tell me which row looks most comparable, I can explain what is and is not comparable. If you did not ask for ongoing updates, you will not be added to them. If you opted in, you can unsubscribe here: [unsubscribe link].
+
+Regards,
+[name] | [agency] | [phone] | [privacy-policy link]`}/>
+            <a href="/guides/resources/sold-price-list-seller-leads/delivery-email.txt" download>Download the delivery email</a>
+          </section>
+
+          <section id="measure" className="bw-measure-section"><div className="bw-section-heading"><span>Hypothetical review</span><h2>Use arithmetic you can audit.</h2></div>
+            <p>Example only: A$420 spend produces 28 form leads. 21 have working contact details (21 ÷ 28 = 75.0% contactable). 12 confirm they own a matching home (12 ÷ 21 = 57.1% of valid contacts). Six have a useful seller conversation (6 ÷ 12 = 50.0%). Three request an appraisal (3 ÷ 6 = 50.0%), and one lists (1 ÷ 3 = 33.3%). Costs are A$15.00 per lead, A$20.00 per valid contact, A$35.00 per homeowner, A$70.00 per seller conversation, A$140.00 per appraisal and A$420.00 per listing. These figures are not a benchmark or promise.</p>
+            <div className="bw-contrast-row"><div><span>Review</span><strong>Check delivery, consent, valid contact and conversation quality before changing creative.</strong></div><div><span>Decide</span><strong>Continue, revise or stop based on your economics and evidence.</strong></div></div>
+          </section>
+
+          <section className="bw-faq-section"><div className="bw-section-heading"><span>Questions</span><h2>The practical details.</h2></div>{faqItems.map(([question, answer]) => <details key={question}><summary>{question}</summary><p>{answer}</p></details>)}</section>
+          <footer className="bw-article-sources"><h2>Sources</h2><ol><li><a href="https://customer.realestate.com.au/agent-resources/agency-marketplace/seller-leads-best-practice/" target="_blank" rel="noreferrer">realestate.com.au seller-leads guidance</a> — 2024 survey context (n=1,023).</li><li><a href="https://developers.facebook.com/docs/marketing-api/audiences/special-ad-category/" target="_blank" rel="noreferrer">Meta Special Ad Category guidance</a>.</li><li><a href="https://www.acma.gov.au/avoid-sending-spam" target="_blank" rel="noreferrer">ACMA: Avoid sending spam</a>.</li><li><a href="https://www.oaic.gov.au/privacy/privacy-guidance-for-organisations-and-government-agencies/organisations/direct-marketing" target="_blank" rel="noreferrer">OAIC: Direct marketing</a>.</li></ol><p className="bw-last-reviewed">Updated 7 September 2026</p></footer>
+        </div></div>
+      </article></main>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
     </GuidesShell>

@@ -1,249 +1,85 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 
 import { ArticleProgress } from "@/components/guides/article-progress";
+import { GuideCopyBlock } from "@/components/guides/guide-copy-block";
 import { GuidesShell } from "@/components/guides/guides-shell";
 
 import "../guides.css";
 
 const title = "Stop showing every homeowner the same appraisal ad";
-const description =
-  "Replace a single high-commitment offer with a seller offer ladder that meets homeowners at every stage of intent.";
+const description = "Build a practical seller offer ladder that gives curious, considering and ready-to-talk homeowners a useful next step.";
 const canonical = "/guides/seller-offer-ladder-real-estate-ads";
+const evidenceEmail = `Subject: Your Como sales list
+
+Hi [first name],
+Here is the source-noted sales list you requested: [link]. It covers [period and property type], updated [date]. It is market context, not a valuation of your home. Reply if you want help comparing a result. Receiving this list does not sign you up for recurring updates.
+
+[name] | [agency] | [contact details] | [privacy link]`;
+const appraisalConfirmation = `Hi [first name], thanks for requesting a property conversation with [agency]. Is [date/time] suitable for a call from [number]? We will discuss your questions, preparation, timing and comparable evidence. There is no obligation to list. Reply to change the time or cancel. [agent]`;
+const marketingConsent = "Optional: Yes, email me occasional Como market updates from [Agency]. This is separate from my resource or appointment request. I can unsubscribe at any time.";
+const campaignBrief = `Seller offer ladder campaign brief
+
+Market: [service area]
+Audience: homeowners reachable under the current Special Ad Category: Housing rules
+Primary outcome: [qualified seller definition]
+
+Offer 1 — local evidence
+Hook: What did [property type] homes in [suburb] sell for this quarter?
+Form: full name, email, ownership question, express follow-up consent
+Follow-up: send: “Here is the source-noted sales list you requested. Was there a particular result or property type you were comparing?”
+
+Offer 2 — appraisal
+Hook: Planning to sell [property type] in [suburb]? Request a property conversation.
+Form: full name, email, phone, address, preferred contact time, consent
+Follow-up: send: “We will cover preparation, timing and comparable evidence; there is no obligation to list. Is [time] still suitable?”
+
+Prerequisites
+- Verify every local sale example and permission to publish it.
+- Confirm account country and current markets before choosing geographic settings.
+- Select Special Ad Category: Housing where required.
+- Write the thank-you page, owner assignment and follow-up before launch.
+- Start with a budget you can review for lead quality, not a universal promise.`;
 
 export const metadata: Metadata = {
   title,
   description,
   alternates: { canonical },
-  openGraph: {
-    type: "article",
-    title,
-    description,
-    url: canonical,
-    images: [{ url: "/guides/offer-ladder/hero.webp", width: 1920, height: 1080, alt: "A four-step ladder representing increasing homeowner commitment levels" }],
-  },
-  twitter: { card: "summary_large_image", title, description, images: ["/guides/offer-ladder/hero.webp"] },
+  openGraph: { type: "article", title, description, url: canonical, images: [{ url: "/guides/og-guides-index.webp", alt: "Blockwise real estate advertising guides" }] },
+  twitter: { card: "summary_large_image", title, description, images: ["/guides/og-guides-index.webp"] },
 };
 
-const articleSchema = {
-  "@context": "https://schema.org",
-  "@type": "Article",
-  headline: title,
-  description,
-  datePublished: "2026-07-24",
-  dateModified: "2026-07-24",
-  author: { "@type": "Organization", name: "Blockwise" },
-  publisher: { "@type": "Organization", name: "Blockwise", url: "https://blockwise.sale" },
-  image: "https://blockwise.sale/guides/offer-ladder/hero.webp",
-  mainEntityOfPage: `https://blockwise.sale${canonical}`,
-};
-
-const faqSchema = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: [
-    {
-      "@type": "Question",
-      name: "Should I stop running appraisal ads entirely?",
-      acceptedAnswer: { "@type": "Answer", text: "No. The appraisal is the top of the ladder — it belongs there. The problem is running it as the only offer. Keep the appraisal ad, but surround it with lower-commitment offers that capture homeowners who are not ready for that step yet." },
-    },
-    {
-      "@type": "Question",
-      name: "How many offer levels should I start with?",
-      acceptedAnswer: { "@type": "Answer", text: "Start with two: a surface-level offer like a sold-price list and the appraisal. Once those are running and you have follow-up in place, add a transition-level offer. The full four-level ladder is the goal, but you do not need to build it all at once." },
-    },
-    {
-      "@type": "Question",
-      name: "Won't lower-commitment offers just attract tyre-kickers?",
-      acceptedAnswer: { "@type": "Answer", text: "Some leads from surface-level offers will not be sellers. That is expected. The qualifying question on the form and the follow-up conversation will separate genuine owners from curious neighbours. The value is identifying owners who care enough about their market to raise their hand." },
-    },
-    {
-      "@type": "Question",
-      name: "Should the same lead see ads from multiple levels?",
-      acceptedAnswer: { "@type": "Answer", text: "Yes, and this happens naturally. A homeowner who downloads a sold-price list may later see a renovation guide or an appraisal ad. The ladder is not a linear path — it is a set of entry points that Meta can match to the same person at different times." },
-    },
-  ],
-};
+const articleSchema = { "@context": "https://schema.org", "@type": "Article", headline: title, description, datePublished: "2026-07-24", dateModified: "2026-09-07", author: { "@type": "Organization", name: "Blockwise" }, publisher: { "@type": "Organization", name: "Blockwise", url: "https://blockwise.sale" }, mainEntityOfPage: `https://blockwise.sale${canonical}` };
+const faq = [
+  ["Should I stop running appraisal ads entirely?", "No. Keep the appraisal for active sellers; make it one entry point alongside lower-commitment evidence and education offers."],
+  ["How many offers should I start with?", "Start with two complete offers: a local-evidence download and an appraisal invitation. Add another only when its form, follow-up and review owner are ready."],
+  ["Will lower-commitment offers attract unqualified people?", "Some will. That is a known trade-off. Use one useful qualifying question, then judge the offer by contactable and progressing leads rather than raw form volume."],
+  ["Do people move through the offers in order?", "Not necessarily. The offers are entry points, not a guaranteed sequence. Keep geography, consent and follow-up clear at every stage."],
+];
+const faqSchema = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faq.map(([name, text]) => ({ "@type": "Question", name, acceptedAnswer: { "@type": "Answer", text } })) };
 
 export default function SellerOfferLadderGuidePage() {
-  return (
-    <GuidesShell>
-      <ArticleProgress />
-      <main id="main-content">
-        <article className="bw-article">
-          <header className="bw-article-hero">
-            <div className="bw-article-hero-copy">
-              <div className="bw-article-breadcrumbs">
-                <Link href="/guides">Guides</Link>
-                <span aria-hidden>/</span>
-                <span>Offer strategy</span>
-              </div>
-              <p className="bw-guides-label">The offer ladder guide</p>
-              <h1>{title}</h1>
-              <p className="bw-article-deck">
-                Most homeowners who see a real estate ad are not ready to invite an agent into their home. A ladder of offers gives each person a reasonable next step.
-              </p>
-              <div className="bw-article-byline">
-                <span>By Blockwise</span>
-                <span>24 July 2026</span>
-                <span>11 minute read</span>
-              </div>
-            </div>
-            <div className="bw-article-hero-media">
-              <Image
-                src="/guides/offer-ladder/hero.webp"
-                alt="A four-step ladder representing increasing homeowner commitment levels"
-                fill
-                priority
-                sizes="100vw"
-              />
-            </div>
-          </header>
+  return <GuidesShell><ArticleProgress /><main id="main-content"><article className="bw-article">
+    <header className="bw-article-hero"><div className="bw-article-hero-copy"><div className="bw-article-breadcrumbs"><Link href="/guides">Guides</Link><span aria-hidden>/</span><span>Offer strategy</span></div><p className="bw-guides-label">The offer ladder guide</p><h1>{title}</h1><p className="bw-article-deck">A direct appraisal is a sensible offer for an active seller, but it is a large first step for someone still researching. Give each homeowner a useful choice.</p><div className="bw-article-byline"><span>By Blockwise</span><span>7 September 2026</span><span>6 minute read</span></div></div><div className="bw-article-hero-media" aria-label="Two offer entry points: local evidence and appraisal"><span>Local evidence</span><span aria-hidden="true">→</span><span>Conversation</span><span aria-hidden="true">→</span><span>Appraisal</span></div></header>
+    <div className="bw-article-body"><aside className="bw-article-toc" aria-label="On this page"><strong>On this page</strong><a href="#gap">The commitment gap</a><a href="#offers">Two complete offers</a><a href="#forms">Forms and follow-up</a><a href="#budget">A conservative test</a><a href="#staging">Staging checklist</a></aside>
+    <div className="bw-article-prose">
+      <section className="bw-opening" id="gap"><p className="bw-drop-intro"><span>The appraisal is not a bad offer.</span> It is simply a high-commitment first step. A homeowner checking recent sales may not be ready to share an address, answer a sales call or discuss a move. A ladder gives that person a credible way to learn while keeping the appraisal available for people who are ready.</p><div className="bw-contrast-row"><div><span>High commitment</span><strong>“Request an appraisal” can imply a visit and sales conversation.</strong></div><div><span>Lower commitment</span><strong>“See recent comparable sales” asks for information first.</strong></div></div><aside className="bw-compliance-note"><strong>Housing and geography</strong><p>Meta’s published restrictions cover US-based advertisers and housing ads reaching the US, Canada or Europe. An Australian business advertising only in Australia is not automatically subject to those same audience restrictions; verify the current account controls and markets reached. Australia is not a universal radius-or-location rule. Check account country and current markets before launch, and apply nondiscrimination principles throughout.</p><a href="https://developers.facebook.com/docs/marketing-api/audiences/special-ad-category/" target="_blank" rel="noreferrer">Read Meta’s housing guidance →</a></aside></section>
+      <section id="offers" className="bw-text-section"><div className="bw-section-heading"><span>Start with two</span><h2>Complete offers beat four unfinished ideas.</h2></div><p>Use two deliberately different hypotheses: one helps a curious owner understand the local market; the other invites an active seller to speak with you. They can run in the same service area, with different forms and follow-up.</p><div className="bw-copy-specimen"><div className="bw-copy-specimen-labels"><span>Finished ad 01 · local evidence</span><span>Illustrative copy</span></div><h3>What did three-bedroom Como homes sell for this quarter?</h3><p>See three recent comparable sales, with sale dates, property type and source notes. No valuation is implied.</p><p><strong>CTA:</strong> Get the local sales list</p><p><strong>Form:</strong> Full name · email · “Do you own a home of this type in Como?” · express consent for the promised follow-up</p></div><div className="bw-copy-specimen"><div className="bw-copy-specimen-labels"><span>Finished ad 02 · appraisal</span><span>Illustrative copy</span></div><h3>Planning to sell your Como home this year?</h3><p>Talk through likely preparation, timing and comparable evidence with an agent. The conversation is not a promise to list.</p><p><strong>CTA:</strong> Request a property conversation</p><p><strong>Form:</strong> Full name · email · phone · property address · preferred contact time · consent</p></div><p>These are illustrative ads, not a guaranteed sequence or universal template. Replace every local claim with evidence you can verify and use.</p></section>
+      <section id="forms" className="bw-text-section"><div className="bw-section-heading"><span>Make the hand-off match</span><h2>Ask only for what the next step needs.</h2></div><div className="bw-measure-table" role="table" aria-label="Offer forms and follow-up"><div role="row" className="bw-measure-head"><span role="columnheader">Offer</span><span role="columnheader">Fields</span><span role="columnheader">First follow-up</span></div><div role="row"><strong role="cell">Local evidence</strong><span role="cell">Name, email, ownership question, consent</span><span role="cell">“Here is the source-noted sales list you requested. Was there a particular result or property type you were comparing?”</span></div><div role="row"><strong role="cell">Appraisal</strong><span role="cell">Name, email, phone, address, preferred time, consent</span><span role="cell">“Thanks for requesting a property conversation. We will cover preparation, timing and comparable evidence; there is no obligation to list. Is [time] still suitable?”</span></div></div><GuideCopyBlock title="Local-evidence delivery email" text={evidenceEmail} /><GuideCopyBlock title="Appraisal confirmation" text={appraisalConfirmation} /><GuideCopyBlock title="Separate recurring-email permission" text={marketingConsent} /><p>Do not promise monthly messages unless the person consented to them. Include a privacy notice, sender identity and unsubscribe path appropriate to your market.</p><p>For the flagship evidence-led version, read <Link href="/guides/sold-price-list-seller-leads">How to use a sold-price list to earn seller leads</Link>.</p></section>
+      <section id="budget" className="bw-measure-section"><div className="bw-section-heading"><span>Hypothetical planning example</span><h2>Allocate for learning, not a magic ratio.</h2></div><p>Suppose you can spend A$600 over 14 days. One conservative starting hypothesis is A$360 toward the local-evidence offer and A$240 toward the appraisal. That is a decision based on the stage you want to learn about, not a universal allocation.</p><div className="bw-measure-table" role="table" aria-label="Hypothetical offer budget allocation"><div role="row" className="bw-measure-head"><span role="columnheader">Offer</span><span role="columnheader">Hypothetical spend</span><span role="columnheader">Review</span></div><div role="row"><strong role="cell">Local evidence</strong><span role="cell">A$360</span><span role="cell">Delivery, contactability, useful conversations</span></div><div role="row"><strong role="cell">Appraisal</strong><span role="cell">A$240</span><span role="cell">Appointment requests, contact rate, fit</span></div></div><p>Do not call this a “winning” split before delivery. Review enough impressions and leads to make a fair comparison, then change one decision at a time.</p></section>
+      <section id="staging" className="bw-followup-section"><div className="bw-section-heading"><span>Before you publish</span><h2>Stage the work in this order.</h2></div><ol><li>Verify the local sales evidence and legal permission to publish it.</li><li>Write both finished ads, their exact forms and their first follow-up message.</li><li>Confirm account country, reachable markets, housing-category requirements and nondiscrimination checks.</li><li>Assign a person to review leads and record outcomes in the CRM.</li><li>Choose a sustainable test budget and a review date; do not promise a listing result.</li></ol><GuideCopyBlock title="Copy the campaign brief" text={`${campaignBrief}
 
-          <div className="bw-article-body">
-            <aside className="bw-article-toc" aria-label="On this page">
-              <strong>On this page</strong>
-              <a href="#commitment-gap">The commitment gap</a>
-              <a href="#step-framework">The STEP framework</a>
-              <a href="#surface">Level S — Surface</a>
-              <a href="#transition">Level T — Transition</a>
-              <a href="#engage">Level E — Engage</a>
-              <a href="#purchase">Level P — Purchase</a>
-              <a href="#example">A practical example</a>
-            </aside>
+DELIVERY EMAIL
+${evidenceEmail}
 
-            <div className="bw-article-prose">
-              <section className="bw-opening" id="commitment-gap">
-                <p className="bw-drop-intro">
-                  <span>The appraisal ad is not dead. It is being asked to do too much.</span> Most homeowners who see a real estate advertisement are not ready to invite an agent into their home. Some are curious. Some are watching the market. Some are planning a move next year. A direct appraisal request is appropriate for a small part of that audience. Showing it to everyone forces homeowners to choose between a high-commitment enquiry and doing nothing. Most choose nothing.
-                </p>
+APPOINTMENT CONFIRMATION
+${appraisalConfirmation}
 
-                <div className="bw-contrast-row">
-                  <div><span>High commitment</span><strong>"Request a free appraisal" — implies a phone call, a visit, a sales process</strong></div>
-                  <div><span>Low commitment</span><strong>"See recent comparable sales" — implies information, not a conversation</strong></div>
-                </div>
-
-                <aside className="bw-compliance-note">
-                  <strong>Housing compliance</strong>
-                  <p>Real estate campaigns on Meta require selecting the Special Ad Category: Housing. This applies regardless of which offer level you are running — a sold-price list is still a housing-related ad.</p>
-                  <a href="https://www.facebook.com/business/help/1198401317374558" target="_blank" rel="noreferrer">Read the housing ads policy →</a>
-                </aside>
-              </section>
-
-              <section id="step-framework" className="bw-list-section">
-                <div className="bw-section-heading bw-section-heading-split">
-                  <span>The STEP framework</span>
-                  <h2>Four levels of homeowner intent.</h2>
-                  <p>If every ad in your account sits at level P, you are asking the entire market to skip three steps.</p>
-                </div>
-                <div className="bw-list-grid">
-                  <div className="bw-list-item"><b>S</b><div><h3>Surface</h3><p>Local information with no personal disclosure.</p><span>Name and email — sold-price list</span></div></div>
-                  <div className="bw-list-item"><b>T</b><div><h3>Transition</h3><p>Property-specific education for early decisions.</p><span>Name, email, property type — renovation guide</span></div></div>
-                  <div className="bw-list-item"><b>E</b><div><h3>Engage</h3><p>Individual advice involving a conversation.</p><span>Name, email, phone — strategy call</span></div></div>
-                  <div className="bw-list-item"><b>P</b><div><h3>Purchase</h3><p>A formal appointment tied to a listing decision.</p><span>Full details — in-person appraisal</span></div></div>
-                </div>
-              </section>
-
-              <section id="surface" className="bw-text-section">
-                <div className="bw-section-heading">
-                  <span>Level S — Surface</span>
-                  <h2>Local information, low commitment.</h2>
-                </div>
-                <p>These offers help homeowners understand their immediate market without declaring an intention to sell: a recent sold-price list for a specific property type, a quarterly suburb snapshot, a buyer-demand update.</p>
-                <p>The commitment is low: a name and an email. The value is in identifying owners who care enough about recent comparable sales to ask for the detail.</p>
-                <div className="bw-copy-specimen">
-                  <div className="bw-copy-specimen-labels"><span>Form fields</span><span>Keep it short</span></div>
-                  <blockquote>Full name, email, one qualifying question: "Do you own a home of this type in [Suburb]?"</blockquote>
-                </div>
-                <aside className="bw-compliance-note">
-                  <strong>Consent</strong>
-                  <p>If you plan to send monthly updates, ask for express consent in plain language. Commercial email and SMS require consent, accurate sender identification and a working unsubscribe method.</p>
-                  <a href="https://www.acma.gov.au/avoid-sending-spam" target="_blank" rel="noreferrer">Read the ACMA guidance →</a>
-                </aside>
-              </section>
-
-              <section id="transition" className="bw-text-section">
-                <div className="bw-section-heading">
-                  <span>Level T — Transition</span>
-                  <h2>Property-specific education.</h2>
-                </div>
-                <p>These offers help the owner make an early decision: a renovate-or-sell assessment, a pre-sale preparation checklist, a guide to selling costs, a timeline from appraisal to settlement.</p>
-                <p>The owner is beginning to consider action but may not be comparing agents. The form can ask for slightly more — property type — because the offer is property-specific.</p>
-                <div className="bw-contrast-row">
-                  <div><span>Wrong follow-up</span><strong>"When are you selling?" — jumps ahead of the conversation</strong></div>
-                  <div><span>Right follow-up</span><strong>"Which part of the guide were you working through?"</strong></div>
-                </div>
-              </section>
-
-              <section id="engage" className="bw-text-section">
-                <div className="bw-section-heading">
-                  <span>Level E — Engage</span>
-                  <h2>Individual advice with a conversation.</h2>
-                </div>
-                <p>These offers require more involvement: a desktop property review, a 15-minute pricing strategy call, a suburb-specific sales analysis. The owner provides a phone number and agrees to a conversation — but it is still not an appraisal.</p>
-                <p>This is the bridge between passive interest and active selling. Some owners will never move from Surface directly to Purchase — the jump is too large. Engage gives them a reason to talk to you first.</p>
-              </section>
-
-              <section id="purchase" className="bw-text-section">
-                <div className="bw-section-heading">
-                  <span>Level P — Purchase</span>
-                  <h2>The appraisal, surrounded.</h2>
-                </div>
-                <p>The appraisal remains the highest-commitment offer, appropriate for the active seller comparing agents. The difference is that it is now one of several offers, not the only one. It is strongest when surrounded by lower-commitment offers that warmed the homeowner first.</p>
-              </section>
-
-              <section id="example" className="bw-measure-section">
-                <div className="bw-section-heading">
-                  <span>Four ads for Como</span>
-                  <h2>A practical example for one suburb.</h2>
-                </div>
-                <div className="bw-measure-table" role="table" aria-label="Four ads for the Como suburb at different commitment levels">
-                  <div role="row" className="bw-measure-head"><span role="columnheader">Level</span><span role="columnheader">Headline</span><span role="columnheader">Offer</span></div>
-                  <div role="row"><strong role="cell">Surface</strong><span role="cell">What 3-bed Como homes sold for this quarter</span><span role="cell">Download the sales list</span></div>
-                  <div role="row"><strong role="cell">Transition</strong><span role="cell">Renovate before selling, or leave it alone?</span><span role="cell">Get the pre-sale guide</span></div>
-                  <div role="row"><strong role="cell">Engage</strong><span role="cell">Planning to sell in Como this year?</span><span role="cell">Book a 15-min strategy call</span></div>
-                  <div role="row"><strong role="cell">Purchase</strong><span role="cell">Ready for an in-person appraisal?</span><span role="cell">Book a property consultation</span></div>
-                </div>
-                <p>These ads support the same commercial objective. They approach it through different homeowner situations and different commitment levels.</p>
-              </section>
-
-              <section className="bw-blockwise-cta">
-                <div>
-                  <span>Where Blockwise fits</span>
-                  <h2>Give every homeowner a next step they can take.</h2>
-                  <p>The offer ladder is a strategy you can run with any tool. Blockwise makes the execution faster and more consistent: preparing the creative for each offer level, building the lead form with the right fields and consent language for each stage, and bringing leads from all levels into one review queue.</p>
-                </div>
-                <Link href="/signup">Build your ladder <span aria-hidden>→</span></Link>
-              </section>
-
-              <section className="bw-faq-section">
-                <div className="bw-section-heading">
-                  <span>Questions</span>
-                  <h2>The practical details.</h2>
-                </div>
-                <details><summary>Should I stop running appraisal ads entirely?</summary><p>No. The appraisal is the top of the ladder — it belongs there. The problem is running it as the only offer. Keep the appraisal ad, but surround it with lower-commitment offers that capture homeowners who are not ready for that step yet.</p></details>
-                <details><summary>How many offer levels should I start with?</summary><p>Start with two: a surface-level offer like a sold-price list and the appraisal. Once those are running and you have follow-up in place, add a transition-level offer. The full four-level ladder is the goal, but you do not need to build it all at once.</p></details>
-                <details><summary>Won't lower-commitment offers just attract tyre-kickers?</summary><p>Some leads from surface-level offers will not be sellers. That is expected. The qualifying question on the form and the follow-up conversation will separate genuine owners from curious neighbours. The value is identifying owners who care enough about their market to raise their hand.</p></details>
-                <details><summary>Should the same lead see ads from multiple levels?</summary><p>Yes, and this happens naturally. A homeowner who downloads a sold-price list may later see a renovation guide or an appraisal ad. The ladder is not a linear path — it is a set of entry points that Meta can match to the same person at different times.</p></details>
-              </section>
-
-              <footer className="bw-article-sources">
-                <h2>Sources and further reading</h2>
-                <ol>
-                  <li><a href="https://www.facebook.com/business/ads/ad-objectives/lead-generation/lead-ads-with-forms" target="_blank" rel="noreferrer">Lead ads with forms, Meta for Business</a></li>
-                  <li><a href="https://www.facebook.com/business/ads/meta-advantage-plus/leads" target="_blank" rel="noreferrer">Advantage+ leads campaigns, Meta for Business</a></li>
-                  <li><a href="https://www.facebook.com/business/help/1198401317374558" target="_blank" rel="noreferrer">About ads for housing, Meta Business Help Center</a></li>
-                  <li><a href="https://www.oaic.gov.au/privacy/privacy-guidance-for-organisations-and-government-agencies/organisations/direct-marketing" target="_blank" rel="noreferrer">Direct marketing, Office of the Australian Information Commissioner</a></li>
-                  <li><a href="https://www.acma.gov.au/avoid-sending-spam" target="_blank" rel="noreferrer">Avoid sending spam, Australian Communications and Media Authority</a></li>
-                </ol>
-              </footer>
-            </div>
-          </div>
-        </article>
-      </main>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-    </GuidesShell>
-  );
+OPTIONAL MARKETING CONSENT
+${marketingConsent}`} /><p><a href="/guides/resources/seller-offer-ladder-real-estate-ads/campaign-brief.txt" download>Download campaign-brief.txt</a></p></section>
+      <section className="bw-blockwise-cta"><div><span>Where Blockwise fits</span><h2>Keep the offer, form and review path together.</h2><p>Blockwise can help prepare editable creative, the Meta campaign and lead-form copy. Meta approval, publishing and any external CRM connection remain gated steps outside the guide.</p></div><Link href="/signup">Prepare the campaign <span aria-hidden="true">→</span></Link></section>
+      <section className="bw-faq-section"><div className="bw-section-heading"><span>Questions</span><h2>The practical details.</h2></div>{faq.map(([q, a]) => <details key={q}><summary>{q}</summary><p>{a}</p></details>)}</section>
+      <footer className="bw-article-sources"><h2>Sources and further reading</h2><ol><li><a href="https://www.facebook.com/business/ads/ad-objectives/lead-generation/lead-ads-with-forms" target="_blank" rel="noreferrer">Lead ads with forms, Meta for Business</a></li><li><a href="https://developers.facebook.com/docs/marketing-api/audiences/special-ad-category/" target="_blank" rel="noreferrer">Special Ad Category, Meta for Developers</a></li><li><a href="https://www.oaic.gov.au/privacy/privacy-guidance-for-organisations-and-government-agencies/organisations/direct-marketing" target="_blank" rel="noreferrer">Direct marketing, OAIC</a></li><li><a href="https://www.acma.gov.au/avoid-sending-spam" target="_blank" rel="noreferrer">Avoid sending spam, ACMA</a></li></ol></footer>
+    </div></div>
+  </article></main><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} /><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} /></GuidesShell>;
 }

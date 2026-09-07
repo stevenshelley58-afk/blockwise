@@ -3,6 +3,7 @@
 import type { Layout, AdTemplate, Rect } from "../../../../packages/ad-template-contract/src/types";
 import { ArrowUp, MessageCircle, MoreHorizontal, Share2, ThumbsUp } from "lucide-react";
 import { LayeredCanvas } from "./layered-canvas";
+import type { CanonicalPreviewState } from "./canonical-preview";
 import { businessInitials, ctaLabelText, domainLabel, truncateForPreview } from "./preview-text";
 import type { MetaCopy } from "./use-editor-state";
 import { META_COPY_CONSTRAINTS } from "../../../lib/adstudio/meta-copy-contract";
@@ -38,6 +39,7 @@ export interface MetaPreviewProps {
   /** Real destination domain shown under the creative; empty → neutral placeholder. */
   destinationUrl?: string;
   className?: string;
+  canonicalPreview?: CanonicalPreviewState;
 }
 
 /** Circular avatar — the Brand Pack logo, or initials when none exists. */
@@ -90,6 +92,7 @@ export function FeedPreview({
   logoUrl,
   destinationUrl,
   className,
+  canonicalPreview,
 }: MetaPreviewProps) {
   const domain = domainLabel(destinationUrl) || "Destination not set";
   const primaryText = truncateForPreview(copy.primaryText, META_COPY_CONSTRAINTS.primaryText);
@@ -124,6 +127,7 @@ export function FeedPreview({
           imageValues={imageValues}
           textValues={textValues}
           cropOverrides={cropOverrides}
+          canonicalPreview={canonicalPreview}
           className="h-full w-full"
         />
       </div>
@@ -171,6 +175,7 @@ export function StoryPreview({
   businessName,
   logoUrl,
   className,
+  canonicalPreview,
 }: MetaPreviewProps) {
   return (
     <div
@@ -187,6 +192,7 @@ export function StoryPreview({
         imageValues={imageValues}
         textValues={textValues}
         cropOverrides={cropOverrides}
+        canonicalPreview={canonicalPreview}
         className="absolute inset-0 h-full w-full"
       />
 

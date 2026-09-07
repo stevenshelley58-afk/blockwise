@@ -1,275 +1,149 @@
 ---
-title: "Build a real estate creative portfolio that does the targeting for you"
-subtitle: "A practical system for replacing one generic appraisal ad with a set of distinct messages that Meta can match to different homeowners."
+title: "Build a real estate ad portfolio around seller decisions"
+subtitle: "A practical way to test distinct real estate ad hypotheses for different homeowner situations, with clear proof, offers and review measures."
 slug: "real-estate-creative-portfolio-meta-ads"
 seo_title: "Real Estate Creative Portfolio for Meta Ads | Blockwise"
-meta_description: "Learn how to build a portfolio of distinct real estate ad concepts that let Meta's algorithm match your ads to different homeowner situations."
-excerpt: "One suburb does not equal one audience. Homeowners in the same area have different motivations — and the algorithm can only match them if you give it different ads to work with."
+meta_description: "Build a manageable portfolio of real estate ads with specific problems, verified proof, clear offers and review measures."
+excerpt: "A suburb is a place, not a motivation. Give the delivery system a few specific, evidence-led reasons for a homeowner to stop, read and act."
 canonical: "https://blockwise.sale/guides/real-estate-creative-portfolio-meta-ads"
-og_title: "Build a real estate creative portfolio that does the targeting for you"
-og_description: "A practical system for replacing one generic appraisal ad with distinct messages for different homeowners."
+og_title: "Build a real estate ad portfolio around seller decisions"
+og_description: "Test distinct homeowner problems with verified proof, one offer and one review measure per ad."
 og_type: "article"
 schema_type: "Article"
 faq_schema: true
-primary_keyword: "real estate creative portfolio Meta ads"
+primary_keyword: "real estate creative portfolio"
 secondary_keywords:
-  - "creative targeting real estate ads"
-  - "Facebook ad creative for real estate agents"
+  - "Meta real estate ad creative"
   - "real estate ad concepts"
-  - "suburb-specific real estate ads"
+  - "housing campaign creative"
 author: "Blockwise"
 publisher: "Blockwise"
-status: "draft"
-last_updated: "2026-07-24"
-hero_image_brief: "A grid of five distinct framed images arranged on a wall — a sold-price chart, a renovation photo, a suburb map, a testimonial card and an appraisal invitation — each visually different. No people, no agent portraits, no fake UI."
-hero_image_alt: "A portfolio wall of five different real estate ad concepts"
+status: "published"
+last_updated: "2026-09-07"
 ---
 
-# Build a real estate creative portfolio that does the targeting for you
+# Build a real estate ad portfolio around seller decisions
 
-Real estate agents are often told to find a winning ad and scale it.
+One hero ad cannot express every seller situation. A curious owner checking the market needs a different reason to stop than an active seller comparing agents.
 
-That advice is incomplete.
+Build a manageable portfolio of distinct arguments. Each concept needs a proof placeholder you can verify, one offer, one CTA and one review measure. Three appraisal ads with different colours are one concept rendered three times, not a portfolio.
 
-A strong ad can keep running while it performs, but no single concept can address every homeowner, motivation and stage of intent. Meta's [Andromeda](https://engineering.fb.com/2024/12/02/production-engineering/meta-andromeda-advantage-automation-next-gen-personalized-ads-retrieval-engine/) retrieval system was specifically designed to handle rapid growth in eligible ad creatives — it scans creative signals to predict which user is most likely to respond. If you only give it one concept, you give it one thing to match with.
+## Housing and geography
 
-The objective is not unlimited content. It is a useful portfolio.
+Meta’s published restrictions cover US-based advertisers and housing ads reaching the US, Canada or Europe. An Australian business advertising only in Australia is not automatically subject to those same audience restrictions; verify the current account controls and markets reached. Australia is not a universal radius rule. Check account country and current markets, verify your reachable service area and keep nondiscrimination checks in the production brief.
 
-## The CRAFT framework
+See [Meta’s housing guidance](https://developers.facebook.com/docs/marketing-api/audiences/special-ad-category/).
 
-Use five checks before you build your next set of ads.
+## Three finished illustrative ads
 
-| Check | What to decide | Good example | Warning sign |
-|---|---|---|---|
-| **C: Concept families** | Do your ads cover at least three of the five concept families below? | Market evidence + seller problem + proof + direct response | Five appraisal ads with different colours |
-| **R: Real local detail** | Does each ad contain specific, verifiable local information? | "Four-bedroom Baldivis homes — see recent comparable sales" | "Perth homeowners: find out what your property is worth" |
-| **A: One argument per ad** | Does each ad make a single, clear point with supporting proof? | Argument: buyers are competing for renovated homes. Proof: three recent sales. Offer: buyer-demand summary. | An ad listing six selling points with no dominant message |
-| **F: Format serves the message** | Is each format chosen for what it does best, not just resized? | A Reel for agent familiarity. A carousel for explaining a process. A static image for one fact. | The same image cropped to three dimensions |
-| **T: Test different hypotheses** | Is each ad testing a different reason a homeowner might engage? | "Owners want price evidence" vs "Owners worry about selling costs" vs "Owners don't know whether to renovate" | "What is your property worth?" vs "Discover your property's value" |
+The following Como examples are fictional/composite and are not a real performed case. Replace proof placeholders with evidence you have permission to use.
 
-If three of these checks are weak, your portfolio is probably one concept rendered several times.
+### Ad 1 — market evidence (static)
 
-## 1. One suburb does not equal one audience
+**Headline:** What did three-bedroom Como homes sell for this quarter?
 
-Agents usually operate within a defined geographic area. But homeowners within that area can have completely different motivations.
+**Body:** See three recent comparable sales, shown with sale date, property type and source note. This is research, not a valuation.
 
-Consider who lives in a single Perth suburb:
+**Audience problem:** Curious owner checking the market.
 
-- A homeowner curious about recent prices but not planning to list
-- An owner wondering whether to renovate before selling
-- A landlord considering whether to hold or sell
-- A family that has outgrown its current property
-- A downsizer who does not know where to begin
-- A seller already comparing local agents
+**Verified proof placeholder:** Three approved sale records.
 
-These people may live on the same street. They do not need the same ad.
+**Offer and CTA:** Source-noted sales list — **Get the local sales list**.
 
-Meta's [Advantage+ audience](https://www.facebook.com/business/help/273363992030035) system can use your audience inputs as suggestions and search more broadly when it predicts that doing so will improve performance. The more distinct creative you provide, the more the system has to work with.
+**Success measure:** Contactable lead and guide completion.
 
-Remember that real estate advertising on Meta requires selecting the [Special Ad Category: Housing](https://www.facebook.com/business/help/1198401317374558) during campaign creation. The algorithm changes that make creative more important do not remove this compliance obligation — they make it more important to build strong, specific creative because you cannot rely on unrestricted targeting instead.
+### Ad 2 — seller problem (carousel)
 
-## 2. Build around the five concept families
+**Headline:** Renovate before selling, or leave it alone?
 
-A practical seller-lead portfolio covers five concept families.
+**Carousel copy:**
 
-### Market evidence
+Card 1 — What needs attention before photos?
+Start with presentation: light, clutter and the condition buyers will see. Ask which work is necessary before committing to a renovation.
 
-These ads provide facts:
+Card 2 — What is worth the cost?
+Compare the quote, disruption and selling timeframe. A renovation is a cost, not a guaranteed price uplift.
 
-- Recent comparable sales by property type
-- Stock levels and days on market
-- Buyer enquiry patterns
-- Property-type trends
+Card 3 — Compare your options.
+An as-is sale and a prepared sale involve different trade-offs. Get our pre-sale decision guide before choosing. [Agency] | Get the guide.
 
-### Seller problems
+**Audience problem:** Owner weighing preparation against an as-is sale.
 
-These ads address a decision or concern:
+**Verified proof placeholder:** Approved checklist and local examples.
 
-- Whether to renovate before selling
-- How to select an agent
-- What selling costs to expect
-- Whether to buy or sell first
+**Offer and CTA:** Pre-sale decision guide — **Get the guide**.
 
-### Process clarity
+**Success measure:** Qualified conversations against written criteria.
 
-These ads make selling feel less uncertain:
+### Ad 3 — process clarity (short video)
 
-- The stages from appraisal to settlement
-- What happens during an appraisal
-- How offers are compared
-- What the owner needs to prepare
+**Headline:** What happens in a first property conversation?
 
-### Proof
+**30-second script:** “Before a property conversation, we ask what you are weighing and when. We review comparable evidence and explain what we can—and cannot—say from it. You choose the next step: a question, a follow-up call or no further action. There is no obligation to list. See what to expect.”
 
-These ads demonstrate capability:
+**Audience problem:** Active seller worried about a pressured appointment.
 
-- A documented client result with before-and-after
-- A seller testimonial about the process
-- A marketing case study
-- A comparison between initial expectations and the final sale outcome
+**Verified proof placeholder:** Your actual reviewed process.
 
-### Direct response
+**Offer and CTA:** 15-minute property conversation — **See what to expect**.
 
-These ads ask for action:
+**Success measure:** Completed conversations and follow-up quality.
 
-- Request an appraisal
-- Book a strategy call
-- Ask for a property review
+## Annotate each concept
 
-The families are deliberately different. Market evidence attracts curiosity. Seller problems attract consideration. Proof reduces risk. Direct response captures active intent. You need ads from at least three families to give Meta meaningful choices.
+Before publishing, record the homeowner problem, evidence source, offer, CTA, format and one downstream measure that would change your decision. This keeps variety functional rather than decorative.
 
-## 3. Make the ad identify the seller
-
-Compare these two messages:
-
-> Thinking of selling? Contact your local property expert for a free appraisal.
-
-> Own a four-bedroom home in Baldivis? See what comparable properties actually sold for during the past 90 days.
-
-The first addresses nearly everyone and therefore speaks directly to almost no one.
-
-The second contains several self-selection signals: the person owns a home, the property is in Baldivis, it is probably a four-bedroom property, the owner is interested in current evidence, and the next step is research, not an immediate sales appointment.
-
-A homeowner who recognises themselves in that description is more likely to stop. The ad has completed part of the targeting work before the form is opened.
-
-## 4. Use local detail that creates relevance
-
-Adding the suburb name to a generic appraisal template is not enough. A genuinely local ad gives the homeowner evidence or context they cannot obtain from an interchangeable national message.
-
-### Recent sale patterns
-
-- What renovated homes sold for compared with unrenovated homes
-- Which property types attracted multiple offers
-- The difference between advertised and final sale prices
-- How long comparable properties remained on the market
-
-### Buyer activity
-
-- Property types receiving the most enquiries
-- Features buyers repeatedly request
-- Price brackets with limited available stock
-- Open-home attendance patterns
-
-### Seller decisions
-
-- Whether certain renovations appear to affect saleability
-- Common preparation mistakes
-- Timing considerations for the local market
-- Differences between selling occupied and vacant properties
-
-The information must be accurate, current and supportable. A local claim should not be invented merely to create a stronger hook.
-
-### Show the evidence
-
-Instead of writing "local market expert," show:
-
-- Three relevant comparable sales with dates
-- A simple map of recent activity
-- A chart showing stock movement
-- A short explanation of one unexpected result
-- A case study involving a similar property
-
-The evidence should be understandable within a few seconds. Do not turn the ad into a full market report. Give the person one useful observation and a clear path to the complete information.
-
-## 5. Choose formats deliberately
-
-A concept should be adapted to the format rather than resized without thought.
-
-| Format | Best for | Example |
-|---|---|---|
-| **Static image** | One fact, one comparison, one clear offer | Three recent sales with dates and prices |
-| **Carousel** | A sequence, checklist, or group of comparable sales | Five properties that sold above expectations |
-| **Short video (Reel)** | Explanation, familiarity, direct agent communication | Agent explains the month's main buyer trend |
-| **Client-led video** | Proof and objection handling | A seller describing their experience |
-| **Property footage** | When the visual itself supports the point | A walk-through showing renovation quality |
-
-Each asset should still have one dominant message. A Reel can establish familiarity with the agent. A carousel can explain a process. A static image can communicate one fact quickly. The formats should not merely repeat the same asset at different dimensions.
-
-## 6. Start at a scale your budget can support
-
-A local agent spending a modest daily budget should not blindly upload fifty ads. Start with six to twelve genuinely distinct assets:
-
-| Slot | Concept family | Example |
-|---|---|---|
-| 1 | Market evidence | Recent comparable sales for one property type |
-| 2 | Market evidence | Buyer-demand update for the suburb |
-| 3 | Seller problem | Renovate-or-sell decision guide |
-| 4 | Proof | Client result with before and after |
-| 5 | Direct response | Appraisal invitation for active sellers |
-| 6 | Process clarity | What happens during an appraisal |
-| 7 | Agent-led video | Monthly suburb market summary |
-| 8 | Carousel | Five recent sales compared |
-
-This provides variety without spreading a small budget across an unmanageable volume.
-
-## 7. Run a simple monthly rhythm
-
-### Week 1: Launch
-
-Publish a balanced set of distinct concepts. Do not launch all appraisal ads at once.
-
-### Week 2: Diagnose
-
-Look beyond clicks. Check lead quality, contact rate and the messages attracting each type of enquiry. Do not edit the campaign every day — let it run long enough to produce a readable result.
-
-### Week 3: Expand the useful ideas
-
-Create a new execution of a proven concept. Do not duplicate the same ad. If the sold-price report attracted owners, try a different property type or a different suburb within your service area.
-
-### Week 4: Replace weak concepts
-
-Remove ads that have received enough delivery to show consistently weak engagement or poor downstream lead quality. Document what changed and why.
-
-## 8. Keep a creative register
-
-Maintain a basic record for each ad:
-
-| Field | Example |
+| Field | Question |
 |---|---|
-| Suburb | Baldivis |
-| Property type | Four-bedroom homes |
-| Seller situation | Curious owner |
-| Concept family | Market evidence |
-| Hook | "See what Baldivis homes sold for this quarter" |
-| Proof used | Three recent sales with dates |
-| Format | Static image |
-| Lead volume | 14 |
-| Qualified leads | 6 |
-| Appraisals | 2 |
-| Listings | 1 |
+| Audience problem | What situation should make the right homeowner recognise themselves? |
+| Proof | What can you verify and legally use? |
+| Offer and CTA | What single next step does this ad promise? |
+| Success measure | Which quality or progression signal will you review? |
 
-This makes it possible to identify patterns. You may discover that market reports create volume, seller checklists create better conversations and testimonial videos produce fewer but more committed enquiries. That is more useful than declaring one ad the winner based solely on cost per lead.
+## Let the message choose the format
+
+- **Static:** one fact or one offer needs a fast read.
+- **Carousel:** the explanation has a clear sequence.
+- **Short video:** the agent’s explanation reduces uncertainty.
+
+Do not treat a resize as a new hypothesis.
+
+## Review the hypothesis
+
+Track spend, impressions, lead contactability and downstream quality together. A low cost per lead is not proof of a useful concept, and a low impression count is not proof that it failed. Set a review date and a minimum evidence threshold appropriate to your budget, then pause, revise or extend one hypothesis at a time.
+
+- Confirm rights, sources, Housing category and current geographic requirements.
+- Check that each ad has one offer, one CTA and a ready follow-up path.
+- Record what changed and what you learned; do not invent a result.
+
+[Download the creative brief and production checklist](/guides/resources/real-estate-creative-portfolio-meta-ads/creative-brief.txt).
 
 ## Where Blockwise fits
 
-You still need the local knowledge — the comparable sales, the buyer patterns, the client stories. Blockwise does not replace that. What Blockwise does is help turn those distinct propositions into on-brand creative across Feed, Story and Reel formats, prepare the campaign and lead form for each concept, and bring the resulting leads into one review path.
+Blockwise can help prepare editable creative and campaign materials. You still supply local evidence, approvals and real client proof; Meta publishing remains a gated step.
 
-The strategy is straightforward: cover different homeowner situations with genuinely different ads, keep the delivery structure controlled, and track what happens after each lead arrives.
-
-> **Build a creative portfolio, not one hero ad.** Use Blockwise to turn distinct seller propositions into on-brand creative, prepare each campaign and lead form, then review incoming leads in one place. [Create your Blockwise account](/signup).
+> **Turn distinct propositions into reviewable creative.** [Prepare the portfolio in Blockwise](/signup).
 
 ## Frequently asked questions
 
-### How many ads should I run at the same time?
+### How many ads should I run at once?
 
-For a local agent with a modest daily budget, six to twelve genuinely distinct assets is a practical starting point. The key word is distinct — three appraisal ads with different headline wording is one concept rendered three times, not a portfolio.
+Use the number your budget can support and your team can review. Start with a small set of genuinely different hypotheses, not a mandatory count.
 
 ### Do I need professional video production?
 
-No. A short Reel filmed on a phone outside a recognisable local location can be more effective than a polished studio video. The format should serve the message — agent-led video builds familiarity, client video provides proof, and property footage supports a point about the home itself.
+No. Choose the format that carries the message. Production polish is not proof.
 
-### Should I show sold prices in the ad?
+### Can I use a sold price in the ad?
 
-The ad can show a verified example if you have the right to use it, but it does not need to reveal the full list. The offer should make clear that the requested resource contains the disclosed results. Avoid implying that comparable sales establish a valuation.
+Only when it is accurate and you have permission to publish it. Label the source and do not present a comparable sale as a valuation.
 
-### How do I know which concept families to start with?
+### How do I choose my first concepts?
 
-Start with market evidence and direct response. Market evidence attracts curious owners who are not ready for an appraisal. Direct response captures active sellers. Once those two are running, add a seller-problem ad and a proof ad to broaden the portfolio.
+Start with local evidence and direct response. Add a seller-problem or process concept when its proof, form and follow-up are ready.
 
 ## Sources
 
-- [Meta Andromeda: Supercharging Advantage+ automation, Meta Engineering](https://engineering.fb.com/2024/12/02/production-engineering/meta-andromeda-advantage-automation-next-gen-personalized-ads-retrieval-engine/)
-- [About Advantage+ audience, Meta Business Help Center](https://www.facebook.com/business/help/273363992030035)
-- [Advantage+ leads campaigns, Meta for Business](https://www.facebook.com/business/ads/meta-advantage-plus/leads)
-- [About ads for housing, Meta Business Help Center](https://www.facebook.com/business/help/1198401317374558)
+- [Meta Andromeda, Meta Engineering](https://engineering.fb.com/2024/12/02/production-engineering/meta-andromeda-advantage-automation-next-gen-personalized-ads-retrieval-engine/)
+- [Special Ad Category, Meta for Developers](https://developers.facebook.com/docs/marketing-api/audiences/special-ad-category/)
 - [Lead ads with forms, Meta for Business](https://www.facebook.com/business/ads/ad-objectives/lead-generation/lead-ads-with-forms)

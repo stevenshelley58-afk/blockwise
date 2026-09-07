@@ -21,6 +21,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { META_COPY_CONSTRAINTS } from "../../../lib/adstudio/meta-copy-contract";
 import { templateAssetProxyUrl } from "@/lib/adstudio/pack-gallery";
+import { useCanonicalPreview, type CanonicalPreviewState } from "./canonical-preview";
 
 // ---------------------------------------------------------------------------
 // Editor Shell — Phase 6 foundation
@@ -343,6 +344,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   return <RedesignedEditor
     pack={pack}
     adId={adId}
+    workspaceId={workspaceId}
     state={state}
     activeLayout={activeLayout}
     templateId={pack.templateId}
@@ -393,8 +395,8 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   />;
 }
 
-function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandColours, brandBusinessName, brandLogoUrl, libraryAssets, canSave, canUndo, canRedo, saveConflict, pendingImageUploads, inspectorTab, setInspectorTab, mobileInspectorOpen, setMobileInspectorOpen, handleSave, handlePublish, handleKeyDown, undo, redo, setActivePlacement, selectLayer, handleColourModeChange, handleCustomColourChange, handleTemplateCopyChange, handleBusinessNameChange, handleLibraryPick, handleImageChange, openCrop, openCropForInput, updateTextValue, updateMetaCopy, updateDestinationUrl, updateCrop, setError, cropTarget, setCropTarget, proposalBrief, setProposalBrief, proposal, proposalBusy, proposeCopy, useAllProposal, name, setName, persistName }: {
-  pack: AdTemplate; adId: string; templateId: string; state: EditorState; activeLayout: AdTemplate["feedLayout"]; brandColours: BrandPackColours | null; brandBusinessName: string; brandLogoUrl: string | null; libraryAssets?: Array<{ id: string; url: string; label: string }>; canSave: boolean; canUndo: boolean; canRedo: boolean; saveConflict: boolean; pendingImageUploads: number;
+function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLayout, brandColours, brandBusinessName, brandLogoUrl, libraryAssets, canSave, canUndo, canRedo, saveConflict, pendingImageUploads, inspectorTab, setInspectorTab, mobileInspectorOpen, setMobileInspectorOpen, handleSave, handlePublish, handleKeyDown, undo, redo, setActivePlacement, selectLayer, handleColourModeChange, handleCustomColourChange, handleTemplateCopyChange, handleBusinessNameChange, handleLibraryPick, handleImageChange, openCrop, openCropForInput, updateTextValue, updateMetaCopy, updateDestinationUrl, updateCrop, setError, cropTarget, setCropTarget, proposalBrief, setProposalBrief, proposal, proposalBusy, proposeCopy, useAllProposal, name, setName, persistName }: {
+  pack: AdTemplate; adId: string; workspaceId: string; templateId: string; state: EditorState; activeLayout: AdTemplate["feedLayout"]; brandColours: BrandPackColours | null; brandBusinessName: string; brandLogoUrl: string | null; libraryAssets?: Array<{ id: string; url: string; label: string }>; canSave: boolean; canUndo: boolean; canRedo: boolean; saveConflict: boolean; pendingImageUploads: number;
   inspectorTab: InspectorTab; setInspectorTab: (value: InspectorTab) => void; mobileInspectorOpen: boolean; setMobileInspectorOpen: (value: boolean) => void; handleSave: () => Promise<boolean>; handlePublish: () => Promise<void>; handleKeyDown: (event: KeyboardEvent) => void; undo: () => void; redo: () => void; setActivePlacement: (value: Placement) => void; selectLayer: (value: string | null) => void;
   handleColourModeChange: (mode: ColourMode) => void; handleCustomColourChange: (role: ColourRole, hex: string) => void; handleTemplateCopyChange: (enabled: boolean) => void; handleBusinessNameChange: (value: string) => void; handleLibraryPick: (key: string, sourceAssetId: string) => Promise<void>; handleImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; openCrop: (slot: ImageSlotLayer) => void; openCropForInput: (key: string) => void; updateTextValue: (key: string, value: string) => void; updateMetaCopy: (field: keyof MetaCopy, value: string) => void; updateDestinationUrl: (value: string) => void; updateCrop: (key: string, placement: Placement, crop: Rect) => void; setError: (value: string | null) => void;
   cropTarget: { slot: ImageSlotLayer; placement: Placement } | null; setCropTarget: (value: { slot: ImageSlotLayer; placement: Placement } | null) => void; proposalBrief: string; setProposalBrief: (value: string) => void; proposal: { onImage: Record<string, string>; copy: Partial<MetaCopy>; source: string } | null; proposalBusy: boolean; proposeCopy: () => Promise<void>; useAllProposal: () => void;
@@ -412,6 +414,33 @@ function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandCo
   const [previewMode, setPreviewMode] = useState<"design" | "meta" | "split">("meta");
   const [zoom, setZoom] = useState<"fit" | 1 | 1.25 | 0.8>("fit");
   const [placementView, setPlacementView] = useState<Placement | "both">(state.activePlacement);
+  const [canonicalDocument, setCanonicalDocument] = useState<{ document: AdDocumentParsed; version: number } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void buildAdDocument(state).then(document => {
+      if (!cancelled) setCanonicalDocument(previous =>
+        previous?.version === (state.editVersion ?? 0) && JSON.stringify(previous.document) === JSON.stringify(document)
+          ? previous : { document, version: state.editVersion ?? 0 });
+    }).catch(() => {
+      if (!cancelled) setCanonicalDocument(null);
+    });
+    return () => { cancelled = true; };
+  }, [state]);
+  const previewDocument = canonicalDocument?.version === (state.editVersion ?? 0) ? canonicalDocument.document : null;
+  const feedCanonicalPreview = useCanonicalPreview({
+    adId,
+    workspaceId,
+    document: previewDocument,
+    placement: "feed",
+    enabled: pendingImageUploads === 0 && (placementView === "both" || state.activePlacement === "feed"),
+  });
+  const storyCanonicalPreview = useCanonicalPreview({
+    adId,
+    workspaceId,
+    document: previewDocument,
+    placement: "story",
+    enabled: pendingImageUploads === 0 && (placementView === "both" || state.activePlacement === "story"),
+  });
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [layersOpen, setLayersOpen] = useState(false);
   const [mobileLayersOpen, setMobileLayersOpen] = useState(false);
@@ -431,6 +460,7 @@ function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandCo
     <FeedPreview
       {...metaPreviewBase}
       layout={pack.feedLayout}
+      canonicalPreview={feedCanonicalPreview}
       cropOverrides={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.crops.feed]))}
       className="max-h-full"
     />
@@ -439,6 +469,7 @@ function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandCo
     <StoryPreview
       {...metaPreviewBase}
       layout={pack.storyLayout}
+      canonicalPreview={storyCanonicalPreview}
       cropOverrides={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.crops.story]))}
       className="max-h-full"
     />
@@ -484,6 +515,7 @@ function RedesignedEditor({ pack, adId, templateId, state, activeLayout, brandCo
       selectedLayerId={interactive && placement === state.activePlacement ? state.selectedLayerId : null}
       onSelect={interactive ? layerId => { if (layerId) editLayer(placement, layerId); } : undefined}
       onError={setError}
+      canonicalPreview={placement === "feed" ? feedCanonicalPreview : storyCanonicalPreview}
       zoom={canvasZoom}
     />
   );
@@ -577,9 +609,10 @@ type DesignCanvasProps = {
   onCropImage?: (slot: ImageSlotLayer) => void;
   onError?: (message: string) => void;
   zoom?: "fit" | 0.8 | 1 | 1.25;
+  canonicalPreview?: CanonicalPreviewState;
 };
 
-function DesignCanvas({ templateId, existingAdId, assets, layout, placement, colours, imageValues, textValues, cropOverrides, selectedLayerId, onSelect, onCropImage, onError, zoom = "fit" }: DesignCanvasProps) {
+function DesignCanvas({ templateId, existingAdId, assets, layout, placement, colours, imageValues, textValues, cropOverrides, selectedLayerId, onSelect, onCropImage, onError, canonicalPreview, zoom = "fit" }: DesignCanvasProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 800, height: 700 });
   useEffect(() => { const node = viewport.current; if (!node) return; const observer = new ResizeObserver(() => setSize({ width: node.clientWidth, height: node.clientHeight })); observer.observe(node); return () => observer.disconnect(); }, []);
@@ -587,7 +620,7 @@ function DesignCanvas({ templateId, existingAdId, assets, layout, placement, col
   const fit = Math.min((size.width - 24) / dims.width, (size.height - 24) / dims.height, 1);
   const scale = zoom === "fit" ? Math.max(0.05, Math.min(1, fit)) : zoom;
   const width = Math.round(dims.width * scale), height = Math.round(dims.height * scale);
-  return <div ref={viewport} className="flex min-h-0 min-w-0 flex-1 items-start justify-start overflow-auto p-3"><div className="m-auto" style={{ width, height, minWidth: width, minHeight: height }}><LayeredCanvas templateId={templateId} existingAdId={existingAdId} assets={assets} layout={layout} colours={colours} imageValues={imageValues} textValues={textValues} cropOverrides={cropOverrides} selectedLayerId={selectedLayerId} onSelect={onSelect} onCropImage={onCropImage} onError={onError} className="h-full w-full" /></div></div>;
+  return <div ref={viewport} className="flex min-h-0 min-w-0 flex-1 items-start justify-start overflow-auto p-3"><div className="m-auto" style={{ width, height, minWidth: width, minHeight: height }}><LayeredCanvas templateId={templateId} existingAdId={existingAdId} assets={assets} layout={layout} colours={colours} imageValues={imageValues} textValues={textValues} cropOverrides={cropOverrides} selectedLayerId={selectedLayerId} onSelect={onSelect} onCropImage={onCropImage} onError={onError} canonicalPreview={canonicalPreview} className="h-full w-full" /></div></div>;
 }
 
 function InspectorTabs({ value, onChange }: { value: InspectorTab; onChange: (value: InspectorTab) => void }) {

@@ -9,3 +9,10 @@ test("email event webhook binds authentication to the exact raw body", () => {
   assert.match(source, /body = JSON\.parse\(rawBody\)/);
   assert.doesNotMatch(source, /request\.json\(\)/);
 });
+
+
+test("email drain has an explicit disabled-by-default delivery gate", () => {
+  const source = readFileSync("src/app/api/internal/email/drain/route.ts", "utf8");
+  assert.match(source, /isEmailDeliveryEnabled\(process\.env\)/);
+  assert.match(source, /deliveryEnabled: false/);
+});
