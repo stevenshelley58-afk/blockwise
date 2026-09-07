@@ -82,7 +82,7 @@ export function AuditLeadForm({ area, label, signupHref, metrics, analytics }: A
   }
 
   return (
-    <form onSubmit={onSubmit} onFocusCapture={onFirstInteraction}>
+    <form onSubmit={onSubmit} onFocusCapture={onFirstInteraction} data-clarity-mask="true">
       <div className="form-row">
         <label>
           Work email
