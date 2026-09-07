@@ -35,3 +35,10 @@ scripts
 scripts/**
 tmp
 tmp/**
+
+# The customer Ad Radar needs this one canonical build-time directory.
+!hermes/
+hermes/*
+!hermes/data/
+hermes/data/*
+!hermes/data/au-postcodes.json
