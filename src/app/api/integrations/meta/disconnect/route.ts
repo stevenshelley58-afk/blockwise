@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { canManageProviderConnections } from "@/lib/auth/access-control";
 import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { DEFAULT_META_GRAPH_VERSION } from "@/lib/providers/meta-graph-version";
-import { loadStoredProviderTokens } from "@/lib/providers/provider-connections";
+import { clearStoredProviderTokens, loadStoredProviderTokens } from "@/lib/providers/provider-connections";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -11,6 +11,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Body = { workspaceId?: string };
+type MetaConnection = { id: string; metadata_json: Record<string, unknown> | null };
 
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => ({}))) as Body;
@@ -31,36 +32,54 @@ export async function POST(request: NextRequest) {
 
   const serviceSupabase = createSupabaseServiceClient();
 
-  // Load the connection row to get its id and then the stored tokens.
-  const { data: connection, error: connErr } = await serviceSupabase
+  // Load every historical row. A reconnect can leave older vault entries, so
+  // clearing only the newest public row would leave a usable credential behind.
+  const { data: connections, error: connErr } = await serviceSupabase
     .from("provider_connections")
-    .select("id")
+    .select("id,metadata_json")
     .eq("workspace_id", access.access.workspaceId)
     .eq("provider", "meta")
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order("updated_at", { ascending: false });
 
   if (connErr) {
     console.error("[meta/disconnect] provider_connections query failed:", connErr.message);
+    return NextResponse.json({ error: connErr.message }, { status: 500 });
   }
 
-  // Best-effort: revoke the app grant via Meta Graph API.
-  if (connection) {
+  const rows = (connections ?? []) as MetaConnection[];
+  const latest = rows[0];
+
+  // Best-effort: revoke an OAuth app grant via Meta Graph API. Partner access
+  // uses a shared system-user token, so /me/permissions is not a workspace-
+  // scoped customer grant and must not be called during a workspace disconnect.
+  if (latest && latest.metadata_json?.connectionMethod !== "partner_access") {
     try {
-      const tokens = await loadStoredProviderTokens(serviceSupabase, connection.id);
+      const tokens = await loadStoredProviderTokens(serviceSupabase, latest.id);
       if (tokens.accessToken) {
         const revokeUrl = new URL(`https://graph.facebook.com/${DEFAULT_META_GRAPH_VERSION}/me/permissions`);
         revokeUrl.searchParams.set("access_token", tokens.accessToken);
         const revokeRes = await fetch(revokeUrl.toString(), { method: "DELETE" });
         if (!revokeRes.ok) {
-          const body = await revokeRes.text().catch(() => "");
-          console.error("[meta/disconnect] Meta revoke failed:", revokeRes.status, body);
+          const responseBody = await revokeRes.text().catch(() => "");
+          console.error("[meta/disconnect] Meta revoke failed:", revokeRes.status, responseBody);
         }
       }
     } catch (err) {
       console.error("[meta/disconnect] revoke error:", err);
     }
+  }
+
+  // Clear every vault entry before changing public status. Readers reject
+  // revoked rows, and a vault failure is surfaced rather than claiming a
+  // disconnected workspace is safe while its credential may still work.
+  try {
+    for (const row of rows) {
+      await clearStoredProviderTokens(serviceSupabase, row.id);
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Could not clear the Meta token vault.";
+    console.error("[meta/disconnect] token vault clear failed:", message);
+    return NextResponse.json({ error: "Could not securely clear the Meta connection." }, { status: 500 });
   }
 
   // Always update status to revoked in the DB regardless of whether the API revoke succeeded.

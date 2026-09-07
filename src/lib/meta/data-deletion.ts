@@ -309,7 +309,7 @@ export async function processMetaDeauthorizeRequest(metaUserId: string) {
   return { disconnectedProviderConnections };
 }
 
-function metadataMatchesMetaUserId(metadata: Record<string, unknown>, metaUserId: string): boolean {
+export function metadataMatchesMetaUserId(metadata: Record<string, unknown>, metaUserId: string): boolean {
   const meta = typeof metadata.meta === "object" && metadata.meta !== null ? metadata.meta as Record<string, unknown> : {};
   const candidateKeys = ["metaUserId", "userId", "user_id", "appScopedUserId", "app_scoped_user_id"];
 

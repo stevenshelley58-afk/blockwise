@@ -13,6 +13,9 @@ export type OAuthTokenExchange = {
   externalAccountName: string;
   status: "connected" | "needs_attention";
   metadata?: Record<string, unknown>;
+  // Meta returns an app-scoped user id. Persisting it is required so signed
+  // deauthorization/data-deletion callbacks can identify this connection.
+  metaUserId?: string;
   tokenExpiresAt?: string | null;
 };
 
@@ -116,6 +119,10 @@ async function exchangeMetaCode(request: NextRequest, code: string): Promise<OAu
   const longLived = await fetchJson<{ access_token?: string; expires_in?: number; error?: { message?: string } }>(longLivedUrl.toString()).catch(() => shortLived);
   const accessToken = longLived.access_token ?? shortLived.access_token;
   const tokenExpiresAt = expiresInToIso(longLived.expires_in ?? shortLived.expires_in);
+  // Do not persist a Meta token unless its app-scoped owner can be recorded.
+  // Without this identity, a later deauthorization callback cannot safely
+  // match and clear the workspace connection.
+  const metaUserId = await fetchMetaUserIdentity(accessToken);
   const [accounts, pages] = await Promise.all([
     fetchMetaAdAccounts(accessToken).catch(() => []),
     fetchMetaPages(accessToken).catch(() => []),
@@ -134,9 +141,14 @@ async function exchangeMetaCode(request: NextRequest, code: string): Promise<OAu
     externalAccountId: account?.id ?? "meta_account_pending",
     externalAccountName: account?.name ?? "Meta Ads account",
     status: account ? "connected" : "needs_attention",
+    metaUserId,
     tokenExpiresAt,
     metadata: {
+      // Keep the id at the root for the data-deletion matcher and inside the
+      // provider metadata for existing consumers that read metadata.meta.
+      metaUserId,
       meta: {
+        metaUserId,
         metaAdAccountId: account?.id ?? "",
         metaBusinessId: account?.businessId ?? "",
         metaBusinessName: account?.businessName ?? "",
@@ -151,6 +163,24 @@ async function exchangeMetaCode(request: NextRequest, code: string): Promise<OAu
       },
     },
   };
+}
+
+export async function fetchMetaUserIdentity(
+  accessToken: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string> {
+  const url = new URL(`https://graph.facebook.com/${DEFAULT_META_GRAPH_VERSION}/me`);
+  url.searchParams.set("fields", "id");
+  url.searchParams.set("access_token", accessToken);
+  const response = await fetchImpl(url.toString(), { cache: "no-store" });
+  const payload = (await response.json()) as { id?: unknown; error?: { message?: string } };
+  if (!response.ok) {
+    throw new Error(payload.error?.message ?? `Meta identity request failed with ${response.status}.`);
+  }
+  if (typeof payload.id !== "string" || !payload.id.trim()) {
+    throw new Error("Meta OAuth did not return a user identity.");
+  }
+  return payload.id.trim();
 }
 
 async function fetchMetaPages(accessToken: string): Promise<Array<{ id: string; name: string }>> {
