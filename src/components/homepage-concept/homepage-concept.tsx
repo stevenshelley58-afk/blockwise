@@ -182,7 +182,7 @@ function StoryAd({ phase, review = false }: { phase: number; review?: boolean })
   const creativeEdited = phase >= 4;
 
   return (
-    <motion.article className={`hc-story-ad${review ? " is-review" : ""}`} transition={STORY_MOVE}>
+    <motion.article layoutId="story-ad" className={`hc-story-ad${review ? " is-review" : ""}`} transition={STORY_MOVE}>
       <div className="hc-ad-account">
         <span className="hc-ad-avatar" aria-hidden="true">{STORY_CREATIVE.avatar}</span>
         <span><strong>{STORY_CREATIVE.account}</strong><small>Sponsored</small></span>
@@ -197,7 +197,7 @@ function StoryAd({ phase, review = false }: { phase: number; review?: boolean })
       >
         {copyEdited ? STORY_CREATIVE.editedCopy : STORY_CREATIVE.startingCopy}{phase === 3 ? <span className="hc-story-caret" /> : null}
       </motion.p>
-      <motion.div className="hc-ad-image-wrap hc-story-ad-image" transition={STORY_MOVE}>
+      <motion.div layoutId="story-template-image" className="hc-ad-image-wrap hc-story-ad-image" transition={STORY_MOVE}>
         <img src={withBasePath(STORY_CREATIVE.image)} alt="" width="1080" height="1350" />
         <motion.span
           className={`hc-story-creative-overlay${phase === 4 ? " is-editing" : ""}`}
