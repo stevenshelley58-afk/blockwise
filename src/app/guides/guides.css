@@ -378,7 +378,7 @@
 .bw-article-progress span { background: var(--blue-bright); display: block; height: 100%; transform-origin: left; width: 100%; }
 .bw-article-hero { background: var(--ink); color: var(--white); display: grid; grid-template-rows: auto clamp(280px, 42vh, 520px); }
 .bw-article-hero:not(:has(.bw-article-hero-media)) { grid-template-rows: auto; }
-.bw-article-hero:has(.bw-article-hero-media:not(:has(img))) {
+.bw-article-hero:has(.bw-article-hero-media):not(:has(img)) {
   grid-template-rows: auto minmax(0, auto);
 }
 .bw-article-hero-media:not(:has(img)) {
