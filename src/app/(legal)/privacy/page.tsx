@@ -159,8 +159,7 @@ export default function PrivacyPolicyPage() {
       <h2 style={{ fontSize: 22, marginTop: 32, fontWeight: 600 }}>6. Sub-processors</h2>
       <p>We use the following infrastructure providers, who are contractually bound to confidentiality:</p>
       <ul>
-        <li>Vercel (application hosting)</li>
-        <li>Supabase (authentication, application database, encrypted storage)</li>
+        <li>Blockwise VPS (application hosting, PostgreSQL database, authentication, and object storage behind Caddy)</li>
         <li>Stripe (Checkout, payment methods, tax calculation, subscriptions, and receipts)</li>
         <li>Cal.com (hosted onboarding scheduling)</li>
         <li>Meta (connected business assets, campaign delivery, lead forms, and reporting)</li>
@@ -198,8 +197,9 @@ export default function PrivacyPolicyPage() {
         </li>
       </ol>
       <p>
-        Deletion requests are normally completed within 30 days. Some backup systems may retain a
-        copy for up to 90 days before being permanently overwritten.
+        Deletion requests are normally completed within 30 days. Product backups are encrypted
+        snapshots on the Blockwise VPS and are removed by the scheduled retention job; this does
+        not remove copies held by Stripe, Meta, Cal.com, or other providers.
       </p>
 
       <h2 style={{ fontSize: 22, marginTop: 32, fontWeight: 600 }}>8. Security</h2>
