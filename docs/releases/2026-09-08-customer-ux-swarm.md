@@ -1,56 +1,72 @@
-# Customer UX swarm lane 3 — draft evidence (8 September 2026)
+# Customer app UX release (8 September 2026)
 
-> **DRAFT — NOT DEPLOYED.** This record describes the lane-3 customer UX work
-> prepared from baseline 674b512139961927191f3659a64737a2e0db1cdd. It is not
-> a release approval or proof of the current production revision.
+This app-only release served
+`cdc4de9c40f8d92ff3a61cf93d2a141acea15b0b` from immutable image
+`blockwise-app:cdc4de9c40f8d92ff3a61cf93d2a141acea15b0b` (image ID
+`sha256:e9427e9b963673843baa22b2c51103ad3f0cf675396c3e6dca0aae0d1dccff07`).
+It started from live baseline `674b512139961927191f3659a64737a2e0db1cdd`.
+This is dated historical evidence, not a permanently current revision claim.
 
-## Intended improvements
+## Customer changes
 
-- Use one consistent customer shell and naming model: Ads and Results, with
-  shared desktop/mobile navigation and existing monitor restrictions preserved.
-- Give Results a truthful disconnected state with a primary Connect Meta action
-  and an explicitly opt-in example report; connected Results use compact primary
-  KPIs, a switchable chart, prioritized attention/results rows, and deliberate
-  reporting/detail and campaign-management drilldowns.
-- Keep Leads connection-aware without introducing CRM functionality.
-- Make Settings a focused category index with deep links, browser back behavior,
-  and focus restoration; keep Team, Notifications, Billing, Security, and
-  deletion safeguards scoped and truthful.
-- Keep Meta connection guidance reassuring and provider-specific, with optional
-  help imagery collapsed by default and direct-versus-assisted status stated
-  honestly.
+- Unified customer navigation and names around Ads, Results, Leads and More on
+  desktop and mobile, without changing the public homepage.
+- Reworked Ads into a compact starting point; templates and inspiration remain
+  browseable libraries. Missing or failed data now has honest recovery states.
+- Reworked Brand Pack around the live preview and next blocker. Logo, colours,
+  fonts, voice, identity and compliance details expand only when needed.
+- Kept the editor focused on the creative, with compact Photos, Content, Style,
+  Layers and Preview controls and a bounded mobile layout.
+- Split publishing into four clear stages with stage-specific validation,
+  persistent values and recoverable Feed/Story downloads.
+- Put Ad Radar search and filters before results, preserve query/back state, and
+  use focused detail views and reliable image fallbacks.
+- Made Results truthful when Meta is disconnected. Example data is explicit;
+  live reporting leads with three key numbers, priority results and one
+  switchable chart. Reporting and campaign controls are collapsed by default.
+- Kept Leads connection-aware and simplified Settings to a category index with
+  deep links, browser back behavior and focus restoration.
+- Put optional Meta setup detail behind disclosure while keeping the essential
+  connection step visible.
+- Removed duplicate main-content landmarks from customer loading states.
 
 ## Safety boundaries
 
-- No public homepage redesign and no backend access, pricing, credits, billing
-  data, provider gates, or deletion safeguards were changed.
+- No public homepage redesign, database migration, pricing, credits, billing
+  data, provider gates or deletion safeguards were changed.
 - Existing palette, fonts, shadcn patterns, navigation restrictions, and focused
   editor behavior remain the design baseline.
-- Browser acceptance uses the controlled authenticated fixture and blocks
-  non-read-only requests; it must not perform real saves, invites, connects, or
-  deletion requests.
+- Browser acceptance used the controlled authenticated fixture and blocked
+  non-read-only requests. No real saves, invites, connections, publishing or
+  deletion requests were performed.
+- `BLOCKWISE_ENABLE_PROVIDER_WRITES=false`; the product worker remained omitted.
+  SMTP, billing and real Meta publishing were not enabled or accepted here.
 
-## Evidence recorded for this draft
+## Verification
 
-- Focused Node test set: **37 passed** (shell routing, settings/mobile shell,
-  publish lifecycle, Leads, monitor/reporting, Meta guide, and reporting
-  honesty).
-- npx tsc --noEmit --incremental false --pretty false: **passed**.
-- git diff --check: **passed**.
-- Prepared browser acceptance: e2e/customer-ux-flows.spec.ts, 8 tests listed
-  across Chromium and mobile projects. The controlled canary URL was not
-  running, so no live browser result is claimed.
+- Repository gates: NUL check, typecheck and production build passed; full test
+  suites reported **1,082 passed**, **0 failed**, with two documented
+  environment-dependent skips.
+- Controlled canary browser acceptance: **29 passed**, **0 failed**, one
+  market-bound fixture skip. It covered 320, 375, 390, 414, 768 and 1440 pixel
+  widths, double-size zoom, navigation, Ads, templates, libraries, Brand Pack,
+  editor, publishing, Radar, Results, Leads, Settings and Meta setup.
+- Public normal-TLS browser acceptance on the final revision: **29 passed**, **0
+  failed**, one market-bound fixture skip. The suite included the canonical
+  read-only creative preview, both-format download recovery and page-fit checks.
+- Public health verified the exact compiled revision
+  `cdc4de9c40f8d92ff3a61cf93d2a141acea15b0b` after app-only replacement.
 
-Evidence and run artifacts are associated with
-/srv/blockwise/e2e-runs/ux-swarm-20260908/ (including the approved review and
-test log). Parent release work will record the final candidate revision and
-results separately.
+Evidence, logs, screenshots, the approved review and candidate/rollback records
+are retained under `/srv/blockwise/e2e-runs/ux-swarm-20260908/`.
 
-## Pending release gates
+## Release and rollback
 
-- Parent-owned full test gates and integrated build.
-- Authenticated controlled-canary browser QA, including responsive Results,
-  Settings focus/back, Leads, and Meta guidance flows.
-- Production verification, deployment, and post-deploy checks.
+Only `product-app` was recreated. Database, Auth, REST, Storage and Caddy stayed
+running. The protected environment backup immediately before the final app is
+`release/product.env.before-cdc4de9c40f8`; the original live-baseline backup is
+`release/product.env.before-b56816d5a308`. The prior immutable app images are
+retained for app-only rollback through the active rollback runbook.
 
-Until those gates are complete, this lane remains a draft and **not deployed**.
+The release branch may contain a later documentation-only commit. The serving
+application identity remains the compiled revision above.
