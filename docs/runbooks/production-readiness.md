@@ -1,5 +1,12 @@
 # Blockwise production readiness
 
+## Current verification authority
+
+Use Current runtime, Health gate and Separate gates below for verification.
+Read the compiled revision from live health and verify the intended full SHA
+with the product-health script. Dated releases below are historical evidence,
+not a fixed current release. [The index](../README.md) selects other procedures.
+
 ## Release candidate (7 September 2026, beta readiness)
 
 The coordinated candidate checkout is `/projects/blockwise-beta-release-20260907`.
@@ -65,6 +72,21 @@ credentials in the deployment environment), and no customer was charged.
 
 The earlier same-day release `3b2770eb4dec62217589b074be999ae9fa9fda06`
 (template editor and customer usability) remains recorded below.
+
+## Historical release (6 September 2026, template editor and customer usability)
+
+The 6 September release served `3b2770eb4dec62217589b074be999ae9fa9fda06` from
+`blockwise-app:3b2770eb4dec62217589b074be999ae9fa9fda06` (image ID
+`sha256:f787e10b3dc8cbf8e4213393a9e96907d3f30c2b8c0fc54c30d436c4b5c0689a`).
+This app-only release combines the focused lead-first usability cleanup with
+the coordinated template-editor fixes. The hero and design system are unchanged.
+
+Integrated checks passed: 924 tests, NUL check, typecheck and production build;
+the final test-only locator correction was rebuilt and passed six canary and
+six public browser tests with no skips. See the [release record](../releases/2026-09-06-template-editor.md)
+for evidence, the retained d39771a9 rollback image/environment, and limitations.
+Provider writes remain disabled and the worker remains omitted. This is not
+acceptance of real Meta publishing, SMTP, billing, or a template's quality.
 
 
 Earlier records below are historical, not the current deployment identity.

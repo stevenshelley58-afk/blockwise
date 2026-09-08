@@ -68,9 +68,13 @@ RELEASE_ROOT='/srv/blockwise/worker-releases'
 RELEASE_DIR="$RELEASE_ROOT/$REVISION"
 IMAGE="ghcr.io/stevenshelley58-afk/blockwise-worker:$REVISION"
 mkdir -p "$RELEASE_ROOT"
-git clone --filter=blob:none --no-checkout https://github.com/stevenshelley58-afk/blockwise.git "$RELEASE_DIR"
-git -C "$RELEASE_DIR" fetch --depth 1 origin "$REVISION"
-git -C "$RELEASE_DIR" checkout --detach "$REVISION"
+git -C /projects/blockwise cat-file -e "$REVISION^{commit}"
+if [ -d "$RELEASE_DIR" ]; then
+  test "$(git -C "$RELEASE_DIR" rev-parse HEAD)" = "$REVISION"
+  git -C "$RELEASE_DIR" diff --quiet HEAD --
+else
+  git -C /projects/blockwise worktree add --detach "$RELEASE_DIR" "$REVISION"
+fi
 BUILD_DATE="$(git -C "$RELEASE_DIR" show -s --format='%cI' "$REVISION")"
 docker build --pull --build-arg GIT_SHA="$REVISION" --build-arg BUILD_DATE="$BUILD_DATE" -f "$RELEASE_DIR/worker/Dockerfile" -t "$IMAGE" "$RELEASE_DIR"
 test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$IMAGE")" = "$REVISION"
