@@ -3,11 +3,16 @@
 ## Current status and scope
 
 As observed on 2026-09-08, the runtime is ACTIVE at exact SHA
-7b11172024c6050bd1c27b2b671278598028b495 and the product is LIVE at exact
+e351c56e8a3d626b42d2866248ccdca924d10c6f and the product is LIVE at exact
 SHA 674b512139961927191f3659a64737a2e0db1cdd. Product health is verified
-after two pagination canary and two public normal TLS passes. WA first-fill
-remains RUNNING and NOT COMPLETE. This document records the observed evidence
-and the release procedure; it is not a claim of complete WA coverage.
+after two pagination canary and two public normal TLS passes. The deployed
+one-queue worker has witnessed all five bounded lanes: directory fanout 1
+(306 directory jobs and fanouts observed; all 15,256 entities queued), discovery entity 4 (about 2,871
+completed by 05:53 UTC), collector 4, media 4, and deterministic classifier 1
+(90+ deterministic saved-evidence decisions). WA first-fill remains RUNNING
+and NOT COMPLETE. This document
+records the observed evidence and the release procedure; it is not a claim
+of complete WA coverage.
 
 The isolated research database is authoritative for page scan state. Apply
 research migrations in filename order, including the signup-owned
@@ -15,13 +20,16 @@ research migrations in filename order, including the signup-owned
 202609080002_ad_radar_scan_truth.sql. Do not put either research migration in
 the customer product migration list.
 
-The known WA first-fill scope is 389 eligible numeric Facebook pages, not
-the whole WA directory. Of those 389 pages, 370 do not yet have a latest
-comparable baseline. This is a known-page scope, not a claim of complete WA
-agent coverage. A fresh DEMIRS audit recorded 11,832 licenses, with 205 agents
-and 35 agencies appended from safe evidence; the current WA directory reports
-12,349 agents and 2,907 agencies. Its 181 identity ambiguities remain explicit,
-and a repeat audit found zero missing records. These counts do not turn the
+The historical launch snapshot covered 389 eligible numeric Facebook
+pages, not the whole WA directory; 370 of those pages then lacked a latest
+comparable baseline. These are historical known-page baseline counts, not
+current completion counts or a claim of complete WA agent coverage. The
+current worker snapshot has 392 eligible numeric pages and 296 filled; this
+still is not full WA identity or directory completion. A fresh
+DEMIRS audit recorded 11,832 licenses, with 205 agents and 35 agencies
+appended from safe evidence; the current WA directory reports 12,349 agents
+and 2,907 agencies. Its 181 identity ambiguities remain explicit, and a
+repeat audit found zero missing records. These counts do not turn the
 known-page fill into full directory coverage. Existing and future customer
 interests are synced from the product signup/profile source every five minutes. The research table contains only a
 pseudonymous customer_key and target/linkage fields; it does not contain
@@ -47,11 +55,11 @@ ad_fetch_runs row:
 
 The SQL scheduler function requires active_ads in addition to the completion,
 coverage, and pagination predicates. The runtime writes active_ads for new
-runs. Historical preexisting baseline rows may instead expose
-Historical last_successful_scan timestamps alone do not count as a full fill.
-result_summary.item_count or result_summary.ads_seen, or may lack an
-active-count field; those fields are descriptive historical evidence only and
-must never substitute for active_ads in the new scheduler truth.
+runs. Historical preexisting baseline rows may instead expose only
+last_successful_scan, result_summary.item_count, or result_summary.ads_seen,
+or may lack an active-count field. Those fields are descriptive historical
+evidence only and must never substitute for active_ads in the new scheduler
+truth; a historical last_successful_scan alone does not count as a full fill.
 
 A partial pagination run, even when it saw active ads, schedules another
 attempt within 24 hours and retains coverage as unknown. It must not mark the
@@ -95,33 +103,41 @@ number.
 ## Queue and fairness contract
 
 There is one canonical research queue and one --ad-db-worker process; do
-not start a second queue or parallel worker definition. The upcoming parallel
+not start a second queue or parallel worker definition. The deployed parallel
 lane plan is directory fanout 1, discovery entity 4, collector 4 by default,
 media 4, and deterministic classifier 1. Collector concurrency may be raised
 to 8 only after bounded acceptance evidence. The scheduler polls every 10
 seconds while idle and drains busy queues independently; slow paid captures
 must not stall directory, discovery, media, classification, or scheduling.
-Each lane claims only its marked job type and canonical dedupe prefix. Legacy
+All five lanes were witnessed on the active runtime SHA above. Each lane
+claims only its marked job type and canonical dedupe prefix. Legacy
 census/resolver/classifier rows are not consumed by the narrow worker.
 
 Directory maintenance runs weekly, with durable continuation checkpoints and
 batches of 50 entity jobs. Exact stable page IDs only are accepted: no
 name-only or slug-only guesses, and existing page ownership is preserved.
-Signed-up customer own/local pages and postcode-known pages remain daily;
+A directory HTTP 403 remains unresolved and never becomes a zero-ad or
+Facebook-page result. Structured Person.sameAs evidence is accepted when it
+proves a stable page identity; directory footer text alone never proves
+agency ownership. The live directory lookup index is 0f02800. Signed-up customer own/local pages and postcode-known pages remain daily;
 other active pages follow normal cadence, and quiet pages use 3, 7, 14, and
 30-day backoff. Customer-interest targets are eligible again after 24 hours.
 Disabled pages are never restarted by scheduler recovery. Media capture is a
 separate archive child job and rule-based classification is a separate display
 refresh; classification makes no LLM call. Provider/raw responses and
-verified media archives are distinct evidence. Media failure remains retryable
-and cannot report a fully successful media job. There is no fixed item-count
+verified media archives are distinct evidence. The data-preserving shared
+archive migration is live at e5f074fc587dfca2cb89658cb9dea79275e28473:
+12 shared physical archive files and 52 provenance references were verified
+by exact SHA/byte checks with zero downloads during verification. Media failure
+remains retryable and cannot report a fully successful media job. There is no fixed item-count
 ceiling that can silently truncate provider pagination; a provider stop,
 credit guard, timeout, or other bounded stop is recorded as partial with
 coverage unknown.
 
-The parallel lane source is not yet deployed; its immutable full SHA will be
-recorded after parent integration. The active runtime SHA above describes the
-currently verified service, not this upcoming lane change.
+The parallel lanes are deployed and active at the immutable runtime SHA
+e351c56e8a3d626b42d2866248ccdca924d10c6f. The systemd worker uses a five-minute
+stop timeout. The lane observations above are operational evidence, not a
+claim of complete WA directory coverage or failure-free pagination.
 ## Capture journal and charge safety
 
 Before writing a research source document, the capture path atomically stores
@@ -140,7 +156,8 @@ first. Do not create a paid request merely to prove queue health.
 
 The provider request limit is 25 credits per request. The database subscription
 maximum is 75,000, with 74,700 remaining at the current rehearsal snapshot.
-These are operational observations, not permission to purchase credits. Do
+The 74,675 remaining figure in the launch evidence below is historical. These
+are operational observations, not permission to purchase credits. Do
 not add another overall ceiling, and do not purchase or top up provider
 credits. A bounded stop caused by these controls is recorded with its actual
 stop reason and unknown coverage.
@@ -150,8 +167,11 @@ stop reason and unknown coverage.
 The first paid GLC Residential capture confirmed zero ads using 25 credits
 and scheduled the next scan in 3 days. Same-job raw replay took 192 ms with
 one attempt; provider-used remained 325 before and after, with no extra
-credits. The launch budget snapshot was a 75,000 subscription maximum with
-74,675 remaining. These observations do not waive the release gates below.
+credits. The later Jennings replay recovered four partial ads with one paid
+attempt and 25 credits unchanged; the final canary preserved page-scheduling
+JSON and the replay ledger exactly. The historical launch budget snapshot was a 75,000 subscription maximum
+with 74,675 remaining. These observations do not waive the release gates
+below.
 
 ## Rehearsal and release procedure
 
@@ -160,8 +180,9 @@ function against the schema-only candidate research database. Verify that
 failed and partial runs do not set initial_fill_completed_at, complete zero-ad
 runs advance through the 3/7/14/30 cadence, active pages remain daily, and a
 customer postcode produces postcode targets without changing service areas.
-Verify the 389-page known scope and the 370 pages without a latest comparable
-baseline. For new scheduler truth, test a successful run with a non-negative
+Verify the historical 389-page known scope and the historical 370 pages
+without a latest comparable baseline; current observed scope is 392 eligible
+pages with 296 filled, not full WA directory completion. For new scheduler truth, test a successful run with a non-negative
 active_ads value and test that missing, negative, or non-integer active_ads
 does not advance completion. Historical item_count/ads_seen rows may be
 reported separately but must not pass the new truth gate.
@@ -190,4 +211,8 @@ never roll back to a moving checkout or introduce a second queue.
 
 The classifier stage uses the canonical deterministic helper classifyCreativeFromSavedEvidence(creative) for saved-ad first-fill and backfill work. It reads persisted creative evidence only and makes no paid provider request, media download, network call, or LLM call. It runs in its own lane (concurrency 1) apart from media/archive refresh. Strong existing classifications must be preserved by the supervisor; replacement is for stale creative hash or classifier version, or unclassified/other status. Weak evidence remains industry=unknown, ad_type=other, and primary_intent=other.
 
-This source is implemented in the un-deployed branch and is not production activation evidence until the parent integration is merged and deployed at an immutable full SHA.
+The deterministic classifier is active in the deployed runtime SHA above;
+its observed decisions are saved-evidence-only and do not make a completeness
+claim for provider pagination. Full repository checks recorded 1,184 tests,
+1,181 passes, 3 skips, and zero failures; NUL, typecheck, and build checks
+also passed.
