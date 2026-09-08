@@ -14,6 +14,8 @@ This index separates current operating guidance from retained history.
 
 ## Design previews
 
+- [Pricing FAQ on homepage](releases/2026-09-08-homepage-pricing-faq.md) - six collapsible categories and all 15 current pricing questions.
+
 - [Reporting conversion update](releases/2026-09-08-homepage-reporting-conversion.md) - clearer reporting outcome, visible trial action and preview release evidence.
 - [Reporting email selector](releases/2026-09-08-homepage-reporting-email.md) - 7-day, 30-day and inert email preview states with sanitized sample provenance.
 
