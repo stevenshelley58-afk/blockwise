@@ -51,11 +51,10 @@ test("homepage concept uses a clean Meta ad loop as the hero visual", async () =
     "Comment",
     "Share",
     "Send message",
-    "Know how your ads are going.",
+    "See your leads. Know your costs.",
     "Start free trial",
     "No card required.",
     "Ad spend is separate.",
-    "Example data",
     "Nothing will be sent or saved",
   ]) {
     assert.match(component, new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));

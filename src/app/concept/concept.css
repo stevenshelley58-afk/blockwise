@@ -921,9 +921,21 @@
   font-size: clamp(17px, 1.8vw, 21px);
   line-height: 1.45;
 }
+.hc-results-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 28px;
+}
+.hc-results-actions .hc-button { gap: 9px; }
+.hc-results-actions > span {
+  color: #aeb8c6;
+  font-size: 13px;
+  font-weight: 650;
+}
 
 .hc-reporting-stage {
-  margin-top: clamp(52px, 6vw, 76px);
+  margin-top: clamp(46px, 5vw, 64px);
   border-block: 1px solid rgba(255, 255, 255, .14);
 }
 .hc-reporting-topline {
@@ -980,17 +992,24 @@
   box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
 }
 
+.hc-report-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 216px;
+  align-items: start;
+  gap: clamp(28px, 5vw, 72px);
+  margin-top: 36px;
+}
 .hc-report-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  max-width: 700px;
+  max-width: none;
   gap: clamp(26px, 6vw, 80px);
-  margin: 36px 0 0 !important;
+  margin: 0 !important;
 }
 .hc-report-metrics > div { min-width: 0; }
 .hc-report-metrics dt {
-  color: #7f8a99;
-  font-size: 11px;
+  color: #9ca8b8;
+  font-size: 12px;
   font-weight: 650;
   letter-spacing: .02em;
 }
@@ -1004,6 +1023,30 @@
   font-variant-numeric: tabular-nums;
 }
 
+.hc-email-update {
+  display: grid;
+  gap: 5px;
+  min-height: 90px;
+  padding: 15px 16px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .045);
+}
+.hc-email-update > span {
+  color: var(--hc-blue-bright);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.hc-email-update strong { font-size: 14px; }
+.hc-email-update p {
+  margin: 0;
+  color: #aeb8c6;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .hc-leads-chart { margin: 28px 0 24px !important; }
 .hc-line-chart-grid {
   display: grid;
@@ -1012,7 +1055,7 @@
 }
 .hc-chart-scale {
   display: flex;
-  height: clamp(260px, 29vw, 350px);
+  height: clamp(198px, 21.75vw, 264px);
   flex-direction: column;
   justify-content: space-between;
   padding-block: 5px;
@@ -1024,7 +1067,7 @@
 .hc-line-chart {
   display: block;
   width: 100%;
-  height: clamp(260px, 29vw, 350px);
+  height: clamp(198px, 21.75vw, 264px);
   overflow: visible;
   touch-action: pan-y;
 }
@@ -1102,12 +1145,6 @@
 .hc-chart-dates span:first-child { transform: none; }
 .hc-chart-dates span:last-child { transform: translateX(-100%); }
 
-.hc-reporting-disclosure {
-  margin-top: 13px !important;
-  color: #586270;
-  font-size: 9px;
-  text-align: right;
-}
 .hc-report-sr-only {
   position: absolute;
   width: 1px;
@@ -1130,24 +1167,28 @@
   .hc-results-intro { max-width: 720px; }
   .hc-results-intro h2 { font-size: clamp(50px, 8vw, 68px); }
   .hc-report-metrics { max-width: 620px; }
-
+  .hc-report-overview { grid-template-columns: 1fr; }
+  .hc-email-update { max-width: 360px; }
 }
 @media(max-width:600px) {
   .hc-results { padding-block: 72px; }
   .hc-results-intro h2 { font-size: clamp(42px, 12vw, 54px); }
   .hc-results-intro p { max-width: 310px; margin-top: 15px; font-size: 16px; }
+  .hc-results-actions { align-items: flex-start; flex-direction: column; gap: 10px; margin-top: 22px; }
+  .hc-results-actions .hc-button { width: 100%; justify-content: center; }
   .hc-reporting-stage { margin-top: 44px; }
   .hc-reporting-topline { min-height: 64px; gap: 12px; }
   .hc-reporting-topline > div:first-child { font-size: 11px; }
   .hc-report-range button { min-height: 38px; padding-inline: 11px; font-size: 10px; }
-  .hc-report-metrics { gap: 14px; margin-top: 28px !important; }
-  .hc-report-metrics dt { font-size: 9px; }
+  .hc-report-overview { gap: 18px; margin-top: 28px; }
+  .hc-report-metrics { gap: 12px; }
+  .hc-report-metrics dt { font-size: 10px; }
   .hc-report-metrics dd { margin-top: 4px; font-size: clamp(26px, 8vw, 34px); }
+  .hc-email-update { max-width: none; min-height: 0; }
   .hc-leads-chart { margin-top: 24px !important; }
   .hc-line-chart-grid { grid-template-columns: 18px minmax(0, 1fr); column-gap: 7px; }
   .hc-line-chart,
-  .hc-chart-scale { height: 220px; }
-  .hc-reporting-disclosure { text-align: left; }
+  .hc-chart-scale { height: 165px; }
   .hc-chart-dates--month span { display: none; }
   .hc-chart-dates--month span:first-child,
   .hc-chart-dates--month span:nth-child(4),

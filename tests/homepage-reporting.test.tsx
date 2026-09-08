@@ -9,15 +9,22 @@ import { REPORTS, lineChartGeometry } from "../src/lib/homepage-concept/reportin
 test("reporting sells live visibility and scheduled updates with minimal copy", () => {
   const html = renderToStaticMarkup(createElement(ResultsReporting));
   for (const copy of [
-    "Know how your ads are going.",
-    "Your personal dashboard. Emails as often as you like. Even never. We get it.",
-    "Example data",
+    "See your leads. Know your costs.",
+    "Track your leads, cost per lead and ad spend in one simple dashboard. Get email updates as often or as little as you like.",
+    "Leads generated",
+    "Cost per lead",
+    "Ad spend",
+    "In your inbox",
+    "Performance update",
+    "Start free trial",
+    "No card required.",
   ]) assert.ok(html.includes(copy), copy);
   const words = html.replace(/<[^>]+>/g, " ").trim().split(/\s+/);
-  assert.ok(words.length < 70, `${words.length} words is too much copy`);
+  assert.ok(words.length < 90, `${words.length} words is too much copy`);
   assert.match(html, /id="results"/);
   assert.match(html, /aria-label="Dashboard reporting period"/);
-  assert.doesNotMatch(html, /hc-email-controls|hc-email-update|hc-chart-line-base/);
+  assert.doesNotMatch(html, /Example data/);
+  assert.doesNotMatch(html, /hc-email-controls|hc-chart-line-base/);
   assert.match(html, /<svg[^>]*role="img"[^>]*aria-label="Last 7 days:/);
   assert.match(html, /class="hc-chart-line"/);
   assert.match(html, /clip-path="url/);

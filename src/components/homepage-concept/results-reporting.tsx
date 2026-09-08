@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowRight } from "lucide-react";
 import { AnimatePresence, LayoutGroup, motion, useInView } from "motion/react";
 import { useId, useRef, useState } from "react";
 import {
@@ -42,8 +43,12 @@ export function ResultsReporting() {
     <section className="hc-results" id="results" aria-labelledby="results-heading">
       <div className="hc-shell hc-results-layout">
         <header className="hc-results-intro">
-          <h2 id="results-heading">Know how your ads are going.</h2>
-          <p>Your personal dashboard. Emails as often as you like. Even never. We get it.</p>
+          <h2 id="results-heading">See your leads. Know your costs.</h2>
+          <p>Track your leads, cost per lead and ad spend in one simple dashboard. Get email updates as often or as little as you like.</p>
+          <div className="hc-results-actions">
+            <a className="hc-button hc-button--primary" href="#trial">Start free trial<ArrowRight size={17} aria-hidden="true" /></a>
+            <span>No card required.</span>
+          </div>
         </header>
 
         <div className="hc-reporting-stage" aria-label="Example personal ad dashboard">
@@ -74,11 +79,18 @@ export function ResultsReporting() {
             </LayoutGroup>
           </div>
 
-          <dl className="hc-report-metrics" aria-live="polite" aria-atomic="true">
-            <div><dt>Leads</dt><dd>{report.leads}</dd></div>
-            <div><dt>Per lead</dt><dd>{formatAdSpend(report.spend / report.leads)}</dd></div>
-            <div><dt>Spent</dt><dd>{formatAdSpend(report.spend)}</dd></div>
-          </dl>
+          <div className="hc-report-overview">
+            <dl className="hc-report-metrics" aria-live="polite" aria-atomic="true">
+              <div><dt>Leads generated</dt><dd>{report.leads}</dd></div>
+              <div><dt>Cost per lead</dt><dd>{formatAdSpend(report.spend / report.leads)}</dd></div>
+              <div><dt>Ad spend</dt><dd>{formatAdSpend(report.spend)}</dd></div>
+            </dl>
+            <aside className="hc-email-update" aria-label="Example performance email update">
+              <span>In your inbox</span>
+              <strong>Performance update</strong>
+              <p>{report.leads} leads at {formatAdSpend(report.spend / report.leads)} per lead</p>
+            </aside>
+          </div>
 
           <figure className="hc-leads-chart">
             <figcaption className="hc-report-sr-only">Leads over time</figcaption>
@@ -181,7 +193,6 @@ export function ResultsReporting() {
 
         </div>
 
-        <p className="hc-reporting-disclosure">Example data · AUD</p>
       </div>
     </section>
   );
