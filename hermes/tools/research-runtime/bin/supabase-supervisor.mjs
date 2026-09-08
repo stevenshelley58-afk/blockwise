@@ -2775,11 +2775,14 @@ function captureModeForSourceProvider(sourceProvider, suffix = "") {
 // are still captured by the existing media collector directly from source.
 
 let scrapingBeeUsageCache = { at: 0, value: null };
+let scrapingBeeUsageInFlight = null;
 
 async function scrapingBeeBalanceEvidence() {
   if (scrapingBeeUsageCache.value && Date.now() - scrapingBeeUsageCache.at < 65_000) {
     return scrapingBeeUsageCache.value;
   }
+  if (scrapingBeeUsageInFlight) return scrapingBeeUsageInFlight;
+  scrapingBeeUsageInFlight = (async () => {
   const response = await fetch(`https://app.scrapingbee.com/api/v1/usage?api_key=${encodeURIComponent(scrapingBeeApiKey)}`, {
     signal: AbortSignal.timeout(15_000),
   });
@@ -2790,6 +2793,10 @@ async function scrapingBeeBalanceEvidence() {
     value: parseScrapingBeeUsage(usage, now()),
   };
   return scrapingBeeUsageCache.value;
+  })();
+  try { return await scrapingBeeUsageInFlight; }
+  finally { scrapingBeeUsageInFlight = null; }
+
 }
 
 async function assertScrapingBeeBudgetConfiguration() {
