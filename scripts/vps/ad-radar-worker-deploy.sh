@@ -5,6 +5,29 @@ repo="$(git rev-parse --show-toplevel)"
 revision="$(git rev-parse --verify "${1:?usage: ad-radar-worker-deploy.sh FULL_SHA}^{commit}")"
 root=/srv/hermes/ad-db
 unit=/etc/systemd/system/hermes-ad-db-worker.service
+
+# Activate an already staged release without rebuilding or replacing it.
+if [[ "${2:-}" == "--activate" ]]; then
+  requested="$1"
+  [[ "$requested" =~ ^[0-9a-f]{40}$ ]] || { echo "Activation requires a full 40-character SHA." >&2; exit 1; }
+  revision="$(git rev-parse --verify "${requested}^{commit}")"
+  test "$revision" = "$requested" || { echo "SHA is not the exact resolved commit." >&2; exit 1; }
+  release="$root/releases/$revision"
+  test -d "$release" || { echo "Staged release is missing: $release" >&2; exit 1; }
+  test -f "$release/REVISION" && test "$(cat "$release/REVISION")" = "$revision" || { echo "Release revision marker mismatch." >&2; exit 1; }
+  test -f "$release/worker.service" || { echo "Staged worker.service is missing." >&2; exit 1; }
+  test -d "$release/runtime" || { echo "Staged runtime is missing." >&2; exit 1; }
+  test -f "$release/runtime/bin/supabase-supervisor.mjs" || { echo "Staged supervisor runtime is missing." >&2; exit 1; }
+  test -f "$unit"
+  install -m 644 "$release/worker.service" "$unit"
+  systemctl daemon-reload
+  systemctl restart hermes-ad-db-worker.service
+  sleep 3
+  systemctl is-active --quiet hermes-ad-db-worker.service
+  test "$(systemctl show hermes-ad-db-worker.service -p WorkingDirectory --value)" = "$release/runtime"
+  printf 'Activated %s\nRollback unit retained: %s/previous.service\n' "$revision" "$release"
+  exit 0
+fi
 release="$root/releases/$revision"
 previous="$(systemctl show hermes-ad-db-worker.service -p WorkingDirectory --value)"
 test -d "$previous/node_modules/sharp"
