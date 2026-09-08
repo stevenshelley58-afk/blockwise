@@ -670,7 +670,7 @@ async function upsertAgencies(research, agencySubjects, dryRun, insertMissingOnl
     rows: upserted,
     matched: subjects.filter((subject) => existing.has(subject.normalizedName)).length,
     inserted: subjects.filter((subject) => !existing.has(subject.normalizedName)).length,
-    idBySubjectKey: new Map(upserted.map((row) => [row.normalized_name, row.id])),
+    idBySubjectKey: new Map(upserted.map((row) => [insertMissingOnly ? normalizeName(row.normalized_name) : row.normalized_name, row.id])),
   };
 }
 
@@ -1060,11 +1060,30 @@ async function planMissingDirectorySubjects(research, subjects) {
       .select("id,normalized_name,licence_number,metadata,state")
       .eq("state", "WA").order("id"));
   }
+  const identityKeys = (row) => {
+    const metadata = row.metadata?.demirs_wa_licence_register || row.metadata || {};
+    const licence = clean(row.licence_number ?? metadata.licence_number);
+    const entity = clean(metadata.entity_id ?? row.entity_id);
+    const name = normalizeName(row.normalized_name ?? row.normalizedName);
+    return [licence && "licence:" + licence, entity && "entity:" + entity,
+      name && "name:" + name].filter(Boolean);
+  };
+  const indexes = { agent: new Map(), agency: new Map() };
+  const indexRow = (kind, row) => {
+    for (const key of identityKeys(row)) {
+      if (!indexes[kind].has(key)) indexes[kind].set(key, []);
+      indexes[kind].get(key).push(row);
+    }
+  };
+  for (const [kind, rows] of Object.entries(existingByKind)) {
+    for (const row of rows) indexRow(kind, row);
+  }
   const accepted = [];
   const summary = { matched: 0, missing: 0, ambiguous: 0, reasons: {} };
   for (const subject of subjects) {
-    const rows = existingByKind[subject.kind];
-    const resolution = resolveDemirsIdentity(subject, rows);
+    const candidates = [...new Set(identityKeys(subject)
+      .flatMap((key) => indexes[subject.kind].get(key) || []))];
+    const resolution = resolveDemirsIdentity(subject, candidates);
     summary[resolution.status] += 1;
     if (resolution.status === "ambiguous") {
       summary.reasons[resolution.reason] = (summary.reasons[resolution.reason] || 0) + 1;
@@ -1073,7 +1092,7 @@ async function planMissingDirectorySubjects(research, subjects) {
     accepted.push(subject);
     // Include accepted identities so a second licence/name in this same
     // input cannot create a duplicate or collide with a normalized-name key.
-    rows.push({ id: "planned:" + subject.sourceDocumentId,
+    indexRow(subject.kind, { id: "planned:" + subject.sourceDocumentId,
       normalized_name: subject.normalizedName, licence_number: subject.licenceNumber,
       metadata: subject.metadata, state: "WA" });
   }

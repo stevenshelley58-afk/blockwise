@@ -16,7 +16,11 @@ function identity(row) {
 }
 
 function name(row) {
-  return clean(row?.normalized_name ?? row?.normalizedName);
+  const value = clean(row?.normalized_name ?? row?.normalizedName);
+  // Database generated names only lowercase/trim; the source adapter also
+  // normalizes punctuation. Compare like with like before declaring absence.
+  return value?.toLowerCase().replace(/&/gu, " and ")
+    .replace(/[^a-z0-9]+/gu, " ").replace(/\s+/gu, " ").trim() || null;
 }
 
 export function resolveDemirsIdentity(subject, existingRows = []) {

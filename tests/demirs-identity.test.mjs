@@ -43,3 +43,11 @@ test("entity match with reused licence is rejected as contradictory", () => {
   assert.equal(result.status, "ambiguous");
   assert.equal(result.reason, "contradictory_stable_identity");
 });
+
+test("database punctuation is not mistaken for a missing source identity", () => {
+  const result = resolveDemirsIdentity(
+    { normalizedName: "smith and co pty ltd", licence_number: "RA-NEW" },
+    [{ id: "existing", normalized_name: "Smith & Co. Pty Ltd", licence_number: "RA-OLD" }],
+  );
+  assert.equal(result.status, "ambiguous");
+});
