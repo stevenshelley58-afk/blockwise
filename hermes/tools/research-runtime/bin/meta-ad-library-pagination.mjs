@@ -6,11 +6,6 @@ import { classifyMetaAdLibraryPayload } from "./meta-ad-library-parser.mjs";
 const DEFAULT_SCROLLS = 8,
   MAX_SCROLLS = 16,
   BUDGET = 40000;
-const RECORDER_INSTALL =
-  '(() => {\n const K="__hermesMetaPagination", r=window[K]||(window[K]={records:[]}), pk=["viewAllPageID","view_all_page_id","page_id","pageId","pageID","pageIDs","pagesID"], ak=["after","cursor","end_cursor","endCursor"], sk=["activeStatus","active_status","ad_active_status"], ck=["country","country_code","countryCode","countries"], ok=["operationName","operation_name","friendlyName","friendly_name"];\n const find=(v,ks,d=0)=>{if(d>8||v==null||typeof v!=="object")return; if(Array.isArray(v)){for(const x of v){const z=find(x,ks,d+1);if(z!==undefined)return z;}return;} for(const k of ks)if(Object.prototype.hasOwnProperty.call(v,k)&&v[k]!=null&&(!Array.isArray(v[k])||v[k].length>0))return v[k]; for(const x of Object.values(v)){const z=find(x,ks,d+1);if(z!==undefined)return z;}};\n const scalar=v=>v==null||["string","number","boolean"].includes(typeof v)?v:null; const one=v=>Array.isArray(v)?(v.length===1?scalar(v[0]):null):scalar(v);\n const parse=s=>{if(typeof s!=="string"||s.length>1500000)return;try{return JSON.parse(s)}catch{} try{const lines=s.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);if(lines.length>1)return lines.map(x=>JSON.parse(x))}catch{} try{const p=new URLSearchParams(s);for(const k of ["variables","data","payload"]){const x=p.get(k);if(x)try{return JSON.parse(x)}catch{}}}catch{}};\n const meta=(url,method,body)=>{if(String(method||"GET").toUpperCase()!=="POST"||!/\\/api\\/graphql(?:\\/|$)/i.test(String(url||"")))return;const p=parse(body);if(!p)return;const page=one(find(p,pk));if(page==null||!/^\\d{5,}$/.test(String(page)))return;const after=one(find(p,ak)), active=one(find(p,sk)), country=one(find(p,ck)), operation=scalar(find(p,ok))||"anonymous";return {pageId:String(page),after:after==null?null:String(after),activeStatus:active==null?null:String(active),country:country==null?null:String(country),operation:String(operation).slice(0,200)}};\n const save=(m,status,response)=>{if(m&&r.records.length<64)r.records.push({request:m,status:Number(status)||0,response})};\n const fetchBody=async response=>{try{const s=await response.clone().text();if(s.length>4000000)return {truncated:true};try{return JSON.parse(s)}catch{try{const lines=s.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);if(lines.length>1)return lines.map(x=>JSON.parse(x))}catch{}return {malformed:true}}}catch{return {unreadable:true}}};\n if(window.fetch&&!window.fetch.__hermesMetaPaginationWrapped){const old=window.fetch, wrapped=function(input,init){let u="",m="GET",b=null;try{if(typeof input==="string")u=input;else if(input){u=input.url||"";m=input.method||m}if(init){m=init.method||m;b=typeof init.body==="string"?init.body:null}}catch{}const x=meta(u,m,b), out=old.apply(this,arguments);if(x)Promise.resolve(out).then(q=>fetchBody(q).then(z=>save(x,q&&q.status,z))).catch(()=>{});return out};wrapped.__hermesMetaPaginationWrapped=true;window.fetch=wrapped}\n const xp=window.XMLHttpRequest&&window.XMLHttpRequest.prototype;if(xp&&!xp.__hermesMetaPaginationWrapped){const oo=xp.open, os=xp.send;xp.open=function(m,u){this.__hm=this.__hm||{};this.__hm.m=m;this.__hm.u=u;return oo.apply(this,arguments)};xp.send=function(b){const q=this.__hm||{},x=meta(q.u,q.m,b);if(x)this.addEventListener("load",()=>{let z={unreadable:true};try{const s=this.responseType===""||this.responseType==="text"?this.responseText:"";z=s.length>4000000?{truncated:true}:(()=>{try{return JSON.parse(s)}catch{try{const lines=s.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);if(lines.length>1)return lines.map(x=>JSON.parse(x))}catch{}return {malformed:true}}})()}catch{}save(x,this.status,z)},{once:true});return os.apply(this,arguments)};xp.__hermesMetaPaginationWrapped=true}\n return {installed:true};\n})()';
-const RECORDER_READ =
-  "(() => { const r=window.__hermesMetaPagination&&window.__hermesMetaPagination.records; return {metaPaginationRecords:Array.isArray(r)?r:[]}; })()";
-
 const NATIVE_SCROLL_TO_BOTTOM = String.raw`(()=>{for(const e of document.querySelectorAll("main,div"))e.scrollTop=e.scrollHeight;window.scrollTo(0,1e9)})()`;
 
 // Provider GET request lines are limited to 8190 bytes. Remove indentation
@@ -37,17 +32,14 @@ export function buildMetaPaginationScenario({
     settle = positive(settleMs, 1500, 4000);
   if (scrolls * delay + settle + 5000 >= BUDGET)
     throw new Error("Meta pagination scenario exceeds 40 second budget");
-  const instructions = [{ evaluate: compactScript(RECORDER_INSTALL) }];
+  const instructions = [];
   for (let index = 0; index < scrolls; index += 1) {
     instructions.push(
       { evaluate: compactScript(NATIVE_SCROLL_TO_BOTTOM) },
       { wait: delay },
     );
   }
-  instructions.push(
-    { wait: settle },
-    { evaluate: compactScript(RECORDER_READ) },
-  );
+  instructions.push({ wait: settle });
   return { strict: true, instructions };
 }
 function unwrap(raw) {
@@ -71,21 +63,142 @@ function failed(c) {
     Array.isArray(r.tasks) && r.tasks.some((x) => x && x.success === false)
   );
 }
-function records(c) {
-  const out = [],
-    walk = (v, d = 0) => {
-      if (d > 8 || v == null || typeof v !== "object") return;
-      if (Array.isArray(v)) {
-        for (const x of v) walk(x, d + 1);
-        return;
-      }
-      if (Array.isArray(v.metaPaginationRecords))
-        for (const x of v.metaPaginationRecords)
-          if (x && typeof x === "object") out.push(x);
-      for (const x of Object.values(v)) walk(x, d + 1);
+const MAX_NATIVE_XHR = 64;
+const MAX_NATIVE_POST_DATA = 200000;
+const PAGE_KEYS = [
+  "pageId",
+  "pageID",
+  "page_id",
+  "viewAllPageID",
+  "view_all_page_id",
+  "pageIDs",
+  "pagesID",
+];
+const CURSOR_KEYS = ["after", "cursor", "endCursor", "end_cursor"];
+const ACTIVE_KEYS = ["activeStatus", "active_status", "ad_active_status"];
+const COUNTRY_KEYS = ["country", "country_code", "countryCode", "countries"];
+const OPERATION_KEYS = [
+  "operation",
+  "operationName",
+  "operation_name",
+  "friendlyName",
+  "friendly_name",
+];
+const AMBIGUOUS_NATIVE_FIELD = Symbol("ambiguous_native_field");
+
+function nativeScalar(value) {
+  if (Array.isArray(value)) {
+    if (value.length === 0) return { value: null, ambiguous: false };
+    if (value.length !== 1) return { value: null, ambiguous: true };
+    return nativeScalar(value[0]);
+  }
+  return {
+    value: ["string", "number", "boolean"].includes(typeof value)
+      ? String(value)
+      : null,
+    ambiguous: false,
+  };
+}
+function nativeField(value, keys) {
+  const values = new Set();
+  let visited = 0,
+    ambiguous = false;
+  const walk = (current, depth = 0) => {
+    if (
+      depth > 12 ||
+      visited++ > 2000 ||
+      current == null ||
+      typeof current !== "object"
+    )
+      return;
+    if (Array.isArray(current)) {
+      for (const item of current) walk(item, depth + 1);
+      return;
+    }
+    for (const key of keys) {
+      const scalar = nativeScalar(current[key]);
+      if (scalar.ambiguous) ambiguous = true;
+      else if (scalar.value != null && scalar.value !== "")
+        values.add(scalar.value);
+    }
+    for (const child of Object.values(current)) walk(child, depth + 1);
+  };
+  walk(value);
+  if (ambiguous || values.size > 1) return AMBIGUOUS_NATIVE_FIELD;
+  return values.size === 1 ? [...values][0] : null;
+}
+function isNativeGraphqlUrl(value) {
+  try {
+    const url = new URL(String(value));
+    return (
+      url.protocol === "https:" &&
+      (url.hostname === "facebook.com" ||
+        url.hostname === "www.facebook.com") &&
+      !url.username &&
+      !url.password &&
+      !url.port &&
+      (url.pathname === "/api/graphql" || url.pathname === "/api/graphql/")
+    );
+  } catch {
+    return false;
+  }
+}
+function nativeVariables(postData) {
+  if (typeof postData !== "string" || postData.length > MAX_NATIVE_POST_DATA)
+    return null;
+  try {
+    const form = new URLSearchParams(postData);
+    const encoded = ["variables", "data", "payload"]
+      .map((key) => form.get(key))
+      .find(Boolean);
+    if (!encoded) return null;
+    const variables = JSON.parse(encoded);
+    if (!variables || typeof variables !== "object") return null;
+    const operation =
+      form.get("fb_api_req_friendly_name") ||
+      form.get("operationName") ||
+      form.get("operation_name") ||
+      null;
+    return { variables, operation };
+  } catch {
+    return null;
+  }
+}
+function nativeRecords(c) {
+  if (!Array.isArray(c.xhr)) return [];
+  const out = [];
+  for (const entry of c.xhr.slice(0, MAX_NATIVE_XHR)) {
+    if (!entry || typeof entry !== "object") continue;
+    if (String(entry.method || "").toUpperCase() !== "POST") continue;
+    if (!isNativeGraphqlUrl(entry.url)) continue;
+    const parsed = nativeVariables(entry.post_data);
+    if (!parsed) continue;
+    const request = {
+      pageId: nativeField(parsed.variables, PAGE_KEYS),
+      after: nativeField(parsed.variables, CURSOR_KEYS),
+      activeStatus: nativeField(parsed.variables, ACTIVE_KEYS),
+      country: nativeField(parsed.variables, COUNTRY_KEYS),
+      operation:
+        parsed.operation || nativeField(parsed.variables, OPERATION_KEYS),
     };
-  for (const x of Array.isArray(c.evaluate_results) ? c.evaluate_results : [])
-    walk(x);
+    // A provider capture includes other GraphQL calls. Keep only requests with
+    // enough identity and cursor data to enter the strict filter checks below.
+    if (
+      Object.values(request).includes(AMBIGUOUS_NATIVE_FIELD) ||
+      typeof request.pageId !== "string" ||
+      !request.pageId ||
+      typeof request.after !== "string" ||
+      !request.after ||
+      typeof request.operation !== "string" ||
+      !request.operation
+    )
+      continue;
+    out.push({
+      request,
+      status: entry.status_code,
+      body: entry.body,
+    });
+  }
   return out;
 }
 function responseBody(r) {
@@ -237,7 +350,8 @@ function partial(base, warns, count = 0) {
 }
 
 /**
- * Parse final HTML and recorder responses. Arbitrary xhr[] entries are ignored.
+ * Parse final HTML and provider-native GraphQL XHR responses.
+ * Only strict, observed pagination requests participate in the cursor chain.
  */
 export function parseMetaPaginatedCapture(
   raw,
@@ -287,7 +401,7 @@ export function parseMetaPaginatedCapture(
   )
     return partial(base, ["initial_page_pagination_unproven"]);
   if (failed(c)) return partial(base, ["js_scenario_failed"]);
-  const rs = records(c);
+  const rs = nativeRecords(c);
   let cursor = initial.pageInfo.endCursor,
     last = null,
     ads = [...initial.ads];

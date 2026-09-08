@@ -211,11 +211,20 @@ the serving revision and current fill status.
 
 ## Native ad pagination
 
+The capture uses the provider's documented [JSON/XHR response](https://www.scrapingbee.com/documentation/#json_response),
+not a second scraper. Pages with a saved positive, explicitly non-exhausted
+scan may use bounded native scrolling when enabled. Other pages keep plain
+HTML collection. A partial initial HTML result may queue one native follow-up;
+a partial native result cannot recursively pay for more immediate requests.
+
+
 The optional native path uses a separately accounted capture and stores
 the complete raw response before ingestion. A bounded browser scenario lets
-Meta issue its own pagination requests. The recorder keeps only safe query
-fields and response evidence, not session tokens or complete request bodies.
-The parser requires an exact page, country, active-status and cursor chain,
+Meta issue its own pagination requests. ScrapingBee's built-in JSON response supplies the native XHR evidence; no
+custom fetch/XHR interception is installed. The parser extracts only the
+required observed request variables from that protected raw capture, never
+provider cookies, headers or session fields into operational output. The
+parser requires an exact page, country, active-status and cursor chain,
 ending in an observed exhausted response. A scroll timeout, missing response
 or unrelated zero-result response remains partial. Saved ads are retained.
 

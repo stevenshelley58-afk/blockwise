@@ -71,23 +71,34 @@ function record({
   }),
   activeStatus = "active",
   country = "AU",
-  operation = "AdLibrarySearch",
+  operation = "AdLibrarySearchPaginationQuery",
+  variables,
+  url = "https://www.facebook.com/api/graphql/",
 } = {}) {
+  const requestVariables = variables ?? {
+    pageId,
+    after,
+    activeStatus,
+    country,
+    operationName: operation,
+  };
+  const postData = new URLSearchParams({
+    variables: JSON.stringify(requestVariables),
+    fb_api_req_friendly_name: operation,
+  }).toString();
   return {
-    request: { pageId, after, activeStatus, country, operation },
-    status,
-    response: body,
+    url,
+    method: "POST",
+    status_code: status,
+    post_data: postData,
+    body: typeof body === "string" ? body : JSON.stringify(body),
   };
 }
-function capture(records, extra = {}) {
-  return {
-    body: html(),
-    evaluate_results: [{ metaPaginationRecords: records }],
-    ...extra,
-  };
+function capture(xhr, extra = {}) {
+  return { body: html(), xhr, ...extra };
 }
 
-test("scenario recorder is bounded and has valid JS", () => {
+test("scenario uses bounded synchronous scrolling without fragile interception", () => {
   const scenario = buildMetaPaginationScenario();
   assert.equal(scenario.strict, true);
   const scrolls = scenario.instructions.filter(
@@ -99,47 +110,39 @@ test("scenario recorder is bounded and has valid JS", () => {
   assert.match(scrolls[0].evaluate, /scrollTop/);
   assert.match(scrolls[0].evaluate, /window\.scrollTo/);
   assert.doesNotMatch(scrolls[0].evaluate, /Promise|async/);
-  assert.match(scenario.instructions[0].evaluate, /XMLHttpRequest/);
-  assert.match(scenario.instructions[0].evaluate, /window\.fetch/);
-  const read = scenario.instructions.find(
-    (instruction) =>
-      typeof instruction.evaluate === "string" &&
-      instruction.evaluate.includes("metaPaginationRecords"),
+  assert.doesNotMatch(
+    JSON.stringify(scenario),
+    /XMLHttpRequest|window\.fetch|metaPaginationRecords/,
   );
-  assert.ok(read);
-  assert.doesNotThrow(() => new vm.Script(scenario.instructions[0].evaluate));
-  assert.doesNotThrow(() => new vm.Script(scrolls[0].evaluate));
-  assert.doesNotThrow(() => new vm.Script(read.evaluate));
+  for (const instruction of scenario.instructions)
+    if (instruction.evaluate)
+      assert.doesNotThrow(() => new vm.Script(instruction.evaluate));
 });
 
 test("30 initial ads plus two ordered native pages produce complete coverage", () => {
-  const firstIds = Array.from({ length: 30 }, (_, i) => `${PAGE}_${i + 1}`);
+  const firstIds = Array.from({ length: 30 }, (_, i) => PAGE + "_" + (i + 1));
   const result = parseMetaPaginatedCapture(
     {
       body: html({ ids: firstIds, endCursor: CURSOR_1, count: 32 }),
-      evaluate_results: [
-        {
-          metaPaginationRecords: [
-            record({
-              after: CURSOR_1,
-              body: response({
-                ids: [`${PAGE}_31`],
-                hasNextPage: true,
-                endCursor: CURSOR_2,
-                count: 32,
-              }),
-            }),
-            record({
-              after: CURSOR_2,
-              body: response({
-                ids: [`${PAGE}_32`],
-                hasNextPage: false,
-                endCursor: CURSOR_2,
-                count: 32,
-              }),
-            }),
-          ],
-        },
+      xhr: [
+        record({
+          after: CURSOR_1,
+          body: response({
+            ids: [PAGE + "_31"],
+            hasNextPage: true,
+            endCursor: CURSOR_2,
+            count: 32,
+          }),
+        }),
+        record({
+          after: CURSOR_2,
+          body: response({
+            ids: [PAGE + "_32"],
+            hasNextPage: false,
+            endCursor: CURSOR_2,
+            count: 32,
+          }),
+        }),
       ],
     },
     PAGE,
@@ -159,7 +162,7 @@ for (const [name, make] of [
   ["challenge", () => record({ body: "<div>checkpoint challenge</div>" })],
   ["truncated stream", () => record({ body: { truncated: true } })],
 ]) {
-  test(`${name} retains initial evidence as partial`, () => {
+  test(name + " retains initial evidence as partial", () => {
     const result = parseMetaPaginatedCapture(capture([make()]), PAGE);
     assert.equal(result.outcome, "partial");
     assert.equal(result.coverageComplete, false);
@@ -167,6 +170,7 @@ for (const [name, make] of [
     assert.equal(result.adIds.length, 1);
   });
 }
+
 test("failed JS scenario retains initial evidence as partial", () => {
   const result = parseMetaPaginatedCapture(
     capture([], {
@@ -213,6 +217,20 @@ test("initial challenge outcome remains visible and never completes", () => {
   assert.equal(result.paginationExhausted, false);
 });
 
+test("native XHR accepts only the exact HTTPS Facebook GraphQL endpoint", () => {
+  for (const url of [
+    "http://www.facebook.com/api/graphql/",
+    "https://www.facebook.com:444/api/graphql/",
+    "https://user@www.facebook.com/api/graphql/",
+    "https://www.facebook.com/api/graphql/extra",
+    "https://not-facebook.example/api/graphql/",
+  ]) {
+    const result = parseMetaPaginatedCapture(capture([record({ url })]), PAGE);
+    assert.equal(result.outcome, "partial");
+    assert.ok(result.warnings.includes("pagination_records_missing"));
+  }
+});
+
 test("pagination request filters are required and must match requested filters", () => {
   for (const bad of [
     record({ activeStatus: null }),
@@ -233,24 +251,70 @@ test("pagination request filters are required and must match requested filters",
   assert.equal(result.coverageComplete, true);
 });
 
-test("recorder-shaped pageIDs and countries arrays are accepted only as singletons", () => {
-  const next = record();
-  next.request = {
-    pageIDs: [PAGE],
-    countries: ["AU"],
-    activeStatus: "active",
-    operation: "AdLibrarySearch",
-    after: CURSOR_1,
-  };
-  const result = parseMetaPaginatedCapture(capture([next]), PAGE);
+test("provider variables accept singleton pageIDs and countries, but reject ambiguity", () => {
+  const result = parseMetaPaginatedCapture(
+    capture([
+      record({
+        variables: {
+          pageIDs: [PAGE],
+          countries: ["AU"],
+          activeStatus: "active",
+          cursor: CURSOR_1,
+        },
+      }),
+    ]),
+    PAGE,
+  );
   assert.equal(result.outcome, "success");
   assert.equal(result.coverageComplete, true);
 
-  const multiple = record();
-  multiple.request = { ...next.request, pageIDs: [PAGE, "999999999999999"] };
-  const rejected = parseMetaPaginatedCapture(capture([multiple]), PAGE);
+  const rejected = parseMetaPaginatedCapture(
+    capture([
+      record({
+        variables: {
+          pageIDs: [PAGE, "999999999999999"],
+          countries: ["AU"],
+          activeStatus: "active",
+          cursor: CURSOR_1,
+        },
+      }),
+    ]),
+    PAGE,
+  );
   assert.equal(rejected.outcome, "partial");
-  assert.ok(rejected.warnings.includes("pagination_page_mismatch"));
+  assert.ok(rejected.warnings.includes("pagination_records_missing"));
+});
+
+test("conflicting or nonempty multi-value identity and filter fields are rejected", () => {
+  for (const variables of [
+    {
+      pageIDs: [PAGE, "999999999999999"],
+      viewAllPageID: PAGE,
+      countries: ["AU"],
+      activeStatus: "active",
+      cursor: CURSOR_1,
+    },
+    {
+      pageId: PAGE,
+      countries: ["AU", "NZ"],
+      country: "AU",
+      activeStatus: "active",
+      cursor: CURSOR_1,
+    },
+    {
+      pageId: PAGE,
+      country: "AU",
+      activeStatus: ["active", "inactive"],
+      cursor: CURSOR_1,
+    },
+  ]) {
+    const result = parseMetaPaginatedCapture(
+      capture([record({ variables })]),
+      PAGE,
+    );
+    assert.equal(result.outcome, "partial");
+    assert.ok(result.warnings.includes("pagination_records_missing"));
+  }
 });
 
 test("a nonterminal response must advance its cursor", () => {
@@ -295,27 +359,97 @@ test("newline-delimited complete GraphQL responses can form a chain", () => {
 test("duplicate archive IDs are deduped across initial and native pages", () => {
   const result = parseMetaPaginatedCapture(
     {
-      body: html({ ids: [`${PAGE}_1`, `${PAGE}_2`], endCursor: CURSOR_1 }),
-      evaluate_results: [
-        {
-          metaPaginationRecords: [
-            record({
-              body: response({
-                ids: [`${PAGE}_2`, `${PAGE}_3`],
-                hasNextPage: false,
-                endCursor: CURSOR_2,
-              }),
-            }),
-          ],
-        },
+      body: html({ ids: [PAGE + "_1", PAGE + "_2"], endCursor: CURSOR_1 }),
+      xhr: [
+        record({
+          body: response({
+            ids: [PAGE + "_2", PAGE + "_3"],
+            hasNextPage: false,
+            endCursor: CURSOR_2,
+          }),
+        }),
       ],
     },
     PAGE,
   );
   assert.equal(result.outcome, "success");
-  assert.deepEqual(result.adIds, [`${PAGE}_1`, `${PAGE}_2`, `${PAGE}_3`]);
+  assert.deepEqual(result.adIds, [PAGE + "_1", PAGE + "_2", PAGE + "_3"]);
 });
-test("missing terminal response and arbitrary xhr[] do not prove exhaustion", () => {
+
+test("sanitized saved-provider xhr shape recovers its complete native cursor chain", () => {
+  const initialIds = Array.from(
+    { length: 10 },
+    (_, index) => PAGE + "_" + (index + 1),
+  );
+  const pageTwoIds = Array.from(
+    { length: 10 },
+    (_, index) => PAGE + "_" + (index + 11),
+  );
+  const pageThreeIds = Array.from(
+    { length: 6 },
+    (_, index) => PAGE + "_" + (index + 21),
+  );
+  const result = parseMetaPaginatedCapture(
+    {
+      body: html({
+        ids: initialIds,
+        hasNextPage: true,
+        endCursor: CURSOR_1,
+        count: 26,
+      }),
+      xhr: [
+        {
+          url: "https://www.facebook.com/api/graphql/",
+          method: "POST",
+          status_code: 200,
+          post_data: new URLSearchParams({
+            variables: JSON.stringify({ country: "AU" }),
+            fb_api_req_friendly_name: "AdLibraryFilterContextProviderQuery",
+          }).toString(),
+          body: JSON.stringify({ data: {}, extensions: { is_final: true } }),
+        },
+        record({
+          variables: {
+            activeStatus: "active",
+            countries: ["AU"],
+            cursor: CURSOR_1,
+            pageIDs: [],
+            viewAllPageID: PAGE,
+          },
+          body: response({
+            ids: pageTwoIds,
+            hasNextPage: true,
+            endCursor: CURSOR_2,
+            count: 26,
+          }),
+        }),
+        record({
+          variables: {
+            activeStatus: "active",
+            countries: ["AU"],
+            cursor: CURSOR_2,
+            pageIDs: [],
+            viewAllPageID: PAGE,
+          },
+          body: response({
+            ids: pageThreeIds,
+            hasNextPage: false,
+            endCursor: "",
+            count: 26,
+          }),
+        }),
+      ],
+    },
+    PAGE,
+  );
+  assert.equal(result.outcome, "success");
+  assert.equal(result.paginationRecords, 2);
+  assert.equal(result.paginationExhausted, true);
+  assert.equal(result.connectionCount, 26);
+  assert.equal(result.adIds.length, 26);
+});
+
+test("arbitrary non-GraphQL xhr entries do not prove exhaustion", () => {
   const result = parseMetaPaginatedCapture(
     {
       body: html({ ids: [`${PAGE}_1`, `${PAGE}_2`] }),
