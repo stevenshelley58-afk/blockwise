@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarClock, Check, CircleDot, CreditCard, UsersRound } from "lucide-react";
+import { ArrowRight, CalendarClock, Check, ChevronDown, CircleDot, CreditCard, UsersRound } from "lucide-react";
 import Link from "next/link";
 
 import { StatusPill } from "@/components/status-pill";
@@ -61,17 +61,9 @@ export function ActivationCard({ data }: { data: ActivationCardData }) {
     <section className="h-full rounded-(--r-panel) border border-(--line) bg-(--surface) p-5 shadow-card">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
-            {isComplete ? "Workspace status" : "Next action"}
-          </p>
           <h2 className="mt-1 font-display text-[20px] font-extrabold tracking-[-0.02em]">
             {activation.nextAction}
           </h2>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            {isComplete
-              ? "Your activation is complete. Create, publish, and manage the workspace from here."
-              : "Pick up from the last completed step. You will not need to repeat finished work."}
-          </p>
         </div>
         <StatusPill tone={isComplete ? "green" : "blue"}>
           {activation.foundationAvailable
@@ -125,13 +117,14 @@ export function ActivationCard({ data }: { data: ActivationCardData }) {
         />
       </div>
 
-      <div className="mt-5 border-t border-(--line) pt-4">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-[12.5px] font-bold">Completed milestones</h3>
+      <details className="mt-5 group border-t border-(--line) pt-4">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-[12.5px] font-bold [&::-webkit-details-marker]:hidden">
+          <span className="flex-1">Completed milestones</span>
           {completedMilestones.length > 0 ? (
-            <span className="text-[11.5px] text-muted-foreground">{completedMilestones.length} shown</span>
+            <span className="text-[11.5px] font-normal text-muted-foreground">{completedMilestones.length} complete</span>
           ) : null}
-        </div>
+          <ChevronDown aria-hidden className="size-4 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none" />
+        </summary>
         {completedMilestones.length > 0 ? (
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
             {completedMilestones.map(([key, label]) => (
@@ -148,7 +141,7 @@ export function ActivationCard({ data }: { data: ActivationCardData }) {
             Completed setup steps will appear here.
           </p>
         )}
-      </div>
+      </details>
     </section>
   );
 }

@@ -22,6 +22,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { META_COPY_CONSTRAINTS } from "../../../lib/adstudio/meta-copy-contract";
 import { templateAssetProxyUrl } from "@/lib/adstudio/pack-gallery";
 import { useCanonicalPreview, type CanonicalPreviewState } from "./canonical-preview";
+import { guardedEditorNavigationHref } from "./editor-navigation";
 
 // ---------------------------------------------------------------------------
 // Editor Shell — Phase 6 foundation
@@ -112,7 +113,13 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   const imageUploadTokens = useRef(new Map<string, number>());
   const [pendingCropKey, setPendingCropKey] = useState<string | null>(null);
   const [name, setName] = useState(adName);
-  const persistedName = useRef(adName);
+  const [persistedName, setPersistedName] = useState(adName);
+  const normalizedName = name.trim().replace(/\s+/g, " ");
+  const hasUnsavedWork = state.isDirty || Boolean(normalizedName && normalizedName !== persistedName);
+
+  const handleBackToLibrary = useCallback(() => {
+    if (!hasUnsavedWork || window.confirm("You have unsaved changes. Leave this ad?")) router.push("/ad-studio/library?view=ads");
+  }, [hasUnsavedWork, router]);
 
   const handleImageChange = useCallback(async (key: string, change: { file: File; previewUrl: string } | null) => {
     const token = (imageUploadTokens.current.get(key) ?? 0) + 1;
@@ -224,16 +231,16 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
 
   const persistName = useCallback(async () => {
     const next = name.trim().replace(/\s+/g, " ");
-    if (!next) { setName(persistedName.current); return; }
+    if (!next) { setName(persistedName); return; }
     setName(next);
-    if (next === persistedName.current) return;
+    if (next === persistedName) return;
     try {
       const response = await fetch(`/api/adstudio/ads/${encodeURIComponent(adId)}/rename?workspaceId=${encodeURIComponent(workspaceId)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: next }) });
       if (!response.ok) throw new Error("Ad name could not be saved.");
-      persistedName.current = next;
+      setPersistedName(next);
       setName(next);
     } catch (error) { setError(error instanceof Error ? error.message : "Ad name could not be saved."); }
-  }, [name, adId, workspaceId, setError]);
+  }, [name, persistedName, adId, workspaceId, setError]);
 
   const proposeCopy = useCallback(async () => {
     setProposalBusy(true);
@@ -296,13 +303,38 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
 
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => {
-      if (!state.isDirty) return;
+      if (!hasUnsavedWork) return;
       event.preventDefault();
       event.returnValue = "";
     };
     window.addEventListener("beforeunload", beforeUnload);
     return () => window.removeEventListener("beforeunload", beforeUnload);
-  }, [state.isDirty]);
+  }, [hasUnsavedWork]);
+
+  // Guard client-side tab/link navigation while preserving the current URL and history.
+  useEffect(() => {
+    const handleLinkClick = (event: MouseEvent) => {
+      if (!hasUnsavedWork) return;
+      const target = event.target as HTMLElement | null;
+      const anchor = target?.closest("a") as HTMLAnchorElement | null;
+      if (!anchor) return;
+      const href = guardedEditorNavigationHref({
+        href: anchor.href,
+        currentHref: window.location.href,
+        button: event.button,
+        defaultPrevented: event.defaultPrevented,
+        modified: event.metaKey || event.ctrlKey || event.shiftKey || event.altKey,
+        target: anchor.target,
+        download: anchor.hasAttribute("download"),
+      });
+      if (!href) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (window.confirm("You have unsaved changes. Leave this ad?")) router.push(href);
+    };
+    document.addEventListener("click", handleLinkClick, true);
+    return () => document.removeEventListener("click", handleLinkClick, true);
+  }, [router, hasUnsavedWork]);
 
   // Colour modes resolve from the same never-invent-a-palette rule: template
   // colours always; Brand Pack roles override where the kit has a field;
@@ -357,12 +389,14 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     canRedo={canRedo}
     saveConflict={saveConflict}
     pendingImageUploads={pendingImageUploads}
+    hasUnsavedWork={hasUnsavedWork}
     inspectorTab={inspectorTab}
     setInspectorTab={setInspectorTab}
     mobileInspectorOpen={mobileInspectorOpen}
     setMobileInspectorOpen={setMobileInspectorOpen}
     handleSave={handleSave}
     handlePublish={handlePublish}
+    handleBackToLibrary={handleBackToLibrary}
     handleKeyDown={handleKeyDown}
     undo={undo}
     redo={redo}
@@ -395,9 +429,9 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   />;
 }
 
-function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLayout, brandColours, brandBusinessName, brandLogoUrl, libraryAssets, canSave, canUndo, canRedo, saveConflict, pendingImageUploads, inspectorTab, setInspectorTab, mobileInspectorOpen, setMobileInspectorOpen, handleSave, handlePublish, handleKeyDown, undo, redo, setActivePlacement, selectLayer, handleColourModeChange, handleCustomColourChange, handleTemplateCopyChange, handleBusinessNameChange, handleLibraryPick, handleImageChange, openCrop, openCropForInput, updateTextValue, updateMetaCopy, updateDestinationUrl, updateCrop, setError, cropTarget, setCropTarget, proposalBrief, setProposalBrief, proposal, proposalBusy, proposeCopy, useAllProposal, name, setName, persistName }: {
-  pack: AdTemplate; adId: string; workspaceId: string; templateId: string; state: EditorState; activeLayout: AdTemplate["feedLayout"]; brandColours: BrandPackColours | null; brandBusinessName: string; brandLogoUrl: string | null; libraryAssets?: Array<{ id: string; url: string; label: string }>; canSave: boolean; canUndo: boolean; canRedo: boolean; saveConflict: boolean; pendingImageUploads: number;
-  inspectorTab: InspectorTab; setInspectorTab: (value: InspectorTab) => void; mobileInspectorOpen: boolean; setMobileInspectorOpen: (value: boolean) => void; handleSave: () => Promise<boolean>; handlePublish: () => Promise<void>; handleKeyDown: (event: KeyboardEvent) => void; undo: () => void; redo: () => void; setActivePlacement: (value: Placement) => void; selectLayer: (value: string | null) => void;
+function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLayout, brandColours, brandBusinessName, brandLogoUrl, libraryAssets, canSave, canUndo, canRedo, saveConflict, pendingImageUploads, hasUnsavedWork, inspectorTab, setInspectorTab, mobileInspectorOpen, setMobileInspectorOpen, handleSave, handlePublish, handleBackToLibrary, handleKeyDown, undo, redo, setActivePlacement, selectLayer, handleColourModeChange, handleCustomColourChange, handleTemplateCopyChange, handleBusinessNameChange, handleLibraryPick, handleImageChange, openCrop, openCropForInput, updateTextValue, updateMetaCopy, updateDestinationUrl, updateCrop, setError, cropTarget, setCropTarget, proposalBrief, setProposalBrief, proposal, proposalBusy, proposeCopy, useAllProposal, name, setName, persistName }: {
+  pack: AdTemplate; adId: string; workspaceId: string; templateId: string; state: EditorState; activeLayout: AdTemplate["feedLayout"]; brandColours: BrandPackColours | null; brandBusinessName: string; brandLogoUrl: string | null; libraryAssets?: Array<{ id: string; url: string; label: string }>; canSave: boolean; canUndo: boolean; canRedo: boolean; saveConflict: boolean; pendingImageUploads: number; hasUnsavedWork: boolean;
+  inspectorTab: InspectorTab; setInspectorTab: (value: InspectorTab) => void; mobileInspectorOpen: boolean; setMobileInspectorOpen: (value: boolean) => void; handleSave: () => Promise<boolean>; handlePublish: () => Promise<void>; handleBackToLibrary: () => void; handleKeyDown: (event: KeyboardEvent) => void; undo: () => void; redo: () => void; setActivePlacement: (value: Placement) => void; selectLayer: (value: string | null) => void;
   handleColourModeChange: (mode: ColourMode) => void; handleCustomColourChange: (role: ColourRole, hex: string) => void; handleTemplateCopyChange: (enabled: boolean) => void; handleBusinessNameChange: (value: string) => void; handleLibraryPick: (key: string, sourceAssetId: string) => Promise<void>; handleImageChange: (key: string, change: { file: File; previewUrl: string } | null) => Promise<void>; openCrop: (slot: ImageSlotLayer) => void; openCropForInput: (key: string) => void; updateTextValue: (key: string, value: string) => void; updateMetaCopy: (field: keyof MetaCopy, value: string) => void; updateDestinationUrl: (value: string) => void; updateCrop: (key: string, placement: Placement, crop: Rect) => void; setError: (value: string | null) => void;
   cropTarget: { slot: ImageSlotLayer; placement: Placement } | null; setCropTarget: (value: { slot: ImageSlotLayer; placement: Placement } | null) => void; proposalBrief: string; setProposalBrief: (value: string) => void; proposal: { onImage: Record<string, string>; copy: Partial<MetaCopy>; source: string } | null; proposalBusy: boolean; proposeCopy: () => Promise<void>; useAllProposal: () => void;
   name: string; setName: (value: string) => void; persistName: () => Promise<void>;
@@ -444,6 +478,7 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [layersOpen, setLayersOpen] = useState(false);
   const [mobileLayersOpen, setMobileLayersOpen] = useState(false);
+  const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
   const metaPreviewBase = {
     templateId,
     existingAdId: adId,
@@ -476,7 +511,7 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
   );
   const metaPreview = state.activePlacement === "feed" ? feedMetaPreview : storyMetaPreview;
   const inspector = <InspectorContent tab={inspectorTab} pack={pack} state={state} defaultImageValues={defaultImageValues} brandColours={brandColours} brandBusinessName={brandBusinessName} libraryAssets={libraryAssets} onTextChange={updateTextValue} onImageChange={handleImageChange} onCropClick={openCropForInput} onMetaChange={updateMetaCopy} onDestinationChange={updateDestinationUrl} onColourModeChange={handleColourModeChange} onCustomColourChange={handleCustomColourChange} onTemplateCopyChange={handleTemplateCopyChange} onBusinessNameChange={handleBusinessNameChange} onLibraryPick={handleLibraryPick} proposalBrief={proposalBrief} proposal={proposal} proposalBusy={proposalBusy} onBriefChange={setProposalBrief} onPropose={proposeCopy} onUseAllProposal={useAllProposal} />;
-  const saveStatus = pendingImageUploads > 0 ? "Uploading…" : state.isSaving ? "Saving…" : state.isDirty ? "Unsaved changes" : state.lastSavedRevision !== null ? "Saved" : "Not saved yet";
+  const saveStatus = pendingImageUploads > 0 ? "Uploading…" : state.isSaving ? "Saving…" : hasUnsavedWork ? "Unsaved changes" : state.lastSavedRevision !== null ? "Saved" : "Not saved yet";
   const workingLayout = state.activePlacement === "feed" ? pack.feedLayout : pack.storyLayout;
   const selectedLayer = workingLayout.layers.find(layer => layer.layerId === state.selectedLayerId) ?? null;
   const choosePlacementView = (value: string) => {
@@ -520,12 +555,22 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
     />
   );
   return <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background text-foreground" onKeyDown={handleKeyDown} tabIndex={0} role="region" aria-label="Ad Studio editor">
-    <header className="relative grid min-h-14 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[auto_auto_auto] items-center gap-x-1.5 gap-y-1 border-b border-border bg-card px-2 py-1.5 xl:flex xl:h-16 xl:flex-nowrap xl:justify-between xl:gap-2 xl:px-4 xl:py-0">
-      <Button variant="ghost" size="icon" aria-label="Back to library" className="col-start-1 row-start-1 min-h-11 min-w-11 rounded-full xl:order-1" onClick={() => { if (!state.isDirty || window.confirm("You have unsaved changes. Leave this ad?")) window.location.href = "/ad-studio/library?view=ads"; }}><ArrowLeft className="size-4" /></Button><input aria-label="Ad name" maxLength={120} value={name} onChange={event => setName(event.target.value)} onBlur={() => void persistName()} onKeyDown={event => { if (event.key === "Enter") { event.currentTarget.blur(); } }} className="col-start-2 row-start-1 min-w-0 max-w-[220px] flex-1 truncate border-0 bg-transparent px-1 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring xl:order-2" />
-      <div className="col-span-3 row-start-2 flex min-w-0 justify-center xl:pointer-events-none xl:absolute xl:inset-x-0 xl:top-1/2 xl:-translate-y-1/2"><Tabs value={placementView} onValueChange={choosePlacementView} className="min-w-0 xl:pointer-events-auto"><TabsList aria-label="Ad format" className="max-w-full overflow-x-auto bg-muted/60 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"><TabsTrigger value="feed" className="min-h-11 px-3 text-xs xl:px-4 xl:text-sm">Feed</TabsTrigger><TabsTrigger value="story" className="min-h-11 px-3 text-xs xl:px-4 xl:text-sm">Story</TabsTrigger><TabsTrigger value="both" className="min-h-11 px-3 text-xs xl:px-4 xl:text-sm">Both</TabsTrigger></TabsList></Tabs></div>
-      <span className="col-span-2 row-start-3 min-w-0 truncate text-left text-[10px] text-muted-foreground xl:order-4 xl:w-auto xl:text-right xl:text-xs" role="status" aria-live="polite">{saveStatus}</span>
-      <div className="col-start-3 row-start-3 ml-auto flex shrink-0 items-center gap-0.5 xl:order-5 xl:gap-1"><Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo} aria-label="Undo" className="min-h-11 min-w-11 rounded-full"><RotateCcw /></Button><Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo} aria-label="Redo" className="min-h-11 min-w-11 rounded-full"><RotateCw /></Button><Button variant="outline" onClick={handleSave} disabled={!canSave || state.isSaving || pendingImageUploads > 0} aria-label={state.isSaving ? "Saving" : "Save"} className="min-h-11 min-w-11 rounded-full px-2 xl:min-w-0 xl:px-4"><span className="hidden xl:inline">{state.isSaving ? "Saving…" : "Save"}</span><Save className="size-4 xl:ml-1.5" /></Button><Button variant="ghost" size="icon" aria-label={inspectorOpen ? "Hide inspector" : "Show inspector"} aria-pressed={inspectorOpen} className="hidden min-h-11 min-w-11 rounded-full xl:inline-flex" onClick={() => setInspectorOpen(value => !value)}>{inspectorOpen ? <PanelRightClose /> : <PanelRightOpen />}</Button></div>
-      <Button onClick={handlePublish} disabled={!canSave || state.isSaving || pendingImageUploads > 0} className="col-start-3 row-start-1 min-h-11 rounded-full px-3 text-xs xl:order-6 xl:px-4 xl:text-sm"><span className="xl:hidden">Review</span><span className="hidden xl:inline">Review & publish</span></Button>
+    <header className="shrink-0 border-b border-border bg-card">
+      <div className="grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem_auto] gap-1 px-2 py-1.5 xl:hidden">
+        <Button variant="ghost" size="icon" aria-label="Back to library" className="min-h-11 min-w-11 rounded-full" onClick={handleBackToLibrary}><ArrowLeft className="size-4" /></Button>
+        <div className="min-w-0 self-center"><input aria-label="Ad name" maxLength={120} value={name} onChange={event => setName(event.target.value)} onBlur={() => void persistName()} onKeyDown={event => { if (event.key === "Enter") event.currentTarget.blur(); }} className="block w-full truncate border-0 bg-transparent px-1 text-base font-semibold xl:text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /><span className="block truncate px-1 text-[10px] text-muted-foreground" role="status" aria-live="polite">{saveStatus}</span></div>
+        <Button variant="outline" size="icon" onClick={handleSave} disabled={!canSave || state.isSaving || pendingImageUploads > 0} aria-label={state.isSaving ? "Saving" : "Save"} className="min-h-11 min-w-11 rounded-full"><Save className="size-4" /></Button>
+        <Button onClick={handlePublish} disabled={!canSave || state.isSaving || pendingImageUploads > 0} className="min-h-11 rounded-full px-3 text-xs">Review</Button>
+        <div className="col-span-4 flex min-w-0 items-center justify-between gap-2">
+          <label className="min-w-0 flex-1"><span className="sr-only">Ad format</span><select aria-label="Ad format" value={placementView} onChange={event => choosePlacementView(event.target.value)} className="min-h-11 w-full rounded-full border border-input bg-background px-3 text-xs font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring"><option value="feed">Feed</option><option value="story">Story</option><option value="both">Feed and Story</option></select></label>
+          <div className="flex shrink-0 gap-1"><Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo} aria-label="Undo" className="min-h-11 min-w-11 rounded-full"><RotateCcw /></Button><Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo} aria-label="Redo" className="min-h-11 min-w-11 rounded-full"><RotateCw /></Button></div>
+        </div>
+      </div>
+      <div className="relative hidden h-16 items-center justify-between gap-2 px-4 xl:flex">
+        <div className="flex min-w-0 items-center gap-2"><Button variant="ghost" size="icon" aria-label="Back to library" className="min-h-11 min-w-11 rounded-full" onClick={handleBackToLibrary}><ArrowLeft className="size-4" /></Button><input aria-label="Ad name" maxLength={120} value={name} onChange={event => setName(event.target.value)} onBlur={() => void persistName()} onKeyDown={event => { if (event.key === "Enter") event.currentTarget.blur(); }} className="min-w-0 max-w-[220px] truncate border-0 bg-transparent px-1 text-base font-semibold xl:text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>
+        <div className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 justify-center"><Tabs value={placementView} onValueChange={choosePlacementView} className="pointer-events-auto"><TabsList aria-label="Ad format" className="bg-muted/60"><TabsTrigger value="feed" className="min-h-11 px-4 text-sm">Feed</TabsTrigger><TabsTrigger value="story" className="min-h-11 px-4 text-sm">Story</TabsTrigger><TabsTrigger value="both" className="min-h-11 px-4 text-sm">Both</TabsTrigger></TabsList></Tabs></div>
+        <div className="ml-auto flex items-center gap-1"><span className="w-24 truncate text-right text-xs text-muted-foreground" role="status" aria-live="polite">{saveStatus}</span><Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo} aria-label="Undo" className="min-h-11 min-w-11 rounded-full"><RotateCcw /></Button><Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo} aria-label="Redo" className="min-h-11 min-w-11 rounded-full"><RotateCw /></Button><Button variant="outline" onClick={handleSave} disabled={!canSave || state.isSaving || pendingImageUploads > 0} className="min-h-11 rounded-full px-4"><span>{state.isSaving ? "Saving…" : "Save"}</span><Save className="ml-1.5 size-4" /></Button><Button variant="ghost" size="icon" aria-label={inspectorOpen ? "Hide inspector" : "Show inspector"} aria-pressed={inspectorOpen} className="min-h-11 min-w-11 rounded-full" onClick={() => setInspectorOpen(value => !value)}>{inspectorOpen ? <PanelRightClose /> : <PanelRightOpen />}</Button><Button onClick={handlePublish} disabled={!canSave || state.isSaving || pendingImageUploads > 0} className="min-h-11 rounded-full px-4 text-sm">Review & publish</Button></div>
+      </div>
     </header>
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden xl:flex-row">
       <nav className="hidden w-16 shrink-0 flex-col items-center gap-1 border-r border-white/10 bg-(--ink) py-3 text-white xl:flex" aria-label="Canvas tools">
@@ -538,7 +583,7 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
       </nav>
       {layersOpen ? <LayersPanel pack={pack} layout={workingLayout} selectedLayerId={state.selectedLayerId} onSelect={(layerId) => { if (layerId) editLayer(state.activePlacement, layerId); }} onClose={() => setLayersOpen(false)} /> : null}
       <section aria-label="Ad canvas" className="relative order-first flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center bg-(--ink) p-3 md:p-4 xl:order-none">
-        <div className="z-10 flex shrink-0 flex-wrap items-center justify-center gap-1 rounded-full border border-white/10 bg-(--surface) p-1 shadow-float" role="radiogroup" aria-label="Preview mode">
+        <div className="z-10 hidden shrink-0 flex-wrap items-center justify-center gap-1 rounded-full xl:flex border border-white/10 bg-(--surface) p-1 shadow-float" role="radiogroup" aria-label="Preview mode">
           {([["design", "Design"], ["meta", "Meta preview"], ["split", "Split"]] as const).map(([value, label]) => (
             <button
               key={value}
@@ -547,7 +592,7 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
               aria-checked={previewMode === value}
               onClick={() => setPreviewMode(value)}
               className={cn(
-                "min-h-9 rounded-full px-3 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "min-h-11 rounded-full px-3 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 previewMode === value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
               )}
             >
@@ -555,19 +600,20 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
             </button>
           ))}
         </div>
-        {previewMode === "design" && selectedLayer ? <div className="absolute left-1/2 top-16 z-10 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-(--surface) p-1 pl-3 shadow-float"><span className="max-w-40 truncate text-xs font-semibold">{layerLabel(selectedLayer, pack)}</span><Button type="button" variant="ghost" size="sm" className="h-9 rounded-full" onClick={() => editLayer(state.activePlacement, selectedLayer.layerId)}>Edit</Button>{selectedLayer.type === "image_slot" ? <Button type="button" variant="ghost" size="sm" className="h-9 rounded-full" onClick={() => openCrop(selectedLayer)}><Crop className="size-3.5" /> Crop</Button> : null}</div> : null}
+        {previewMode === "design" && selectedLayer ? <div className="absolute left-1/2 top-16 z-10 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-(--surface) p-1 pl-3 shadow-float"><span className="max-w-40 truncate text-xs font-semibold">{layerLabel(selectedLayer, pack)}</span><Button type="button" variant="ghost" size="sm" className="min-h-11 rounded-full" onClick={() => editLayer(state.activePlacement, selectedLayer.layerId)}>Edit</Button>{selectedLayer.type === "image_slot" ? <Button type="button" variant="ghost" size="sm" className="min-h-11 rounded-full" onClick={() => openCrop(selectedLayer)}><Crop className="size-3.5" /> Crop</Button> : null}</div> : null}
         {previewMode === "design" ? (
           placementView === "both" ? <div className="grid min-h-0 w-full flex-1 grid-cols-1 gap-3 overflow-auto md:grid-cols-2 md:overflow-hidden"><PlacementCanvas label="Feed" active={state.activePlacement === "feed"}>{canvasFor("feed", "fit")}</PlacementCanvas><PlacementCanvas label="Story" active={state.activePlacement === "story"}>{canvasFor("story", "fit")}</PlacementCanvas></div> : canvasFor(placementView)
         ) : previewMode === "meta" ? (
           placementView === "both" ? <div className="grid min-h-0 w-full flex-1 grid-cols-1 gap-3 overflow-auto md:grid-cols-2"><PlacementCanvas label="Feed preview">{feedMetaPreview}</PlacementCanvas><PlacementCanvas label="Story preview">{storyMetaPreview}</PlacementCanvas></div> : <div className="flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden">{metaPreview}</div>
         ) : <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-3 overflow-auto md:flex-row"><div className="flex min-h-0 min-w-0 max-w-full flex-1 items-center justify-center">{canvasFor(state.activePlacement, "fit", false)}</div><div className="flex min-h-0 min-w-0 max-w-full flex-1 items-center justify-center overflow-hidden">{metaPreview}</div></div>}
-        {previewMode === "design" ? <div className="z-10 flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-(--surface) p-1 shadow-float" aria-label="Canvas zoom"><button type="button" aria-pressed={zoom === "fit"} className="min-h-9 rounded-full px-3 text-xs font-semibold hover:bg-muted" onClick={() => setZoom("fit")}>Fit</button><button type="button" aria-pressed={zoom === 1} className="min-h-9 rounded-full px-3 text-xs font-semibold hover:bg-muted" onClick={() => setZoom(1)}>100%</button><button type="button" className="min-h-9 min-w-9 rounded-full hover:bg-muted" aria-label="Zoom out" onClick={() => setZoom(0.8)}><ZoomOut className="mx-auto size-4" /></button><button type="button" className="min-h-9 min-w-9 rounded-full hover:bg-muted" aria-label="Zoom in" onClick={() => setZoom(1.25)}><ZoomIn className="mx-auto size-4" /></button><span className="px-2 text-xs font-medium text-muted-foreground" role="status" aria-live="polite">{placementView === "both" ? "Both · fit" : zoom === "fit" ? "Fit" : `${Math.round(zoom * 100)}%`}</span></div> : null}
+        {previewMode === "design" ? <div className="z-10 flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-(--surface) p-1 shadow-float" aria-label="Canvas zoom"><button type="button" aria-pressed={zoom === "fit"} className="min-h-11 rounded-full px-3 text-xs font-semibold hover:bg-muted" onClick={() => setZoom("fit")}>Fit</button><button type="button" aria-pressed={zoom === 1} className="min-h-11 rounded-full px-3 text-xs font-semibold hover:bg-muted" onClick={() => setZoom(1)}>100%</button><button type="button" className="min-h-11 min-w-11 rounded-full hover:bg-muted" aria-label="Zoom out" onClick={() => setZoom(0.8)}><ZoomOut className="mx-auto size-4" /></button><button type="button" className="min-h-11 min-w-11 rounded-full hover:bg-muted" aria-label="Zoom in" onClick={() => setZoom(1.25)}><ZoomIn className="mx-auto size-4" /></button><span className="px-2 text-xs font-medium text-muted-foreground" role="status" aria-live="polite">{placementView === "both" ? "Both · fit" : zoom === "fit" ? "Fit" : `${Math.round(zoom * 100)}%`}</span></div> : null}
       </section>
       {inspectorOpen ? <aside aria-label="Editor inspector" className="hidden w-[22rem] shrink-0 overflow-y-auto border-l border-border bg-card xl:block"><InspectorTabs value={inspectorTab} onChange={setInspectorTab} />{inspector}</aside> : null}
     </div>
-    <nav className="z-20 grid shrink-0 grid-cols-5 border-t border-border bg-card p-1.5 xl:hidden" aria-label="Editor tools">{INSPECTOR_TABS.map(({ value, label, icon: Icon }) => <button key={value} type="button" aria-pressed={inspectorTab === value && mobileInspectorOpen} onClick={() => { setInspectorTab(value); setMobileLayersOpen(false); setMobileInspectorOpen(true); }} className={cn("flex min-h-11 items-center justify-center gap-1 rounded-full px-1 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", inspectorTab === value && mobileInspectorOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>{<Icon className="size-4" />}{label}</button>)}<button type="button" aria-pressed={mobileLayersOpen} onClick={() => { setMobileInspectorOpen(false); setMobileLayersOpen(true); }} className={cn("flex min-h-11 items-center justify-center gap-1 rounded-full px-1 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", mobileLayersOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}><Layers3 className="size-4" />Layers</button><button type="button" aria-pressed={previewMode === "meta" && !mobileInspectorOpen && !mobileLayersOpen} onClick={() => { setPreviewMode("meta"); setMobileInspectorOpen(false); setMobileLayersOpen(false); }} className={cn("flex min-h-11 items-center justify-center gap-1 rounded-full px-1 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", previewMode === "meta" && !mobileInspectorOpen && !mobileLayersOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}><Eye className="size-4" />Preview</button></nav>
-    <Sheet open={mobileInspectorOpen} onOpenChange={setMobileInspectorOpen}><SheetContent side="bottom" className="max-h-[82dvh] overflow-y-auto rounded-t-(--r-card) p-0 xl:hidden"><SheetHeader><SheetTitle>{INSPECTOR_TABS.find(tab => tab.value === inspectorTab)?.label}</SheetTitle><SheetDescription>Make one change at a time; your preview updates as you work.</SheetDescription></SheetHeader>{inspector}</SheetContent></Sheet>
-    <Sheet open={mobileLayersOpen} onOpenChange={setMobileLayersOpen}><SheetContent side="bottom" className="max-h-[70dvh] overflow-y-auto rounded-t-(--r-card) p-0 xl:hidden"><SheetHeader><SheetTitle>Layers</SheetTitle><SheetDescription>Select an element to edit it on the canvas.</SheetDescription></SheetHeader><LayersPanel pack={pack} layout={workingLayout} selectedLayerId={state.selectedLayerId} onSelect={layerId => { if (layerId) editLayer(state.activePlacement, layerId); setMobileLayersOpen(false); }} /></SheetContent></Sheet>
+    <nav className="z-20 grid shrink-0 grid-cols-5 border-t border-border bg-card p-1.5 xl:hidden" aria-label="Editor tools">{INSPECTOR_TABS.map(({ value, label, icon: Icon }) => <button key={value} type="button" aria-pressed={inspectorTab === value && mobileInspectorOpen} onClick={() => { setInspectorTab(value); setMobileLayersOpen(false); setMobilePreviewOpen(false); setMobileInspectorOpen(true); }} className={cn("flex min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[10px] font-semibold leading-none transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", inspectorTab === value && mobileInspectorOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}><Icon className="size-4" />{label}</button>)}<button type="button" aria-pressed={mobileLayersOpen} onClick={() => { setMobileInspectorOpen(false); setMobilePreviewOpen(false); setMobileLayersOpen(true); }} className={cn("flex min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[10px] font-semibold leading-none transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", mobileLayersOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}><Layers3 className="size-4" />Layers</button><button type="button" aria-pressed={mobilePreviewOpen} onClick={() => { setMobileInspectorOpen(false); setMobileLayersOpen(false); setMobilePreviewOpen(true); }} className={cn("flex min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[10px] font-semibold leading-none transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", mobilePreviewOpen ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}><Eye className="size-4" />Preview</button></nav>
+    <Sheet open={mobileInspectorOpen} onOpenChange={setMobileInspectorOpen}><SheetContent side="bottom" className="max-h-[82dvh] overflow-y-auto rounded-t-(--r-card) p-0 xl:hidden"><SheetHeader><SheetTitle>{INSPECTOR_TABS.find(tab => tab.value === inspectorTab)?.label}</SheetTitle><SheetDescription>Editor tools</SheetDescription></SheetHeader>{inspector}</SheetContent></Sheet>
+    <Sheet open={mobileLayersOpen} onOpenChange={setMobileLayersOpen}><SheetContent side="bottom" className="max-h-[70dvh] overflow-y-auto rounded-t-(--r-card) p-0 xl:hidden"><SheetHeader><SheetTitle>Layers</SheetTitle><SheetDescription>Choose a layer to edit.</SheetDescription></SheetHeader><LayersPanel pack={pack} layout={workingLayout} selectedLayerId={state.selectedLayerId} onSelect={layerId => { if (layerId) editLayer(state.activePlacement, layerId); setMobileLayersOpen(false); }} /></SheetContent></Sheet>
+    <Sheet open={mobilePreviewOpen} onOpenChange={setMobilePreviewOpen}><SheetContent side="bottom" className="rounded-t-(--r-card) xl:hidden"><SheetHeader><SheetTitle>Preview</SheetTitle></SheetHeader><label className="mt-4 block text-sm font-semibold">Preview mode<select aria-label="Preview mode" value={previewMode} onChange={event => { setPreviewMode(event.target.value as "design" | "meta" | "split"); setMobilePreviewOpen(false); }} className="mt-2 min-h-11 w-full rounded-(--r-ctl) border border-input bg-background px-3 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring"><option value="design">Design</option><option value="meta">Meta preview</option><option value="split">Split</option></select></label></SheetContent></Sheet>
     {cropTarget && <CropDialogHost cropTarget={cropTarget} state={state} pack={pack} onApply={updateCrop} onClose={() => setCropTarget(null)} />}
     {state.error && <Alert variant="destructive" role="alert" className="m-3"><AlertTitle>Check this before continuing</AlertTitle><AlertDescription className="flex items-center justify-between gap-3"><span>{state.error}</span><Button variant="outline" size="sm" onClick={() => saveConflict ? window.location.reload() : setError(null)} className="min-h-11 shrink-0">{saveConflict ? "Reload latest" : "Dismiss"}</Button></AlertDescription></Alert>}
   </div>;

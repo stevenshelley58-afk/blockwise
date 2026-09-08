@@ -178,9 +178,6 @@ export function HomeDashboard({ data }: { data: HomeData }) {
       <AnimatedGroup className="grid grid-cols-1 gap-3.5">
         {/* Page head */}
         <div>
-          <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
-            Customer workspace
-          </p>
           <div>
             <h1 className="font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">
               Home
@@ -188,14 +185,17 @@ export function HomeDashboard({ data }: { data: HomeData }) {
             <p className="mt-1 text-[13.5px] text-muted-foreground">{data.workspaceName}</p>
           </div>
         </div>
-        <p
-          className="rounded-(--r-card) border border-(--line) bg-(--surface-subtle) px-4 py-3 text-[12.5px] text-muted-foreground"
-          role="status"
-        >
-          {performance
-            ? `Reporting for the last 30 days. ${reportingFoot(performance.lastSyncedAt)}.`
-            : "Reporting for the last 30 days is unavailable."}
-        </p>
+        {performance ? (
+          <p className="rounded-(--r-card) border border-(--line) bg-(--surface-subtle) px-4 py-3 text-[12.5px] text-muted-foreground" role="status">
+            Reporting for the last 30 days. {reportingFoot(performance.lastSyncedAt)}.
+          </p>
+        ) : null}
+
+        {/* One server-resolved activation card remains dominant; performance is secondary. */}
+        <AnimatedGroup className="grid grid-cols-1 gap-3.5 lg:grid-cols-[3fr_2fr]" itemClassName="h-full">
+          <ActivationCard data={data} />
+          <HomePerformanceChart daily={performance?.daily ?? null} />
+        </AnimatedGroup>
 
         {/* KPI row */}
         <AnimatedGroup className="grid grid-cols-2 gap-3.5 xl:grid-cols-4" itemClassName="h-full">
@@ -212,7 +212,7 @@ export function HomeDashboard({ data }: { data: HomeData }) {
             {performance ? (
               <AnimatedNumber value={performance.leads} springOptions={COUNT_SPRING} />
             ) : (
-              <span aria-label="Enquiry reporting unavailable">—</span>
+              <span aria-label="Enquiry reporting unavailable" className="font-sans text-sm font-bold tracking-normal">Unavailable</span>
             )}
             <DeltaBadge current={performance?.leads ?? null} previous={performance?.previousLeads ?? null} />
           </StatCard>
@@ -225,7 +225,7 @@ export function HomeDashboard({ data }: { data: HomeData }) {
             {performance?.cpl != null ? (
               <AnimatedNumber value={performance.cpl} format={money} springOptions={COUNT_SPRING} />
             ) : (
-              <span aria-label="No cost data yet">—</span>
+              <span aria-label="No cost data yet" className="font-sans text-sm font-bold tracking-normal">Unavailable</span>
             )}
             <DeltaBadge current={performance?.cpl ?? null} previous={performance?.previousCpl ?? null} downIsGood />
           </StatCard>
@@ -266,15 +266,9 @@ export function HomeDashboard({ data }: { data: HomeData }) {
                 </span>
               </>
             ) : (
-              <span aria-label="Credits not issued yet">—</span>
+              <span aria-label="Credits not issued yet" className="font-sans text-sm font-bold tracking-normal">Not issued</span>
             )}
           </StatCard>
-        </AnimatedGroup>
-
-        {/* One server-resolved activation card remains dominant; performance is secondary. */}
-        <AnimatedGroup className="grid grid-cols-1 gap-3.5 lg:grid-cols-[3fr_2fr]" itemClassName="h-full">
-          <ActivationCard data={data} />
-          <HomePerformanceChart daily={performance?.daily ?? null} />
         </AnimatedGroup>
 
         {/* Quick actions */}
