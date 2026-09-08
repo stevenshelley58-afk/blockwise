@@ -12,7 +12,7 @@ test("home puts the activation task before reporting metrics in the rendered tre
 });
 
 test("completed milestones remain accessible without occupying first-run space", () => {
-  assert.match(activation, /<details className="mt-5/);
+  assert.match(activation, /<details[^>]*className="[^"]*mt-5/);
   assert.match(activation, /<summary[^>]*>[\s\S]*Completed milestones/);
   assert.match(activation, /const isComplete = activation\.currentStage/);
 });

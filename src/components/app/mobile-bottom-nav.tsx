@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, LifeBuoy, LogOut, MoreHorizontal } from "lucide-react";
+import { Download, House, LifeBuoy, LogOut, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
@@ -14,6 +14,7 @@ type MobileBottomNavProps = {
   variant: SidebarVariant;
   homeHref?: string;
   account: { email: string; name: string; role: string };
+  homePilot?: boolean;
 };
 
 type MobileNavItem = NavItem & { mobileLabel?: string };
@@ -68,7 +69,7 @@ function itemIsActive(pathname: string, item: MobileNavItem, homeHref: string, a
   return isItemActive(pathname, item.href, activeItems);
 }
 
-export function MobileBottomNav({ variant, homeHref = "/self-serve", account }: MobileBottomNavProps) {
+export function MobileBottomNav({ variant, homeHref = "/self-serve", account, homePilot = false }: MobileBottomNavProps) {
   const pathname = usePathname() ?? "";
   const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -99,9 +100,9 @@ export function MobileBottomNav({ variant, homeHref = "/self-serve", account }: 
 
   return (
     <>
-      <nav className={variant === "self_serve" ? "mobile-bottom-nav mobile-bottom-nav--customer" : "mobile-bottom-nav"} aria-label="Primary mobile navigation">
+      <nav className={variant === "self_serve" ? `mobile-bottom-nav mobile-bottom-nav--customer${homePilot ? " mobile-bottom-nav--customer-home" : ""}` : "mobile-bottom-nav"} aria-label="Primary mobile navigation">
         {primaryItems.map((item) => {
-          const Icon = item.icon;
+          const Icon = homePilot && variant === "self_serve" && item.href === homeHref ? House : item.icon;
           const active = itemIsActive(pathname, item, homeHref, activeItems);
           return (
             <Link className={active ? "mobile-bottom-nav-item active" : "mobile-bottom-nav-item"} href={item.href} key={item.href} aria-current={active ? "page" : undefined}>
