@@ -1,6 +1,7 @@
 .hc-process { padding-block: clamp(76px, 8vw, 112px); background: var(--hc-canvas); }
 .hc-process-layout { display: grid; grid-template-columns: minmax(260px,.64fr) minmax(620px,1.36fr); align-items: center; gap: clamp(48px,6vw,88px); }
 .hc-process-copy h2 { max-width: 11ch; font-size: clamp(40px,4.1vw,58px); font-weight: 760; letter-spacing: -.04em; }
+.hc-process-copy > p { max-width: 38ch; margin-top: 20px; color: var(--hc-muted); font-size: 16px; line-height: 1.6; }
 .hc-process-steps { display: grid; margin-top: 32px; border-top: 1px solid var(--hc-line); }
 .hc-process-steps button { display: flex; gap: 18px; min-height: 66px; align-items: center; border: 0; border-bottom: 1px solid var(--hc-line); padding: 10px 0; background: transparent; color: var(--hc-muted); text-align: left; cursor: pointer; transition: color 250ms ease; }
 .hc-process-steps button[aria-pressed=true] { color: var(--hc-ink); }

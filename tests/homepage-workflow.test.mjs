@@ -39,3 +39,11 @@ test("one studio, ad and template rail stay mounted through all phases", async()
   assert.match(source,/if \(reduced \|\| !visible \|\| !pageVisible\) return/);
   assert.match(source,/WORKFLOW_PHASES.length - 1/);
 });
+
+
+test("workflow displays the exact owner-selected heading and subheading", async () => {
+  const source = await readFile(new URL("../src/components/homepage-concept/workflow-showcase.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes("<h2>More leads. Less ad management.</h2>"));
+  assert.ok(source.includes("<p>Customise a proven template and publish your lead-generating ad, all in one place.</p>"));
+  assert.ok(!source.includes("<h2>Create real estate ads"));
+});
