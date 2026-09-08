@@ -444,3 +444,28 @@ test("provider initial status failure is rejected even with an HTTP 200 response
     },
   );
 });
+
+test("Auto Mode accepts exact final identity after recovering an initial blocked tier", async () => {
+  await withHarness(
+    {
+      captureMode: "auto",
+      creditCap: 25,
+      balanceEvidence: async () => ({
+        remaining: 100,
+        verifiedAt: "2026-09-08T00:00:00.000Z",
+      }),
+      responses: response(
+        200,
+        '{"__typename":"Page","userID":"123456","userVanity":"acme"}',
+        { "spb-auto-cost": "25", "spb-initial-status-code": "403" },
+      ),
+    },
+    async (h) => {
+      const r = await h.fn(input());
+      assert.equal(r.pageId, "123456");
+      assert.equal(r.permalinkMatch, true);
+      assert.equal(h.fetches.length, 1);
+      assert.equal([...h.runs.values()][0].status, "success");
+    },
+  );
+});

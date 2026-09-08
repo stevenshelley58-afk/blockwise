@@ -221,3 +221,10 @@ const runtimeTypes = readFileSync("hermes/tools/research-runtime/src/types.ts", 
 test("legacy location-search job schema is removed", () => {
   assert.doesNotMatch(runtimeTypes, /blockwise-location-ad-search|locationAdSearchPayloadSchema|locationSearchGateSchema/u);
 });
+
+test("Auto Mode initial blocking status does not discard a validated final response", () => {
+  const block = supervisor.slice(supervisor.indexOf("const blocked = !response.ok"), supervisor.indexOf(";", supervisor.indexOf("const blocked = !response.ok")));
+  assert.match(block, /!response\.ok/);
+  assert.doesNotMatch(block, /receipt\.initialStatus/);
+  assert.match(supervisor, /\["challenge", "login_wall", "unparseable"\]\.includes\(classified\.outcome\)/);
+});

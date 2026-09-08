@@ -268,10 +268,11 @@ function retry(e, key) {
   x.retryable = true;
   return x;
 }
-function badResponse(status, receipt) {
+function badResponse(status, receipt, captureMode) {
   if (!Number.isInteger(status) || status < 200 || status >= 300)
     return "facebook_page_identity_provider_http_" + status;
-  return Number.isInteger(receipt?.initialStatus) &&
+  return captureMode !== "auto" &&
+    Number.isInteger(receipt?.initialStatus) &&
     receipt.initialStatus >= 400
     ? "facebook_page_identity_provider_initial_status_" + receipt.initialStatus
     : null;
@@ -457,7 +458,7 @@ export function createFacebookPageIdentityEvidence({
       );
       if (!sourceDocumentId)
         throw new Error("facebook_page_identity_source_document_missing");
-      const error = badResponse(status, receipt);
+      const error = badResponse(status, receipt, mode);
       const parsed = error ? null : parseFacebookPageIdentity(body, page.url);
       return out(original, parsed, {
         sourceDocumentId,

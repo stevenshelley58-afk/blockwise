@@ -3,13 +3,49 @@
  */
 import { classifyMetaAdLibraryPayload } from "./meta-ad-library-parser.mjs";
 
-const DEFAULT_SCROLLS = 8,
+const DEFAULT_SCROLLS = 12,
   MAX_SCROLLS = 16,
   BUDGET = 40000;
 const RECORDER_INSTALL =
   '(() => {\n const K="__hermesMetaPagination", r=window[K]||(window[K]={records:[]}), pk=["viewAllPageID","view_all_page_id","page_id","pageId","pageID","pageIDs","pagesID"], ak=["after","cursor","end_cursor","endCursor"], sk=["activeStatus","active_status","ad_active_status"], ck=["country","country_code","countryCode","countries"], ok=["operationName","operation_name","friendlyName","friendly_name"];\n const find=(v,ks,d=0)=>{if(d>8||v==null||typeof v!=="object")return; if(Array.isArray(v)){for(const x of v){const z=find(x,ks,d+1);if(z!==undefined)return z;}return;} for(const k of ks)if(Object.prototype.hasOwnProperty.call(v,k)&&v[k]!=null&&(!Array.isArray(v[k])||v[k].length>0))return v[k]; for(const x of Object.values(v)){const z=find(x,ks,d+1);if(z!==undefined)return z;}};\n const scalar=v=>v==null||["string","number","boolean"].includes(typeof v)?v:null; const one=v=>Array.isArray(v)?(v.length===1?scalar(v[0]):null):scalar(v);\n const parse=s=>{if(typeof s!=="string"||s.length>1500000)return;try{return JSON.parse(s)}catch{} try{const lines=s.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);if(lines.length>1)return lines.map(x=>JSON.parse(x))}catch{} try{const p=new URLSearchParams(s);for(const k of ["variables","data","payload"]){const x=p.get(k);if(x)try{return JSON.parse(x)}catch{}}}catch{}};\n const meta=(url,method,body)=>{if(String(method||"GET").toUpperCase()!=="POST"||!/\\/api\\/graphql(?:\\/|$)/i.test(String(url||"")))return;const p=parse(body);if(!p)return;const page=one(find(p,pk));if(page==null||!/^\\d{5,}$/.test(String(page)))return;const after=one(find(p,ak)), active=one(find(p,sk)), country=one(find(p,ck)), operation=scalar(find(p,ok))||"anonymous";return {pageId:String(page),after:after==null?null:String(after),activeStatus:active==null?null:String(active),country:country==null?null:String(country),operation:String(operation).slice(0,200)}};\n const save=(m,status,response)=>{if(m&&r.records.length<64)r.records.push({request:m,status:Number(status)||0,response})};\n const fetchBody=async response=>{try{const s=await response.clone().text();if(s.length>4000000)return {truncated:true};try{return JSON.parse(s)}catch{try{const lines=s.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);if(lines.length>1)return lines.map(x=>JSON.parse(x))}catch{}return {malformed:true}}}catch{return {unreadable:true}}};\n if(window.fetch&&!window.fetch.__hermesMetaPaginationWrapped){const old=window.fetch, wrapped=function(input,init){let u="",m="GET",b=null;try{if(typeof input==="string")u=input;else if(input){u=input.url||"";m=input.method||m}if(init){m=init.method||m;b=typeof init.body==="string"?init.body:null}}catch{}const x=meta(u,m,b), out=old.apply(this,arguments);if(x)Promise.resolve(out).then(q=>fetchBody(q).then(z=>save(x,q&&q.status,z))).catch(()=>{});return out};wrapped.__hermesMetaPaginationWrapped=true;window.fetch=wrapped}\n const xp=window.XMLHttpRequest&&window.XMLHttpRequest.prototype;if(xp&&!xp.__hermesMetaPaginationWrapped){const oo=xp.open, os=xp.send;xp.open=function(m,u){this.__hm=this.__hm||{};this.__hm.m=m;this.__hm.u=u;return oo.apply(this,arguments)};xp.send=function(b){const q=this.__hm||{},x=meta(q.u,q.m,b);if(x)this.addEventListener("load",()=>{let z={unreadable:true};try{const s=this.responseType===""||this.responseType==="text"?this.responseText:"";z=s.length>4000000?{truncated:true}:(()=>{try{return JSON.parse(s)}catch{try{const lines=s.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);if(lines.length>1)return lines.map(x=>JSON.parse(x))}catch{}return {malformed:true}}})()}catch{}save(x,this.status,z)},{once:true});return os.apply(this,arguments)};xp.__hermesMetaPaginationWrapped=true}\n return {installed:true};\n})()';
 const RECORDER_READ =
   "(() => { const r=window.__hermesMetaPagination&&window.__hermesMetaPagination.records; return {metaPaginationRecords:Array.isArray(r)?r:[]}; })()";
+
+function nativeScrollScript(scrolls, delay) {
+  return (
+    "(async () => {\n" +
+    "  const maxIterations = " +
+    scrolls +
+    ";\n" +
+    "  const delayMs = " +
+    delay +
+    ";\n" +
+    "  const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));\n" +
+    "  const candidates = () => {\n" +
+    "    const roots = [document.scrollingElement, document.documentElement, document.body];\n" +
+    "    try { roots.push(...document.querySelectorAll('main,[role=main],[data-pagelet],div')); } catch {}\n" +
+    "    return [...new Set(roots)].filter((element) => {\n" +
+    "      try { return element && element.scrollHeight > element.clientHeight + 100; } catch { return false; }\n" +
+    "    }).sort((a, b) => b.scrollHeight - a.scrollHeight).slice(0, 12);\n" +
+    "  };\n" +
+    "  let moved = 0;\n" +
+    "  for (let iteration = 0; iteration < maxIterations; iteration += 1) {\n" +
+    "    let progressed = false;\n" +
+    "    for (const element of candidates()) {\n" +
+    "      try {\n" +
+    "        const before = element.scrollTop;\n" +
+    "        const target = Math.min(element.scrollHeight, before + Math.max(element.clientHeight || 800, 800));\n" +
+    "        if (target > before) { if (typeof element.scrollTo === 'function') element.scrollTo(0, target); else element.scrollTop = target; progressed = true; }\n" +
+    "      } catch {}\n" +
+    "    }\n" +
+    "    try { const before = window.scrollY; window.scrollBy(0, Math.max(window.innerHeight || 800, 800)); progressed = progressed || window.scrollY > before; } catch {}\n" +
+    "    if (progressed) moved += 1;\n" +
+    "    await pause(delayMs);\n" +
+    "  }\n" +
+    "  return { scrollIterations: maxIterations, scrollsMoved: moved };\n" +
+    "})()"
+  );
+}
 
 function positive(value, fallback, max) {
   const n = Number(value);
@@ -30,7 +66,7 @@ export function buildMetaPaginationScenario({
     strict: true,
     instructions: [
       { evaluate: RECORDER_INSTALL },
-      { infinite_scroll: { max_count: scrolls, delay } },
+      { evaluate: nativeScrollScript(scrolls, delay) },
       { wait: settle },
       { evaluate: RECORDER_READ },
     ],

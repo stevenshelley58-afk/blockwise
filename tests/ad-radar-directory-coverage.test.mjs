@@ -1003,9 +1003,11 @@ test("agency-first website evidence is fetched once and named profiles do not in
     fetches = [];
   const responses = {
     "https://agency.example/":
-      '{"url":"\\/team/jane-smith","title":"Meet The Team"}<a href="https://facebook.com/agency-footer">Facebook</a>',
+      '{"url":"\\/team/jane-smith","title":"Meet The Team","label":"Our team at Agency One"}{"url":"\\/staff/tony-choong","title":"Tony Choong"}<a href="https://facebook.com/Agency-Footer/">Facebook</a>',
     "https://agency.example/team/jane-smith":
       '<h1>Jane Smith</h1><nav><a href="https://facebook.com/agency-footer">Facebook</a></nav><a href="https://facebook.com/jane-smith">Jane Facebook</a>',
+    "https://agency.example/staff/tony-choong":
+      '<h1>Tony Choong</h1><footer><a href="https://www.facebook.com/agency-footer/">Agency Facebook</a></footer>',
     "https://www.facebook.com/jane-smith":
       '{"__typename":"Page","userID":"123456","userVanity":"jane-smith"}',
   };
@@ -1066,7 +1068,7 @@ test("agency-first website evidence is fetched once and named profiles do not in
     rawEvidenceDir: "/tmp/ad-radar-agency-share-" + Date.now(),
     now: () => "2026-09-08T00:00:00.000Z",
   };
-  const [jane, john] = await Promise.all([
+  const [jane, john, tony] = await Promise.all([
     handleAdRadarEntityDiscovery(
       {
         id: "job-jane",
@@ -1091,6 +1093,18 @@ test("agency-first website evidence is fetched once and named profiles do not in
       },
       { rest, ...base },
     ),
+    handleAdRadarEntityDiscovery(
+      {
+        id: "job-tony",
+        payload: {
+          entity_kind: "agent",
+          entity_id: "agent-tony",
+          name: "Tony Choong",
+          ...base,
+        },
+      },
+      { rest, ...base },
+    ),
   ]);
   assert.equal(
     fetches.filter((url) => url === "https://agency.example/").length,
@@ -1101,10 +1115,28 @@ test("agency-first website evidence is fetched once and named profiles do not in
       .length,
     1,
   );
+  assert.equal(
+    fetches.filter((url) => url === "https://agency.example/staff/tony-choong")
+      .length,
+    1,
+  );
   assert.equal(pages.length, 1);
   assert.equal(pages[0].agent_id, "agent-jane");
   assert.equal(jane.result.search_outcome, "resolved");
   assert.notEqual(john.result.search_outcome, "resolved");
+  assert.notEqual(tony.result.search_outcome, "resolved");
+  assert.equal(
+    tony.result.evidence.links.some((link) =>
+      link.url.toLowerCase().includes("agency-footer"),
+    ),
+    false,
+  );
+  assert.equal(
+    tony.result.evidence.links.some(
+      (link) => link.sourceType === "named_agent_profile",
+    ),
+    false,
+  );
   assert.equal(
     john.result.evidence.links.some((link) =>
       link.url.includes("agency-footer"),
@@ -1495,4 +1527,78 @@ test("same-name out-of-state search result cannot assign Facebook ownership", as
   assert.equal(result.result.search_outcome, "unresolved");
   assert.equal(result.result.evidence.links.length, 0);
   assert.equal(storedSource, false);
+});
+
+test("cached pre-repair named-profile metadata cannot reuse a shared agency footer as a personal page", async () => {
+  const now = () => "2026-09-08T12:00:00.000Z";
+  const sourceDocs = [
+    {
+      id: "cached-home",
+      source: "ad_radar_agency_website",
+      source_url: "https://agency.example/",
+      fetched_at: now(),
+      metadata: {
+        agency_id: "cached-agency",
+        crawl_role: "agency_homepage",
+        official_facebook_links: ["https://facebook.com/Agency-Footer"],
+      },
+    },
+    {
+      id: "cached-tony",
+      source: "ad_radar_agency_website",
+      source_url: "https://agency.example/staff/tony-choong",
+      fetched_at: now(),
+      metadata: {
+        agency_id: "cached-agency",
+        crawl_role: "agency_profile",
+        crawl_parent_url: "https://agency.example/",
+        profile_names: ["Tony Choong"],
+        named_profile_facebook_links: [
+          "https://www.facebook.com/agency-footer/",
+        ],
+        official_facebook_links: ["https://www.facebook.com/agency-footer/"],
+      },
+    },
+  ];
+  const { rest, writes } = discoveryRest({ sourceDocs });
+  let searches = 0;
+  const r = await handleAdRadarEntityDiscovery(
+    {
+      id: "cached-footer-job",
+      payload: {
+        entity_kind: "agent",
+        entity_id: "cached-tony",
+        name: "Tony Choong",
+        state: "WA",
+        agency_id: "cached-agency",
+        agency_name: "Cached Agency",
+        agency_website_url: "https://agency.example/",
+      },
+    },
+    {
+      rest,
+      now,
+      rawEvidenceDir: "/tmp/ad-radar-cached-footer",
+      fetchImpl: async () => {
+        throw new Error("cached evidence must not fetch a page");
+      },
+      resolvePageEvidence: async () => {
+        throw new Error("must not pay for agency footer");
+      },
+      searchEvidence: async () => {
+        searches++;
+        return {
+          complete: true,
+          actualAttempted: true,
+          sourceDocumentId: "mock-search-" + searches,
+          sourceUrl: "https://search.example/" + searches,
+          results: [],
+        };
+      },
+    },
+  );
+  assert.equal(searches, 2);
+  assert.deepEqual(r.result.evidence.links, []);
+  assert.equal(writes.length, 0);
+  assert.equal(r.result.search_outcome, "searched_not_found");
 });

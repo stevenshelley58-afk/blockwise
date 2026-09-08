@@ -212,7 +212,7 @@ export function extractExactFacebookLinks(values) {
 export function extractFacebookLinksFromHtml(baseUrl, html) {
   const body = s(html).slice(0, 2000000);
   const links = [];
-  const attr = /(?:href|content|url)\s*=\s*["']([^"']+)["']/giu;
+  const attr = /(?:href|content)\s*=\s*["']([^"']+)["']/giu;
   for (const match of body.matchAll(attr)) {
     try {
       const url = new URL(match[1], baseUrl);
@@ -1140,6 +1140,12 @@ async function readEntityEvidence(rest, item) {
       enc(item.id) +
       "&order=fetched_at.desc&limit=50",
   ];
+  if (item.kind === "agent")
+    paths.push(
+      "source_documents?select=id,source,source_url,metadata,fetched_at&metadata->>agent_id=eq." +
+        enc(item.id) +
+        "&order=fetched_at.desc&limit=100",
+    );
   if (item.kind === "agent" && item.agencyId)
     paths.push(
       "source_documents?select=id,source,source_url,metadata,fetched_at&metadata->>agency_id=eq." +
@@ -1210,7 +1216,7 @@ async function readAgencyEvidence(rest, agency, websiteUrl = null) {
 function websiteLinksFromBody(baseUrl, body) {
   const base = new URL(baseUrl),
     links = [],
-    attr = /(?:href|content|url)\s*=\s*["']([^"']+)["']/giu;
+    attr = /(?:href|content)\s*=\s*["']([^"']+)["']/giu;
   for (const match of s(body).matchAll(attr)) {
     try {
       const url = new URL(match[1], base);
@@ -1231,6 +1237,9 @@ function websiteLinksFromBody(baseUrl, body) {
   )) {
     try {
       const route = match[1].replace(/\\\//gu, "/").replace(/\\"/gu, '"');
+      // Only route-shaped JSON values are crawl candidates. Human labels such
+      // as "Team Members - Agency" must not become guessed URLs.
+      if (!/^\//u.test(route) && !/^https:\/\//iu.test(route)) continue;
       const url = new URL(route, base);
       if (
         url.protocol === "https:" &&
@@ -1261,18 +1270,54 @@ function textFromProfileMarkers(body) {
     )
     .filter(Boolean);
 }
-function namedProfileEvidence(baseUrl, body) {
+function facebookLinkKey(value) {
+  const reference = facebookPageReference(value);
+  if (!reference.url) return null;
+  try {
+    const url = new URL(reference.url);
+    return (url.hostname + url.pathname).replace(/\/+$/u, "").toLowerCase();
+  } catch {
+    return null;
+  }
+}
+function namedProfileEvidence(baseUrl, body, excludedFacebookLinks = []) {
   const names = textFromProfileMarkers(body);
   const stripped = s(body).replace(
     /<(?:header|footer|nav)\b[^>]*>[\s\S]*?<\/(?:header|footer|nav)>/giu,
     " ",
   );
-  const links = extractFacebookLinksFromHtml(baseUrl, stripped).map(
-    (link) => link.url,
+  const excluded = new Set(
+    (Array.isArray(excludedFacebookLinks) ? excludedFacebookLinks : [])
+      .map(facebookLinkKey)
+      .filter(Boolean),
   );
-  return { profileNames: names, namedLinks: [...new Set(links)] };
+  const links = [
+    ...new Set(
+      extractFacebookLinksFromHtml(baseUrl, stripped).map((link) => link.url),
+    ),
+  ].filter((url) => !excluded.has(facebookLinkKey(url)));
+  return { profileNames: names, namedLinks: links.length === 1 ? links : [] };
 }
 function linksFromAgencyDocuments(item, docs) {
+  const sharedAgencyLinks = new Set(
+    docs
+      .flatMap((doc) => {
+        const meta = sourceMeta(doc);
+        return [
+          ...(Array.isArray(meta.agency_homepage_facebook_links)
+            ? meta.agency_homepage_facebook_links
+            : []),
+          ...(meta.crawl_role === "agency_homepage" &&
+          Array.isArray(meta.official_facebook_links)
+            ? meta.official_facebook_links
+            : []),
+        ];
+      })
+      .map(facebookLinkKey)
+      .filter(Boolean),
+  );
+  const owned = (link) =>
+    item.kind !== "agent" || !sharedAgencyLinks.has(facebookLinkKey(link.url));
   return docs.flatMap((doc) => {
     const url = s((doc && doc.source_url) || sourceMeta(doc).website_url);
     if (!url) return [];
@@ -1308,7 +1353,7 @@ function linksFromAgencyDocuments(item, docs) {
         },
       }),
       ...explicitNamed,
-    ];
+    ].filter(owned);
   });
 }
 function linksFromEntityDocuments(item, docs) {
@@ -1457,6 +1502,10 @@ async function fetchAgencyWebsiteEvidence({
           website,
           body,
         ).map((link) => link.url),
+        agency_homepage_facebook_links: extractFacebookLinksFromHtml(
+          website,
+          body,
+        ).map((link) => link.url),
         facebook_owners: facebookOwnersFromHtml(body),
         fetched_at: checkedAt(now),
         crawl_role: "agency_homepage",
@@ -1536,7 +1585,11 @@ async function fetchAgencyWebsiteEvidence({
             retries: 0,
           });
           profileUrls.push(...profileLinksFromBody(profileUrl, profileBody));
-          const named = namedProfileEvidence(profileUrl, profileBody);
+          const named = namedProfileEvidence(
+            profileUrl,
+            profileBody,
+            metadata.agency_homepage_facebook_links,
+          );
           const nestedProfileUrls = profileLinksFromBody(
             profileUrl,
             profileBody,
@@ -2211,12 +2264,25 @@ export async function handleAdRadarEntityDiscovery(
         const profileBody = await boundedFetch(fetchImpl, profileUrl, {
           retries: 0,
         });
-        const named = namedProfileEvidence(profileUrl, profileBody);
+        const homepageFacebookLinks = agencyDocs
+          .filter((doc) => sourceMeta(doc).crawl_role === "agency_homepage")
+          .flatMap(
+            (doc) =>
+              sourceMeta(doc).agency_homepage_facebook_links ||
+              sourceMeta(doc).official_facebook_links ||
+              [],
+          );
+        const named = namedProfileEvidence(
+          profileUrl,
+          profileBody,
+          homepageFacebookLinks,
+        );
         const profileMetadata = {
           coverage_version: DIRECTORY_COVERAGE_VERSION,
           agency_id: agency.id,
           agency_name: agency.name,
           website_url: profileUrl,
+          agency_homepage_facebook_links: homepageFacebookLinks,
           profile_names: named.profileNames,
           named_profile_facebook_links: named.namedLinks,
           facebook_owners: facebookOwnersFromHtml(profileBody),

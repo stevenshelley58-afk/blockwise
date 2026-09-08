@@ -90,16 +90,15 @@ function capture(records, extra = {}) {
 test("scenario recorder is bounded and has valid JS", () => {
   const scenario = buildMetaPaginationScenario();
   assert.equal(scenario.strict, true);
-  assert.deepEqual(Object.keys(scenario.instructions[1].infinite_scroll), [
-    "max_count",
-    "delay",
-  ]);
-  assert.equal(scenario.instructions[1].infinite_scroll.max_count, 8);
-  assert.equal(scenario.instructions[1].infinite_scroll.delay, 1000);
+  assert.match(scenario.instructions[1].evaluate, /scrollHeight/);
+  assert.match(scenario.instructions[1].evaluate, /scrollTop/);
+  assert.match(scenario.instructions[1].evaluate, /window.scrollBy/);
+  assert.match(scenario.instructions[1].evaluate, /maxIterations = 12/);
   assert.match(scenario.instructions[0].evaluate, /XMLHttpRequest/);
   assert.match(scenario.instructions[0].evaluate, /window\.fetch/);
   assert.match(scenario.instructions[3].evaluate, /metaPaginationRecords/);
   assert.doesNotThrow(() => new vm.Script(scenario.instructions[0].evaluate));
+  assert.doesNotThrow(() => new vm.Script(scenario.instructions[1].evaluate));
   assert.doesNotThrow(() => new vm.Script(scenario.instructions[3].evaluate));
 });
 

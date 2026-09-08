@@ -3017,8 +3017,10 @@ async function runScrapingBeePageCapture(input) {
           raw_evidence_bytes: evidence.byteSize,
         };
         await patchAdFetchAttempt(attemptId, { raw_evidence_ref: evidence.ref });
-        const blocked = !response.ok || response.status === 401 || response.status === 429
-          || ([403, 429].includes(receipt.initialStatus));
+        // Auto Mode may recover an initial 403 at a later tier. Only the
+        // final HTTP result and strict payload parsing determine usability.
+        // The initial status remains in the receipt for diagnostics/accounting.
+        const blocked = !response.ok || response.status === 401 || response.status === 429;
         if (blocked) {
           const message = `scrapingbee request failed ${response.status}`;
           return {
