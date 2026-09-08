@@ -1,5 +1,5 @@
 {
-  "version": "1.3.0",
+  "version": "1.3.1",
   "approvedDesign": "quiet-card",
   "templates": [
     {
@@ -585,37 +585,51 @@
       "trigger": "A verified new lead arrives in the recipient's workspace and new lead alerts are enabled",
       "message": {
         "kind": "new-lead",
-        "eyebrow": "NEW LEAD ALERT",
+        "eyebrow": "Lead alert",
         "transactional": false,
-        "greeting": "Hi {{first_name}},",
-        "signOff": "The Blockwise team",
+        "greeting": "",
         "subject": "New lead · {{lead_name}}",
-        "preheader": "A new enquiry for {{campaign_name}}. Open the lead to follow up.",
+        "preheader": "{{enquiry_type}} enquiry in {{lead_suburb}}.",
         "heading": "{{lead_name}}",
-        "intro": "A new enquiry just arrived for {{campaign_name}}.",
+        "intro": "{{enquiry_type}} in {{lead_suburb}}",
         "details": [
           {
-            "label": "Enquiry",
-            "value": "{{enquiry_type}}"
+            "label": "Phone",
+            "value": "{{lead_phone}}"
           },
           {
-            "label": "Location",
-            "value": "{{lead_suburb}}"
+            "label": "Email",
+            "value": "{{lead_email}}"
           },
           {
-            "label": "Source",
-            "value": "{{lead_source}}"
+            "label": "Property address",
+            "value": "{{property_address}}"
           },
           {
-            "label": "Received",
-            "value": "{{event_time}}"
+            "label": "Looking to sell",
+            "value": "{{selling_timeframe}}"
+          },
+          {
+            "label": "Property type",
+            "value": "{{property_type}}"
+          },
+          {
+            "label": "Anything else",
+            "value": "{{lead_message}}"
           }
         ],
         "action": {
           "label": "View lead",
           "href": "{{lead_url}}"
         },
-        "note": "Contact details and the full enquiry are available securely in Blockwise."
+        "leadContact": {
+          "phone": "{{lead_phone_number}}",
+          "email": "{{lead_email}}",
+          "firstName": "{{lead_first_name}}",
+          "received": "{{event_time}}",
+          "source": "{{lead_source}}",
+          "campaign": "{{campaign_name}}"
+        }
       },
       "notificationPreference": {
         "key": "leadAlerts",

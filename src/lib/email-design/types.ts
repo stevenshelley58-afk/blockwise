@@ -29,6 +29,7 @@ export type EmailMessage = {
   intro: string;
   action?: { label: string; href: string };
   oneTimeCode?: string;
+  leadContact?: { phone: string; email: string; firstName: string; received: string; source: string; campaign: string };
   summary?: { label: string; value: string; caption?: string; metrics: ReadonlyArray<{ label: string; value: string }> };
   visual?: { chart?: EmailChart; adPreviews?: ReadonlyArray<EmailAdPreview> };
   details?: ReadonlyArray<{ label: string; value: string }>;

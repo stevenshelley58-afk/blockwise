@@ -174,7 +174,7 @@ test("visual fixtures reconcile, survive plaintext, and never appear as fallback
   assert.deepEqual(week.chart.values.map(item => item.label), ["Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Mon"]);
   assert.ok(renderExample("weekly-performance").html.includes(week.lead_comparison));
   const lead = renderExample("new-lead");
-  assert.ok(lead.html.indexOf('class="action') < lead.html.indexOf('<img '));
+  assert.ok(lead.html.indexOf('class="action') > lead.html.indexOf('<img '));
 });
 
 test("visual text is escaped and validated, including controls and placeholders", () => {
@@ -212,4 +212,21 @@ test("approved masthead, inset footer and compact capsule cover the complete cat
     }
     assert.ok(text.length > 0);
   }
+});
+
+
+test("new lead follows supplied contact-first reference and validates contact actions", () => {
+  const output = renderExample("new-lead");
+  for (const label of ["Phone", "Email", "Property address", "Looking to sell", "Property type", "Anything else"]) assert.ok(output.html.includes(label));
+  assert.ok(output.html.indexOf("Anything else") < output.html.indexOf("<img "));
+  assert.match(output.html, /href="tel:\+61400123456"/);
+  assert.match(output.html, /href="mailto:sarah.mitchell@example.com"/);
+  assert.match(output.html, /width="52"/);
+  assert.match(output.html, /Call Sarah/);
+  assert.doesNotMatch(output.html, /Related creative|Contact details and the full enquiry|Hi Jordan/);
+  const values = productionValues("new-lead");
+  assert.throws(() => buildTemplate("new-lead", {...values, lead_phone_number:"javascript:alert(1)"}), /phone/);
+  assert.throws(() => buildTemplate("new-lead", {...values, lead_email:"test@example.com?bcc=other@example.com"}), /email/);
+  assert.ok(output.text.includes("0400 123 456"));
+  assert.ok(output.text.includes("Anything else"));
 });

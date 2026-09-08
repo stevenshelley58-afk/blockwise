@@ -7,7 +7,7 @@ import { renderExample, exampleStates, EXAMPLE_STATE_LABELS, type ExampleState }
 import type { EmailColorMode } from "@/lib/email-design/renderer";
 import { EmailPreviewFrame } from "./email-preview-frame";
 
-const FRANK_LIBRARY = "https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.3/blockwise-email-library.zip?download=1";
+const FRANK_LIBRARY = "https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.3.1/blockwise-email-library.zip?download=1";
 const fieldStyle = "mt-2 min-h-11 w-full min-w-0 rounded-xl border border-border bg-card px-3 text-[13px] text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 const deliveryLabel = { transactional: "Service email", "optional-service": "Optional notification", marketing: "Subscriber email" };
 

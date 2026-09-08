@@ -119,6 +119,11 @@ export function buildTemplate(id: string, values: TemplateValues, options: { mod
     return value;
   };
   const message = walk(template.message) as EmailMessage;
+  if (message.leadContact) {
+    if (!/^\+[1-9]\d{7,14}$/.test(message.leadContact.phone)) throw new Error("Invalid lead phone");
+    if (!/^[^\s@?&]+@[^\s@?&]+\.[^\s@?&]+$/.test(message.leadContact.email) || /[\r\n]/.test(message.leadContact.email)) throw new Error("Invalid lead email");
+  }
+
   message.sections = (template.message.sections ?? []).flatMap(section => "repeat" in section
     ? structuredClone(values[section.repeat] as readonly EmailSection[])
     : [walk(section) as EmailSection]);

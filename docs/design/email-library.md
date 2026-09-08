@@ -1,6 +1,6 @@
 # Blockwise email library — Quiet card
 
-Version 1.3.0. Quiet card with the dark branded header, inset footer and compact actions approved by Steven on 8 September 2026.
+Version 1.3.1. Quiet card with the dark branded header, inset footer and compact actions approved by Steven on 8 September 2026.
 Daily, weekly and new-lead emails rebuilt with performance charts and ad previews on 8 September 2026.
 
 44 reusable templates in the existing Blockwise design system. This is a template
@@ -10,9 +10,9 @@ events, figures, dates and links are fictional. Do not send the examples.
 ## Open and reuse
 
 - Browse: https://blockwise.sale/email-preview/email-library
-- Stored in Frank: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.3/blockwise-email-library.zip?download=1
-- Frank README: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.3/README.md
-- Persistent VPS location: `/srv/frank/data/window/uploads/library/blockwise-email/2026-09-08-v1.3/`.
+- Stored in Frank: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.3.1/blockwise-email-library.zip?download=1
+- Frank README: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.3.1/README.md
+- Persistent VPS location: `/srv/frank/data/window/uploads/library/blockwise-email/2026-09-08-v1.3.1/`.
 
 Frank's existing file-download route serves this versioned library. No new Frank
 app screen, database, agent runtime or live-mail integration was created. The ZIP
@@ -58,8 +58,11 @@ Browse the focused set at https://blockwise.sale/email-preview/email-notificatio
   previews alongside campaign results and one report action. It is separate from
   the editorial weekly newsletter. Illustrated sample data is not live performance.
 - New-lead alert: the related ad creative, lead name, enquiry type, location,
-  source, receipt time and one View lead action. Contact details stay in the
-  authenticated application; a lead alert does not need a decorative chart.
+  source and receipt time, followed by linked phone/email, property address, selling
+  timeframe, property type and the full message. A small ad thumbnail precedes
+  Call and View lead capsules at the bottom, matching the supplied reference.
+  This alert contains personal details: send only to the authorised workspace
+  recipient, never public archives of real leads. Samples remain fictional.
 
 All three are optional notifications with separate preference metadata and scoped
 unsubscribe wording. A person may select any combination. Disabling daily reports

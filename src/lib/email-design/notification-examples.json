@@ -206,13 +206,13 @@
   },
   "new-lead": {
     "standard": {
-      "lead_name": "Alex Morgan",
+      "lead_name": "Sarah Mitchell",
       "campaign_name": "Baldivis seller appraisals",
       "enquiry_type": "Property appraisal",
-      "lead_suburb": "Baldivis, WA",
+      "lead_suburb": "Baldivis",
       "lead_source": "Facebook lead form",
       "event_time": "8 September 2026 · 3:42 pm AWST",
-      "lead_url": "https://preview.blockwise.example/leads/alex-morgan",
+      "lead_url": "https://preview.blockwise.example/leads/8412",
       "preferences_url": "https://preview.blockwise.example/settings/notifications",
       "unsubscribe_url": "https://preview.blockwise.example/notifications/new-leads/unsubscribe",
       "ad_previews": [
@@ -224,7 +224,15 @@
           "width": 640,
           "height": 1138
         }
-      ]
+      ],
+      "lead_first_name": "Sarah",
+      "lead_phone": "0400 123 456",
+      "lead_phone_number": "+61400123456",
+      "lead_email": "sarah.mitchell@example.com",
+      "property_address": "12 Sample Street, Baldivis WA 6171",
+      "selling_timeframe": "In the next 3 months",
+      "property_type": "4 bed, 2 bath house",
+      "lead_message": "We had it valued two years ago and want to know where it sits now before we commit to anything."
     }
   }
 }
