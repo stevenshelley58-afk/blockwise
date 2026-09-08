@@ -30,7 +30,7 @@
   box-sizing: border-box;
 }
 
-.hc-root :where(h1, h2, h3, p, ul, dl, figure) {
+:where(.hc-root) :where(h1, h2, h3, p, ul, dl, figure) {
   margin: 0;
 }
 

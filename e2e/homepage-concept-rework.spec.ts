@@ -133,6 +133,20 @@ async function assertLayoutAt(page: Page, width: number, height = 844) {
   await assertLegible(page);
 }
 
+async function assertRestoredSectionSpacing(page: Page) {
+  const expectedMargins: Array<[string, string]> = [
+    [".hp-plan-price", "20px"],
+    [".hp-plan-billing", "7px"],
+    [".hp-plan-outcome", "15px"],
+    [".hp-plan-included", "18px"],
+    [".hp-plan-terms", "18px"],
+    [".rr-chart", "16px"],
+  ];
+  for (const [selector, marginTop] of expectedMargins) {
+    await expect(page.locator(selector).first(), selector + " must retain its intended top spacing").toHaveCSS("margin-top", marginTop);
+  }
+}
+
 async function assertExpandedFaqsFit(page: Page) {
   const groups = page.locator(".hc-faq-group");
   await expect(groups).toHaveCount(6);
@@ -150,8 +164,8 @@ async function assertExpandedFaqsFit(page: Page) {
       await expect(questionText).toHaveCSS("transform", "none");
       const questionRect = await questionText.boundingBox();
       expect(questionRect, "opened FAQ question text must have a rendered rectangle").not.toBeNull();
-      expect(questionRect!.left, "opened FAQ question text must not begin off-page").toBeGreaterThanOrEqual(-1);
-      expect(questionRect!.right, "opened FAQ question text must not exceed the viewport").toBeLessThanOrEqual((await page.viewportSize())!.width + 1);
+      expect(questionRect!.x, "opened FAQ question text must not begin off-page").toBeGreaterThanOrEqual(-1);
+      expect(questionRect!.x + questionRect!.width, "opened FAQ question text must not exceed the viewport").toBeLessThanOrEqual((await page.viewportSize())!.width + 1);
       await assertVisibleElementsFit(page);
     }
   }
@@ -188,6 +202,7 @@ test("homepage concept preview is contained, interactive, static, and explicitly
   await expect(firstPricingDetails).not.toHaveAttribute("open", "");
 
   await assertLayoutAt(page, 1440, 1000);
+  await assertRestoredSectionSpacing(page);
   await takeSectionScreenshots(page, "desktop-1440");
   await assertAllImagesLoaded(page);
   await page.locator(".hc-hero").screenshot({ path: screenshotPath("desktop-1440-hero-readable.png") });
