@@ -14,6 +14,8 @@ This index separates current operating guidance from retained history.
 
 ## Design previews
 
+- [Reporting conversion update](releases/2026-09-08-homepage-reporting-conversion.md) - clearer reporting outcome, visible trial action and preview release evidence.
+
 - [Approved workflow copy](releases/2026-09-08-homepage-workflow-copy.md) — exact two-line heading and subheading, responsive checks and preview release evidence.
 
 - [Homepage concept](design/homepage-concept.md) — isolated mobile/desktop mockup; not a production homepage release.
