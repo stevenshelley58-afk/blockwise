@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, rm, readFile, writeFile } from "node:fs/promises";
+import vm from "node:vm";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { saveCaptureJournal, loadCaptureJournal, ensureFetchRun } from "../hermes/tools/research-runtime/bin/ad-radar-capture-journal.mjs";
@@ -74,4 +75,47 @@ test("supervisor saved branch reconciles ledger and never launches a paid attemp
   const branch=source.slice(source.indexOf("  if (savedCapture) {"),source.indexOf("  const params = new URLSearchParams({",source.indexOf("  if (savedCapture) {")));
   assert.match(branch,/reconcileSavedCaptureSettlement/);
   assert.doesNotMatch(branch,/fetch\(|executeScrapingBeePaidAttempt/);
+});
+
+
+test("saved replay finalization records the run without rescheduling the page", async () => {
+  const source = await readFile("hermes/tools/research-runtime/bin/supabase-supervisor.mjs", "utf8");
+  const start = source.indexOf("async function updateFetchRun(");
+  const end = source.indexOf("\nasync function markAdvertiserPageScanStarted(", start);
+  assert.ok(start >= 0 && end > start);
+  const writes = [];
+  const update = vm.runInNewContext(source.slice(start, end) + ";updateFetchRun", {
+    rest: async (_schema, path, init) => { writes.push({ path, body: JSON.parse(init.body) }); return [{ id: RUN }]; },
+    rpc: async () => { throw new Error("saved replay must not schedule the page"); },
+    encode: encodeURIComponent,
+    json: JSON.stringify,
+    now: () => "2026-09-08T06:10:00.000Z",
+  });
+  await update(RUN, { status: "success" }, { schedulePage: false });
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0].body.status, "success");
+  assert.equal(writes[0].body.ad_radar_scheduled_at, "2026-09-08T06:10:00.000Z");
+});
+
+test("normal finalization still invokes the page scheduling RPC", async () => {
+  const source = await readFile("hermes/tools/research-runtime/bin/supabase-supervisor.mjs", "utf8");
+  const start = source.indexOf("async function updateFetchRun(");
+  const end = source.indexOf("\nasync function markAdvertiserPageScanStarted(", start);
+  const calls = [];
+  const update = vm.runInNewContext(source.slice(start, end) + ";updateFetchRun", {
+    rest: async () => [{ id: RUN }],
+    rpc: async (name, body) => calls.push({ name, body }),
+    encode: encodeURIComponent, json: JSON.stringify, now: () => "2026-09-08T06:10:00.000Z",
+  });
+  await update(RUN, { status: "success" });
+  assert.equal(JSON.stringify(calls), JSON.stringify([{ name: "schedule_ad_radar_after_run", body: { p_run_id: RUN } }]));
+});
+
+test("collector identifies saved evidence before touching live page scan state", async () => {
+  const source = await readFile("hermes/tools/research-runtime/bin/supabase-supervisor.mjs", "utf8");
+  const replayCheck = source.indexOf("const replayingSavedCapture =");
+  const markStarted = source.indexOf("if (!replayingSavedCapture) await markAdvertiserPageScanStarted", replayCheck);
+  const capture = source.indexOf("const capture = await runMetaPageCapture", replayCheck);
+  assert.ok(replayCheck > 0 && markStarted > replayCheck && capture > markStarted);
+  assert.match(source.slice(replayCheck, capture), /schedulePage: !replayingSavedCapture/);
 });

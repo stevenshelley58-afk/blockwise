@@ -3855,10 +3855,19 @@ function runTelemetryPatch(outcome) {
   return patch;
 }
 
-async function updateFetchRun(id, patch) {
-  const updated = await rest("research", `ad_fetch_runs?id=eq.${encode(id)}`, { method: "PATCH", headers: { Prefer: "return=representation" }, body: json({ completed_at: now(), ...patch }) });
+async function updateFetchRun(id, patch, { schedulePage = true } = {}) {
+  const completedAt = now();
+  const updated = await rest("research", `ad_fetch_runs?id=eq.${encode(id)}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=representation" },
+    body: json({
+      completed_at: completedAt,
+      ...patch,
+      ...(schedulePage ? {} : { ad_radar_scheduled_at: completedAt }),
+    }),
+  });
   if (!updated?.[0]?.id) throw new Error("ad fetch run finalization was not confirmed");
-  await rpc("schedule_ad_radar_after_run", { p_run_id: id });
+  if (schedulePage) await rpc("schedule_ad_radar_after_run", { p_run_id: id });
   return updated[0];
 }
 
@@ -4298,13 +4307,21 @@ async function handleAdCollector(job) {
     : metaOfficialApiEnabled ? META_OFFICIAL_SOURCE_PROVIDER : configuredMetaFallbackSourceProvider();
   const adFetchRunId = await insertFetchRun(job, buildRunId, input, initialSourceProvider);
   if (!adFetchRunId) throw new Error("ad_fetch_run insert did not return an id");
-  await markAdvertiserPageScanStarted(pageRow.id);
   // Link provider attempts back to the run row.
   input.adFetchRunId = adFetchRunId;
+  const replayingSavedCapture = initialSourceProvider === META_SCRAPINGBEE_SOURCE_PROVIDER
+    && Boolean(await loadCaptureJournal(rawEvidenceDir, input));
+  if (!replayingSavedCapture) await markAdvertiserPageScanStarted(pageRow.id);
+  // Historical replay can improve evidence without replacing newer scheduling truth.
+  const finalizeFetchRun = (patch) => updateFetchRun(
+    adFetchRunId,
+    patch,
+    { schedulePage: !replayingSavedCapture },
+  );
   const capture = await runMetaPageCapture(input);
   const { outcome, sourceProvider, captureMode: capture_mode } = capture;
   if (outcome.status === "SKIPPED") {
-    await updateFetchRun(adFetchRunId, {
+    await finalizeFetchRun({
       source_provider: sourceProvider,
       status: "failed",
       result_summary: {
@@ -4332,7 +4349,7 @@ async function handleAdCollector(job) {
     };
   }
   if (outcome.status !== "SUCCEEDED") {
-    await updateFetchRun(adFetchRunId, { source_provider: sourceProvider, status: "failed", result_summary: { provider: sourceProvider, active_ads: null, metadata: outcome.metadata || {} }, error: outcome.errorMessage || "capture failed", cost_usd: outcome.costUsd || 0, ...runTelemetryPatch(outcome) });
+    await finalizeFetchRun({ source_provider: sourceProvider, status: "failed", result_summary: { provider: sourceProvider, active_ads: null, metadata: outcome.metadata || {} }, error: outcome.errorMessage || "capture failed", cost_usd: outcome.costUsd || 0, ...runTelemetryPatch(outcome) });
     await insertCoverageDefect({
       platform: "facebook",
       reason: "ad_collector_capture_failed",
@@ -4371,7 +4388,7 @@ async function handleAdCollector(job) {
       sourceProvider,
     });
     if (!zeroCaptureTrusted) {
-      await updateFetchRun(adFetchRunId, {
+      await finalizeFetchRun({
         source_provider: sourceProvider,
         status: "failed",
         result_summary: {
@@ -4419,7 +4436,7 @@ async function handleAdCollector(job) {
     // Finalize the run (with coverage flags) BEFORE reconciliation so the
     // DB function sees the authoritative coverage columns. A confirmed
     // zero-ad result is a valid observation, never a fake.
-    await updateFetchRun(adFetchRunId, {
+    await finalizeFetchRun({
       source_provider: sourceProvider,
       status: "success",
       result_summary: { provider: sourceProvider, active_ads: 0, item_count: 0, confirmed_absence: true, metadata: outcome.metadata || {} },
@@ -4456,7 +4473,7 @@ async function handleAdCollector(job) {
       await enqueuePostIngestJobs(item, payload.advertiserPageId, buildRunId, job);
     }
   } catch (error) {
-    await updateFetchRun(adFetchRunId, {
+    await finalizeFetchRun({
       source_provider: sourceProvider,
       status: "partial",
       result_summary: {
@@ -4481,7 +4498,7 @@ async function handleAdCollector(job) {
   const activeCount = outcome.items.filter((ad) => activeStatusForMetaAd(ad) === "active").length;
   // Finalize the run (with coverage flags) BEFORE reconciliation so the DB
   // function sees the authoritative coverage columns.
-  await updateFetchRun(adFetchRunId, {
+  await finalizeFetchRun({
     source_provider: sourceProvider,
     status: "success",
     result_summary: { provider: sourceProvider, active_ads: activeCount, item_count: outcome.itemCount, ingested_count: ingested.length, raw_dataset_id: outcome.rawDatasetId, metadata: outcome.metadata || {} },
