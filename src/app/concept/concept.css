@@ -971,7 +971,7 @@
 .hc-report-range button {
   position: relative;
   isolation: isolate;
-  min-height: 40px;
+  min-height: 44px;
   border: 0;
   border-radius: 999px;
   padding-inline: 15px;
@@ -992,11 +992,28 @@
   box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
 }
 
+.hc-reporting-view-stack {
+  display: grid;
+}
+.hc-reporting-view {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+.hc-reporting-view--chart {
+  z-index: 1;
+}
+.hc-reporting-view--email {
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 30px;
+}
 .hc-report-overview {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 216px;
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: clamp(28px, 5vw, 72px);
+  gap: 0;
   margin-top: 36px;
 }
 .hc-report-metrics {
@@ -1023,29 +1040,107 @@
   font-variant-numeric: tabular-nums;
 }
 
-.hc-email-update {
-  display: grid;
-  gap: 5px;
-  min-height: 90px;
-  padding: 15px 16px;
-  border: 1px solid rgba(255, 255, 255, .14);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, .045);
+.hc-report-email {
+  width: min(100%, 660px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 18px;
+  background: #f8fafc;
+  color: #14171d;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, .22);
 }
-.hc-email-update > span {
-  color: var(--hc-blue-bright);
+.hc-report-email-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 16px;
+  padding: 19px 22px 17px;
+  border-bottom: 1px solid #e4e8ee;
+  background: #fff;
+}
+.hc-report-email-kicker {
+  grid-column: 1 / -1;
+  color: #657180;
   font-size: 10px;
   font-weight: 750;
-  letter-spacing: .04em;
+  letter-spacing: .08em;
   text-transform: uppercase;
 }
-.hc-email-update strong { font-size: 14px; }
-.hc-email-update p {
+.hc-report-email-head h3 {
   margin: 0;
-  color: #aeb8c6;
-  font-size: 12px;
-  line-height: 1.35;
+  font-family: var(--hc-display);
+  font-size: clamp(18px, 2.4vw, 24px);
+  letter-spacing: -.035em;
+  line-height: 1.1;
 }
+.hc-report-email-sender {
+  grid-column: 1 / -1;
+  color: #657180;
+  font-size: 11px;
+}
+.hc-report-email-period {
+  align-self: center;
+  color: #657180;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.hc-report-email-body {
+  padding: 20px 22px 21px;
+}
+.hc-report-email-body p {
+  margin: 0;
+  color: #505c6b;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.hc-report-email-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 19px 0 18px;
+}
+.hc-report-email-metrics div {
+  min-width: 0;
+  padding: 13px 14px 12px;
+  border: 1px solid #e1e6ed;
+  border-radius: 11px;
+  background: #fff;
+}
+.hc-report-email-metrics dt {
+  color: #657180;
+  font-size: 10px;
+  line-height: 1.25;
+}
+.hc-report-email-metrics dd {
+  margin: 6px 0 0;
+  color: #161a20;
+  font-family: var(--hc-display);
+  font-size: clamp(19px, 3vw, 27px);
+  font-weight: 720;
+  letter-spacing: -.04em;
+  line-height: 1;
+}
+.hc-report-email-footer {
+  padding-top: 14px;
+  border-top: 1px solid #e1e6ed;
+  font-size: 12px !important;
+}
+.hc-report-email-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-top: 14px;
+}
+.hc-report-email-links button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #245f9f;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.hc-report-email-links button:hover { text-decoration: underline; }
 
 .hc-leads-chart { margin: 28px 0 24px !important; }
 .hc-line-chart-grid {
@@ -1168,7 +1263,7 @@
   .hc-results-intro h2 { font-size: clamp(50px, 8vw, 68px); }
   .hc-report-metrics { max-width: 620px; }
   .hc-report-overview { grid-template-columns: 1fr; }
-  .hc-email-update { max-width: 360px; }
+  .hc-reporting-view--email { padding-top: 20px; }
 }
 @media(max-width:600px) {
   .hc-results { padding-block: 72px; }
@@ -1179,12 +1274,17 @@
   .hc-reporting-stage { margin-top: 44px; }
   .hc-reporting-topline { min-height: 64px; gap: 12px; }
   .hc-reporting-topline > div:first-child { font-size: 11px; }
-  .hc-report-range button { min-height: 38px; padding-inline: 11px; font-size: 10px; }
+  .hc-report-range button { min-height: 44px; padding-inline: 11px; font-size: 10px; }
   .hc-report-overview { gap: 18px; margin-top: 28px; }
   .hc-report-metrics { gap: 12px; }
   .hc-report-metrics dt { font-size: 10px; }
   .hc-report-metrics dd { margin-top: 4px; font-size: clamp(26px, 8vw, 34px); }
-  .hc-email-update { max-width: none; min-height: 0; }
+  .hc-report-email-head,
+  .hc-report-email-body { padding-inline: 16px; }
+  .hc-report-email-metrics { gap: 7px; }
+  .hc-report-email-metrics div { padding-inline: 10px; }
+  .hc-report-email-metrics dt { font-size: 9px; }
+  .hc-report-email-metrics dd { font-size: clamp(17px, 6vw, 23px); }
   .hc-leads-chart { margin-top: 24px !important; }
   .hc-line-chart-grid { grid-template-columns: 18px minmax(0, 1fr); column-gap: 7px; }
   .hc-line-chart,

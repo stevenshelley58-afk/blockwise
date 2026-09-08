@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { readFile } from "node:fs/promises";
 import { ResultsReporting } from "../src/components/homepage-concept/results-reporting.tsx";
 import { REPORTS, lineChartGeometry } from "../src/lib/homepage-concept/reporting.ts";
+import { REPORT_EMAIL } from "../src/lib/homepage-concept/reporting-email.ts";
 
 test("reporting sells live visibility and scheduled updates with minimal copy", () => {
   const html = renderToStaticMarkup(createElement(ResultsReporting));
@@ -14,17 +15,30 @@ test("reporting sells live visibility and scheduled updates with minimal copy", 
     "Leads generated",
     "Cost per lead",
     "Ad spend",
-    "In your inbox",
-    "Performance update",
+    "Email update",
+    REPORT_EMAIL.subject,
+    REPORT_EMAIL.intro,
+    REPORT_EMAIL.metrics[0].label,
+    REPORT_EMAIL.footer.text,
+    "7 days",
+    "30 days",
+    "Email",
     "Start free trial",
     "No card required.",
   ]) assert.ok(html.includes(copy), copy);
   const words = html.replace(/<[^>]+>/g, " ").trim().split(/\s+/);
-  assert.ok(words.length < 90, `${words.length} words is too much copy`);
+  assert.ok(words.length < 120, `${words.length} words is too much copy`);
   assert.match(html, /id="results"/);
   assert.match(html, /aria-label="Dashboard reporting period"/);
+  assert.equal((html.match(/aria-pressed=/g) ?? []).length, 3, "selector keeps three real buttons mounted");
+  assert.match(html, /aria-label="7 days"/);
+  assert.match(html, /aria-label="30 days"/);
+  assert.match(html, /aria-label="Email"/);
+  assert.match(html, /class="hc-reporting-view-stack"/);
+  assert.match(html, /class="hc-reporting-view hc-reporting-view--chart"/);
+  assert.match(html, /class="hc-reporting-view hc-reporting-view--email"/);
   assert.doesNotMatch(html, /Example data/);
-  assert.doesNotMatch(html, /hc-email-controls|hc-chart-line-base/);
+  assert.doesNotMatch(html, /hc-email-update|hc-email-controls|hc-chart-line-base/);
   assert.match(html, /<svg[^>]*role="img"[^>]*aria-label="Last 7 days:/);
   assert.match(html, /class="hc-chart-line"/);
   assert.match(html, /clip-path="url/);
@@ -54,12 +68,23 @@ test("line chart faithfully represents and can morph between both periods", () =
 test("reporting stays isolated and follows the shared motion rules", async () => {
   const source = await readFile(new URL("../src/components/homepage-concept/results-reporting.tsx", import.meta.url), "utf8");
   const fixture = await readFile(new URL("../src/lib/homepage-concept/reporting.ts", import.meta.url), "utf8");
-  assert.doesNotMatch(source + fixture, /fetch\s*\(|localStorage|sessionStorage|supabase|sendBeacon|setInterval/);
+  const emailFixture = await readFile(new URL("../src/lib/homepage-concept/reporting-email.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(source + fixture + emailFixture, /fetch\s*\(|localStorage|sessionStorage|supabase|sendBeacon|setInterval/);
   assert.match(source, /useReducedMotion/);
   assert.match(source, /durations\.entrance/);
   assert.match(source, /useInView\(chartRef, \{ once: false, amount: 0.4 \}\)/);
   assert.match(source, /animate=\{\{ d: chart\.line \}\}/);
   assert.match(source, /layoutId="active-range"/);
+  assert.match(source, /REPORT_RANGES: readonly ReportingView\[\] = \["week", "month", "email"\]/);
+  assert.match(source, /REPORT_EMAIL\.footer\.links\.slice\(0, 1\)/);
+  assert.match(source, /hc-reporting-view--email/);
+  assert.match(source, /aria-hidden=\{view !== "email"\}/);
+  assert.match(source, /inert=\{view !== "email"\}/);
+  assert.match(source, /initial=\{false\}/);
+  assert.match(source, /if \(id !== "email"\) setRange\(id\)/);
+  assert.match(source, /reducedMotion \? 0 : view === "email"/);
+  assert.match(source, /type="button"/);
+  assert.match(source, /transition=\{\{ duration: reducedMotion \|\| instant \? 0 : durations\.state/);
   assert.match(source, /reportingReveal.duration/);
   assert.match(source, /setInstant\(event\.detail === 0\)/);
   assert.match(source, /report\.labels\.map/);

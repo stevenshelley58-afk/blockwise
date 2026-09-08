@@ -9,15 +9,18 @@ import {
   lineChartGeometry,
   type ReportRange,
 } from "@/lib/homepage-concept/reporting";
+import { REPORT_EMAIL } from "@/lib/homepage-concept/reporting-email";
 import { durations, reportingReveal, useReducedMotion } from "@/lib/motion";
 
-const REPORT_RANGES: readonly ReportRange[] = ["week", "month"];
+type ReportingView = ReportRange | "email";
+const REPORT_RANGES: readonly ReportingView[] = ["week", "month", "email"];
 const CHART_MAX: Record<ReportRange, number> = { week: 4, month: 12 };
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 
 /** A product-shaped proof: live results, then the update cadence that carries them to you. */
 export function ResultsReporting() {
   const [range, setRange] = useState<ReportRange>("week");
+  const [view, setView] = useState<ReportingView>("week");
   const [instant, setInstant] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const reducedMotion = useReducedMotion();
@@ -63,34 +66,39 @@ export function ResultsReporting() {
                   <button
                     key={id}
                     type="button"
-                    aria-label={REPORTS[id].label}
-                    aria-pressed={range === id}
+                    aria-label={id === "week" ? "7 days" : id === "month" ? "30 days" : "Email"}
+                    aria-pressed={view === id}
                     onClick={(event) => {
                       setInstant(event.detail === 0);
-                      setRange(id);
+                      setView(id);
+                      if (id !== "email") setRange(id);
                       setActiveIndex(null);
                     }}
                   >
-                    {range === id ? <motion.span className="hc-range-active" layoutId="active-range" transition={chartTransition} /> : null}
-                    <span>{id === "week" ? "7 days" : "30 days"}</span>
+                    {view === id ? <motion.span className="hc-range-active" layoutId="active-range" transition={chartTransition} /> : null}
+                    <span>{id === "week" ? "7 days" : id === "month" ? "30 days" : "Email"}</span>
                   </button>
                 ))}
               </div>
             </LayoutGroup>
           </div>
 
-          <div className="hc-report-overview">
-            <dl className="hc-report-metrics" aria-live="polite" aria-atomic="true">
-              <div><dt>Leads generated</dt><dd>{report.leads}</dd></div>
-              <div><dt>Cost per lead</dt><dd>{formatAdSpend(report.spend / report.leads)}</dd></div>
-              <div><dt>Ad spend</dt><dd>{formatAdSpend(report.spend)}</dd></div>
-            </dl>
-            <aside className="hc-email-update" aria-label="Example performance email update">
-              <span>In your inbox</span>
-              <strong>Performance update</strong>
-              <p>{report.leads} leads at {formatAdSpend(report.spend / report.leads)} per lead</p>
-            </aside>
-          </div>
+          <div className="hc-reporting-view-stack">
+            <motion.div
+              className="hc-reporting-view hc-reporting-view--chart"
+              initial={false}
+              animate={{ opacity: view === "email" ? 0 : 1, y: reducedMotion ? 0 : view === "email" ? -10 : 0 }}
+              aria-hidden={view === "email"}
+              style={{ pointerEvents: view === "email" ? "none" : "auto" }}
+              transition={{ duration: reducedMotion || instant ? 0 : durations.state, ease: EASE_OUT }}
+            >
+              <div className="hc-report-overview">
+                <dl className="hc-report-metrics" aria-live="polite" aria-atomic="true">
+                  <div><dt>Leads generated</dt><dd>{report.leads}</dd></div>
+                  <div><dt>Cost per lead</dt><dd>{formatAdSpend(report.spend / report.leads)}</dd></div>
+                  <div><dt>Ad spend</dt><dd>{formatAdSpend(report.spend)}</dd></div>
+                </dl>
+              </div>
 
           <figure className="hc-leads-chart">
             <figcaption className="hc-report-sr-only">Leads over time</figcaption>
@@ -190,6 +198,52 @@ export function ResultsReporting() {
               </div>
             </div>
           </figure>
+            </motion.div>
+
+            <motion.article
+              className="hc-reporting-view hc-reporting-view--email"
+              initial={false}
+              inert={view !== "email"}
+              aria-hidden={view !== "email"}
+              aria-labelledby="report-email-subject"
+              animate={{ opacity: view === "email" ? 1 : 0, y: reducedMotion ? 0 : view === "email" ? 0 : 10 }}
+              style={{ pointerEvents: view === "email" ? "auto" : "none" }}
+              transition={{ duration: reducedMotion || instant ? 0 : durations.state, ease: EASE_OUT }}
+            >
+              <div className="hc-report-email">
+                <header className="hc-report-email-head">
+                  <span className="hc-report-email-kicker">Email update</span>
+                  <h3 id="report-email-subject">{REPORT_EMAIL.subject}</h3>
+                  <span className="hc-report-email-period">{REPORT_EMAIL.period}</span>
+                  <span className="hc-report-email-sender">Blockwise</span>
+                </header>
+                <div className="hc-report-email-body">
+                  <p>{REPORT_EMAIL.intro}</p>
+                  <dl className="hc-report-email-metrics">
+                    {REPORT_EMAIL.metrics.map((metric) => (
+                      <div key={metric.label}><dt>{metric.label}</dt><dd>{metric.value}</dd></div>
+                    ))}
+                  </dl>
+                  <p className="hc-report-email-footer">{REPORT_EMAIL.footer.text}</p>
+                  <nav className="hc-report-email-links" aria-label="Report email links">
+                    {REPORT_EMAIL.footer.links.slice(0, 1).map((link) => (
+                    <button
+                      type="button"
+                      key={link}
+                      onClick={() => {
+                        setInstant(false);
+                        setRange("week");
+                        setView("week");
+                      }}
+                    >
+                      {link}
+                    </button>
+                  ))}
+                  </nav>
+                </div>
+              </div>
+            </motion.article>
+          </div>
 
         </div>
 
