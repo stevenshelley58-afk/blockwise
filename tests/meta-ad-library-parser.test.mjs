@@ -53,6 +53,100 @@ const strictZeroPayload = ({
   },
 });
 
+const relayStreamZeroPayload = ({
+  requestedPageId = "100042841013992",
+  mappedPageId = requestedPageId,
+  conflictingPageId = null,
+  queryName = "AdLibraryFoundationRootQuery",
+  complete = true,
+  isFinal = true,
+} = {}) => {
+  const preloaderID = "adp_AdLibraryFoundationRootQueryRelayPreloader_fixture";
+  const preloaders = [{
+    preloaderID,
+    queryName,
+    variables: { viewAllPageID: mappedPageId },
+  }];
+  if (conflictingPageId) {
+    preloaders.push({
+      preloaderID,
+      queryName: "AdLibraryFoundationRootQuery",
+      variables: { viewAllPageID: conflictingPageId },
+    });
+  }
+  const stream = [
+    "RelayPrefetchedStreamCache@fixture",
+    "next",
+    [],
+    [
+      preloaderID,
+      {
+        __bbox: {
+          complete,
+          result: {
+            label: "fixture$defer$AdLibraryV2SearchResultsContainer",
+            data: {
+              ad_library_main: {
+                search_results_connection: {
+                  count: 0,
+                  edges: [],
+                  page_info: { has_next_page: false, end_cursor: "" },
+                },
+              },
+              page: null,
+            },
+            extensions: { is_final: isFinal },
+          },
+        },
+      },
+    ],
+  ];
+  return [
+    '<script type="application/json">',
+    JSON.stringify({ preloaders }),
+    "</script>",
+    '<script data-sjs type="application/json">',
+    JSON.stringify({ require: [stream] }),
+    "</script>",
+  ].join("");
+};
+
+test("complete final Relay zero stream is correlated through its exact preloader", () => {
+  const result = classifyMetaAdLibraryPayload(relayStreamZeroPayload(), {
+    requestedPageId: "100042841013992",
+  });
+  assert.equal(result.outcome, "confirmed_absence");
+  assert.equal(result.connectionCount, 0);
+  assert.deepEqual(result.pageInfo, { hasNextPage: false, endCursor: "" });
+});
+
+test("Relay preloader correlation fails closed on mismatch or ambiguity", () => {
+  for (const html of [
+    relayStreamZeroPayload({ mappedPageId: "999999999999999" }),
+    relayStreamZeroPayload({ conflictingPageId: "999999999999999" }),
+    relayStreamZeroPayload({ queryName: "UnrelatedQuery" }),
+  ]) {
+    const result = classifyMetaAdLibraryPayload(html, {
+      requestedPageId: "100042841013992",
+    });
+    assert.equal(result.outcome, "partial");
+    assert.deepEqual(result.adIds, []);
+  }
+});
+
+test("Relay zero stream must be both complete and final", () => {
+  for (const html of [
+    relayStreamZeroPayload({ complete: false }),
+    relayStreamZeroPayload({ isFinal: false }),
+  ]) {
+    const result = classifyMetaAdLibraryPayload(html, {
+      requestedPageId: "100042841013992",
+    });
+    assert.equal(result.outcome, "partial");
+    assert.deepEqual(result.adIds, []);
+  }
+});
+
 test("confirmed absence requires strict page correlation and exhausted empty connection", () => {
   const result = classifyMetaAdLibraryPayload(strictZeroPayload(), {
     requestedPageId: "100042841013992",

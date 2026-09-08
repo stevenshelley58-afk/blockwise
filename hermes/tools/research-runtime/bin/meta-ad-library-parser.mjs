@@ -225,6 +225,89 @@ function numericPageId(value) {
   return /^\d{5,}$/u.test(text) ? text : null;
 }
 
+function walkObjects(value, visit) {
+  if (!value || typeof value !== "object") return;
+  visit(value);
+  if (Array.isArray(value)) {
+    for (const item of value) walkObjects(item, visit);
+    return;
+  }
+  for (const child of Object.values(value)) walkObjects(child, visit);
+}
+
+function parsedApplicationJson(text) {
+  const values = [];
+  const pattern = /<script[^>]*type=["']application\/json["'][^>]*>([\s\S]*?)<\/script>/giu;
+  for (const match of String(text || "").matchAll(pattern)) {
+    try {
+      values.push(JSON.parse(match[1]));
+    } catch {
+      // Ignore malformed script bodies. They cannot prove page correlation.
+    }
+  }
+  return values;
+}
+
+function extractRelayConnections(text) {
+  const documents = parsedApplicationJson(text);
+  const pagesByPreloader = new Map();
+
+  for (const document of documents) {
+    walkObjects(document, (value) => {
+      if (Array.isArray(value)) return;
+      if (
+        typeof value.preloaderID !== "string"
+        || value.queryName !== "AdLibraryFoundationRootQuery"
+      ) return;
+      const pageId = numericPageId(value.variables?.viewAllPageID);
+      if (!pageId) return;
+      const pages = pagesByPreloader.get(value.preloaderID) ?? new Set();
+      pages.add(pageId);
+      pagesByPreloader.set(value.preloaderID, pages);
+    });
+  }
+
+  const connections = [];
+  for (const document of documents) {
+    walkObjects(document, (value) => {
+      if (
+        !Array.isArray(value)
+        || typeof value[0] !== "string"
+        || !value[0].startsWith("RelayPrefetchedStreamCache@")
+        || value[1] !== "next"
+        || !Array.isArray(value[3])
+      ) return;
+
+      const [preloaderId, payload] = value[3];
+      if (typeof preloaderId !== "string") return;
+      const pages = pagesByPreloader.get(preloaderId);
+      // A reused preloader id with conflicting page variables is ambiguous.
+      if (!pages || pages.size !== 1) return;
+
+      const box = payload?.__bbox;
+      const result = box?.result;
+      const connection =
+        result?.data?.ad_library_main?.search_results_connection;
+      if (
+        box?.complete !== true
+        || result?.extensions?.is_final !== true
+        || !String(result?.label ?? "").includes("AdLibraryV2SearchResultsContainer")
+        || !connection
+        || typeof connection !== "object"
+      ) return;
+
+      const relayPageId = [...pages][0];
+      connections.push({
+        connection,
+        mainPageId: null,
+        relayPageId,
+        pageIds: new Set([relayPageId]),
+      });
+    });
+  }
+  return connections;
+}
+
 function pageIdsIn(value, out = new Set(), parentKey = "") {
   if (!value || typeof value !== "object") return out;
   if (Array.isArray(value)) {
@@ -258,8 +341,11 @@ function nearbyPageIds(source, start, end) {
 
 function extractConnections(html) {
   const text = String(html || "");
-  const connections = [];
-  const seen = new Set();
+  const connections = extractRelayConnections(text);
+  const seen = new Set(
+    connections.map(({ connection, relayPageId }) =>
+      JSON.stringify([connection, null, relayPageId])),
+  );
   // Scan both the raw text and a one-level-unescaped copy. Escaped variants
   // (payload embedded in a JS string) only parse after \" -> " unescaping,
   // and brace matching must run over the SAME text the regex matched.
@@ -275,12 +361,13 @@ function extractConnections(html) {
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === "object") {
           const mainPageId = enclosingDataPageId(source, match.index);
-          const key = JSON.stringify([parsed, mainPageId]);
+          const key = JSON.stringify([parsed, mainPageId, null]);
           if (!seen.has(key)) {
             seen.add(key);
             connections.push({
               connection: parsed,
               mainPageId,
+              relayPageId: null,
               pageIds: new Set([
                 ...pageIdsIn(parsed),
                 ...nearbyPageIds(source, match.index, braceIndex + raw.length),
@@ -401,8 +488,10 @@ export function classifyMetaAdLibraryPayload(
   // can contain prefetches for unrelated pages. Select one correlated
   // connection only; no correlation is partial evidence, never success/zero.
   const correlated = requested
-    ? connections.filter(({ pageIds, mainPageId }) =>
-      pageIds.has(requested) || mainPageId === requested)
+    ? connections.filter(({ pageIds, mainPageId, relayPageId }) =>
+      pageIds.has(requested)
+      || mainPageId === requested
+      || relayPageId === requested)
     : connections;
   if (correlated.length === 0) {
     warnings.push("requested_page_connection_not_found");
@@ -468,7 +557,8 @@ export function classifyMetaAdLibraryPayload(
 
   // No ads in edges. Absence needs complete structured evidence.
   if (
-    selectedEntry.mainPageId === requested
+    (selectedEntry.mainPageId === requested
+      || selectedEntry.relayPageId === requested)
     && isStrictZeroConnection(selected)
   ) {
     return {
