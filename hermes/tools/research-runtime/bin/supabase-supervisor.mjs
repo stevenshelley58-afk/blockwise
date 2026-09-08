@@ -3106,7 +3106,6 @@ async function runScrapingBeePageCapture(input) {
     return handled.result;
   }
   const params = new URLSearchParams({
-    api_key: scrapingBeeApiKey,
     url,
     mode: "auto",
     max_cost: String(runCreditCap),
@@ -3143,6 +3142,7 @@ async function runScrapingBeePageCapture(input) {
       request: async () => {
         telemetry.provider_request_count = 1;
         return fetch(`https://app.scrapingbee.com/api/v1/?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${scrapingBeeApiKey}` },
           signal: AbortSignal.timeout(scrapingBeeTimeoutMs),
         });
       },
@@ -3897,6 +3897,7 @@ async function updateFetchRun(id, patch, { schedulePage = true } = {}) {
     headers: { Prefer: "return=representation" },
     body: json({
       completed_at: completedAt,
+      ...(patch.status === "success" ? { error: null } : {}),
       ...patch,
       ...(schedulePage ? {} : { ad_radar_scheduled_at: completedAt }),
     }),

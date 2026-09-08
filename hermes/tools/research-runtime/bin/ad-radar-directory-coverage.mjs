@@ -1389,7 +1389,18 @@ function indexedProfileForAgent(item, docs) {
   );
   return (
     [...new Set(urls)].find((url) => {
-      const normalized = identityName(url);
+      const safe = safePublicHttpsUrl(url);
+      if (!safe) return false;
+      let path;
+      try {
+        path = decodeURIComponent(new URL(safe).pathname);
+      } catch {
+        return false;
+      }
+      // Old cache indexes included display labels treated as relative URLs.
+      // Never prefer those over an explicit hyphenated profile route.
+      if (/\s/u.test(path)) return false;
+      const normalized = identityName(path);
       return tokens.every((token) => normalized.includes(token));
     }) || null
   );

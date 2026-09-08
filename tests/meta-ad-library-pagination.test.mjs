@@ -341,3 +341,17 @@ test("capped scroll with valid nonterminal page stays partial", () => {
   assert.equal(result.paginationRecords, 1);
   assert.equal(result.pageInfo.hasNextPage, true);
 });
+
+test("encoded provider request line fits the upstream limit with header authentication", () => {
+  const query = new URLSearchParams({
+    url: "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=AU&view_all_page_id=107512001410098&media_type=all",
+    mode: "auto",
+    max_cost: "25",
+    wait: "5000",
+    json_response: "true",
+    js_scenario: JSON.stringify(buildMetaPaginationScenario()),
+  });
+  assert.ok(
+    Buffer.byteLength("GET /api/v1/?" + query.toString() + " HTTP/1.1") < 8190,
+  );
+});

@@ -47,6 +47,15 @@ function nativeScrollScript(scrolls, delay) {
   );
 }
 
+// Provider GET request lines are limited to 8190 bytes. Remove indentation
+// from our own scripts without changing tokens, quoted strings or regexes.
+function compactScript(script) {
+  return script
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .join(" ");
+}
+
 function positive(value, fallback, max) {
   const n = Number(value);
   return Number.isFinite(n) && n >= 1 ? Math.min(Math.floor(n), max) : fallback;
@@ -65,10 +74,10 @@ export function buildMetaPaginationScenario({
   return {
     strict: true,
     instructions: [
-      { evaluate: RECORDER_INSTALL },
-      { evaluate: nativeScrollScript(scrolls, delay) },
+      { evaluate: compactScript(RECORDER_INSTALL) },
+      { evaluate: compactScript(nativeScrollScript(scrolls, delay)) },
       { wait: settle },
-      { evaluate: RECORDER_READ },
+      { evaluate: compactScript(RECORDER_READ) },
     ],
   };
 }
