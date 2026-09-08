@@ -92,6 +92,13 @@ test("reporting stays isolated and follows the shared motion rules", async () =>
   assert.match(source, /duration: reducedMotion \|\| !inView \? 0 : reportingReveal\.duration/);
   assert.match(source, /width: reducedMotion \|\| inView \? 608 : 0/);
 
+  const conceptCss = await readFile(new URL("../src/app/concept/concept.css", import.meta.url), "utf8");
+  assert.match(conceptCss, /\.hc-root \.hc-report-email-metrics[\s\S]*margin: 19px 0 18px/);
+  assert.match(conceptCss, /\.hc-report-range[\s\S]*flex-shrink: 0/);
+  assert.match(conceptCss, /\.hc-report-range button[\s\S]*white-space: nowrap/);
+  assert.match(conceptCss, /flex-wrap: wrap[\s\S]*padding-block: 12px/);
+  assert.match(conceptCss, /\.hc-reporting-view--email[\s\S]*padding-bottom: 24px/);
+
   const motionSource = await readFile(new URL("../src/lib/motion.ts", import.meta.url), "utf8");
   assert.match(motionSource, /reportingReveal = \{\s*duration: 1\.5,/);
 });

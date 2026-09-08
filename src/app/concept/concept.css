@@ -684,6 +684,7 @@
   color: var(--hc-muted);
   font-size: 13px;
   font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
 }
 .hc-example-tabs button[aria-pressed="true"] { border-color: var(--hc-ink); background: var(--hc-ink); color: #fff; }
@@ -962,6 +963,7 @@
 .hc-report-range {
   display: flex;
   position: relative;
+  flex-shrink: 0;
   gap: 3px;
   padding: 3px;
   border: 1px solid rgba(255, 255, 255, .1);
@@ -979,6 +981,7 @@
   color: #8f9aaa;
   font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
 }
 .hc-report-range button > span:last-child { position: relative; z-index: 1; }
@@ -1008,6 +1011,7 @@
   align-items: flex-start;
   justify-content: center;
   padding-top: 30px;
+  padding-bottom: 24px;
 }
 .hc-report-overview {
   display: grid;
@@ -1092,7 +1096,7 @@
   font-size: 13px;
   line-height: 1.45;
 }
-.hc-report-email-metrics {
+.hc-root .hc-report-email-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
@@ -1272,7 +1276,12 @@
   .hc-results-actions { align-items: flex-start; flex-direction: column; gap: 10px; margin-top: 22px; }
   .hc-results-actions .hc-button { width: 100%; justify-content: center; }
   .hc-reporting-stage { margin-top: 44px; }
-  .hc-reporting-topline { min-height: 64px; gap: 12px; }
+  .hc-reporting-topline {
+    min-height: 64px;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-block: 12px;
+  }
   .hc-reporting-topline > div:first-child { font-size: 11px; }
   .hc-report-range button { min-height: 44px; padding-inline: 11px; font-size: 10px; }
   .hc-report-overview { gap: 18px; margin-top: 28px; }
