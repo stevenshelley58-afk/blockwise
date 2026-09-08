@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Pause, Play } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { AnimatePresence, LayoutGroup, motion, useInView } from "motion/react";
 import { useEffect, useId, useRef, useState } from "react";
 import {
@@ -125,25 +125,7 @@ export function ResultsReporting() {
                 ))}
               </div>
             </LayoutGroup>
-            <button
-              type="button"
-              className="hc-report-loop-toggle"
-              aria-label={paused ? "Play automatic preview" : "Pause automatic preview"}
-              title={paused ? "Play automatic preview" : "Pause automatic preview"}
-              hidden={Boolean(reducedMotion)}
-              onClick={() => {
-                setPaused(!paused);
-                if (paused) {
-                  setInstant(false);
-                  setRange("week");
-                  setView("week");
-                  setDrawFinished(false);
-                  setCycle((value) => value + 1);
-                }
-              }}
-            >
-              {paused ? <Play size={14} aria-hidden="true" /> : <Pause size={14} aria-hidden="true" />}
-            </button>
+
             </div>
           </div>
 
