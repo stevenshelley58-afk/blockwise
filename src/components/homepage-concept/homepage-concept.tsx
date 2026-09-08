@@ -1,455 +1,75 @@
 "use client";
 
-import {
-  ArrowRight,
-  BarChart3,
-  Check,
-  ChevronRight,
-  Globe2,
-  MessageCircle,
-  MoreHorizontal,
-  Send,
-  Share2,
-  ThumbsUp,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { ArrowRight, Check, ChevronDown, Mail, Menu, ShieldCheck } from "lucide-react";
+import { useEffect, useRef } from "react";
 
-import { CampaignControls } from "@/components/homepage-concept/campaign-controls";
 import { HomepagePricing } from "@/components/homepage-concept/homepage-pricing";
 import { ResultsReporting } from "@/components/homepage-concept/results-reporting";
 import { WorkflowShowcase } from "@/components/homepage-concept/workflow-showcase";
-import { FAQ_GROUPS, withBasePath } from "@/lib/homepage-concept/content";
-import { requestMockTrial, validateTrialEmail } from "@/lib/homepage-concept/mock-trial";
+import {
+  BUSINESS_IDENTITY,
+  CONTACT_HREF,
+  FAQ_GROUPS,
+  LOGIN_HREF,
+  PRICING_HREF,
+  PRIVACY_HREF,
+  TERMS_HREF,
+  withBasePath,
+} from "@/lib/homepage-concept/content";
+import { TRIAL_CTA_LABEL, TRIAL_SIGNUP_URL } from "@/lib/homepage-concept/pricing";
 
-type FormState = "idle" | "loading" | "success" | "error";
-
-function PrimaryLink({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return (
-    <a className={`hc-button hc-button--primary ${className}`} href="#trial">
-      {children}
-    </a>
-  );
+function TrialLink({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <a className={`hc-button hc-button--primary ${className}`} href={TRIAL_SIGNUP_URL}>{children}</a>;
 }
 
-function TrialForm() {
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => setHydrated(true), []);
-  const [email, setEmail] = useState("");
-  const [state, setState] = useState<FormState>("idle");
-  const [message, setMessage] = useState("");
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (state === "loading") return;
-
-    const validationError = validateTrialEmail(email);
-    if (validationError) {
-      setState("error");
-      setMessage(validationError);
-      return;
-    }
-
-    setState("loading");
-    setMessage("");
-    try {
-      const result = await requestMockTrial(email);
-      setState("success");
-      setMessage(result.message);
-    } catch (error) {
-      setState("error");
-      setMessage(error instanceof Error ? error.message : "Try again.");
-    }
-  }
-
-  return (
-    <form className="hc-trial-form" onSubmit={handleSubmit} noValidate>
-      <noscript><p className="hc-form-note">Enable JavaScript to try the preview form.</p></noscript>
-      <label htmlFor="trial-email">Work email</label>
-      <div className="hc-trial-row">
-        <input
-          id="trial-email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          inputMode="email"
-          placeholder="you@agency.com.au"
-          value={email}
-          aria-invalid={state === "error"}
-          aria-describedby="trial-note trial-status"
-          disabled={!hydrated || state === "loading"}
-          onChange={(event) => {
-            setEmail(event.target.value);
-            if (state !== "idle") {
-              setState("idle");
-              setMessage("");
-            }
-          }}
-        />
-        <button className="hc-button hc-button--light" type="submit" disabled={!hydrated || state === "loading"}>
-          {state === "loading" ? "Preparing demo…" : "Start free trial"}
-          {state === "loading" ? <span className="hc-spinner" aria-hidden="true" /> : <ArrowRight aria-hidden="true" size={17} />}
-        </button>
-      </div>
-      <p id="trial-note" className="hc-form-note">No card required. Ad spend is separate.</p>
-      <p
-        id="trial-status"
-        className={`hc-form-status hc-form-status--${state}`}
-        role={state === "error" ? "alert" : "status"}
-        aria-live="polite"
-      >
-        {message || "Preview form only. Nothing will be sent or saved."}
-      </p>
-    </form>
-  );
-}
-
-type MetaShowcaseAd = {
-  id: string;
-  format: "feed" | "story";
-  page: string;
-  initials: string;
-  tone: "navy" | "blue" | "gold" | "charcoal";
-  image: string;
-  copy: string;
-  headline: string;
-  domain: string;
-  reactions: string;
-  comments: string;
-};
-
-const META_SHOWCASE_ADS: readonly MetaShowcaseAd[] = [
-  {
-    id: "just-listed-feed",
-    format: "feed",
-    page: "Blockwise Realty",
-    initials: "BR",
-    tone: "navy",
-    image: "/home/home-dusk.webp",
-    copy: "Just listed in Mount Lawley. View the photos, floorplan and inspection times.",
-    headline: "A new address worth seeing",
-    domain: "BLOCKWISEREALTY.COM.AU",
-    reactions: "36",
-    comments: "5",
-  },
-  {
-    id: "buyers-story",
-    format: "story",
-    page: "West & Co Property",
-    initials: "W&C",
-    tone: "blue",
-    image: "/hero/hero-tall.jpg",
-    copy: "Qualified buyers are looking now.",
-    headline: "See buyer demand",
-    domain: "WESTANDCO.COM.AU",
-    reactions: "21",
-    comments: "3",
-  },
-  {
-    id: "local-advice-feed",
-    format: "feed",
-    page: "Jordan Lee Property",
-    initials: "JL",
-    tone: "charcoal",
-    image: "/home/open-home-living.webp",
-    copy: "Local advice. Clear next steps. Talk with Jordan about your property plans.",
-    headline: "Book a no-pressure property call",
-    domain: "JORDANLEE.COM.AU",
-    reactions: "48",
-    comments: "7",
-  },
-  {
-    id: "appraisal-story",
-    format: "story",
-    page: "Mia Calloway Real Estate",
-    initials: "MC",
-    tone: "gold",
-    image: "/ads/ad-coastline.jpg",
-    copy: "Find out what your home could be worth.",
-    headline: "Request an appraisal",
-    domain: "MIACALLOWAY.COM.AU",
-    reactions: "29",
-    comments: "4",
-  },
-  {
-    id: "first-home-feed",
-    format: "feed",
-    page: "Northside Property",
-    initials: "NP",
-    tone: "navy",
-    image: "/home/mt-lawley-federation.webp",
-    copy: "Buying your first home? Start with the questions that make every inspection easier.",
-    headline: "A smarter first-home checklist",
-    domain: "NORTHSIDEPROPERTY.COM.AU",
-    reactions: "63",
-    comments: "11",
-  },
-  {
-    id: "mobile-appraisal-story",
-    format: "story",
-    page: "Alex Morgan Property",
-    initials: "AM",
-    tone: "blue",
-    image: "/home/workspace-hero/agent-ad.png",
-    copy: "Your local property appraisal, made simple.",
-    headline: "Book an appraisal",
-    domain: "ALEXMORGAN.COM.AU",
-    reactions: "34",
-    comments: "6",
-  },
-  {
-    id: "market-report-feed",
-    format: "feed",
-    page: "Harbourline Realty",
-    initials: "HR",
-    tone: "charcoal",
-    image: "/home/home-pool.webp",
-    copy: "Prices, recent sales and buyer activity. See what changed in your local market.",
-    headline: "Your suburb market report",
-    domain: "HARBOURLINE.COM.AU",
-    reactions: "57",
-    comments: "9",
-  },
-  {
-    id: "planning-story",
-    format: "story",
-    page: "Oak & Key Property",
-    initials: "O&K",
-    tone: "gold",
-    image: "/ads/ad-hillview.jpg",
-    copy: "Plan your next move with a clearer property checklist.",
-    headline: "Get the checklist",
-    domain: "OAKANDKEY.COM.AU",
-    reactions: "42",
-    comments: "8",
-  },
-] as const;
-
-const META_DECK_POSITIONS = [
-  { x: "0%", y: 0, scale: 1, rotate: 0, opacity: 1 },
-  { x: "28%", y: 18, scale: 0.91, rotate: 3, opacity: 0.66 },
-  { x: "-28%", y: 30, scale: 0.82, rotate: -4, opacity: 0.38 },
-  { x: "12%", y: 50, scale: 0.74, rotate: 2, opacity: 0 },
-  { x: "-12%", y: 62, scale: 0.69, rotate: -2, opacity: 0 },
-  { x: "8%", y: 72, scale: 0.65, rotate: 2, opacity: 0 },
-  { x: "-8%", y: 80, scale: 0.62, rotate: -2, opacity: 0 },
-  { x: "0%", y: 88, scale: 0.6, rotate: 0, opacity: 0 },
-] as const;
-
-const META_DECK_TRANSITION = { duration: 0.72, ease: [0.16, 1, 0.3, 1] as const };
-
-function MetaAvatar({ ad }: { ad: MetaShowcaseAd }) {
-  return <span className={`hc-meta-avatar hc-meta-avatar--${ad.tone}`}>{ad.initials}</span>;
-}
-
-function MetaFeedAd({ ad }: { ad: MetaShowcaseAd }) {
-  return (
-    <article className="hc-meta-ad hc-meta-feed" aria-label={`${ad.page} sponsored Facebook Feed ad`}>
-      <header className="hc-meta-feed-head">
-        <MetaAvatar ad={ad} />
-        <span><strong>{ad.page}</strong><small>Sponsored · <Globe2 aria-hidden="true" size={9} /></small></span>
-        <MoreHorizontal aria-hidden="true" size={19} />
-      </header>
-      <p className="hc-meta-feed-copy">{ad.copy}</p>
-      <img className="hc-meta-feed-image" src={withBasePath(ad.image)} alt="" width="1080" height="1350" />
-      <div className="hc-meta-link-preview">
-        <span><small>{ad.domain}</small><strong>{ad.headline}</strong></span>
-        <b>Learn more</b>
-      </div>
-      <div className="hc-meta-social-proof">
-        <span><i><ThumbsUp aria-hidden="true" size={9} fill="currentColor" /></i>{ad.reactions}</span>
-        <span>{ad.comments} comments</span>
-      </div>
-      <div className="hc-meta-actions">
-        <span><ThumbsUp aria-hidden="true" size={15} />Like</span>
-        <span><MessageCircle aria-hidden="true" size={15} />Comment</span>
-        <span><Share2 aria-hidden="true" size={15} />Share</span>
-      </div>
-    </article>
-  );
-}
-
-function MetaStoryAd({ ad }: { ad: MetaShowcaseAd }) {
-  return (
-    <article className="hc-meta-ad hc-meta-story" aria-label={`${ad.page} sponsored Instagram Story ad`}>
-      <img className="hc-meta-story-image" src={withBasePath(ad.image)} alt="" width="1080" height="1920" />
-      <div className="hc-meta-story-shade" />
-      <div className="hc-meta-story-progress"><i /><i /><i /></div>
-      <header className="hc-meta-story-head">
-        <MetaAvatar ad={ad} />
-        <span><strong>{ad.page}</strong><small>Sponsored</small></span>
-        <MoreHorizontal aria-hidden="true" size={19} />
-      </header>
-      <div className="hc-meta-story-cta">
-        <strong>{ad.headline}</strong>
-        <span>Learn more <ChevronRight aria-hidden="true" size={13} /></span>
-      </div>
-      <div className="hc-meta-story-reply">
-        <span>Send message</span>
-        <ThumbsUp aria-hidden="true" size={18} />
-        <Send aria-hidden="true" size={18} />
-      </div>
-    </article>
-  );
-}
-
-function MetaAdShowcase() {
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const reduceMotion = Boolean(useReducedMotion());
-  const [order, setOrder] = useState(() => META_SHOWCASE_ADS.map((_, index) => index));
-  const [inView, setInView] = useState(false);
-  const [pageVisible, setPageVisible] = useState(true);
-  const shouldPlay = inView && pageVisible && !reduceMotion;
+function MobileMenu() {
+  const menuRef = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
-    const syncVisibility = () => setPageVisible(document.visibilityState === "visible");
-    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), { threshold: 0.25 });
-    syncVisibility();
-    if (sectionRef.current) observer.observe(sectionRef.current);
-    document.addEventListener("visibilitychange", syncVisibility);
-    return () => {
-      observer.disconnect();
-      document.removeEventListener("visibilitychange", syncVisibility);
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") menuRef.current?.removeAttribute("open");
     };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
   }, []);
 
-  useEffect(() => {
-    if (!shouldPlay) return;
-    const timer = window.setTimeout(() => {
-      setOrder((current) => [current[current.length - 1], ...current.slice(0, -1)]);
-    }, 1850);
-    return () => window.clearTimeout(timer);
-  }, [order, shouldPlay]);
+  return <details className="hc-mobile-menu" ref={menuRef}><summary aria-label="Open navigation"><Menu aria-hidden="true" size={20} /></summary><nav aria-label="Mobile navigation" onClick={() => menuRef.current?.removeAttribute("open")}><a href="#how-it-works">How it works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a><a href={LOGIN_HREF}>Log in</a></nav></details>;
+}
 
+function HeroPreview() {
   return (
-    <div className="hc-meta-showcase" ref={sectionRef}>
-      <div className="hc-meta-stage" aria-label="Examples of Facebook Feed and Instagram Story ads">
-        <p className="hc-sr-only" aria-live="polite">
-          Showing {META_SHOWCASE_ADS[order[0]].format === "feed" ? "Facebook Feed" : "Instagram Story"} ad from {META_SHOWCASE_ADS[order[0]].page}
-        </p>
-        <div className="hc-meta-deck">
-          {META_SHOWCASE_ADS.map((ad, index) => {
-            const position = order.indexOf(index);
-            const pose = META_DECK_POSITIONS[position];
-            return (
-              <div className="hc-meta-card-positioner" key={ad.id}>
-                <motion.div
-                  className={`hc-meta-card hc-meta-card--${ad.format}${position === 0 ? " is-front" : ""}`}
-                  style={{ zIndex: META_SHOWCASE_ADS.length - position }}
-                  animate={pose}
-                  transition={reduceMotion ? { duration: 0 } : META_DECK_TRANSITION}
-                >
-                  {ad.format === "feed" ? <MetaFeedAd ad={ad} /> : <MetaStoryAd ad={ad} />}
-                </motion.div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
+    <figure className="hc-hero-preview" aria-label="Example appraisal ad leading to an enquiry">
+      <div className="hc-example-label">Example ad</div>
+      <article className="hc-hero-ad">
+        <header><span className="hc-hero-avatar">WCH</span><span><strong>West Coast Home Co</strong><small>Sponsored</small></span></header>
+        <p>Thinking of selling? Get a free property appraisal.</p>
+        <img src={withBasePath("/home/mt-lawley-federation.webp")} alt="" width="1080" height="1350" />
+        <div className="hc-hero-ad-link"><span><strong>Request an appraisal</strong></span><b>Learn more</b></div>
+      </article>
+      <div className="hc-enquiry-cue"><ArrowRight aria-hidden="true" size={17} /><span><strong>Example enquiry</strong><small>New appraisal request</small></span><Check aria-hidden="true" size={16} /></div>
+    </figure>
   );
 }
 
 export function HomepageConcept() {
-
   return (
     <div className="hc-root">
       <header className="hc-header">
-        <a className="hc-logo" href="#top" aria-label="Blockwise homepage concept">
-          <img src={withBasePath("/brand/blockwise-logo-white.svg")} alt="Blockwise" width="142" height="32" />
-        </a>
-        <nav aria-label="Primary navigation">
-          <a href="#how-it-works">How it works</a>
-          <a href="#faq">FAQ</a>
-        </nav>
-        <a className="hc-login" href="https://blockwise.sale/login">Log in</a>
-        <a className="hc-header-cta" href="#trial">Start free trial</a>
+        <a className="hc-logo" href="#top" aria-label="Blockwise home"><img src={withBasePath("/brand/blockwise-logo-white.svg")} alt="Blockwise" width="142" height="32" /></a>
+        <nav className="hc-desktop-nav" aria-label="Primary navigation"><a href="#how-it-works">How it works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></nav>
+        <a className="hc-login" href={LOGIN_HREF}>Log in</a>
+        <a className="hc-header-cta" href={TRIAL_SIGNUP_URL}>{TRIAL_CTA_LABEL}</a>
+        <MobileMenu />
       </header>
-
       <main>
-        <section className="hc-hero" id="top">
-          <div className="hc-shell hc-hero-grid">
-            <div className="hc-hero-copy">
-              <h1><span>Your competition is running ads.</span> <span className="hc-hero-prompt">Are you?</span></h1>
-              <p>More listings, less marketing stress.</p>
-              <div className="hc-hero-actions">
-                <PrimaryLink>Start free trial</PrimaryLink>
-                <span><Check aria-hidden="true" size={16} /> No card required.</span>
-              </div>
-            </div>
-            <div className="hc-hero-visual">
-              <MetaAdShowcase />
-            </div>
-          </div>
-        </section>
-
-        <section className="hc-process" id="how-it-works">
-          <div className="hc-shell">
-            <WorkflowShowcase />
-          </div>
-        </section>
-
+        <section className="hc-hero" id="top"><div className="hc-shell hc-hero-grid"><div className="hc-hero-copy"><h1>More leads. Less ad management.</h1><p>Blockwise helps real estate agents create, review and run Facebook and Instagram ads in one place.</p><div className="hc-hero-actions"><TrialLink>{TRIAL_CTA_LABEL} <ArrowRight aria-hidden="true" size={17} /></TrialLink><span><Check aria-hidden="true" size={16} /> No card required. Meta ad spend is separate.</span></div></div><div className="hc-hero-visual"><HeroPreview /></div></div></section>
+        <section className="hc-process" id="how-it-works"><div className="hc-shell"><WorkflowShowcase /></div></section>
         <ResultsReporting />
-
-        <CampaignControls />
-
         <HomepagePricing />
-
-        <section className="hc-faq" id="faq">
-          <div className="hc-shell hc-faq-grid">
-            <div className="hc-section-copy">
-              <h2>FAQ</h2>
-              <p>What to expect before you start.</p>
-            </div>
-            <div className="hc-faq-groups">
-              {FAQ_GROUPS.map((group, groupIndex) => (
-                <details className="hc-faq-group" key={group.heading}>
-                  <summary>
-                    <h3 id={`hc-faq-group-${groupIndex}`}>{group.heading}</h3>
-                    <span aria-hidden="true">+</span>
-                  </summary>
-                  <div className="hc-faq-list">
-                    {group.faqs.map((faq) => (
-                      <details key={faq.question}>
-                        <summary>{faq.question}<span aria-hidden="true">+</span></summary>
-                        <p>{faq.answer}</p>
-                      </details>
-                    ))}
-                  </div>
-                </details>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="hc-trial" id="trial">
-          <div className="hc-shell hc-trial-grid">
-            <div>
-              <h2>Start with your email.</h2>
-              <p>Try the guided setup in this homepage concept.</p>
-              <div className="hc-trial-points">
-                <span><Sparkles aria-hidden="true" size={18} /> Polished templates</span>
-                <span><ShieldCheck aria-hidden="true" size={18} /> Approval before launch</span>
-                <span><BarChart3 aria-hidden="true" size={18} /> Results in one place</span>
-              </div>
-            </div>
-            <TrialForm />
-          </div>
-        </section>
+        <section className="hc-faq" id="faq"><div className="hc-shell hc-faq-grid"><div className="hc-section-copy"><h2>FAQ</h2><p>Useful details before you start.</p></div><div className="hc-faq-groups">{FAQ_GROUPS.map((group, groupIndex) => <details className="hc-faq-group" key={group.heading}><summary><h3 id={`hc-faq-group-${groupIndex}`}>{group.heading}</h3><ChevronDown aria-hidden="true" size={20} /></summary><div className="hc-faq-list">{group.faqs.map((faq) => <details key={faq.question}><summary><span>{faq.question}</span><ChevronDown aria-hidden="true" size={18} /></summary><div className="hc-faq-answer"><p>{faq.answer}</p>{"links" in faq && faq.links?.length ? <p className="hc-faq-links">{faq.links.map((link) => <a key={link.href} href={link.href}>{link.label}</a>)}</p> : null}</div></details>)}</div></details>)}</div></div></section>
+        <section className="hc-trial" id="trial"><div className="hc-shell hc-trial-grid"><div><h2>Ready to make your next ad?</h2><p>Start with three Feed and Story packs. No card is required, and you only pay if you choose a paid plan.</p></div><div className="hc-trial-action"><TrialLink>{TRIAL_CTA_LABEL} <ArrowRight aria-hidden="true" size={17} /></TrialLink><p><ShieldCheck aria-hidden="true" size={17} /> Meta ad spend is paid separately.</p></div></div></section>
       </main>
-
-      <footer className="hc-footer">
-        <div className="hc-shell">
-          <img src={withBasePath("/brand/blockwise-logo.svg")} alt="Blockwise" width="134" height="30" />
-          <p>Real estate ads, made manageable.</p>
-          <nav aria-label="Footer navigation">
-            <a href="https://blockwise.sale/pricing" target="_blank" rel="noreferrer">Pricing</a>
-            <a href="#top">Back to top</a>
-          </nav>
-        </div>
-      </footer>
+      <footer className="hc-footer"><div className="hc-shell"><div><img src={withBasePath("/brand/blockwise-logo.svg")} alt="Blockwise" width="134" height="30" /><p>Real estate ads, made manageable.</p></div><nav aria-label="Footer navigation"><a href={PRICING_HREF}>Pricing</a><a href={CONTACT_HREF}><Mail aria-hidden="true" size={15} /> Contact</a><a href={PRIVACY_HREF}>Privacy</a><a href={TERMS_HREF}>Terms</a><a href="https://blockwise.sale/data-deletion">Data deletion</a></nav><small>{BUSINESS_IDENTITY}</small></div></footer>
     </div>
   );
 }

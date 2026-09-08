@@ -1,46 +1,51 @@
-/** Preview fixtures only. No listing, approval or provider integration. */
-export const WORKFLOW_STEPS = ["Choose", "Customise", "Review"] as const;
-export const WORKFLOW_PHASES = [
-  { label: "Browse templates", step: 0, duration: 1800 },
-  { label: "Template selected", step: 0, duration: 1400 },
-  { label: "Customise the ad", step: 1, duration: 1100 },
-  { label: "Editing post copy", step: 1, duration: 2200 },
-  { label: "Editing the creative", step: 1, duration: 2000 },
-  { label: "Review campaign", step: 2, duration: 950 },
-  { label: "Campaign details filled", step: 2, duration: 1200 },
-  { label: "Approve campaign", step: 2, duration: 550 },
-  { label: "Campaign approved", step: 2, duration: 2200 },
+/** Local fixtures for a labelled homepage example. Nothing is published or saved. */
+export const WORKFLOW_STEPS = [
+  { id: "choose", label: "Choose" },
+  { id: "customise", label: "Customise" },
+  { id: "review", label: "Budget & review" },
 ] as const;
-export const WORKFLOW_STEP_STARTS = [0, 2, 5] as const;
-export const WORKFLOW_TEMPLATES = [
-  { id: "appraisal", label: "Appraisal", image: "/home/home-dusk.webp", title: "A new perspective", detail: "Discover your home's value" },
-  { id: "listing", label: "Property listing", image: "/home/subiaco-townhouse.webp", title: "Discover Subiaco", detail: "3 beds  ·  2 baths  ·  2 cars" },
-  { id: "guide", label: "Suburb guide", image: "/home/home-pool.webp", title: "Life, locally", detail: "Your neighbourhood guide" },
-] as const;
+
+export type WorkflowStepId = (typeof WORKFLOW_STEPS)[number]["id"];
+
+/** One illustrative appraisal campaign runs through the whole homepage. */
 export const WORKFLOW_AD = {
+  campaign: "Free property appraisal",
   agency: "West Coast Home Co",
   initials: "WCH",
-  appraisalCopy: "Thinking of selling? Discover what your home could be worth.",
-  startingCopy: "A fresh start in Subiaco. Explore the property.",
-  editedCopy: "Your next chapter starts in Subiaco. View this Saturday.",
-  startingTitle: "Discover Subiaco",
-  editedTitle: "18 Olive Street",
-  subtitle: "Subiaco, WA",
-  domain: "WESTCOASTHOME.CO",
+  suburb: "Mt Lawley, WA",
+  domain: "EXAMPLE.COM",
+  defaultCopy: "Thinking of selling in Mt Lawley? Find out what your home could be worth.",
+  defaultTitle: "Free property appraisal",
+  linkTitle: "Request an appraisal",
 } as const;
-export function workflowFrame(phase: number) {
-  const index = Math.max(0, Math.min(WORKFLOW_PHASES.length - 1, Math.trunc(phase)));
-  return {
-    index,
-    ...WORKFLOW_PHASES[index],
-    template: index === 0 ? 0 : 1,
-    postEdited: index >= 3,
-    titleEdited: index >= 4,
-    filled: index >= 6,
-    pressing: index === 7,
-    approved: index === 8,
-  };
-}
-export function nextWorkflowPhase(phase: number) {
-  return (phase + 1) % WORKFLOW_PHASES.length;
-}
+
+/** Three visual treatments for the same appraisal campaign. */
+export const WORKFLOW_TEMPLATES = [
+  {
+    id: "classic",
+    label: "Classic",
+    image: "/home/mt-lawley-federation.webp",
+    detail: "Property appraisal",
+  },
+  {
+    id: "editorial",
+    label: "Editorial",
+    image: "/home/home-dusk.webp",
+    detail: "Property appraisal",
+  },
+  {
+    id: "minimal",
+    label: "Minimal",
+    image: "/home/home-pool.webp",
+    detail: "Property appraisal",
+  },
+] as const;
+
+export const WORKFLOW_REVIEW = {
+  audience: "Mt Lawley +10 km",
+  durations: [7, 14, 30] as const,
+  defaultDuration: 14,
+  defaultDailyBudget: 20,
+  minDailyBudget: 10,
+  maxDailyBudget: 100,
+} as const;

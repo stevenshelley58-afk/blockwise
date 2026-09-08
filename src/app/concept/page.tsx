@@ -5,8 +5,8 @@ import { HomepageConcept } from "@/components/homepage-concept/homepage-concept"
 import "./concept.css";
 
 export const metadata: Metadata = {
-  title: "Homepage concept",
-  description: "A Blockwise homepage concept preview.",
+  title: "More leads. Less ad management. | Blockwise",
+  description: "Create, review and run real-estate Feed and Story ads with Blockwise.",
   other: {
     "blockwise-preview-revision": process.env.BLOCKWISE_BUILD_REVISION ?? "",
   },
