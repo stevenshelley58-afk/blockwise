@@ -162,6 +162,12 @@ test("/usage is cached for 65 seconds and fresh authenticated evidence gates res
   assert.match(supervisor, /p_provider_balance_verified_at: balance\.verifiedAt/);
 });
 
+test("collection defaults and scheduled jobs request active ads only", () => {
+  assert.match(supervisor, /scanMode,[\s\S]*?activeStatus: "active",[\s\S]*?resultsLimit: metaCaptureResultsLimit/);
+  assert.match(supervisor, /function captureInput\(payload\)[\s\S]*?\? payload\.activeStatus : "active"/);
+  assert.match(supervisor, /function enqueueCollectorForPage[\s\S]*?activeStatus: "active"/);
+});
+
 test("coverage_complete derives only from page_info, never from result-list size", () => {
   assert.match(supervisor, /const paginationExhausted = classified\.pageInfo\.hasNextPage === false;/);
   assert.match(supervisor, /coverageComplete: !partialEvidence && \(confirmedAbsence \|\| paginationExhausted\),/);
