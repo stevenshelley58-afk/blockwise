@@ -86,6 +86,16 @@ typography:
     fontWeight: 500
     lineHeight: "1.2"
     letterSpacing: "0.12em"
+  home-creative-name:
+    fontFamily: "Manrope, Inter, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "18px"
+    fontWeight: 800
+    lineHeight: "1.25"
+  home-creative-headline-desktop:
+    fontFamily: "Manrope, Inter, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "30px"
+    fontWeight: 800
+    lineHeight: "1.05"
 rounded:
   control: "10px"
   card: "16px"

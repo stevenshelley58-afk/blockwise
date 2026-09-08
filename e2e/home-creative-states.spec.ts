@@ -13,7 +13,7 @@ for (const audience of ['first_ad', 'returning'] as const) {
   test(`${audience} shows the preview fixture with correct template targets`, async ({ page }, info) => {
     await page.addInitScript(() => localStorage.setItem('bw-consent', 'essential'));
     await page.route('**/*', route => ['GET', 'HEAD', 'OPTIONS'].includes(route.request().method()) ? route.continue() : route.fulfill({ status: 409, body: 'Read-only acceptance' }));
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ width: audience === "first_ad" ? 320 : 390, height: audience === "first_ad" ? 667 : 844 });
     await page.goto(`/self-serve?workspaceId=${workspaceId}`);
     expect(existsSync(previewFixture), 'Canonical renderer preview fixture must exist').toBe(true);
     await page.route('**/api/home-preview-fixture/*', route => route.fulfill({ contentType: 'image/png', path: previewFixture }));
@@ -27,6 +27,9 @@ for (const audience of ['first_ad', 'returning'] as const) {
     const preview = page.locator('img[data-template-preview]');
     await expect.poll(() => preview.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
     const use = page.getByRole('link', { name: 'Use template', exact: true });
+    const actionBox = await use.boundingBox();
+    expect(actionBox!.height).toBeGreaterThanOrEqual(44);
+    expect(actionBox!.width).toBeLessThan((await page.evaluate(() => innerWidth)) * .75);
     await expect(use).toHaveAttribute('href', /^\/ad-studio\/templates\/[^/]+$/);
     const next = page.getByRole('button', { name: 'Next template', exact: true });
     if (safe.creativeSuggestions.items.length > 1) {
