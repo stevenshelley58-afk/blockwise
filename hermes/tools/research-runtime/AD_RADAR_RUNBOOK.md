@@ -3,7 +3,7 @@
 ## Current status and scope
 
 As observed on 2026-09-08, the runtime is ACTIVE at exact SHA
-a507d8eb1400269558b9d3092ee4f3cab04ad2a4 and the product is LIVE at exact
+c088699e7356e68244f58d3ef233455ce1ff7692 and the product is LIVE at exact
 SHA 674b512139961927191f3659a64737a2e0db1cdd. Product health is verified
 after two pagination canary and two public normal TLS passes. The deployed
 one-queue worker has witnessed all five bounded lanes: directory fanout 1
@@ -25,11 +25,15 @@ The historical launch snapshot covered 389 eligible numeric Facebook
 pages, not the whole WA directory; 370 of those pages then lacked a latest
 comparable baseline. These are historical known-page baseline counts, not
 current completion counts or a claim of complete WA agent coverage. The
-current worker snapshot has 392 eligible numeric pages, 306 completed initial
-fills, and 86 remaining: 70 latest partial_evidence, 12 latest failed, and 4
-pagination_unresolved. Active observed ads are 558. The directory sweep itself
-is complete, but paid known-page fill is deliberately backing off rather than
-blindly retrying; this is not full WA Facebook identity coverage. A fresh
+current worker snapshot has 392 eligible WA-linked numeric pages, 389
+completed initial fills, and 3 remaining high-volume pages with genuine
+pagination_unresolved evidence. Active observed ads are 605. The Relay
+preloader-correlation fix recovered 63 saved complete zero-result captures
+without a new provider request; the provider-credit ledger was byte-for-byte
+unchanged across that replay. Scheduled collection now requests active ads
+rather than inactive history, reducing false pagination pressure. The
+directory sweep itself is complete, but this remains known-page coverage, not
+a claim that every WA agent has a resolved Facebook identity. A fresh
 DEMIRS audit recorded 11,832 licenses, with 205 agents and 35 agencies
 appended from safe evidence; the current WA directory reports 12,349 agents
 and 2,907 agencies. Its 181 identity ambiguities remain explicit, and a
@@ -141,9 +145,16 @@ credit guard, timeout, or other bounded stop is recorded as partial with
 coverage unknown.
 
 The parallel lanes are deployed and active at the immutable runtime SHA
-a507d8eb1400269558b9d3092ee4f3cab04ad2a4. The systemd worker uses a five-minute
+c088699e7356e68244f58d3ef233455ce1ff7692. The systemd worker uses a five-minute
 stop timeout. The lane observations above are operational evidence, not a
 claim of complete WA directory coverage or failure-free pagination.
+A complete Meta Relay result may carry a null data.page value. The parser
+correlates that result only through an exact AdLibraryFoundationRootQuery
+preloader ID whose viewAllPageID matches the requested page, and it still
+requires a complete bbox, final stream result, and strict exhausted zero
+connection. Conflicting or missing mappings remain partial. This avoids both
+false zeroes and wasteful retries of already-complete responses.
+
 ## Capture journal and charge safety
 
 Before writing a research source document, the capture path atomically stores
@@ -191,8 +202,8 @@ runs advance through the 3/7/14/30 cadence, active pages remain daily, and a
 customer postcode produces postcode targets without changing service areas.
 Verify the historical 389-page known scope and the historical 370 pages
 without a latest comparable baseline; current observed scope is 392 eligible
-pages with 306 completed initial fills and 86 remaining, not full WA directory
-completion. For new scheduler truth, test a successful run with a non-negative
+WA-linked pages with 389 completed initial fills and 3 genuine high-volume
+pagination exceptions, not full WA directory identity coverage. For new scheduler truth, test a successful run with a non-negative
 active_ads value and test that missing, negative, or non-integer active_ads
 does not advance completion. Historical item_count/ads_seen rows may be
 reported separately but must not pass the new truth gate.
@@ -226,4 +237,4 @@ its observed decisions are saved-evidence-only and do not make a completeness
 claim for provider pagination. Full repository checks recorded 1,184 tests,
 1,181 passes, 3 skips, and zero failures; NUL, typecheck, and build checks
 also passed. The final safe two-step deployment flow was proven for commit
-a507d8eb1400269558b9d3092ee4f3cab04ad2a4.
+c088699e7356e68244f58d3ef233455ce1ff7692.
