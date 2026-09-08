@@ -22,7 +22,6 @@ export function ResultsReporting() {
   const [range, setRange] = useState<ReportRange>("week");
   const [view, setView] = useState<ReportingView>("week");
   const [instant, setInstant] = useState(false);
-  const [paused, setPaused] = useState(false);
   const [cycle, setCycle] = useState(0);
   const [drawFinished, setDrawFinished] = useState(false);
   const [pageHidden, setPageHidden] = useState(false);
@@ -61,7 +60,7 @@ export function ResultsReporting() {
 
   // Advance only after the actual reveal completes, never on an unrelated interval.
   useEffect(() => {
-    if (!inView || paused || reducedMotion || pageHidden) return;
+    if (!inView || reducedMotion || pageHidden) return;
     if (view !== "email" && !drawFinished) return;
     const timer = window.setTimeout(() => {
       setInstant(false);
@@ -76,7 +75,7 @@ export function ResultsReporting() {
       }
     }, 1000 * (view === "email" ? reportingLoop.emailHold : reportingLoop.chartHold));
     return () => window.clearTimeout(timer);
-  }, [inView, paused, reducedMotion, pageHidden, view, drawFinished]);
+  }, [inView, reducedMotion, pageHidden, view, drawFinished]);
 
   function inspectPoint(event: React.PointerEvent<SVGSVGElement>) {
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -112,7 +111,6 @@ export function ResultsReporting() {
                     aria-label={id === "week" ? "7 days" : id === "month" ? "30 days" : "Email"}
                     aria-pressed={view === id}
                     onClick={(event) => {
-                      setPaused(true);
                       setInstant(event.detail === 0);
                       setView(id);
                       if (id !== "email") setRange(id);
@@ -129,7 +127,7 @@ export function ResultsReporting() {
             </div>
           </div>
 
-          <div className="hc-reporting-view-stack" onFocusCapture={() => setPaused(true)}>
+          <div className="hc-reporting-view-stack">
             <motion.div
               className="hc-reporting-view hc-reporting-view--chart"
               initial={false}
@@ -280,8 +278,7 @@ export function ResultsReporting() {
                       type="button"
                       key={link}
                       onClick={() => {
-                        setPaused(true);
-                        setInstant(false);
+                          setInstant(false);
                         setRange("week");
                         setView("week");
                       }}

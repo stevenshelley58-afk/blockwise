@@ -110,11 +110,11 @@ test("requested reporting loop follows draw completion and respects interaction"
   assert.match(source, /onAnimationComplete=/);
   assert.match(source, /definition.width === 608/);
   assert.match(source, /view !== "email" && !drawFinished/);
-  assert.match(source, /!inView \|\| paused \|\| reducedMotion \|\| pageHidden/);
+  assert.ok(source.includes("if (!inView || reducedMotion || pageHidden) return;"));
   assert.match(source, /clearTimeout\(timer\)/);
   assert.match(source, /visibilitychange/);
   assert.doesNotMatch(source, /hc-report-loop-toggle|Pause automatic preview|Play automatic preview/);
-  assert.match(source, /onFocusCapture=\{\(\) => setPaused\(true\)\}/);
+  assert.doesNotMatch(source, /setPaused|onFocusCapture/);
   assert.match(source, /setCycle\(\(value\) => value \+ 1\)/);
   assert.match(source, /reportingLoop.emailHold : reportingLoop.chartHold/);
   assert.match(source, /delay: cycle > 0/);
