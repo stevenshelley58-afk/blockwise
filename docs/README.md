@@ -38,6 +38,8 @@ guides. Third-party licence text is retained unchanged.
 
 ## Plans and historical evidence
 
+- [8 September lead-management baseline](plans/2026-09-08-lead-management-baseline.md)
+
 - [8 September documentation audit](releases/2026-09-08-docs-alignment.md)
 - [8 September customer UX swarm lane 3 (draft evidence)](releases/2026-09-08-customer-ux-swarm.md)
 - [6 September template-editor release](releases/2026-09-06-template-editor.md)
