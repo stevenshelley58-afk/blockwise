@@ -109,7 +109,7 @@ test("homepage FAQ mirrors pricing in grouped collapsed disclosures", async () =
 
 test("homepage reconciliation preserves approved sections and their order", async () => {
   const component = await readFile(new URL("../src/components/homepage-concept/homepage-concept.tsx", import.meta.url), "utf8");
-  const sections = ['id="top"', 'id="how-it-works"', '<ResultsReporting />', 'id="examples"', 'id="control"', 'id="faq"', 'id="trial"'];
+  const sections = ['id="top"', 'id="how-it-works"', '<ResultsReporting />', 'id="control"', 'id="faq"', 'id="trial"'];
   const positions = sections.map((section) => component.indexOf(section));
   assert.ok(positions.every((position) => position >= 0), "All approved sections remain present");
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
@@ -120,7 +120,7 @@ test("homepage reconciliation preserves approved sections and their order", asyn
   assert.match(component, /Budget control/);
   assert.match(component, /Campaign detail/);
   assert.match(component, /Helpful updates/);
-  assert.match(component, /hc-example-tabs/);
+  assert.doesNotMatch(component, /id="examples"|href="#examples"/);
   assert.doesNotMatch(component, /EditingPreview/);
 });
 

@@ -22,7 +22,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { ResultsReporting } from "@/components/homepage-concept/results-reporting";
 import { WorkflowShowcase } from "@/components/homepage-concept/workflow-showcase";
-import { AD_EXAMPLES, FAQ_GROUPS, withBasePath } from "@/lib/homepage-concept/content";
+import { FAQ_GROUPS, withBasePath } from "@/lib/homepage-concept/content";
 import { requestMockTrial, validateTrialEmail } from "@/lib/homepage-concept/mock-trial";
 
 type FormState = "idle" | "loading" | "success" | "error";
@@ -354,8 +354,6 @@ function MetaAdShowcase() {
 }
 
 export function HomepageConcept() {
-  const [exampleFilter, setExampleFilter] = useState("all");
-  const visibleExamples = AD_EXAMPLES.filter((example) => exampleFilter === "all" || example.id === exampleFilter);
 
   return (
     <div className="hc-root">
@@ -365,7 +363,6 @@ export function HomepageConcept() {
         </a>
         <nav aria-label="Primary navigation">
           <a href="#how-it-works">How it works</a>
-          <a href="#examples">Examples</a>
           <a href="#faq">FAQ</a>
         </nav>
         <a className="hc-login" href="https://blockwise.sale/login">Log in</a>
@@ -396,37 +393,6 @@ export function HomepageConcept() {
         </section>
 
         <ResultsReporting />
-
-        <section className="hc-examples" id="examples" aria-labelledby="template-gallery-heading">
-          <div className="hc-shell">
-            <div className="hc-gallery-heading">
-              <h2 id="template-gallery-heading">Find your next ad.</h2>
-              <a className="hc-button hc-button--dark" href="#trial">Start free trial <ArrowRight aria-hidden="true" size={18} /></a>
-            </div>
-            <div className="hc-example-tabs" role="group" aria-label="Filter ad templates">
-              {[{ id: "all", label: "All templates" }, ...AD_EXAMPLES].map((example) => (
-                <button key={example.id} type="button" aria-pressed={exampleFilter === example.id}
-                  aria-controls="template-gallery" onClick={() => setExampleFilter(example.id)}>
-                  {example.label}
-                </button>
-              ))}
-            </div>
-            <p className="hc-sr-only" role="status">{visibleExamples.length} {visibleExamples.length === 1 ? "template" : "templates"} shown</p>
-            <div className="hc-template-gallery" id="template-gallery">
-              {visibleExamples.map((example) => (
-                <article className="hc-template-card" key={example.id}>
-                  <a className="hc-template-art" href="#trial" aria-label={`Start a free trial with the ${example.label.toLowerCase()} template`}>
-                    <img src={withBasePath(example.image)} alt={`${example.label} real estate ad template`} width="1080" height="1350" loading="lazy" />
-                  </a>
-                  <div className="hc-template-footer">
-                    <h3>{example.label}</h3>
-                    <a href="#trial" aria-label={`Use the ${example.label.toLowerCase()} template`}>Use this template <ArrowRight aria-hidden="true" size={17} /></a>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
 
         <section className="hc-control" id="control">
           <div className="hc-shell hc-control-grid">
