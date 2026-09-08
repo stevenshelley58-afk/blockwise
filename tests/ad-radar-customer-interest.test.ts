@@ -12,6 +12,10 @@ import {
   syncCustomerAdRadarInterests,
   customerInterestKey,
   extractContactPostcode,
+  type CustomerFetch,
+  type CustomerRestInit,
+  type ResearchRest,
+  type CustomerFetchResponse,
 } from "../hermes/tools/research-runtime/bin/customer-freshness-sync.mjs";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
@@ -129,22 +133,41 @@ test("exact connected page mapping wins without using the market marker as a sta
 });
 
 
-function responseJson(value, status = 200) {
+function responseJson(value: unknown, status = 200): CustomerFetchResponse {
   return { ok: status >= 200 && status < 300, status, text: async () => JSON.stringify(value) };
+}
+
+type ResearchWrite = { path: string; body: Array<Record<string, unknown>> | null };
+
+function parseWriteBody(body: string | undefined): Array<Record<string, unknown>> {
+  assert.ok(body);
+  const parsed: unknown = JSON.parse(body);
+  assert.ok(Array.isArray(parsed));
+  return parsed as Array<Record<string, unknown>>;
+}
+
+function requiredString(value: unknown): string {
+  assert.equal(typeof value, "string");
+  return value as string;
+}
+
+function recordValue(value: unknown): Record<string, unknown> {
+  assert.ok(value && typeof value === "object" && !Array.isArray(value));
+  return value as Record<string, unknown>;
 }
 
 test("sync registers an exact assigned Meta page once and follows changed profile postcode", async () => {
   const assignmentPageId = "99887766";
   const registeredPageId = "55555555-5555-4555-8555-555555555555";
   let kitPostcode = "6160";
-  const researchWrites = [];
-  const knownPages = new Map();
+  const researchWrites: ResearchWrite[] = [];
+  const knownPages = new Map<string, string>();
   const env = {
     HERMES_CUSTOMER_SUPABASE_URL: "https://customer.example",
     HERMES_CUSTOMER_SUPABASE_SERVICE_ROLE_KEY: "test-service-key",
     HERMES_AD_RADAR_CUSTOMER_KEY_SECRET: "0123456789abcdef0123456789abcdef",
   };
-    const fetchImpl = async (url, init = {}) => {
+    const fetchImpl: CustomerFetch = async (url, init: CustomerRestInit = {}) => {
     const relation = new URL(url).pathname.split("/").at(-1);
     if (relation === "ad_radar_customer_interest_sources") {
       return responseJson([{ profile_id: "profile-connected", postcode: "6000", source: "signup", active: true }]);
@@ -160,15 +183,15 @@ test("sync registers an exact assigned Meta page once and follows changed profil
     }
     throw new Error("unexpected product relation " + relation);
   };
-  const researchRest = async (_schema, path, init = {}) => {
-    if (init.method) researchWrites.push({ path, body: init.body ? JSON.parse(init.body) : null });
+  const researchRest: ResearchRest = async (_schema, path, init: CustomerRestInit = {}) => {
+    if (init.method) researchWrites.push({ path, body: init.body ? parseWriteBody(init.body) : null });
     if (path.startsWith("agents?")) return [];
     if (path.startsWith("advertiser_pages?select=id,page_id")) {
       return [...knownPages].map(([page_id, id]) => ({ page_id, id }));
     }
     if (path.startsWith("advertiser_pages?on_conflict=")) {
-      const rows = JSON.parse(init.body);
-      for (const row of rows) knownPages.set(row.page_id, registeredPageId);
+      const rows = parseWriteBody(init.body);
+      for (const row of rows) knownPages.set(requiredString(row.page_id), registeredPageId);
       return rows.map((row) => ({ id: registeredPageId, page_id: row.page_id }));
     }
     if (path.startsWith("ad_radar_customer_interests?select=")) return [];
@@ -179,12 +202,16 @@ test("sync registers an exact assigned Meta page once and follows changed profil
   await syncCustomerAdRadarInterests({ researchRest, fetchImpl, env, now: "2026-09-08T01:00:00.000Z" });
   const registrationWrites = researchWrites.filter((write) => write.path.startsWith("advertiser_pages?on_conflict="));
   assert.equal(registrationWrites.length, 1);
+  assert.ok(registrationWrites[0].body);
+  assert.ok(registrationWrites[0].body[0]);
   assert.equal(registrationWrites[0].body[0].platform, "facebook");
   assert.equal(registrationWrites[0].body[0].page_id, assignmentPageId);
-  assert.equal(registrationWrites[0].body[0].metadata.source, "customer_meta_assignment");
+  assert.equal(recordValue(registrationWrites[0].body[0].metadata).source, "customer_meta_assignment");
   assert.equal(registrationWrites[0].body[0].owner_type, "unknown");
   assert.equal(registrationWrites[0].body[0].status, "resolved_collectable");
   const firstTarget = researchWrites.find((write) => write.path.startsWith("ad_radar_customer_interests?on_conflict="));
+  assert.ok(firstTarget?.body);
+  assert.ok(firstTarget.body[0]);
   assert.equal(firstTarget.body[0].advertiser_page_id, registeredPageId);
   assert.equal(firstTarget.body[0].postcode, "6160");
 
@@ -193,6 +220,8 @@ test("sync registers an exact assigned Meta page once and follows changed profil
   assert.equal(researchWrites.filter((write) => write.path.startsWith("advertiser_pages?on_conflict=")).length, 1);
   const targetWrites = researchWrites.filter((write) => write.path.startsWith("ad_radar_customer_interests?on_conflict="));
   assert.equal(targetWrites.length, 2);
+  assert.ok(targetWrites[1].body);
+  assert.ok(targetWrites[1].body[0]);
   assert.equal(targetWrites[1].body[0].postcode, "6150");
 });
 
@@ -222,16 +251,16 @@ test("sync never writes research data for incomplete product snapshots", async (
   };
   for (const failure of ["bad-json-shape", "timeout", "http-error"]) {
     let researchWrites = 0;
-    const fetchImpl = async (url, init = {}) => {
+    const fetchImpl: CustomerFetch = async (url, init: CustomerRestInit = {}) => {
       const relation = new URL(url).pathname.split("/").at(-1);
       if (relation === "ad_radar_customer_interest_sources") {
         if (failure === "bad-json-shape") return responseJson({ rows: [] });
-        if (failure === "timeout") return new Promise((resolve, reject) => init.signal.addEventListener("abort", () => reject(new Error("simulated timeout")), { once: true }));
+        if (failure === "timeout") return new Promise((resolve, reject) => init.signal!.addEventListener("abort", () => reject(new Error("simulated timeout")), { once: true }));
         return responseJson({ error: "unavailable" }, 503);
       }
       return responseJson([]);
     };
-    const researchRest = async (_schema, _path, init = {}) => {
+    const researchRest: ResearchRest = async (_schema, _path, init: CustomerRestInit = {}) => {
       if (init.method) researchWrites += 1;
       throw new Error("research should not be called");
     };

@@ -11,6 +11,7 @@ import {
   CLASSIFIER_VERSION,
   assessCapturedImageQuality,
   classifyCreativeWithModels,
+  classifyCreativeFromSavedEvidence,
   hasUnresolvedDynamicPlaceholder,
   hasUsableCapturedMedia,
   readImageDimensions,
@@ -31,6 +32,18 @@ import { publishCustomerReadModels } from "./customer-read-model-publisher.mjs";
 import { selectDueAdRadarPages, chunkIds } from "./ad-radar-scheduling.mjs";
 import { saveCaptureJournal, loadCaptureJournal, ensureFetchRun } from "./ad-radar-capture-journal.mjs";
 import { syncCustomerAdRadarInterests } from "./customer-freshness-sync.mjs";
+import {
+  DIRECTORY_DISCOVERY_JOB_TYPE,
+  enqueueAdRadarDirectoryDiscovery,
+  handleAdRadarEntityDiscovery,
+  handleAdRadarPageDiscovery,
+} from "./ad-radar-directory-coverage.mjs";
+import {
+  laneForJob,
+  resolveAdRadarLaneConfigs,
+  runLaneBatch,
+  startAdRadarLaneLoops,
+} from "./ad-radar-lane-scheduler.mjs";
 import { runInactiveAdPurge } from "./inactive-ad-purge.mjs";
 import {
   assertHermesOwnedStorageUrl,
@@ -44,6 +57,7 @@ const COVERAGE_AUDITOR_JOB_TYPE = "blockwise-coverage-auditor";
 const DEFECT_INVESTIGATOR_JOB_TYPE = "blockwise-defect-investigator";
 const AD_RADAR_JOB_TYPES = [
   "blockwise-agent-census",
+  DIRECTORY_DISCOVERY_JOB_TYPE,
   "blockwise-page-resolver",
   "blockwise-ad-collector",
   "blockwise-media-collector",
@@ -670,13 +684,12 @@ async function enqueueDueAdPageRefreshJobs(buildRunId) {
 
 async function runWatchdogs() {
   const runHourlyWatchdogs = Date.now() % (60 * 60 * 1000) < intervalMs;
-  const [stale, providerFailures, zeroAds, missingMedia, unclassified, classificationBackfill, staleBlockedArchive, staleAgencyRecheck, unresolvedPageRetry] = await Promise.all([
+  const [stale, providerFailures, zeroAds, missingMedia, unclassified, staleBlockedArchive, staleAgencyRecheck, unresolvedPageRetry] = await Promise.all([
     rpc("watchdog_requeue_stale_jobs", { p_limit: 100 }),
     rpc("watchdog_record_provider_failures", { p_since: "24 hours", p_failure_threshold: 3 }),
     rpc("watchdog_record_zero_ad_anomalies", { p_since: "48 hours", p_limit: 100 }),
     rpc("watchdog_record_missing_media", { p_since: "24 hours", p_limit: 100 }),
     rpc("watchdog_record_unclassified_creatives", { p_since: "24 hours", p_limit: 100 }),
-    enqueueClassificationBackfillJobs(),
     watchdogArchiveStaleBlockedJobs(),
     runHourlyWatchdogs
       ? watchdogRecheckStaleAgencies()
@@ -691,7 +704,6 @@ async function runWatchdogs() {
     zeroAds: zeroAds.length,
     missingMedia: missingMedia.length,
     unclassified: unclassified.length,
-    classificationBackfill,
     ...staleBlockedArchive,
     ...staleAgencyRecheck,
     ...unresolvedPageRetry,
@@ -862,23 +874,55 @@ async function enqueueClassificationBackfillJobs() {
   return enqueued;
 }
 
+async function loadWaOwnedAdCreativeIds(rows) {
+  const observedIds = [...new Set(rows.map((row) => row?.observed_ad_id).filter((id) => uuidPattern.test(String(id || ""))))];
+  if (!observedIds.length) return new Set();
+  const observed = await rest("research", `observed_ads?select=id,advertiser_page_id&id=in.(${observedIds.map(encode).join(",")})&limit=${observedIds.length}`);
+  if (!Array.isArray(observed)) throw new Error("Classification backfill observed-ad response was not an array");
+  const pageIds = [...new Set(observed.map((row) => row?.advertiser_page_id).filter((id) => uuidPattern.test(String(id || ""))))];
+  if (!pageIds.length) return new Set();
+  const pages = await rest("research", `advertiser_pages?select=id,agent_id,agency_id&id=in.(${pageIds.map(encode).join(",")})&limit=${pageIds.length}`);
+  if (!Array.isArray(pages)) throw new Error("Classification backfill page response was not an array");
+  const agentIds = [...new Set(pages.map((row) => row?.agent_id).filter((id) => uuidPattern.test(String(id || ""))))];
+  const agencyIds = [...new Set(pages.map((row) => row?.agency_id).filter((id) => uuidPattern.test(String(id || ""))))];
+  const [agents, agencies] = await Promise.all([
+    agentIds.length ? rest("research", `agents?select=id,state&id=in.(${agentIds.map(encode).join(",")})&limit=${agentIds.length}`) : [],
+    agencyIds.length ? rest("research", `agencies?select=id,state&id=in.(${agencyIds.map(encode).join(",")})&limit=${agencyIds.length}`) : [],
+  ]);
+  if (!Array.isArray(agents) || !Array.isArray(agencies)) throw new Error("Classification backfill owner response was not an array");
+  const waAgents = new Set(agents.filter((row) => String(row?.state || "").toUpperCase() === "WA").map((row) => row.id));
+  const waAgencies = new Set(agencies.filter((row) => String(row?.state || "").toUpperCase() === "WA").map((row) => row.id));
+  const waPageIds = new Set(pages.filter((row) => waAgents.has(row.agent_id) || waAgencies.has(row.agency_id)).map((row) => row.id));
+  const waObservedIds = new Set(observed.filter((row) => waPageIds.has(row.advertiser_page_id)).map((row) => row.id));
+  return new Set(rows.filter((row) => waObservedIds.has(row.observed_ad_id)).map((row) => row.id));
+}
+
 async function loadClassificationBackfillCandidates() {
   const select = "id,observed_ad_id,creative_hash,classification_status,classification,ad_type,primary_intent,updated_at";
   const sources = [
-    `ad_creatives?select=${select}&or=(classified_at.is.null,classification_status.in.(unclassified,failed),classification.eq.%7B%7D)&order=updated_at.asc.nullsfirst&limit=${classificationBackfillBatchSize}`,
-    `ad_creatives?select=${select}&classification_status=eq.classified&order=updated_at.asc.nullsfirst&limit=${classificationBackfillBatchSize}`,
-    `ad_creatives?select=${select}&or=(ad_type.eq.other,primary_intent.eq.other)&order=updated_at.asc.nullsfirst&limit=${classificationBackfillWeakBatchSize}`,
+    `ad_creatives?select=${select}&or=(classified_at.is.null,classification_status.in.(unclassified,failed),classification.eq.%7B%7D)&order=updated_at.asc.nullsfirst`,
+    `ad_creatives?select=${select}&classification_status=eq.classified&order=updated_at.asc.nullsfirst`,
+    `ad_creatives?select=${select}&or=(ad_type.eq.other,primary_intent.eq.other)&order=updated_at.asc.nullsfirst`,
   ];
   const seen = new Set();
   const candidates = [];
-  for (const path of sources) {
-    const rows = await rest("research", path);
-    for (const row of rows) {
-      if (!row?.id || seen.has(row.id)) continue;
-      seen.add(row.id);
-      if (!shouldReclassifyCreative(row)) continue;
-      candidates.push(row);
-      if (candidates.length >= classificationBackfillBatchSize) return candidates;
+  for (const [sourceIndex, basePath] of sources.entries()) {
+    const pageLimit = sourceIndex === 2 ? classificationBackfillWeakBatchSize : classificationBackfillBatchSize;
+    for (let offset = 0; ; offset += pageLimit) {
+      const rows = await rest("research", basePath + "&limit=" + pageLimit + "&offset=" + offset);
+      if (!Array.isArray(rows)) throw new Error("Classification backfill creative response was not an array");
+      const waOwned = await loadWaOwnedAdCreativeIds(rows);
+      for (const row of rows) {
+        if (!row?.id || seen.has(row.id) || !waOwned.has(row.id)) continue;
+        seen.add(row.id);
+        if (row.classification_status === "classified" &&
+          row.classification?.classifier_version === CLASSIFIER_VERSION + ":saved" &&
+          row.classification?.creative_hash === row.creative_hash) continue;
+        if (!shouldReclassifyCreative(row)) continue;
+        candidates.push(row);
+        if (candidates.length >= classificationBackfillBatchSize) return candidates;
+      }
+      if (rows.length < pageLimit) break;
     }
   }
   return candidates;
@@ -1744,24 +1788,37 @@ function isLegalEntityAliasAgency(existingAgency, verifiedAgency) {
   return tradingNames.map((name) => normalizeName(name)).filter(Boolean).includes(existingName);
 }
 
+function classifierCreativeHash(creative) {
+  if (creative?.creative_hash) return String(creative.creative_hash);
+  return hash(JSON.stringify({
+    headline: creative?.headline || null,
+    body: creative?.body || null,
+    cta: creative?.cta || null,
+    landing_url: creative?.landing_url || null,
+    format: creative?.format || null,
+  }));
+}
+
 async function enqueueClassificationJob(creative, parentJob) {
+  const creativeHash = classifierCreativeHash(creative);
   return enqueueFollowUp({
     queue_name: "research",
     job_type: "blockwise-ad-classifier",
-    dedupe_key: `classifier:${creative.id}:${creative.creative_hash || "unknown"}:${CLASSIFIER_VERSION}`,
+    dedupe_key: `ad-radar:classifier:${creative.id}:${creativeHash}:${CLASSIFIER_VERSION}:saved`,
     advertiser_page_id: null,
     priority: 5,
     payload: {
       adCreativeId: creative.id,
       observedAdId: creative.observed_ad_id || null,
-      classifier_version: CLASSIFIER_VERSION,
-      force: true,
+      creative_hash: creativeHash,
+      classifier_version: CLASSIFIER_VERSION + ":saved",
+      classifierMode: "deterministic",
+      ad_db_child: true,
     },
     status: "pending",
     max_attempts: 3,
   }, parentJob);
 }
-
 async function enqueueFollowUp(input, parentJob) {
   const existing = await rest("research", `work_queue?select=id,status&dedupe_key=eq.${encode(input.dedupe_key)}&limit=1`);
   const active = existing.find((job) => job.status === "pending" || job.status === "claimed");
@@ -1812,14 +1869,23 @@ async function enqueuePostIngestJobs(item, advertiserPageId, buildRunId, parentJ
       max_attempts: 3,
     }, parentJob);
   }
-  if (env.HERMES_AD_DB_ENABLE_CLASSIFICATION !== "true") return;
+  if (!item.creative_hash) return;
+  const creativeHash = String(item.creative_hash);
   await enqueueFollowUp({
     queue_name: "research",
     job_type: "blockwise-ad-classifier",
-    dedupe_key: `classifier:${item.ad_creative_id}:${item.creative_hash}:${CLASSIFIER_VERSION}`,
+    dedupe_key: `ad-radar:classifier:${item.ad_creative_id}:${creativeHash}:${CLASSIFIER_VERSION}:saved`,
     advertiser_page_id: advertiserPageId,
     priority: 5,
-    payload: { adCreativeId: item.ad_creative_id, observedAdId: item.observed_ad_id, build_run_id: buildRunId, classifier_version: CLASSIFIER_VERSION },
+    payload: {
+      adCreativeId: item.ad_creative_id,
+      observedAdId: item.observed_ad_id,
+      build_run_id: buildRunId,
+      creative_hash: creativeHash,
+      classifier_version: CLASSIFIER_VERSION + ":saved",
+      classifierMode: "deterministic",
+      ad_db_child: true,
+    },
     status: "pending",
     max_attempts: 3,
   }, parentJob);
@@ -4508,6 +4574,7 @@ async function handleMediaCollector(job) {
     }
   }
   if (failed > 0) throw new Error("media_capture_failed");
+  await refreshClassifiedCreativeDisplay(payload.adCreativeId);
   return {
     status: "complete",
     result: { handler: "blockwise-media-collector", ad_creative_id: payload.adCreativeId, seeded, captured, failed, model_calls: 0 },
@@ -4577,16 +4644,40 @@ async function handleAdClassifier(job) {
   const creatives = await rest("research", `ad_creatives?select=*&id=eq.${payload.adCreativeId}&limit=1`);
   const creative = creatives?.[0];
   if (!creative) return { status: "complete", result: { handler: "blockwise-ad-classifier", ad_creative_id: payload.adCreativeId, stale_creative_skipped: true } };
-  const capturedAssets = await rest("research", `media_assets?select=id,kind,storage_path,source_url,capture_status,byte_size,width,height&ad_creative_id=eq.${creative.id}&capture_status=eq.captured&limit=20`);
-  if (shouldWaitForMediaClassification(creative, capturedAssets)) {
+  const expectedCreativeHash = classifierCreativeHash(creative);
+  if (creative.classification_status === "classified" &&
+      ((creative.classification?.classifier_version === CLASSIFIER_VERSION + ":saved" &&
+        creative.classification?.creative_hash === expectedCreativeHash) ||
+       (creative.ad_type && creative.ad_type !== "other" &&
+        Number(creative.classification?.confidence) >= 0.7))) {
+    return {status:"complete",result:{handler:"blockwise-ad-classifier",
+      ad_creative_id:creative.id,preserved_classification:true,model_calls:0}};
+  }
+  if (payload.creative_hash && String(payload.creative_hash) !== expectedCreativeHash) {
+    return { status: "complete", result: { handler: "blockwise-ad-classifier", ad_creative_id: creative.id, stale_hash_skipped: true, model_calls: 0 } };
+  }
+  const capturedAssets = await rest("research", `media_assets?select=id,kind,storage_path,source_url,capture_status,archive_object_id,archive_verified_at,byte_size,width,height&ad_creative_id=eq.${creative.id}&capture_status=eq.captured&archive_object_id=not.is.null&archive_verified_at=not.is.null&limit=20`);
+  const deterministic = payload.classifierMode === "deterministic" && payload.ad_db_child === true;
+  if (!deterministic && shouldWaitForMediaClassification(creative, capturedAssets)) {
     throw new Error("classifier_waiting_for_media_capture");
   }
-  const classificationResult = await classifyCreativeWithModels(creative, capturedAssets, {
-    env,
-    fetchImpl: fetch,
-    storagePublicUrlForPath,
-  });
-  const classification = classificationResult.classification;
+  if (narrowAdDbMode && !deterministic) {
+    return {
+      status: "blocked",
+      blocked_reason: "legacy_classifier_job_not_allowed_in_narrow_worker",
+      result: { handler: "blockwise-ad-classifier", ad_creative_id: creative.id, model_calls: 0 },
+    };
+  }
+  const classificationResult = deterministic
+    ? classifyCreativeFromSavedEvidence(creative, { evidenceSource: "saved_creative" })
+    : await classifyCreativeWithModels(creative, capturedAssets, {
+      env,
+      fetchImpl: fetch,
+      storagePublicUrlForPath,
+    });
+  const classification = deterministic
+    ? {...classificationResult.classification, classifier_version: CLASSIFIER_VERSION + ":saved", creative_hash: expectedCreativeHash}
+    : classificationResult.classification;
   const requiresMedia = ["image", "video", "carousel"].includes(creative.format);
   const mediaReady = !requiresMedia || hasUsableCapturedMedia(capturedAssets);
   const unresolvedDynamicPlaceholder = hasUnresolvedDynamicPlaceholder(creative);
@@ -4613,7 +4704,7 @@ async function handleAdClassifier(job) {
         unresolved_dynamic_placeholder: unresolvedDynamicPlaceholder,
         evidence_source: classificationResult.evidenceSource,
         classifier_version: CLASSIFIER_VERSION,
-        media_assets: capturedAssets.map((asset) => ({ id: asset.id, kind: asset.kind, storage_path: asset.storage_path, byte_size: asset.byte_size })),
+        media_assets: capturedAssets.map((asset) => ({ id: asset.id, kind: asset.kind, archive_object_id: asset.archive_object_id, archive_verified_at: asset.archive_verified_at, byte_size: asset.byte_size })),
       },
       hermes_session_id: workerId,
       hermes_skill: "blockwise-ad-classifier",
@@ -4632,6 +4723,7 @@ async function handleAdClassifier(job) {
       display_state: displayState,
     }),
   });
+  await refreshClassifiedCreativeDisplay(creative.id);
   return {
     status: "complete",
     result: {
@@ -4647,6 +4739,15 @@ async function handleAdClassifier(job) {
       classifier_version: CLASSIFIER_VERSION,
     },
   };
+}
+
+async function refreshClassifiedCreativeDisplay(creativeId) {
+  const [creative] = await rest("research", `ad_creatives?select=*&id=eq.${encode(creativeId)}&limit=1`);
+  if (!creative || creative.classification_status !== "classified") return;
+  const assets = await rest("research", `media_assets?select=*&ad_creative_id=eq.${encode(creativeId)}&capture_status=eq.captured&archive_object_id=not.is.null&archive_verified_at=not.is.null&limit=250`);
+  const displayState = shouldDisplayClassifiedCreative(creative,assets,creative.classification) ? "displayable" : "hidden";
+  if (displayState !== creative.display_state) await rest("research",`ad_creatives?id=eq.${encode(creativeId)}`,{
+    method:"PATCH",body:json({display_state:displayState})});
 }
 
 async function captureMediaAsset(asset, buildRunId) {
@@ -5054,8 +5155,22 @@ async function handleDefectInvestigator(job) {
 }
 
 async function handleJob(job) {
+  if (job.job_type === DIRECTORY_DISCOVERY_JOB_TYPE) {
+    return handleAdRadarPageDiscovery(job, { rest, fetchImpl: fetch, now, rawEvidenceDir });
+  }
+  if (job.job_type === "blockwise-ad-directory-discovery-entity") {
+    return handleAdRadarEntityDiscovery(job, { rest, fetchImpl: fetch, now, rawEvidenceDir });
+  }
   if (job.job_type === "blockwise-agent-census") return handleAgentCensus(job);
-  if (job.job_type === "blockwise-page-resolver") return handlePageResolver(job);
+  if (job.job_type === "blockwise-page-resolver") {
+    if (job.payload?.ad_radar_discovery === true) {
+      return { status: "blocked", blocked_reason: "canonical_page_discovery_handler_not_loaded", result: { handler: "blockwise-page-resolver", model_calls: 0 } };
+    }
+    if (narrowAdDbMode) {
+      return { status: "blocked", blocked_reason: "legacy_page_resolver_not_allowed_in_narrow_worker", result: { handler: "blockwise-page-resolver", model_calls: 0 } };
+    }
+    return handlePageResolver(job);
+  }
   if (job.job_type === "blockwise-ad-collector") return handleAdCollector(job);
   if (job.job_type === "blockwise-media-collector") return handleMediaCollector(job);
   if (job.job_type === "blockwise-ad-classifier") return handleAdClassifier(job);
@@ -5257,8 +5372,10 @@ async function maybeRunInactiveAdPurge() {
 const exactJobMode = process.argv.includes("--job-id");
 const adDbWorkerMode = process.argv.includes("--ad-db-worker");
 const adDbWorkerPollMs = positiveInt("HERMES_AD_DB_WORKER_POLL_MS", 10_000);
-const adDbWorkerBatchSize = Math.min(positiveInt("HERMES_AD_DB_WORKER_BATCH_SIZE", 3), 4);
-const EXACT_CANONICAL_JOB_TYPES = new Set(["blockwise-ad-collector", "blockwise-media-collector"]);
+const adRadarLaneConfigs = resolveAdRadarLaneConfigs(env);
+const EXACT_CANONICAL_JOB_TYPES = new Set(
+  Object.values(adRadarLaneConfigs).flatMap((lane) => lane.jobTypes),
+);
 
 function exactJobId() {
   const marker = process.argv.indexOf("--job-id");
@@ -5267,15 +5384,19 @@ function exactJobId() {
   return value;
 }
 
-async function runExactJob(jobId) {
+async function runExactJob(jobId, expectedLane = null) {
   const rows = await rest(
     "research",
     "work_queue?select=*&id=eq." + encode(jobId) + "&queue_name=eq.research&status=eq.pending&available_at=lte." + encode(now()) + "&limit=1",
   );
   const job = rows?.[0];
   if (!job) throw new Error("canonical job is missing or not pending");
-  if (!EXACT_CANONICAL_JOB_TYPES.has(job.job_type)) {
-    throw new Error("exact mode only permits canonical ad collector or media collector jobs");
+  const lane = laneForJob(job, adRadarLaneConfigs);
+  if (!EXACT_CANONICAL_JOB_TYPES.has(job.job_type) || !lane) {
+    throw new Error("exact mode requires a canonical marked Ad Radar lane job");
+  }
+  if (expectedLane && lane.name !== expectedLane.name) {
+    throw new Error("job does not belong to the requested Ad Radar lane");
   }
   const claimToken = randomUUID();
   const claimed = await rest("research", "work_queue?id=eq." + encode(job.id) + "&status=eq.pending", {
@@ -5297,6 +5418,7 @@ async function runExactJob(jobId) {
 }
 
 let lastAdRadarInterestSyncAt = 0;
+let lastAdRadarClassificationBackfillAt = 0;
 
 async function runAdDbSupervisorPass() {
   const result = {};
@@ -5308,28 +5430,115 @@ async function runAdDbSupervisorPass() {
       lastAdRadarInterestSyncAt = Date.now();
     } else result.customerInterestSync = { skipped: true, reason: "not_due" };
   } catch (error) { lastAdRadarInterestSyncAt = Date.now(); result.customerInterestSync = { skipped: false, error: error.message }; log("ad-db customer interest sync failed; continuing", { error: error.message }, "error"); }
-  try { const buildRunId = await ensureBuildRun(); await refreshMetaBrowserChallengeCooldownFromSettings(); result.scheduler = await enqueueDueAdPageRefreshJobs(buildRunId); }
+  try {
+    const buildRunId = await ensureBuildRun();
+    await refreshMetaBrowserChallengeCooldownFromSettings();
+    result.scheduler = await enqueueDueAdPageRefreshJobs(buildRunId);
+    result.directoryDiscovery = await enqueueAdRadarDirectoryDiscovery({ rest, now, buildRunId });
+    if (Date.now() - lastAdRadarClassificationBackfillAt >= adRadarInterestSyncIntervalMs) {
+      result.classificationBackfill = await enqueueClassificationBackfillJobs();
+      lastAdRadarClassificationBackfillAt = Date.now();
+    } else result.classificationBackfill = { skipped: true, reason: "not_due" };
+  }
   catch (error) { result.scheduler = { error: error.message }; log("ad-db scheduler failed; continuing", { error: error.message }, "error"); }
   return result;
 }
 
-async function runAdDbWorkerPass() {
-  const supervisor = await runAdDbSupervisorPass();
-  const jobs = await rest(
+async function loadPendingAdRadarLaneJobs(lane) {
+  const jobTypes = lane.jobTypes.map((jobType) => encode(jobType)).join(",");
+  return rest(
     "research",
     "work_queue?select=*&queue_name=eq.research&status=eq.pending&available_at=lte." + encode(now())
-      + "&job_type=in.(blockwise-ad-collector,blockwise-media-collector)&dedupe_key=like.ad-radar:%25"
+      + "&job_type=in.(" + jobTypes + ")"
+      + "&dedupe_key=like." + encode(lane.dedupePrefix) + "%25"
       + "&order=priority.asc,available_at.asc,created_at.asc&limit=100",
   );
-  const eligible = (jobs || []).filter((candidate) => candidate.job_type === "blockwise-ad-collector"
-    || (candidate.job_type === "blockwise-media-collector" && candidate.payload?.ad_db_child === true));
-  const media = eligible.find((job) => job.job_type === "blockwise-media-collector");
-  const firstFill = eligible.find((job) => job.job_type === "blockwise-ad-collector" && job.payload?.scanMode === "initial_fill");
-  const selected = [...new Map([media, firstFill, ...eligible].filter(Boolean).map((job) => [job.id, job])).values()].slice(0, adDbWorkerBatchSize);
-  if (!selected.length) return { supervisor, handled: 0, skipped_unmarked_media: (jobs || []).filter((candidate) => candidate.job_type === "blockwise-media-collector" && candidate.payload?.ad_db_child !== true).length };
-  const results = await Promise.allSettled(selected.map((job) => runExactJob(job.id)));
-  const failures = results.filter((result) => result.status === "rejected").map((result) => result.reason?.message || "canonical job failed");
-  return { supervisor, handled: results.length - failures.length, attempted: results.length, failures, job_ids: selected.map((job) => job.id) };
+}
+
+async function runAdRadarLanePass(lane) {
+  const jobs = await loadPendingAdRadarLaneJobs(lane);
+  const orderedJobs = lane.name === "collector"
+    ? [
+      ...(jobs || []).filter((job) => job.payload?.scanMode === "initial_fill"),
+      ...(jobs || []).filter((job) => job.payload?.scanMode !== "initial_fill"),
+    ]
+    : jobs;
+  const result = await runLaneBatch({
+    jobs: orderedJobs,
+    lane,
+    runJob: (job) => runExactJob(job.id, lane),
+  });
+  if (result.attempted) {
+    log("ad-db lane pass", {
+      lane: lane.name,
+      attempted: result.attempted,
+      completed: result.completed,
+      failed: result.failed,
+      jobIds: result.jobIds,
+    });
+  }
+  return result;
+}
+
+async function runAdDbWorkerOnce() {
+  const lanes = Object.values(adRadarLaneConfigs);
+  const settled = await Promise.allSettled([
+    runAdDbSupervisorPass(),
+    ...lanes.map((lane) => runAdRadarLanePass(lane)),
+  ]);
+  const supervisor = settled[0].status === "fulfilled"
+    ? settled[0].value
+    : { error: settled[0].reason?.message || "scheduler failed" };
+  const laneResults = settled.slice(1).map((item, index) => item.status === "fulfilled"
+    ? item.value
+    : { lane: lanes[index].name, attempted: 0, completed: 0, failed: 1, jobIds: [], results: [], error: item.reason?.message || "lane failed" });
+  const attempted = laneResults.reduce((sum, result) => sum + result.attempted, 0);
+  const handled = laneResults.reduce((sum, result) => sum + result.completed, 0);
+  const failures = laneResults.flatMap((result) => [
+    ...(result.error ? [result.error] : []),
+    ...(result.results || []).filter((item) => item.status === "rejected").map((item) => item.reason?.message || "canonical job failed"),
+  ]);
+  return {
+    supervisor,
+    lanes: laneResults.map(({ lane, attempted: laneAttempted, completed, failed, jobIds, error }) => ({ lane, attempted: laneAttempted, completed, failed, jobIds, ...(error ? { error } : {}) })),
+    attempted,
+    handled,
+    failures,
+  };
+}
+
+async function runAdDbWorker() {
+  if (env.HERMES_RESEARCH_RUN_ONCE === "true") {
+    const result = await runAdDbWorkerOnce();
+    log("ad-db worker pass", result);
+    return;
+  }
+
+  const scheduler = startAdRadarLaneLoops({
+    lanes: [{ name: "scheduler" }],
+    pollMs: adDbWorkerPollMs,
+    runLanePass: () => runAdDbSupervisorPass(),
+    onError: (error) => log("ad-db scheduler failed; continuing", { error: error.message }, "error"),
+  }).start();
+  const workers = startAdRadarLaneLoops({
+    lanes: Object.values(adRadarLaneConfigs),
+    pollMs: adDbWorkerPollMs,
+    runLanePass: runAdRadarLanePass,
+    onError: (error, lane) => log("ad-db lane failed; continuing", { lane: lane.name, error: error.message }, "error"),
+  }).start();
+
+  await new Promise((resolve) => {
+    let shuttingDown = false;
+    const shutdown = async (signal) => {
+      if (shuttingDown) return;
+      shuttingDown = true;
+      log("ad-db worker draining", { signal });
+      await Promise.all([scheduler.stop(), workers.stop()]);
+      resolve();
+    };
+    process.once("SIGTERM", () => { void shutdown("SIGTERM"); });
+    process.once("SIGINT", () => { void shutdown("SIGINT"); });
+  });
 }
 
 const historicalReplayMode = process.argv.includes("--historical-replay");
@@ -5461,16 +5670,7 @@ async function runHistoricalReplay(limit) {
 
 async function main() {
   if (adDbWorkerMode) {
-    for (;;) {
-      try {
-        const pass = await runAdDbWorkerPass();
-        log("ad-db worker pass", pass);
-      } catch (error) {
-        log("ad-db worker pass failed; retrying", { error: error.message }, "error");
-      }
-      if (env.HERMES_RESEARCH_RUN_ONCE === "true") break;
-      await sleep(adDbWorkerPollMs);
-    }
+    await runAdDbWorker();
     return;
   }
   if (exactJobMode) {

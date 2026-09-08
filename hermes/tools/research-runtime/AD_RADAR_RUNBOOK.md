@@ -16,10 +16,14 @@ research migrations in filename order, including the signup-owned
 the customer product migration list.
 
 The known WA first-fill scope is 389 eligible numeric Facebook pages, not
-12,144 agents. Of those 389 pages, 370 do not yet have a latest comparable
-baseline. This is a known-page scope, not a claim of complete WA agent
-coverage. Existing and future customer interests are synced from the product
-signup/profile source every five minutes. The research table contains only a
+the whole WA directory. Of those 389 pages, 370 do not yet have a latest
+comparable baseline. This is a known-page scope, not a claim of complete WA
+agent coverage. A fresh DEMIRS audit recorded 11,832 licenses, with 205 agents
+and 35 agencies appended from safe evidence; the current WA directory reports
+12,349 agents and 2,907 agencies. Its 181 identity ambiguities remain explicit,
+and a repeat audit found zero missing records. These counts do not turn the
+known-page fill into full directory coverage. Existing and future customer
+interests are synced from the product signup/profile source every five minutes. The research table contains only a
 pseudonymous customer_key and target/linkage fields; it does not contain
 customer PII, tokens, or account credentials.
 
@@ -44,6 +48,7 @@ ad_fetch_runs row:
 The SQL scheduler function requires active_ads in addition to the completion,
 coverage, and pagination predicates. The runtime writes active_ads for new
 runs. Historical preexisting baseline rows may instead expose
+Historical last_successful_scan timestamps alone do not count as a full fill.
 result_summary.item_count or result_summary.ads_seen, or may lack an
 active-count field; those fields are descriptive historical evidence only and
 must never substitute for active_ads in the new scheduler truth.
@@ -89,28 +94,34 @@ number.
 
 ## Queue and fairness contract
 
-There is one canonical research queue. Run the supervisor as
-supabase-supervisor.mjs --ad-db-worker; do not start a second queue or a
-parallel worker definition. Only blockwise-ad-collector jobs and explicitly
-marked blockwise-media-collector child jobs with an ad-radar dedupe key are
-eligible.
+There is one canonical research queue and one --ad-db-worker process; do
+not start a second queue or parallel worker definition. The upcoming parallel
+lane plan is directory fanout 1, discovery entity 4, collector 4 by default,
+media 4, and deterministic classifier 1. Collector concurrency may be raised
+to 8 only after bounded acceptance evidence. The scheduler polls every 10
+seconds while idle and drains busy queues independently; slow paid captures
+must not stall directory, discovery, media, classification, or scheduling.
+Each lane claims only its marked job type and canonical dedupe prefix. Legacy
+census/resolver/classifier rows are not consumed by the narrow worker.
 
-The scheduler processes owner/customer chunks bounded at 50 rows per owner
-group. Customer-interest targets are eligible again after 24 hours, so each
-signed-up page/postcode target receives daily consideration. Disabled pages are
-never restarted by scheduler recovery. Queue selection is fair: media child
-jobs and first-fill page jobs each receive an opportunity before ordinary
-refresh jobs, while the configured priority and durable lease rules remain in
-force.
+Directory maintenance runs weekly, with durable continuation checkpoints and
+batches of 50 entity jobs. Exact stable page IDs only are accepted: no
+name-only or slug-only guesses, and existing page ownership is preserved.
+Signed-up customer own/local pages and postcode-known pages remain daily;
+other active pages follow normal cadence, and quiet pages use 3, 7, 14, and
+30-day backoff. Customer-interest targets are eligible again after 24 hours.
+Disabled pages are never restarted by scheduler recovery. Media capture is a
+separate archive child job and rule-based classification is a separate display
+refresh; classification makes no LLM call. Provider/raw responses and
+verified media archives are distinct evidence. Media failure remains retryable
+and cannot report a fully successful media job. There is no fixed item-count
+ceiling that can silently truncate provider pagination; a provider stop,
+credit guard, timeout, or other bounded stop is recorded as partial with
+coverage unknown.
 
-The worker polls every 10 seconds, claims a default batch of 3 jobs, and
-hard-limits a batch to 4. Media capture is a separate archive child job:
-provider/raw responses and verified media archives are distinct evidence.
-Media failure remains retryable and cannot report a fully successful media
-job. There is no fixed item-count ceiling that can silently truncate provider
-pagination; a provider stop, credit guard, timeout, or other bounded stop is
-recorded as partial with coverage unknown.
-
+The parallel lane source is not yet deployed; its immutable full SHA will be
+recorded after parent integration. The active runtime SHA above describes the
+currently verified service, not this upcoming lane change.
 ## Capture journal and charge safety
 
 Before writing a research source document, the capture path atomically stores
@@ -127,7 +138,7 @@ first. Do not create a paid request merely to prove queue health.
 
 ## Request and database budget
 
-The provider request limit is 25 items per request. The database subscription
+The provider request limit is 25 credits per request. The database subscription
 maximum is 75,000, with 74,700 remaining at the current rehearsal snapshot.
 These are operational observations, not permission to purchase credits. Do
 not add another overall ceiling, and do not purchase or top up provider
@@ -136,7 +147,7 @@ stop reason and unknown coverage.
 
 ## Observed launch evidence
 
-The first paid GL C Residential capture confirmed zero ads using 25 credits
+The first paid GLC Residential capture confirmed zero ads using 25 credits
 and scheduled the next scan in 3 days. Same-job raw replay took 192 ms with
 one attempt; provider-used remained 325 before and after, with no extra
 credits. The launch budget snapshot was a 75,000 subscription maximum with
@@ -175,3 +186,8 @@ activation is deliberately a two-step operation:
 
 Rollback uses the previously verified immutable release and its retained unit;
 never roll back to a moving checkout or introduce a second queue.
+## Deterministic saved-creative classification
+
+The classifier stage uses the canonical deterministic helper classifyCreativeFromSavedEvidence(creative) for saved-ad first-fill and backfill work. It reads persisted creative evidence only and makes no paid provider request, media download, network call, or LLM call. It runs in its own lane (concurrency 1) apart from media/archive refresh. Strong existing classifications must be preserved by the supervisor; replacement is for stale creative hash or classifier version, or unclassified/other status. Weak evidence remains industry=unknown, ad_type=other, and primary_intent=other.
+
+This source is implemented in the un-deployed branch and is not production activation evidence until the parent integration is merged and deployed at an immutable full SHA.

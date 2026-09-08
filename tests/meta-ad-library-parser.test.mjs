@@ -84,3 +84,79 @@ test("requested numeric page id selects only its own connection and fails closed
   assert.deepEqual(mismatch.adIds, []);
   assert.ok(mismatch.warnings.includes("requested_page_connection_not_found"));
 });
+
+const serverRenderedCards = (pageId = "144517189067076") => [
+  '<noscript><meta http-equiv="refresh" content="0; URL=/ads/library/?active_status=all&amp;view_all_page_id=',
+  pageId,
+  '&amp;country=AU"></noscript>',
+  '<a href="https://facebook.com/jenningshopkins"><span>Jennings Hopkins</span></a>',
+  '<div><span>Active</span><a href="https://www.facebook.com/jenningshopkins/">Jennings Hopkins</a><span>Library ID: 2166639457618591</span><div style="white-space: pre-wrap;"><span>JUST LISTED | 35 Endicott Loop, Dunsborough</span></div></div>',
+  '<div><span>Active</span><a href="https://www.facebook.com/jenningshopkins/">Jennings Hopkins</a><span>Library ID: 1875345986779754</span><div style="white-space: pre-wrap;"><span>JUST LISTED | 7 Norfolk Street, Dunsborough</span></div></div>',
+  '<div><span>Active</span><a href="https://www.facebook.com/jenningshopkins/">Jennings Hopkins</a><span>Library ID: 1077701668041882</span><div style="white-space: pre-wrap;"><span>JUST LISTED | 21 North Street, Dunsborough</span></div></div>',
+  '<div><span>Active</span><a href="https://www.facebook.com/jenningshopkins/">Jennings Hopkins</a><span>Library ID: 1097740416278829</span><div style="white-space: pre-wrap;"><span>JUST LISTED | 4 Quindalup Road, Quindalup</span></div></div>',
+].join("");
+
+test("server-rendered cards recover IDs as partial evidence with proven page context", () => {
+  const result = classifyMetaAdLibraryPayload(serverRenderedCards(), { requestedPageId: "144517189067076" });
+  assert.equal(result.outcome, "partial");
+  assert.deepEqual(result.adIds, [
+    "2166639457618591",
+    "1875345986779754",
+    "1077701668041882",
+    "1097740416278829",
+  ]);
+  assert.equal(result.pageInfo.hasNextPage, null);
+  assert.ok(result.warnings.includes("server_rendered_card_fallback"));
+  assert.ok(result.warnings.includes("pagination_unproven"));
+  assert.equal(result.ads[0].node.page_id, "144517189067076");
+  assert.equal(result.ads[0].node.page_name, "Jennings Hopkins");
+  assert.equal(result.ads[0].node.ad_active_status, "active");
+  assert.match(result.ads[0].node.snapshot.body, /Dunsborough/u);
+});
+
+test("server-rendered fallback rejects a wrong requested page", () => {
+  const result = classifyMetaAdLibraryPayload(serverRenderedCards("999999999999999"), { requestedPageId: "144517189067076" });
+  assert.equal(result.outcome, "unparseable");
+  assert.deepEqual(result.adIds, []);
+});
+
+test("server-rendered fallback rejects global or unscoped library IDs", () => {
+  const result = classifyMetaAdLibraryPayload(serverRenderedCards().replace(/<noscript>[\s\S]*?<\/noscript>/u, ""), { requestedPageId: "144517189067076" });
+  assert.equal(result.outcome, "unparseable");
+  assert.deepEqual(result.adIds, []);
+});
+
+test("server-rendered fallback keeps challenge responses as failures", () => {
+  const result = classifyMetaAdLibraryPayload("/__rd_verify_blocked " + serverRenderedCards(), { requestedPageId: "144517189067076" });
+  assert.equal(result.outcome, "challenge");
+  assert.deepEqual(result.adIds, []);
+});
+
+test("server-rendered fallback rejects ambiguous cards with multiple library IDs", () => {
+  const html = serverRenderedCards().replace(
+    /<div><span>Active<\/span><a href="https:\/\/www\.facebook\.com\/jenningshopkins\/">Jennings Hopkins<\/a><span>Library ID: 1875345986779754<\/span>[\s\S]*?<\/div><div><span>Active<\/span>/u,
+    '<div><span>Active</span><a href="https://www.facebook.com/jenningshopkins/">Jennings Hopkins</a><span>Library ID: 1875345986779754</span><span>Library ID: 9999999999999999</span><div style="white-space: pre-wrap;"><span>Ambiguous</span></div></div><div><span>Active</span><a href="https://www.facebook.com/jenningshopkins/">Jennings Hopkins</a>',
+  );
+  const result = classifyMetaAdLibraryPayload(html, { requestedPageId: "144517189067076" });
+  assert.equal(result.outcome, "partial");
+  assert.deepEqual(result.adIds, [
+    "2166639457618591",
+    "1077701668041882",
+    "1097740416278829",
+  ]);
+  assert.ok(result.warnings.includes("server_rendered_card_fallback"));
+});
+
+test("server-rendered fallback does not promote an inactive neighboring card", () => {
+  const html = serverRenderedCards().replace(
+    '<div><span>Active</span><a href="https://www.facebook.com/jenningshopkins/">Jennings Hopkins</a><span>Library ID: 1875345986779754</span>',
+    '<div><span>Inactive</span><a href="https://www.facebook.com/jenningshopkins/">Jennings Hopkins</a><span>Library ID: 1875345986779754</span>',
+  );
+  const result = classifyMetaAdLibraryPayload(html, { requestedPageId: "144517189067076" });
+  assert.equal(result.outcome, "partial");
+  assert.deepEqual(result.adIds, [
+    "1077701668041882",
+    "1097740416278829",
+  ]);
+  assert.ok(!result.adIds.includes("1875345986779754"));
+});

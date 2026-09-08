@@ -4,6 +4,8 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import {
   buildDirectoryCoveragePlan,
+  boundedDirectoryFetch,
+  isPublicDirectoryAddress,
   handleAdRadarEntityDiscovery,
   handleAdRadarPageDiscovery,
   enqueueAdRadarDirectoryDiscovery,
@@ -79,7 +81,7 @@ test("extracts official links from HTML and resolves an authoritative page id", 
 test("agency exact official link becomes a candidate and existing exact ownership is covered", () => {
   const plan = buildDirectoryCoveragePlan({
     entities: [{ kind: "agency", id: "g-1", name: "Acme", state: "WA", primary_postcode: "6000" }],
-    sourceLinks: [{ entityKind: "agency", entityId: "g-1", ownerKind: "agency", isOfficial: true, url: "https://facebook.com/acme/123456", sourceDocumentId: "doc-1" }],
+    sourceLinks: [{ entityKind: "agency", entityId: "g-1", ownerKind: "agency", isOfficial: true, url: "https://facebook.com/pages/acme/123456", sourceDocumentId: "doc-1" }],
     existingPages: [{ entityKind: "agency", entityId: "g-1", pageId: "123456" }],
   });
   assert.equal(plan.covered, 1);
@@ -89,7 +91,7 @@ test("agency exact official link becomes a candidate and existing exact ownershi
 test("agent profile or footer agency link never proves agent ownership", () => {
   const plan = buildDirectoryCoveragePlan({
     entities: [{ kind: "agent", id: "a-1", full_name: "Agent One", state: "WA" }],
-    sourceLinks: [{ entityKind: "agent", entityId: "a-1", ownerKind: "agency", isOfficial: true, url: "https://facebook.com/agency/123456", sourceType: "agent_profile_footer" }],
+    sourceLinks: [{ entityKind: "agent", entityId: "a-1", ownerKind: "agency", isOfficial: true, url: "https://facebook.com/pages/agency/123456", sourceType: "agent_profile_footer" }],
   });
   assert.equal(plan.unmapped, 1);
   assert.equal(plan.rows[0].rejected[0].reason, "agent_profile_link_not_ownership");
@@ -102,9 +104,9 @@ test("ambiguous links and non-WA entities remain review gaps without name matchi
       { kind: "agency", id: "g-2", name: "Acme", state: "NSW" },
     ],
     sourceLinks: [
-      { entityKind: "agency", entityId: "g-1", ownerKind: "agency", isOfficial: true, url: "https://facebook.com/one/123456" },
-      { entityKind: "agency", entityId: "g-1", ownerKind: "agency", isOfficial: true, url: "https://facebook.com/two/789012" },
-      { entityKind: "agency", entityId: "g-2", ownerKind: "agency", isOfficial: true, url: "https://facebook.com/other/999999" },
+      { entityKind: "agency", entityId: "g-1", ownerKind: "agency", isOfficial: true, url: "https://facebook.com/pages/one/123456" },
+      { entityKind: "agency", entityId: "g-1", ownerKind: "agency", isOfficial: true, url: "https://facebook.com/pages/two/789012" },
+      { entityKind: "agency", entityId: "g-2", ownerKind: "agency", isOfficial: true, url: "https://facebook.com/pages/other/999999" },
     ],
   });
   assert.equal(plan.eligibleEntities, 1);
@@ -127,14 +129,14 @@ test("directory discovery enqueue is canonical and idempotent for active work", 
 test("entity discovery registers an exact official agency page for collection", async () => {
   const writes = [];
   const rest = async (_schema, path, options) => {
-    if (path.startsWith("source_documents?select=id,source")) return [];
+    if (path.startsWith("source_documents?select=id,source") || path.startsWith("source_documents?select=id,metadata")) return [];
     if (path.startsWith("source_documents?select=id&")) return [];
     if (path === "source_documents") { writes.push([path, JSON.parse(options.body)]); return [{ id: "doc-1" }]; }
     if (path.startsWith("advertiser_pages?select=")) return [];
     if (path === "advertiser_pages") { writes.push([path, JSON.parse(options.body)]); return [{ id: "page-1" }]; }
     throw new Error(`unexpected ${path}`);
   };
-  const result = await handleAdRadarEntityDiscovery({ id: "job-1", payload: { entity_kind: "agency", entity_id: "g-1", name: "Acme", state: "WA", primary_postcode: "6000", website_url: "https://acme.example" } }, { rest, rawEvidenceDir: "/tmp/ad-radar-directory-test", fetchImpl: async () => ({ ok: true, text: async () => '<a href="https://facebook.com/acme/123456">Facebook</a>' }) });
+  const result = await handleAdRadarEntityDiscovery({ id: "job-1", payload: { entity_kind: "agency", entity_id: "g-1", name: "Acme", state: "WA", primary_postcode: "6000", website_url: "https://acme.example" } }, { rest, rawEvidenceDir: "/tmp/ad-radar-directory-test", fetchImpl: async () => ({ ok: true, text: async () => '<a href="https://facebook.com/pages/acme/123456">Facebook</a>' }) });
   assert.equal(result.result.registered_pages, 1);
   assert.equal(writes.filter(([path]) => path === "advertiser_pages").length, 1);
   assert.equal(writes.find(([path]) => path === "advertiser_pages")[1].page_id, "123456");
@@ -143,7 +145,7 @@ test("entity discovery registers an exact official agency page for collection", 
 test("cached official source links avoid website fetch and repeat job does not insert another page", async () => {
   let fetches = 0; let pagePosts = 0; let pagePatches = 0;
   const rest = async (_schema, path, options) => {
-    if (path.startsWith("source_documents?select=id,source")) return [{ id: "doc-1", source: "ad_radar_directory_website", metadata: { entity_kind: "agency", entity_id: "g-1", official_facebook_links: ["https://facebook.com/acme/123456"] } }];
+    if (path.startsWith("source_documents?select=id,source")) return [{ id: "doc-1", source: "ad_radar_directory_website", metadata: { entity_kind: "agency", entity_id: "g-1", official_facebook_links: ["https://facebook.com/pages/acme/123456"] } }];
     if (path.startsWith("advertiser_pages?select=")) return [{ id: "page-1", page_id: "123456", agency_id: "g-1", agent_id: null, status: "resolved_collectable", scan_enabled: true }];
     if (path.startsWith("advertiser_pages?id=")) { pagePatches += 1; return [{ id: "page-1" }]; }
     if (path === "advertiser_pages") { pagePosts += 1; return [{ id: "page-2" }]; }
@@ -155,7 +157,7 @@ test("cached official source links avoid website fetch and repeat job does not i
   await handleAdRadarEntityDiscovery(job, options);
   assert.equal(fetches, 0);
   assert.equal(pagePosts, 0);
-  assert.equal(pagePatches, 2);
+  assert.equal(pagePatches, 0);
 });
 
 test("directory sweep enqueues per-entity jobs instead of fetching websites itself", async () => {
@@ -173,4 +175,71 @@ test("directory sweep enqueues per-entity jobs instead of fetching websites itse
   assert.equal(result.result.queued_entities, 1);
   assert.equal(queued[0].job_type, "blockwise-ad-directory-discovery-entity");
   assert.equal(calls.some((path) => path.startsWith("source_documents?")), false);
+});
+
+test("completed roster checkpoints still return every saved row", async () => {
+  const initial = await enumerateDirectoryPages({kinds:["agent"],pageSize:1,fetchPage:async(k,i,n)=>pageRows(k,i,n)});
+  const resumed = await enumerateDirectoryPages({kinds:["agent"],pageSize:1,checkpoint:initial.checkpoint,
+    fetchPage:async()=>{throw new Error("unexpected refetch");}});
+  assert.equal(resumed.rows.length,2);
+});
+test("vanity resolution rejects unrelated IDs and ambiguous owners", () => {
+  assert.equal(facebookPageIdFromHtml('{"userID":"123456","userVanity":"other"}',"acme"),null);
+  assert.equal(facebookPageIdFromHtml('{"userID":"123456","userVanity":"acme"}{"userID":"654321","userVanity":"acme"}',"acme"),null);
+  assert.equal(facebookPageReference("123456").pageId,"123456");
+  assert.equal(facebookPageReference("https://facebook.com/acme/posts/123456").pageId,null);
+});
+test("directory fanout reaches beyond the first batch and stops at exhaustion", async () => temp(async(root) => {
+  const roster=Array.from({length:120},(_,i)=>({id:"a-"+String(i).padStart(3,"0"),full_name:"Agent "+i,state:"WA"}));
+  const queue=[];
+  const rest=async(_schema,path,options)=>{
+    if(path.startsWith("agents?")) return roster;
+    if(path.startsWith("agencies?")) return [];
+    if(path.startsWith("work_queue?")) {
+      const match=decodeURIComponent(path).match(/dedupe_key=eq\.([^&]+)/);
+      return queue.filter(row=>row.dedupe_key===match?.[1]);
+    }
+    if(path==="work_queue"){const row={...JSON.parse(options.body),id:"j-"+queue.length};queue.push(row);return[row];}
+    throw new Error(path);
+  };
+  let job={id:"root",payload:{build_run_id:"test-sweep",entity_limit:50}};
+  let passes=0;
+  while(job){
+    await handleAdRadarPageDiscovery(job,{rest,rawEvidenceDir:root});
+    passes++;
+    job=queue.find(row=>row.job_type==="blockwise-ad-directory-discovery"&&!row.ran);
+    if(job)job.ran=true;
+    if(passes>5)throw new Error("unbounded continuation");
+  }
+  const children=queue.filter(row=>row.job_type.endsWith("-entity"));
+  assert.equal(passes,3);
+  assert.equal(children.length,120);
+  assert.equal(new Set(children.map(row=>row.payload.entity_id)).size,120);
+}));
+test("directory requests reject internal hosts and bounded redirect loops", async () => {
+  assert.equal(isPublicDirectoryAddress("127.0.0.1"),false);
+  assert.equal(isPublicDirectoryAddress("10.0.0.1"),false);
+  assert.equal(isPublicDirectoryAddress("100.78.126.112"),false);
+  assert.equal(isPublicDirectoryAddress("8.8.8.8"),true);
+  let calls=0;
+  const fake=async()=>{calls++;return {status:302,headers:{get:()=>"/loop"}};};
+  await assert.rejects(()=>boundedDirectoryFetch(fake,"https://[::1]",{retries:0}),/Unsafe/);
+  assert.equal(calls,0);
+  await assert.rejects(()=>boundedDirectoryFetch(fake,"https://public.example",{retries:0}),/redirect limit/);
+  assert.equal(calls,4);
+});
+
+test('structured person ownership is reusable but directory footer is never agency evidence', async () => {
+  const {facebookOwnersFromHtml, linksForWebsiteEvidence} = await import('../hermes/tools/research-runtime/bin/ad-radar-directory-coverage.mjs');
+  const body = '<script type="application/ld+json">'+JSON.stringify({
+    '@graph':[
+      {'@type':'Person',name:'Jane Smith',sameAs:['https://facebook.com/123456']},
+      {'@type':'Organization',name:'REIWA',sameAs:['https://facebook.com/999999']},
+    ],
+  })+'</script>';
+  const evidence={id:'doc',metadata:{facebook_owners:facebookOwnersFromHtml(body),official_facebook_links:['https://facebook.com/999999']}};
+  const jane=linksForWebsiteEvidence({id:'jane',kind:'agent',name:'Jane Smith'},'https://reiwa.com.au/jane/',evidence);
+  assert.equal(jane.length,1);assert.equal(jane[0].pageId,'123456');assert.equal(jane[0].explicitAssignment,true);
+  assert.deepEqual(linksForWebsiteEvidence({id:'john',kind:'agent',name:'John Smith'},'https://reiwa.com.au/john/',evidence),[]);
+  assert.deepEqual(linksForWebsiteEvidence({id:'agency',kind:'agency',name:'Local Agency'},'https://reiwa.com.au/local-agency/',evidence),[]);
 });

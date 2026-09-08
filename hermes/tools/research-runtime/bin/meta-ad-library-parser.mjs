@@ -40,6 +40,103 @@ const AD_ID_FALLBACK_PATTERN =
 
 const AD_ID_VALUE_PATTERN = /^\d[\d_]{5,}$/u;
 
+function decodeHtmlText(value) {
+  return String(value || "")
+    .replace(/<br\s*\/?>/giu, " ")
+    .replace(/<[^>]+>/gu, " ")
+    .replace(/&nbsp;/giu, " ")
+    .replace(/&amp;/giu, "&")
+    .replace(/&quot;/giu, '"')
+    .replace(/&#39;|&#x27;/giu, "'")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
+function extractServerRenderedPageContext(text, requestedPageId) {
+  const pageIds = new Set();
+  const queryPatterns = [
+    /(?:view_all_page_id|viewAllPageID)\s*=\s*(?:&quot;|["']?)(\d{5,})/giu,
+    /(?:view_all_page_id|viewAllPageID)(?:&quot;|["'])\s*:\s*(?:&quot;|["'])(\d{5,})/giu,
+  ];
+  for (const pattern of queryPatterns) {
+    for (const match of text.matchAll(pattern)) pageIds.add(match[1]);
+  }
+  if (pageIds.size !== 1 || !pageIds.has(requestedPageId)) return null;
+
+  const anchors = [];
+  const anchorPattern =
+    /<a\b[^>]*href=["']https?:\/\/(?:www\.)?facebook\.com\/(?!ads(?:[/?#]|$))[^"']*["'][^>]*>([\s\S]{0,1200}?)<\/a>/giu;
+  for (const match of text.matchAll(anchorPattern)) {
+    const label = decodeHtmlText(match[1]);
+    const href = match[0].match(/href=["']([^"']+)["']/iu)?.[1] || null;
+    let pagePath = null;
+    try {
+      pagePath = href ? new URL(href).pathname.replace(/\/+$/u, "").toLowerCase() : null;
+    } catch {
+      // The href is only context; an invalid URL cannot prove page identity.
+    }
+    if (label && pagePath && !/^(?:log in|ad library|about|report)$/iu.test(label)) {
+      anchors.push({ label, index: match.index, pagePath });
+    }
+  }
+  const page = anchors.find(({ label }) => label.length >= 2) || null;
+  return page
+    ? { pageName: page.label, pageId: requestedPageId, anchorIndex: page.index, pagePath: page.pagePath }
+    : null;
+}
+
+function extractServerRenderedCards(text, requestedPageId) {
+  const context = extractServerRenderedPageContext(text, requestedPageId);
+  if (!context) return null;
+
+  const activeMarkers = [...text.matchAll(/>\s*Active\s*<\/span>/giu)];
+  if (!activeMarkers.length) return null;
+  // The page anchor is the only owner/page context available in this
+  // server-rendered shape. Require it before the cards, alongside the exact
+  // view_all_page_id query correlation above; otherwise IDs are unscoped.
+  const firstCardIndex = activeMarkers[0].index;
+  if (context.anchorIndex > firstCardIndex) return null;
+  const cards = [];
+  const seen = new Set();
+  for (let index = 0; index < activeMarkers.length; index += 1) {
+    const start = activeMarkers[index].index;
+    const end = activeMarkers[index + 1]?.index ?? text.length;
+    const segment = text.slice(start, end);
+    const cardLinks = [...segment.matchAll(/<a\b[^>]*href=["'](https?:\/\/(?:www\.)?facebook\.com\/[^"']+)["']/giu)];
+    const cardHasPageContext = cardLinks.some((match) => {
+      try {
+        return new URL(match[1]).pathname.replace(/\/+$/u, "").toLowerCase() === context.pagePath;
+      } catch {
+        return false;
+      }
+    });
+    if (!cardHasPageContext) continue;
+    const ids = [...segment.matchAll(/Library ID:\s*(\d{8,})/giu)].map((match) => match[1]);
+    if (ids.length !== 1 || seen.has(ids[0])) continue;
+    const bodyMatch = segment.match(
+      /<div\b[^>]*style=["'][^"']*white-space\s*:\s*pre-wrap[^"']*["'][^>]*>([\s\S]*?)<\/div>/iu,
+    );
+    const body = decodeHtmlText(bodyMatch?.[1]);
+    if (!body) continue;
+    seen.add(ids[0]);
+    // Server-rendered media URLs live in an opaque card shell. Do not guess
+    // ownership or media identity here; the independent media lane can only
+    // archive media after a later validated source supplies that linkage.
+    cards.push({
+      id: ids[0],
+      node: {
+        library_id: ids[0],
+        page_id: context.pageId,
+        page_name: context.pageName,
+        is_active: true,
+        ad_active_status: "active",
+        snapshot: { body },
+      },
+    });
+  }
+  return cards.length ? cards : null;
+}
+
 function softUnescape(text) {
   // One level of JS-string unescaping: \" -> ", \\ -> \. Applied only to the
   // extracted object bodies, never to the whole document.
@@ -221,6 +318,18 @@ export function classifyMetaAdLibraryPayload(
         outcome: "partial",
         ads: [...fallbackIds].map((id) => ({ id, node: null })),
         adIds: [...fallbackIds],
+        connectionCount: null,
+        pageInfo: { hasNextPage: null, endCursor: null },
+        warnings,
+      };
+    }
+    const serverRenderedCards = extractServerRenderedCards(text, numericPageId(requestedPageId));
+    if (serverRenderedCards) {
+      warnings.push("server_rendered_card_fallback", "pagination_unproven");
+      return {
+        outcome: "partial",
+        ads: serverRenderedCards,
+        adIds: serverRenderedCards.map(({ id }) => id),
         connectionCount: null,
         pageInfo: { hasNextPage: null, endCursor: null },
         warnings,

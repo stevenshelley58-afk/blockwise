@@ -31,6 +31,9 @@ lines=unit.read_text().splitlines()
 lines=[f"WorkingDirectory={release}/runtime" if l.startswith("WorkingDirectory=")
        else f"ExecStart=/usr/bin/node {release}/runtime/bin/supabase-supervisor.mjs --ad-db-worker" if l.startswith("ExecStart=")
        else l for l in lines]
+# Allow the new worker to stop claiming and drain paid requests before termination.
+lines=[line for line in lines if not line.startswith("TimeoutStopSec=")]
+lines.insert(lines.index("[Service]")+1, "TimeoutStopSec=300")
 (release/"worker.service").write_text("\n".join(lines)+"\n")
 PY
 chown -R hermes:hermes "$release"

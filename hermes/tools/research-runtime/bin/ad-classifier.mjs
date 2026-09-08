@@ -314,7 +314,8 @@ function dimensions(width, height) {
 
 export function hasUsableCapturedMedia(capturedAssets = []) {
   return Array.isArray(capturedAssets) && capturedAssets.some((asset) => {
-    if (!firstMediaUrl([asset]) && !cleanString(asset?.storage_path)) return false;
+    const archived = asset?.archive_object_id && asset?.archive_verified_at && Number(asset?.byte_size) > 0;
+    if (!archived && !firstMediaUrl([asset]) && !cleanString(asset?.storage_path)) return false;
     const byteSize = mediaByteSize(asset);
     if (cleanString(asset?.kind)?.toLowerCase() === "image") {
       return assessCapturedImageQuality({ ...asset, byteSize }).displayable;
@@ -681,4 +682,17 @@ function arrayOfStrings(value) {
 
 function isObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+/** Classify saved evidence with canonical deterministic rules only. */
+export function classifyCreativeFromSavedEvidence(creative, options = {}) {
+  const evidenceSource = hasUsableCreativeCopy(creative) ? "text" : "fallback";
+  const classification = classifyCreativeDeterministically(creative, { ...options, evidenceSource });
+  return {
+    classification,
+    model: "deterministic-saved-evidence",
+    evidenceSource,
+    usedFallback: evidenceSource === "fallback",
+    fallbackReason: evidenceSource === "fallback" ? "saved_creative_copy_is_weak_or_missing" : null,
+  };
 }
