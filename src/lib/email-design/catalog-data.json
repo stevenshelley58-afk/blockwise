@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "approvedDesign": "quiet-card",
   "templates": [
     {
@@ -580,34 +580,47 @@
     {
       "id": "new-lead",
       "category": "Leads & reporting",
-      "label": "New lead",
-      "delivery": "transactional",
-      "trigger": "Explicit product event or approved campaign",
+      "label": "New lead alert",
+      "delivery": "optional-service",
+      "trigger": "A verified new lead arrives in the recipient's workspace and new lead alerts are enabled",
       "message": {
         "kind": "new-lead",
-        "eyebrow": "NEW LEAD",
-        "subject": "New enquiry: {{lead_name}}",
-        "preheader": "{{lead_name}} responded to {{campaign_name}}. Open the record to review the enquiry and contact details.",
+        "eyebrow": "NEW LEAD ALERT",
+        "transactional": false,
         "greeting": "Hi {{first_name}},",
-        "heading": "A new enquiry is waiting",
-        "intro": "{{lead_name}} responded to {{campaign_name}}. Open the record to review the enquiry and contact details.",
-        "transactional": true,
         "signOff": "The Blockwise team",
-        "action": {
-          "label": "Review lead",
-          "href": "{{lead_url}}"
-        },
+        "subject": "New lead · {{lead_name}}",
+        "preheader": "A new enquiry for {{campaign_name}}. Open the lead to follow up.",
+        "heading": "{{lead_name}}",
+        "intro": "A new enquiry just arrived for {{campaign_name}}.",
         "details": [
           {
-            "label": "Campaign",
-            "value": "{{campaign_name}}"
+            "label": "Enquiry",
+            "value": "{{enquiry_type}}"
+          },
+          {
+            "label": "Location",
+            "value": "{{lead_suburb}}"
+          },
+          {
+            "label": "Source",
+            "value": "{{lead_source}}"
           },
           {
             "label": "Received",
             "value": "{{event_time}}"
           }
         ],
-        "note": "Contact details stay in the lead record, not in this notification."
+        "action": {
+          "label": "View lead",
+          "href": "{{lead_url}}"
+        },
+        "note": "Contact details and the full enquiry are available securely in Blockwise."
+      },
+      "notificationPreference": {
+        "key": "leadAlerts",
+        "reason": "You chose new lead alerts for {{workspace_name}}.",
+        "unsubscribeLabel": "Unsubscribe from new lead alerts"
       }
     },
     {
@@ -668,80 +681,113 @@
     {
       "id": "daily-digest",
       "category": "Leads & reporting",
-      "label": "Daily lead digest",
+      "label": "Daily summary",
       "delivery": "optional-service",
-      "trigger": "Explicit product event or approved campaign",
+      "trigger": "The daily reporting window closes and this recipient has daily summaries enabled",
       "message": {
         "kind": "daily-digest",
-        "eyebrow": "DAILY LEAD DIGEST",
-        "subject": "Your Blockwise day: {{lead_count}} new enquiries",
-        "preheader": "Here is the summary for {{workspace_name}} for {{reporting_period}}.",
-        "greeting": "Hi {{first_name}},",
-        "heading": "Your day, at a glance",
-        "intro": "Here is the summary for {{workspace_name}} for {{reporting_period}}.",
+        "eyebrow": "DAILY SUMMARY",
         "transactional": false,
+        "greeting": "Hi {{first_name}},",
         "signOff": "The Blockwise team",
+        "subject": "Your daily summary · {{reporting_period}}",
+        "preheader": "{{report_preview}}",
+        "heading": "Your day, at a glance",
+        "intro": "{{workspace_name}} · {{reporting_period}}\n{{report_timezone}}",
+        "summary": {
+          "label": "New leads",
+          "value": "{{report_lead_count}}",
+          "caption": "{{lead_comparison}}",
+          "metrics": [
+            {
+              "label": "Ad spend",
+              "value": "{{report_spend}}"
+            },
+            {
+              "label": "Cost per lead",
+              "value": "{{cost_per_lead}}"
+            }
+          ]
+        },
+        "sections": [
+          {
+            "heading": "{{activity_heading}}",
+            "body": "{{activity_description}}"
+          },
+          {
+            "repeat": "activity_items"
+          },
+          {
+            "heading": "{{next_action_heading}}",
+            "body": "{{next_action_body}}"
+          }
+        ],
         "action": {
-          "label": "Review activity",
+          "label": "View daily summary",
           "href": "{{report_url}}"
         },
-        "details": [
-          {
-            "label": "New enquiries",
-            "value": "{{lead_count}}"
-          },
-          {
-            "label": "Follow-ups due",
-            "value": "{{follow_up_count}}"
-          },
-          {
-            "label": "Items needing review",
-            "value": "{{review_count}}"
-          }
-        ]
+        "note": "{{data_note}}"
+      },
+      "notificationPreference": {
+        "key": "dailyDigest",
+        "reason": "You chose daily summaries for {{workspace_name}}.",
+        "unsubscribeLabel": "Unsubscribe from daily summaries"
       }
     },
     {
       "id": "weekly-performance",
       "category": "Leads & reporting",
-      "label": "Weekly performance",
+      "label": "Weekly report",
       "delivery": "optional-service",
-      "trigger": "Explicit product event or approved campaign",
+      "trigger": "The weekly reporting window closes and this recipient has weekly reports enabled",
       "message": {
         "kind": "weekly-performance",
-        "eyebrow": "WEEKLY PERFORMANCE",
-        "subject": "Your Blockwise week in review",
-        "preheader": "Here is the summary for {{workspace_name}} for {{reporting_period}}. Start with the items needing attention.",
-        "greeting": "Hi {{first_name}},",
-        "heading": "Your week, in brief",
-        "intro": "Here is the summary for {{workspace_name}} for {{reporting_period}}. Start with the items needing attention.",
+        "eyebrow": "WEEKLY REPORT",
         "transactional": false,
+        "greeting": "Hi {{first_name}},",
         "signOff": "The Blockwise team",
-        "action": {
-          "label": "Open the full report",
-          "href": "{{report_url}}"
+        "subject": "Your weekly report · {{reporting_period}}",
+        "preheader": "{{report_preview}}",
+        "heading": "Your week in perspective",
+        "intro": "{{workspace_name}} · {{reporting_period}}\n{{report_timezone}}",
+        "summary": {
+          "label": "New leads",
+          "value": "{{report_lead_count}}",
+          "caption": "{{lead_comparison}}",
+          "metrics": [
+            {
+              "label": "Ad spend",
+              "value": "{{report_spend}}"
+            },
+            {
+              "label": "Cost per lead",
+              "value": "{{cost_per_lead}}"
+            }
+          ]
         },
-        "details": [
-          {
-            "label": "New enquiries",
-            "value": "{{lead_count}}"
-          },
-          {
-            "label": "Reported spend",
-            "value": "{{spend}}"
-          },
-          {
-            "label": "Items needing review",
-            "value": "{{review_count}}"
-          }
-        ],
         "sections": [
           {
-            "heading": "What needs attention",
-            "body": "{{performance_note}}"
+            "heading": "{{activity_heading}}",
+            "body": "{{activity_description}}"
+          },
+          {
+            "repeat": "activity_items"
+          },
+          {
+            "heading": "{{next_action_heading}}",
+            "body": "{{next_action_body}}"
           }
         ],
-        "note": "This is a reporting snapshot, not a final billing record."
+        "action": {
+          "label": "View weekly report",
+          "href": "{{report_url}}"
+        },
+        "note": "{{data_note}}"
+      },
+      "notificationPreference": {
+        "key": "weeklyDigest",
+        "reason": "You chose weekly reports for {{workspace_name}}.",
+        "unsubscribeLabel": "Unsubscribe from weekly reports"
       }
     },
     {

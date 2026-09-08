@@ -1,4 +1,5 @@
 export type EmailSection = {
+  layout?: "list-item";
   heading?: string;
   body?: string;
   bullets?: readonly string[];
@@ -14,6 +15,7 @@ export type EmailMessage = {
   intro: string;
   action?: { label: string; href: string };
   oneTimeCode?: string;
+  summary?: { label: string; value: string; caption?: string; metrics: ReadonlyArray<{ label: string; value: string }> };
   details?: ReadonlyArray<{ label: string; value: string }>;
   sections?: readonly EmailSection[];
   note?: string;
@@ -25,5 +27,6 @@ export type EmailMessage = {
     supportUrl?: string;
     preferencesUrl?: string;
     unsubscribeUrl?: string;
+    unsubscribeLabel?: string;
   };
 };

@@ -66,7 +66,7 @@
   "event_summary": "An example invitation for a practical session on reviewing campaign creative.",
   "event_location": "Online",
   "feedback_prompt": "Tell us about one thing you would improve.",
-  "business_identity": "Blockwise · Sample business address — replace before sending",
+  "business_identity": "Blockwise · Sample business address. Replace before sending",
   "support_url": "https://preview.blockwise.example/support",
   "preferences_url": "https://preview.blockwise.example/preferences",
   "unsubscribe_url": "https://preview.blockwise.example/unsubscribe",

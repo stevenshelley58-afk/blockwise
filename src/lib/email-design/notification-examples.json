@@ -1,0 +1,134 @@
+{
+  "daily-digest": {
+    "standard": {
+      "report_timezone": "Australia/Perth (AWST)",
+      "lead_comparison": "From your connected lead forms",
+      "next_action_heading": "Your next step",
+      "next_action_body": "Review the newest enquiries and give each lead a clear next action.",
+      "data_note": "Reporting snapshot as at 11:59 pm AWST. Meta reporting can update after this email.",
+      "report_url": "https://preview.blockwise.example/reports/daily",
+      "preferences_url": "https://preview.blockwise.example/settings/notifications",
+      "unsubscribe_url": "https://preview.blockwise.example/notifications/daily/unsubscribe",
+      "reporting_period": "7 September 2026",
+      "report_preview": "4 new leads. A$84.00 in ad spend. Your daily summary is ready.",
+      "report_lead_count": "4",
+      "report_spend": "A$84.00",
+      "cost_per_lead": "A$21.00",
+      "activity_heading": "Latest leads",
+      "activity_description": "The three most recent enquiries from this reporting period.",
+      "activity_items": [
+        {
+          "layout": "list-item",
+          "heading": "Alex Morgan",
+          "body": "Seller appraisal · Baldivis · 3:42 pm AWST"
+        },
+        {
+          "layout": "list-item",
+          "heading": "Taylor Reed",
+          "body": "Buyer enquiry · Rockingham · 1:18 pm AWST"
+        },
+        {
+          "layout": "list-item",
+          "heading": "Casey Lee",
+          "body": "Seller appraisal · Baldivis · 10:06 am AWST"
+        }
+      ]
+    },
+    "quiet": {
+      "report_preview": "No new leads in this reporting period. Your summary is ready.",
+      "report_lead_count": "0",
+      "report_spend": "A$42.00",
+      "cost_per_lead": "Not available",
+      "lead_comparison": "No new leads recorded in this period",
+      "activity_heading": "No new leads this period",
+      "activity_description": "There are no new enquiries to list. Ad spend may still be recorded while a campaign is running.",
+      "activity_items": [],
+      "next_action_heading": "A useful next step",
+      "next_action_body": "Check your campaign delivery and make sure your destination and lead form are working.",
+      "data_note": "No cost per lead is calculated when the lead count is zero. Reporting can update later."
+    },
+    "delayed": {
+      "report_preview": "Some reporting is still updating. Open Blockwise for the latest available status.",
+      "report_lead_count": "Pending",
+      "report_spend": "Pending",
+      "cost_per_lead": "Pending",
+      "lead_comparison": "The latest reporting data is not yet available",
+      "activity_heading": "Your report is still updating",
+      "activity_description": "We do not have a complete snapshot for this period. Missing data is not treated as zero.",
+      "activity_items": [],
+      "next_action_heading": "Check the latest status",
+      "next_action_body": "Open Blockwise to see the latest available reporting and connection status.",
+      "data_note": "No complete snapshot was available when this email was prepared. This is not a zero-activity report."
+    }
+  },
+  "weekly-performance": {
+    "standard": {
+      "report_timezone": "Australia/Perth (AWST)",
+      "lead_comparison": "6 more leads than the previous 7 days",
+      "next_action_heading": "Plan your next week",
+      "next_action_body": "Review the campaign breakdown and follow up with enquiries before making changes to your ads.",
+      "data_note": "Reporting snapshot as at 11:59 pm AWST. Meta reporting can update after this email.",
+      "report_url": "https://preview.blockwise.example/reports/weekly",
+      "preferences_url": "https://preview.blockwise.example/settings/notifications",
+      "unsubscribe_url": "https://preview.blockwise.example/notifications/weekly/unsubscribe",
+      "reporting_period": "1–7 September 2026",
+      "report_preview": "18 new leads. A$378.00 in ad spend. Your weekly report is ready.",
+      "report_lead_count": "18",
+      "report_spend": "A$378.00",
+      "cost_per_lead": "A$21.00",
+      "activity_heading": "Where your leads came from",
+      "activity_description": "Reported results for the same seven-day period.",
+      "activity_items": [
+        {
+          "layout": "list-item",
+          "heading": "Baldivis seller appraisals",
+          "body": "12 leads · A$240.00 spend · A$20.00 per lead"
+        },
+        {
+          "layout": "list-item",
+          "heading": "Rockingham buyer enquiries",
+          "body": "6 leads · A$138.00 spend · A$23.00 per lead"
+        }
+      ]
+    },
+    "quiet": {
+      "report_preview": "No new leads in this reporting period. Your summary is ready.",
+      "report_lead_count": "0",
+      "report_spend": "A$42.00",
+      "cost_per_lead": "Not available",
+      "lead_comparison": "No new leads recorded in this period",
+      "activity_heading": "No new leads this period",
+      "activity_description": "There are no new enquiries to list. Ad spend may still be recorded while a campaign is running.",
+      "activity_items": [],
+      "next_action_heading": "A useful next step",
+      "next_action_body": "Check your campaign delivery and make sure your destination and lead form are working.",
+      "data_note": "No cost per lead is calculated when the lead count is zero. Reporting can update later."
+    },
+    "delayed": {
+      "report_preview": "Some reporting is still updating. Open Blockwise for the latest available status.",
+      "report_lead_count": "Pending",
+      "report_spend": "Pending",
+      "cost_per_lead": "Pending",
+      "lead_comparison": "The latest reporting data is not yet available",
+      "activity_heading": "Your report is still updating",
+      "activity_description": "We do not have a complete snapshot for this period. Missing data is not treated as zero.",
+      "activity_items": [],
+      "next_action_heading": "Check the latest status",
+      "next_action_body": "Open Blockwise to see the latest available reporting and connection status.",
+      "data_note": "No complete snapshot was available when this email was prepared. This is not a zero-activity report."
+    }
+  },
+  "new-lead": {
+    "standard": {
+      "lead_name": "Alex Morgan",
+      "campaign_name": "Baldivis seller appraisals",
+      "enquiry_type": "Property appraisal",
+      "lead_suburb": "Baldivis, WA",
+      "lead_source": "Facebook lead form",
+      "event_time": "8 September 2026 · 3:42 pm AWST",
+      "lead_url": "https://preview.blockwise.example/leads/alex-morgan",
+      "preferences_url": "https://preview.blockwise.example/settings/notifications",
+      "unsubscribe_url": "https://preview.blockwise.example/notifications/new-leads/unsubscribe"
+    }
+  }
+}

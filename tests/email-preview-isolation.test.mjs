@@ -13,6 +13,8 @@ test("email preview allows only read-only design review and never calls a provid
       ["/email-design", "GET", 200],
       ["/email-design", "HEAD", 200],
       ["/email-library", "GET", 200],
+      ["/email-notifications", "GET", 200],
+      ["/email-notifications", "POST", 405],
       ["/email-library", "HEAD", 200],
       ["/email-library", "POST", 405],
       ["/_next/static/test.js", "GET", 200],

@@ -5,9 +5,11 @@ import type { EmailMessage, EmailSection } from "./types.ts";
 export type Delivery = "transactional" | "optional-service" | "marketing";
 export type TemplateDefinition = {
   id: string; category: string; label: string; delivery: Delivery; trigger: string;
+  notificationPreference?: { key: string; reason: string; unsubscribeLabel: string };
   message: Omit<EmailMessage, "sections"> & { sections?: readonly (EmailSection | { repeat: string })[] };
 };
 export type TemplateValues = Record<string, string | readonly EmailSection[]>;
+export const NOTIFICATION_TEMPLATE_IDS = ["daily-digest", "weekly-performance", "new-lead"] as const;
 export const EMAIL_LIBRARY_VERSION = data.version;
 export const EMAIL_TEMPLATES = data.templates as readonly TemplateDefinition[];
 export const EMAIL_CATEGORIES = [...new Set(EMAIL_TEMPLATES.map(item => item.category))];
@@ -21,7 +23,7 @@ export function getTemplate(id: string): TemplateDefinition {
 
 export function requiredVariables(id: string): string[] {
   const template = getTemplate(id);
-  const fields = new Set([...JSON.stringify(template.message).matchAll(tokenPattern)].map(match => match[1]));
+  const fields = new Set([...JSON.stringify([template.message, template.notificationPreference]).matchAll(tokenPattern)].map(match => match[1]));
   for (const section of template.message.sections ?? []) if ("repeat" in section) fields.add(section.repeat);
   fields.add("business_identity"); fields.add("support_url");
   if (template.delivery !== "transactional") { fields.add("preferences_url"); fields.add("unsubscribe_url"); }
@@ -45,12 +47,15 @@ function validateUrl(value: string, key: string, production: boolean) {
   }
 }
 
-function validateStories(value: unknown, production: boolean): asserts value is readonly EmailSection[] {
-  if (!Array.isArray(value) || value.length < 1 || value.length > 5) throw new Error("Provide 1 to 5 newsletter stories");
+function validateSections(value: unknown, key: string, production: boolean): asserts value is readonly EmailSection[] {
+  const minimum = key === "stories" ? 1 : 0;
+  if (!Array.isArray(value) || value.length < minimum || value.length > 5) throw new Error(`Provide ${minimum} to 5 items for ${key}`);
   for (const story of value) {
     if (!story || typeof story !== "object") throw new Error("Invalid newsletter story");
+    if (story.layout !== undefined && story.layout !== "list-item") throw new Error("Invalid section layout");
     validateText(story.heading, "story heading", 120);
     validateText(story.body, "story body", 1200);
+    if (story.layout === "list-item" && story.bullets !== undefined) throw new Error("Compact activity rows do not support bullets");
     if (story.bullets !== undefined) {
       if (!Array.isArray(story.bullets) || story.bullets.length > 5) throw new Error("At most 5 bullets per story");
       for (const bullet of story.bullets) validateText(bullet, "story bullet", 300);
@@ -69,9 +74,10 @@ export function buildTemplate(id: string, values: TemplateValues, options: { mod
   const production = options.mode !== "preview";
   const colorMode = options.colorMode ?? "system";
   if (production && colorMode !== "system") throw new Error("Production emails must use adaptive system colours");
+  const repeatedFields = new Set((template.message.sections ?? []).flatMap(section => "repeat" in section ? [section.repeat] : []));
   for (const key of requiredVariables(id)) {
     const value = values[key];
-    if (key === "stories") { validateStories(value, production); continue; }
+    if (repeatedFields.has(key)) { validateSections(value, key, production); continue; }
     validateText(value, key);
     if (key.endsWith("_url")) validateUrl(value, key, production);
   }
@@ -91,11 +97,11 @@ export function buildTemplate(id: string, values: TemplateValues, options: { mod
     : [walk(section) as EmailSection]);
   if (/[\r\n]/.test(message.subject) || message.subject.length > 200) throw new Error("Invalid email subject");
   message.footer = {
-    reason: template.delivery === "transactional" ? "This is a service email about your Blockwise account."
+    reason: template.notificationPreference ? interpolate(template.notificationPreference.reason) : template.delivery === "transactional" ? "This is a service email about your Blockwise account."
       : template.delivery === "optional-service" ? "You enabled this Blockwise report. You can change your email preferences below."
       : "You subscribed to Blockwise updates. You can unsubscribe at any time.",
     businessIdentity: String(values.business_identity), supportUrl: String(values.support_url),
-    ...(template.delivery !== "transactional" ? { preferencesUrl: String(values.preferences_url), unsubscribeUrl: String(values.unsubscribe_url) } : {}),
+    ...(template.delivery !== "transactional" ? { preferencesUrl: String(values.preferences_url), unsubscribeUrl: String(values.unsubscribe_url), unsubscribeLabel: template.notificationPreference?.unsubscribeLabel } : {}),
   };
   const rendered = renderEmail(message, "quiet-card", colorMode);
   const bytes = new TextEncoder().encode(rendered.html).length;

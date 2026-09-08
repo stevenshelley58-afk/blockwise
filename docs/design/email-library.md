@@ -1,6 +1,7 @@
 # Blockwise email library — Quiet card
 
-Version 1.0.0 · approved by Steven on 7 September 2026.
+Version 1.1.0. Quiet card approved by Steven on 7 September 2026.
+Daily, weekly and new-lead designs expanded on 8 September 2026.
 
 44 reusable templates in the existing Blockwise design system. This is a template
 library, not an email sender or newsletter schedule. All supplied example names,
@@ -9,9 +10,9 @@ events, figures, dates and links are fictional. Do not send the examples.
 ## Open and reuse
 
 - Browse: https://blockwise.sale/email-preview/email-library
-- Stored in Frank: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-07-v1/blockwise-email-library.zip?download=1
-- Frank README: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-07-v1/README.md
-- Persistent VPS location: `/srv/frank/data/window/uploads/library/blockwise-email/2026-09-07-v1/`.
+- Stored in Frank: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.1/blockwise-email-library.zip?download=1
+- Frank README: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.1/README.md
+- Persistent VPS location: `/srv/frank/data/window/uploads/library/blockwise-email/2026-09-08-v1.1/`.
 
 Frank's existing file-download route serves this versioned library. No new Frank
 app screen, database, agent runtime or live-mail integration was created. The ZIP
@@ -44,6 +45,49 @@ Import `buildTemplate(id, values)` from `source/catalog.ts` in future integratio
 it returns subject, HTML, plain text, delivery category and HTML byte count. Do
 not import the examples module into delivery code. Use the existing sending
 provider when integration is separately requested; do not add another platform.
+
+## Daily, weekly and new-lead notifications
+
+Browse the focused set at https://blockwise.sale/email-preview/email-notifications.
+
+- Daily summary: new-lead count, ad spend, cost per lead, latest enquiries and one
+  action to open the daily report. The period and timezone are explicit.
+- Weekly report: the same metric definitions for a seven-day window, comparison
+  with the preceding period, campaign breakdown and one report action. This is
+  separate from the editorial weekly newsletter.
+- New-lead alert: lead name, enquiry type, location, source, receipt time and one
+  View lead action. Contact details stay in the authenticated application.
+
+All three are optional notifications with separate preference metadata and scoped
+unsubscribe wording. A person may select any combination. Disabling daily reports
+must not disable weekly reports or instant lead alerts. Before delivery, the sender
+must check the exact user's current setting and build the corresponding scoped
+unsubscribe URL. The template renderer does not mutate or enforce profile settings.
+
+The current canonical Settings source has `leadAlerts` and `weeklyDigest`, but no
+`dailyDigest` control. The daily control is requested product behaviour, not a
+verified live feature. No preference UI, scheduling or sender changes are made in
+this design task. Missing preferences should fail closed in a future sender.
+
+Daily and weekly include `standard`, `quiet` and `delayed` sample states, accessible
+in the review UI and under `examples/`. Zero leads show no invented cost per lead.
+Delayed reporting uses Pending rather than zero; neither state reuses stale lead
+rows. These are presentation examples, not live data calculations. Future reporting
+adapters must compute consistent windows, deduplicate leads, use fresh provider
+snapshots, divide spend by leads only when that denominator is positive, and omit
+comparisons when no comparable prior window exists. The sample comparison is in
+absolute leads, not a claimed statistical improvement. Respect timezone/DST when
+building day/week windows. A scheduled report may still be useful on a quiet day;
+any skip-empty delivery rule is separate and was not enabled here.
+
+```sh
+node render.mjs daily-digest --example=quiet ./review
+node render.mjs weekly-performance --example=delayed ./review
+```
+
+The shared card now has an optional lead-count/metric block and compact activity
+rows. All required dynamic content remains plain text and is escaped. Never
+interpolate raw HTML or connect the public preview to real customer lead records.
 
 ## What is included
 
