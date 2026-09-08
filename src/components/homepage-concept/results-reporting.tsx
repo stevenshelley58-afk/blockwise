@@ -1,8 +1,8 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Pause, Play } from "lucide-react";
 import { AnimatePresence, LayoutGroup, motion, useInView } from "motion/react";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   REPORTS,
   formatAdSpend,
@@ -10,7 +10,7 @@ import {
   type ReportRange,
 } from "@/lib/homepage-concept/reporting";
 import { REPORT_EMAIL } from "@/lib/homepage-concept/reporting-email";
-import { durations, reportingReveal, useReducedMotion } from "@/lib/motion";
+import { durations, reportingReveal, reportingLoop, useReducedMotion } from "@/lib/motion";
 
 type ReportingView = ReportRange | "email";
 const REPORT_RANGES: readonly ReportingView[] = ["week", "month", "email"];
@@ -22,6 +22,10 @@ export function ResultsReporting() {
   const [range, setRange] = useState<ReportRange>("week");
   const [view, setView] = useState<ReportingView>("week");
   const [instant, setInstant] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [cycle, setCycle] = useState(0);
+  const [drawFinished, setDrawFinished] = useState(false);
+  const [pageHidden, setPageHidden] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const reducedMotion = useReducedMotion();
   const chartRef = useRef<HTMLDivElement>(null);
@@ -35,6 +39,36 @@ export function ResultsReporting() {
     duration: reducedMotion || instant ? 0 : durations.entrance,
     ease: EASE_OUT,
   };
+
+  useEffect(() => {
+    const syncVisibility = () => setPageHidden(document.hidden);
+    syncVisibility();
+    document.addEventListener("visibilitychange", syncVisibility);
+    return () => document.removeEventListener("visibilitychange", syncVisibility);
+  }, []);
+
+  useEffect(() => {
+    if (!inView) setDrawFinished(false);
+  }, [inView]);
+
+  // Advance only after the actual reveal completes, never on an unrelated interval.
+  useEffect(() => {
+    if (!inView || paused || reducedMotion || pageHidden) return;
+    if (view !== "email" && !drawFinished) return;
+    const timer = window.setTimeout(() => {
+      setInstant(false);
+      setActiveIndex(null);
+      setDrawFinished(false);
+      if (view === "email") {
+        setRange("week");
+        setCycle((value) => value + 1);
+        setView("week");
+      } else {
+        setView("email");
+      }
+    }, 1000 * (view === "email" ? reportingLoop.emailHold : reportingLoop.chartHold));
+    return () => window.clearTimeout(timer);
+  }, [inView, paused, reducedMotion, pageHidden, view, drawFinished]);
 
   function inspectPoint(event: React.PointerEvent<SVGSVGElement>) {
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -60,6 +94,7 @@ export function ResultsReporting() {
               <span className="hc-live-dot" aria-hidden="true" />
               <strong>Mt Lawley appraisal</strong>
             </div>
+            <div className="hc-reporting-controls">
             <LayoutGroup id="report-range">
               <div className="hc-report-range" role="group" aria-label="Dashboard reporting period">
                 {REPORT_RANGES.map((id) => (
@@ -69,6 +104,7 @@ export function ResultsReporting() {
                     aria-label={id === "week" ? "7 days" : id === "month" ? "30 days" : "Email"}
                     aria-pressed={view === id}
                     onClick={(event) => {
+                      setPaused(true);
                       setInstant(event.detail === 0);
                       setView(id);
                       if (id !== "email") setRange(id);
@@ -81,9 +117,29 @@ export function ResultsReporting() {
                 ))}
               </div>
             </LayoutGroup>
+            <button
+              type="button"
+              className="hc-report-loop-toggle"
+              aria-label={paused ? "Play automatic preview" : "Pause automatic preview"}
+              title={paused ? "Play automatic preview" : "Pause automatic preview"}
+              hidden={Boolean(reducedMotion)}
+              onClick={() => {
+                setPaused(!paused);
+                if (paused) {
+                  setInstant(false);
+                  setRange("week");
+                  setView("week");
+                  setDrawFinished(false);
+                  setCycle((value) => value + 1);
+                }
+              }}
+            >
+              {paused ? <Play size={14} aria-hidden="true" /> : <Pause size={14} aria-hidden="true" />}
+            </button>
+            </div>
           </div>
 
-          <div className="hc-reporting-view-stack">
+          <div className="hc-reporting-view-stack" onFocusCapture={() => setPaused(true)}>
             <motion.div
               className="hc-reporting-view hc-reporting-view--chart"
               initial={false}
@@ -123,12 +179,15 @@ export function ResultsReporting() {
                     </linearGradient>
                     <clipPath id={revealId}>
                       <motion.rect
-                        key={range}
+                        key={`${range}-${cycle}`}
                         className="hc-chart-reveal"
                         x="-4" y="-12" height="224"
                         initial={reducedMotion ? false : { width: 0 }}
                         animate={{ width: reducedMotion || inView ? 608 : 0 }}
-                        transition={{ duration: reducedMotion || !inView ? 0 : reportingReveal.duration, ease: reportingReveal.ease }}
+                        transition={{ duration: reducedMotion || !inView ? 0 : reportingReveal.duration, delay: cycle > 0 && inView && !reducedMotion ? durations.state : 0, ease: reportingReveal.ease }}
+                        onAnimationComplete={(definition) => {
+                          if (typeof definition === "object" && "width" in definition && definition.width === 608 && inView && view !== "email") setDrawFinished(true);
+                        }}
                       />
                     </clipPath>
                   </defs>
@@ -231,6 +290,7 @@ export function ResultsReporting() {
                       type="button"
                       key={link}
                       onClick={() => {
+                        setPaused(true);
                         setInstant(false);
                         setRange("week");
                         setView("week");

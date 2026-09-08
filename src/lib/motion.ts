@@ -74,3 +74,9 @@ export const reportingReveal = {
   duration: 1.5,
   ease: [0.4, 0, 0.2, 1] as const,
 };
+
+/** Explicitly requested homepage chart-to-email loop, in seconds. */
+export const reportingLoop = {
+  chartHold: durations.entrance,
+  emailHold: 5,
+} as const;

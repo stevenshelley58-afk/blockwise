@@ -88,7 +88,7 @@ test("reporting stays isolated and follows the shared motion rules", async () =>
   assert.match(source, /reportingReveal.duration/);
   assert.match(source, /setInstant\(event\.detail === 0\)/);
   assert.match(source, /report\.labels\.map/);
-  assert.match(source, /key=\{range\}/);
+  assert.match(source, /key=\{`\$\{range\}-\$\{cycle\}`\}/);
   assert.match(source, /duration: reducedMotion \|\| !inView \? 0 : reportingReveal\.duration/);
   assert.match(source, /width: reducedMotion \|\| inView \? 608 : 0/);
 
@@ -101,4 +101,20 @@ test("reporting stays isolated and follows the shared motion rules", async () =>
 
   const motionSource = await readFile(new URL("../src/lib/motion.ts", import.meta.url), "utf8");
   assert.match(motionSource, /reportingReveal = \{\s*duration: 1\.5,/);
+});
+
+test("requested reporting loop follows draw completion and respects interaction", async () => {
+  const source = await readFile(new URL("../src/components/homepage-concept/results-reporting.tsx", import.meta.url), "utf8");
+  assert.match(source, /onAnimationComplete=/);
+  assert.match(source, /definition.width === 608/);
+  assert.match(source, /view !== "email" && !drawFinished/);
+  assert.match(source, /!inView \|\| paused \|\| reducedMotion \|\| pageHidden/);
+  assert.match(source, /clearTimeout\(timer\)/);
+  assert.match(source, /visibilitychange/);
+  assert.match(source, /Pause automatic preview/);
+  assert.match(source, /Play automatic preview/);
+  assert.match(source, /onFocusCapture=\{\(\) => setPaused\(true\)\}/);
+  assert.match(source, /setCycle\(\(value\) => value \+ 1\)/);
+  assert.match(source, /reportingLoop.emailHold : reportingLoop.chartHold/);
+  assert.match(source, /delay: cycle > 0/);
 });

@@ -1402,3 +1402,9 @@
 @media (max-width:900px) { .hc-pricing-grid { gap:12px; } .hc-plan { padding:26px 18px 20px; } .hc-plan-price { font-size:34px; } }
 @media (max-width:760px) { .hc-pricing { padding-block:76px; } .hc-pricing-grid { grid-template-columns:minmax(0,1fr); margin-top:32px; gap:18px; } .hc-plan { padding:28px; } .hc-plan-price { font-size:44px; } .hc-plan-billing,.hc-plan-outcome,.hc-plan-terms { min-height:0; } }
 @media (prefers-reduced-motion:reduce) { .hc-plan-cta { transition:none; } .hc-plan-cta:active { transform:none; } }
+
+/* Optional automatic chart/email preview, independent of period selection. */
+.hc-reporting-controls { display: flex; align-items: center; gap: 8px; max-width: 100%; }
+.hc-report-loop-toggle { display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: 1px solid var(--hc-line-dark); border-radius: 50%; background: transparent; color: #b9c6db; cursor: pointer; }
+.hc-report-loop-toggle:hover { color: white; background: rgba(255,255,255,.07); }
+.hc-report-loop-toggle[hidden] { display: none; }
