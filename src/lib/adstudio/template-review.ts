@@ -102,7 +102,10 @@ export async function discardTemplate(service: SupabaseClient, templateId: strin
   if (markError) throw new Error(markError.message);
   const { data: assets, error: assetsError } = await service.from("ad_template_assets_direct").select("storage_path").eq("template_id", templateId);
   if (assetsError) throw new Error(assetsError.message);
-  const paths = (assets ?? []).map((asset: { storage_path: string }) => asset.storage_path);
+  // Upload/download paths pass through a URL and are decoded by Storage.
+  // DELETE prefixes are JSON object keys: sending the encoded path silently
+  // leaves nested demo images behind and breaks the next revision import.
+  const paths = (assets ?? []).map((asset: { storage_path: string }) => decodeURIComponent(asset.storage_path));
   if (paths.length) {
     const { error: storageError } = await service.storage.from(BUCKET).remove(paths);
     if (storageError) throw new Error(storageError.message);
