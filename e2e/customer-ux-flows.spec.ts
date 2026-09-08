@@ -39,7 +39,7 @@ test.describe("customer UX flows", () => {
     await expect(page.getByRole("link", { name: "Notifications", exact: true })).toBeVisible();
     await expect(page.locator("[data-settings-section]:visible")).toHaveCount(0);
 
-    await page.goto("/settings#notifications");
+    await page.getByRole("link", { name: "Notifications", exact: true }).click();
     await expect(page.locator('[data-settings-section="notifications"]:visible')).toBeVisible();
     await expect(page.locator("[data-settings-section]:visible")).toHaveCount(1);
     await expect.poll(() =>

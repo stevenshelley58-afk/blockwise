@@ -18,16 +18,17 @@ export function SkeletonPage({
   width?: string;
 }) {
   return (
-    <main
+    <div
+      role="status"
       aria-busy="true"
       aria-label={label}
       className={`mx-auto grid w-full ${width} gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16`}
     >
-      <span className="sr-only" role="status">
+      <span className="sr-only">
         Loading {label}
       </span>
       {children}
-    </main>
+    </div>
   );
 }
 
