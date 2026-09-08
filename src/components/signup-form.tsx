@@ -10,6 +10,7 @@ import {
 } from "@/components/auth/turnstile-verification";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { validateEmail } from "@/lib/auth/form-validation";
+import { adRadarSignupMetadata } from "@/lib/research/ad-radar-signup";
 
 export function SignupForm() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -61,6 +62,7 @@ export function SignupForm() {
         shouldCreateUser: true,
         data: {
           signup_flow: "trial_self_serve",
+          ...adRadarSignupMetadata(location.search),
         },
       },
     });
