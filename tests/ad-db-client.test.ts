@@ -8,9 +8,12 @@ import {
   AdDbConfigurationError,
   fetchAdDbAd,
   fetchAdDbMedia,
+  parseAdDbSearchParams,
   searchAdDbAds,
 } from "../src/lib/research/ad-db-client.ts";
+import { mergeCards } from "../src/components/research/ad-radar-search-panel.tsx";
 import type { AdDbRow } from "../src/lib/research/ad-db.ts";
+import type { CustomerMetaAdLibraryCard } from "../src/lib/research/customer-meta-card.ts";
 
 const ENV = {
   AD_DB_API_URL: "http://hermes.internal:9119",
@@ -256,4 +259,35 @@ test("Ad DB advertiser search forwards the canonical advertiser page filter", as
     },
   });
   assert.equal(new URL(calledUrl).searchParams.get("advertiserPageId"), row().advertiser_page_id);
+});
+
+
+test("Ad DB client forwards and validates opaque pagination cursors", async () => {
+  let calledUrl = "";
+  const cursor = "AQHR9c7.example-cursor";
+  await searchAdDbAds({ query: "homes", cursor }, {
+    env: ENV,
+    fetcher: async (input) => {
+      calledUrl = String(input);
+      return Response.json({ items: [], page: { nextCursor: null, limit: 50 } });
+    },
+  });
+  assert.equal(new URL(calledUrl).searchParams.get("cursor"), cursor);
+  assert.equal(parseAdDbSearchParams(new URLSearchParams({ q: "homes", cursor })).ok, true);
+  assert.equal(parseAdDbSearchParams(new URLSearchParams({ q: "homes", cursor: "bad cursor" })).ok, false);
+});
+
+
+test("Ad Radar append merge removes existing and repeated incoming card IDs", () => {
+  const first = { id: "one" } as CustomerMetaAdLibraryCard;
+  const second = { id: "two" } as CustomerMetaAdLibraryCard;
+  const result = mergeCards([first], [first, second, second]);
+  assert.deepEqual(result.map((card) => card.id), ["one", "two"]);
+});
+
+test("Ad Radar panel keeps auto-search term and stale request guards", () => {
+  const source = readFileSync(join(process.cwd(), "src/components/research/ad-radar-search-panel.tsx"), "utf8");
+  assert.match(source, /activeSearchTermRef\.current\.trim\(\)/u);
+  assert.match(source, /requestRef\.current !== controller/u);
+  assert.match(source, /controller\.signal\.aborted/u);
 });

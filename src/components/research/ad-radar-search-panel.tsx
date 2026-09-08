@@ -32,7 +32,7 @@ type Props = {
   autoSearchSource?: "brand_pack" | "location" | null;
 };
 
-type SearchResponse = { cards?: CustomerMetaAdLibraryCard[]; error?: string };
+type SearchResponse = { cards?: CustomerMetaAdLibraryCard[]; page?: { nextCursor: string | null; limit: number }; error?: string };
 
 export function AdRadarSearchPanel({
   initialQuery,
@@ -51,17 +51,25 @@ export function AdRadarSearchPanel({
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestRef = useRef<AbortController | null>(null);
+  const activeSearchTermRef = useRef(initialQuery || autoSearchTerm || "");
 
   function doSearch(
     q: string,
     activeFilters: Filters = filters,
+    append = false,
   ) {
     if (timerRef.current) clearTimeout(timerRef.current);
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
+    activeSearchTermRef.current = q;
+    if (!append) {
+      setCards([]);
+      setNextCursor(null);
+    }
     setLoading(true);
     setSearchError(null);
     timerRef.current = setTimeout(async () => {
@@ -69,13 +77,16 @@ export function AdRadarSearchPanel({
         const params = new URLSearchParams({ q });
         if (activeFilters.agency) params.set("agency", activeFilters.agency);
         if (activeFilters.agent) params.set("agent", activeFilters.agent);
+        if (append && nextCursor) params.set("cursor", nextCursor);
         const res = await fetch(`/api/research/ads/search?${params.toString()}`, {
           signal: controller.signal,
         });
         const data = (await res.json().catch(() => ({}))) as SearchResponse;
+        if (controller.signal.aborted || requestRef.current !== controller) return;
         if (!res.ok) throw new Error(searchFailureMessage(res.status));
         const nextCards = data.cards ?? [];
-        setCards(nextCards);
+        setCards((previous) => append ? mergeCards(previous, nextCards) : nextCards);
+        setNextCursor(data.page?.nextCursor ?? null);
         setSearched(true);
         setSearchError(null);
         // Accumulate agency/agent options across the query session so picking
@@ -84,7 +95,8 @@ export function AdRadarSearchPanel({
         setAgentOptions((prev) => mergeOptions(prev, nextCards.map((c) => c.agentName)));
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        setCards([]);
+        if (controller.signal.aborted || requestRef.current !== controller) return;
+        if (!append) setCards([]);
         setSearched(true);
         setSearchError(
           error instanceof Error
@@ -104,27 +116,32 @@ export function AdRadarSearchPanel({
     setQuery(q);
     setAgencyOptions([]);
     setAgentOptions([]);
-    doSearch(q, filters);
+    doSearch(q, filters, false);
+  }
+
+  function loadMore() {
+    if (!nextCursor || loading || !activeSearchTermRef.current) return;
+    doSearch(activeSearchTermRef.current, filters, true);
   }
 
   function onChangeFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
     const next = { ...filters, [key]: value };
     setFilters(next);
-    if (searched && query.trim()) doSearch(query, next);
+    if (searched && activeSearchTermRef.current.trim()) doSearch(activeSearchTermRef.current, next, false);
   }
 
   function onClearFilters() {
     if (activeFilterCount === 0) return;
     setFilters(EMPTY_FILTERS);
-    if (searched && query.trim()) doSearch(query, EMPTY_FILTERS);
+    if (searched && activeSearchTermRef.current.trim()) doSearch(activeSearchTermRef.current, EMPTY_FILTERS, false);
   }
 
   useEffect(() => {
     if (initialQuery) {
-      doSearch(initialQuery);
+      doSearch(initialQuery, filters, false);
     } else if (autoSearchTerm) {
       // Lazy first paint: the panel renders immediately, results stream in.
-      doSearch(autoSearchTerm);
+      doSearch(autoSearchTerm, filters, false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -257,6 +274,7 @@ export function AdRadarSearchPanel({
       ) : null}
 
       {searchError ? (
+        <>
         <section
           className="grid gap-3 rounded-(--r-card) border border-error/25 bg-error-soft px-5 py-4 text-error"
           role="alert"
@@ -272,13 +290,26 @@ export function AdRadarSearchPanel({
           <button
             type="button"
             className="inline-flex min-h-11 w-fit cursor-pointer items-center gap-2 rounded-full bg-(--ink) px-4 text-[12.5px] font-bold text-white hover:opacity-85"
-            onClick={() => doSearch(query, filters)}
+            onClick={() => doSearch(activeSearchTermRef.current, filters, Boolean(cards.length && nextCursor))}
             disabled={loading}
           >
             <RotateCw size={14} aria-hidden />
             {loading ? "Trying again…" : "Try again"}
           </button>
         </section>
+        {cards.length > 0 ? (
+          <section className="grid gap-3.5">
+            <AdRadarResultsGrid cards={cards} />
+            {nextCursor ? (
+              <div className="flex justify-center">
+                <button type="button" className={ghostButtonClass} onClick={loadMore} disabled={loading}>
+                  {loading ? "Loading more..." : "Load more"}
+                </button>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+        </>
       ) : searched ? (
         <section className="grid gap-3.5">
           <div>
@@ -294,7 +325,16 @@ export function AdRadarSearchPanel({
           </div>
 
           {cards.length > 0 ? (
-            <AdRadarResultsGrid cards={cards} />
+            <>
+              <AdRadarResultsGrid cards={cards} />
+              {nextCursor ? (
+                <div className="flex justify-center">
+                  <button type="button" className={ghostButtonClass} onClick={loadMore} disabled={loading}>
+                    {loading ? "Loading more..." : "Load more"}
+                  </button>
+                </div>
+              ) : null}
+            </>
           ) : activeFilterCount > 0 ? (
             <div className="rounded-(--r-card) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 px-6 py-10 text-center">
               <h3 className="font-display text-[15.5px] font-extrabold">No ads matched your filters</h3>
@@ -333,6 +373,17 @@ function StatTile({ label, value, note }: { label: string; value: string; note: 
       <p className="mt-[7px] text-[10.5px]/[11.5px] text-muted-foreground">{note}</p>
     </article>
   );
+}
+
+export function mergeCards(previous: CustomerMetaAdLibraryCard[], incoming: CustomerMetaAdLibraryCard[]): CustomerMetaAdLibraryCard[] {
+  const seen = new Set(previous.map((card) => card.id));
+  const appended: CustomerMetaAdLibraryCard[] = [];
+  for (const card of incoming) {
+    if (seen.has(card.id)) continue;
+    seen.add(card.id);
+    appended.push(card);
+  }
+  return [...previous, ...appended];
 }
 
 function mergeOptions(prev: string[], incoming: Array<string | null>): string[] {
