@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, House, LifeBuoy, LogOut, MoreHorizontal } from "lucide-react";
+import { ChartNoAxesCombined, Download, Ellipsis, House, LifeBuoy, LogOut, Megaphone, MoreHorizontal, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
@@ -102,17 +102,35 @@ export function MobileBottomNav({ variant, homeHref = "/self-serve", account, ho
     <>
       <nav className={variant === "self_serve" ? `mobile-bottom-nav mobile-bottom-nav--customer${homePilot ? " mobile-bottom-nav--customer-home" : ""}` : "mobile-bottom-nav"} aria-label="Primary mobile navigation">
         {primaryItems.map((item) => {
-          const Icon = homePilot && variant === "self_serve" && item.href === homeHref ? House : item.icon;
+          const Icon = homePilot && variant === "self_serve"
+            ? item.href === homeHref
+              ? House
+              : item.href === "/ad-studio"
+                ? Megaphone
+                : item.href === "/results"
+                  ? ChartNoAxesCombined
+                  : item.href === "/leads"
+                    ? UsersRound
+                    : item.icon
+            : item.icon;
           const active = itemIsActive(pathname, item, homeHref, activeItems);
           return (
             <Link className={active ? "mobile-bottom-nav-item active" : "mobile-bottom-nav-item"} href={item.href} key={item.href} aria-current={active ? "page" : undefined}>
-              <Icon aria-hidden size={21} />
+              <Icon
+                aria-hidden
+                size={homePilot && variant === "self_serve" ? 22 : 21}
+                strokeWidth={homePilot && variant === "self_serve" ? 1.9 : undefined}
+              />
               <span>{item.mobileLabel ?? item.label}</span>
             </Link>
           );
         })}
         <button ref={moreButton} className={moreActive ? "mobile-bottom-nav-item active" : "mobile-bottom-nav-item"} type="button" onClick={() => setMoreOpen(true)} aria-expanded={moreOpen} aria-controls="mobile-more-sheet" aria-current={moreCurrent ? "page" : undefined} aria-pressed={moreActive}>
-          <MoreHorizontal aria-hidden size={22} />
+          {homePilot && variant === "self_serve" ? (
+            <Ellipsis aria-hidden size={22} strokeWidth={1.9} />
+          ) : (
+            <MoreHorizontal aria-hidden size={22} />
+          )}
           <span>{copy.more}</span>
         </button>
       </nav>

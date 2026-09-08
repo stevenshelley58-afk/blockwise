@@ -4,6 +4,8 @@ import { loadReportingSnapshot } from "@/lib/meta-monitor/reporting-snapshots";
 import type { MetaMonitorPayload } from "@/lib/meta-monitor/types";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { listTemplates } from "@/lib/adstudio/pack-gallery";
+import { buildHomeCreativeSuggestions, type HomeCreativeSuggestions } from "@/lib/home/creative-suggestions";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
@@ -18,6 +20,7 @@ export type HomeSafeReadModel = Pick<
   | "booking"
   | "ads"
   | "performance"
+  | "creativeSuggestions"
 >;
 
 export async function loadHomeDashboardData(input: {
@@ -31,12 +34,13 @@ export async function loadHomeDashboardData(input: {
   reportingNeedsRefresh: boolean;
   reportingGeneratedAt: string;
 }> {
-  const [campaigns, brandKits, connections, workspace, wallet, activation, reporting] =
+  const [campaigns, customerAds, brandKits, connections, workspace, wallet, activation, reporting, templates] =
     await Promise.all([
       input.supabase
         .from("adstudio_campaigns")
         .select("id, created_at, template_key")
         .eq("workspace_id", input.workspaceId),
+      input.supabase.from("ad_customer_ads").select("template_id").eq("workspace_id", input.workspaceId),
       input.supabase
         .from("adstudio_brand_kits")
         .select("business_name, colours_json, source_url, review_status")
@@ -65,6 +69,7 @@ export async function loadHomeDashboardData(input: {
         workspaceId: input.workspaceId,
         range: "last_30",
       }).catch(() => null),
+      listTemplates(input.supabase).catch(() => null),
     ]);
 
   const results = reporting?.snapshot.payload ?? null;
@@ -79,7 +84,15 @@ export async function loadHomeDashboardData(input: {
   const campaignRows = (campaigns.data ?? []) as Array<{
     id: string;
     created_at: string | null;
+    template_key?: string | null;
   }>;
+  const customerAdRows = (customerAds.data ?? []) as Array<{ template_id?: string | null }>;
+  const usageReadSucceeded = !campaigns.error && !customerAds.error && templates !== null;
+  const usedTemplateIds = new Set<string>([
+    ...campaignRows.map((row) => row.template_key?.trim() ?? "").filter(Boolean),
+    ...customerAdRows.map((row) => row.template_id?.trim() ?? "").filter(Boolean),
+  ]);
+  const creativeSuggestions: HomeCreativeSuggestions = buildHomeCreativeSuggestions({ templates: templates ?? [], usedTemplateIds, hasCreatedAds: campaignRows.length > 0 || customerAdRows.length > 0, usageReadSucceeded });
   const weekAgo = Date.now() - 7 * 86_400_000;
   const walletRow = (wallet.data ?? null) as {
     entitlement_type?: string | null;
@@ -132,6 +145,7 @@ export async function loadHomeDashboardData(input: {
       }).length,
     },
     performance: live?.performance ?? null,
+    creativeSuggestions,
   };
   const periodEnd =
     typeof workspaceRow.stripe_current_period_end === "string"
@@ -190,6 +204,7 @@ export function homeSafeReadModelFromData(data: HomeData): HomeSafeReadModel {
     booking: data.booking,
     ads: data.ads,
     performance: data.performance,
+    creativeSuggestions: data.creativeSuggestions,
   };
 }
 

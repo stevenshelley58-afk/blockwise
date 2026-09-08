@@ -249,18 +249,23 @@ controls while removing repetition.
 - complete loading/empty/success states — no dead ends
 - compact information density without crowding
 
-### Mobile Home pilot (scoped)
+### Mobile Home direction (scoped)
 
-The September 2026 mobile Home pilot applies only to `/self-serve`. It is a
-mobile-first expression of this existing system, not a new global visual
-language. The Home body is a continuous light surface with hairline section
-boundaries, one resolver-backed next action, compact result metrics, simple tool
-rows, and collapsed workspace details. The shared customer shell still owns the
-single five-destination mobile bar: Home, Ads, Results, Leads, and More.
+The current `/self-serve` direction supersedes the earlier September 2026
+mobile Home pilot. Home is a creative-first workbench: lead with the
+customer's real ad creative or a truthful preview-unavailable state, then show
+only recommendations backed by existing HomeData/read models and approved
+resolvers. Recommendations must retain known source, freshness, pending, and
+unavailable semantics. Never invent a recommendation, metric, connection, or
+completion state to fill the screen.
 
-The pilot does not change other customer routes, operator surfaces, or the
-current light-only customer theme. Dark styling in the sidebar is not evidence
-of a full-page dark customer theme.
+Home is not an identity, setup, reporting, billing, or administration surface.
+Do not repeat workspace/account identity in its title area, show setup or
+activation progress, duplicate Results telemetry, or expose operator controls.
+Account details remain behind the accessible account menu. The shared customer
+shell still owns the five-destination mobile bar: Home, Ads, Results, Leads,
+and More. The direction applies only to Home and does not change other
+customer routes, operator surfaces, or the current light-only customer theme.
 
 ## 2. Colors
 
@@ -314,9 +319,10 @@ data hue is the only vivid display accent. Do not introduce a third.
 **The Semantic Color Rule.** Green, amber, and red communicate state. They never
 decorate headings, cards, or illustrations.
 
-**Mobile Home surface rule.** The pilot remains light-only: `--bg`, `--surface`,
+**Mobile Home surface rule.** Home remains light-only: `--bg`, `--surface`,
 `--surface-subtle`, `--line`, and semantic text tokens come from the existing
 Tailwind bridge. Do not infer a full-page dark mode from sidebar theme support.
+Keep the surface continuous and let the real creative carry visual priority.
 
 ## 3. Typography
 
@@ -444,10 +450,11 @@ hand-building; use the token utilities below for layout and bespoke surfaces.
 
 ### Controls
 
-- **Home primary action (pilot only):** semantic primary background and
-  foreground, `--r-ctl` (10px), 48px minimum height, full width on mobile and
-  an appropriately bounded width on desktop. It is the one visible next-step
-  action, not a second summary of the heading.
+- **Home primary action (scoped):** semantic primary background and foreground,
+  `--r-ctl` (10px), and a reachable 44px minimum height. **Never make a Home
+  CTA full width.** Keep it bounded by content or a sensible max width at every
+  viewport. It is the one visible next-step action, not a second summary of
+  the creative.
 - **Ink button:** full pill, Operations Ink background, white label, 36px.
   Hover opacity, active scale — no bounce.
 - **Ghost button:** full pill, Clean Surface, Control Line boundary, ink label.
@@ -456,19 +463,19 @@ hand-building; use the token utilities below for layout and bespoke surfaces.
 - **Input / select:** Clean Surface, hairline border, `card` radius, 36px, ink
   border on focus. Selects pair with a faint chevron.
 
-### Mobile Home pilot components
+### Mobile Home direction components
 
-- **Section:** a flat content group separated by a one-pixel `--line` hairline;
-  no nested card grid. Keep section headings in the 15.5px title voice.
-- **Action row:** a minimum 44px reachable row with a meaningful leading icon,
-  15px action label, 13px supporting text, and one trailing chevron.
-- **Disclosure:** native progressive disclosure with a minimum 44px summary;
-  use it for completed milestones and Workspace details, not required next
-  actions.
-- **Results:** three compact inline metrics on mobile. Credits belong in
-  Workspace details, not a fourth narrow metric column.
-- **Loading:** mirror this flat hierarchy with hairlines and token skeletons;
-  do not restore the old card-and-chart scaffold.
+- **Creative lead:** use the existing shared image/video/text preview primitives;
+  keep media readable at 320px and branch honestly for failed or unknown media.
+- **Recommendation row:** a minimum 44px reachable row with a meaningful action,
+  concise rationale when supplied by data, and one trailing affordance. Do not
+  render a placeholder recommendation.
+- **Bounded action:** keep the next real route or resolver-backed action near
+  the creative, but never stretch its CTA to the viewport edges.
+- **Flat grouping:** use continuous sections and hairlines before rounded cards.
+  A panel must improve grouping, not decorate an empty Home.
+- **State treatment:** loading, empty, partial, and error states preserve the
+  same creative-first hierarchy and provide a real recovery path.
 
 ### Page head
 
@@ -486,17 +493,16 @@ hand-building; use the token utilities below for layout and bespoke surfaces.
 
 ### Do:
 
-- **Do** keep the mobile Home pilot primary task first and link it to the
-  server-resolved activation path.
+- **Do** lead Home with the customer's real creative and keep its next action
+  linked to a server-resolved, available route.
 - **Do** keep Home flat by default: use sections, rows, hairlines, and
   disclosures before rounded cards or chart scaffolds.
 - **Do** preserve actual data semantics. Show unavailable reporting as
   unavailable with a contextual recovery link; never substitute zero.
 - **Do** make the 390px first viewport useful while preserving a natural scroll
   at 320px and clearing the shared five-destination bar.
-- **Do** make future Home-like screens follow the same 15px action, 13px
-  supporting, 20px Home title, 10px control-radius, and 48px primary-action
-  rhythm only when their own design review adopts it.
+- **Do** keep recommendations concise, real, and secondary to the creative;
+  expose source and freshness whenever the data provides them.
 - **Do** make one next action or operational read visibly dominant.
 - **Do** use the shared ink accent, neutral layers, radius scale, Manrope/Inter,
   and existing primitives before adding route-local values.
@@ -509,8 +515,8 @@ hand-building; use the token utilities below for layout and bespoke surfaces.
   control is compact; no horizontal scroll at 320px.
 - **Do** make the first viewport useful on mobile: show the purpose, current
   state, and next action without requiring an unnecessary scroll.
-- **Do** preserve useful sections and safety controls while collapsing repeated
-  summaries, completed setup, and optional detail behind progressive disclosure.
+- **Do** preserve useful creative states and safety controls while keeping
+  identity, setup, Results, billing, and admin detail off Home.
 - **Do** keep overlays, consent banners, sheets, and fixed navigation clear of
   one another and the device safe area.
 - **Do** keep Back, save, retry, cancel, and return paths visible and
@@ -537,7 +543,7 @@ hand-building; use the token utilities below for layout and bespoke surfaces.
 - **Don't** add eyebrows, filler subheadings, or explanatory paragraphs that
   repeat what the visual hierarchy already communicates.
 - **Don't** shorten a screen by hiding approved features, shrinking text, or
-  making a required task harder to find.
+  making a required task harder to find. Never use a full-width Home CTA.
 - **Don't** leave a status without its next action: a pending booking,
   connection, verification, payment, or save state must explain how to proceed.
 

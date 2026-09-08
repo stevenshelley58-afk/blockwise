@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, LifeBuoy, LogOut } from "lucide-react";
+import { Download, LifeBuoy, LogOut, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
@@ -114,13 +114,19 @@ function AccountDropdown({ account, homeCompact = false }: { account: Account; h
         <button
           type="button"
           aria-label="Account"
-          className={cn("inline-grid cursor-pointer place-items-center rounded-full border border-border bg-(--accent-tint) font-display text-[11.5px] font-extrabold text-foreground transition-opacity duration-150 hover:opacity-80 md:size-9", homeCompact ? "size-11 self-serve-home-account" : "size-8")}
+          className={homeCompact
+            ? "inline-grid size-11 cursor-pointer place-items-center text-foreground transition-opacity duration-150 hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:size-9"
+            : "inline-grid size-8 cursor-pointer place-items-center rounded-full border border-border bg-(--accent-tint) font-display text-[11.5px] font-extrabold text-foreground transition-opacity duration-150 hover:opacity-80 md:size-9"}
         >
-          <Avatar className="size-full">
-            <AvatarFallback className="bg-transparent font-display text-[11.5px] font-extrabold">
-              {initialsFor(account.name)}
-            </AvatarFallback>
-          </Avatar>
+          {homeCompact ? (
+            <UserRound aria-hidden size={22} strokeWidth={1.9} />
+          ) : (
+            <Avatar className="size-full">
+              <AvatarFallback className="bg-transparent font-display text-[11.5px] font-extrabold">
+                {initialsFor(account.name)}
+              </AvatarFallback>
+            </Avatar>
+          )}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-56">
@@ -231,14 +237,17 @@ export function SelfServeShell({
         <header className={cn("sticky top-0 z-20 flex items-center gap-2.5 border-b border-border px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:min-h-[60px] md:gap-3.5 md:px-7", isSelfServeHome ? "self-serve-home-topbar min-h-[56px] bg-(--surface)" : "min-h-[54px] bg-background/85")}>
           <SidebarTrigger className="-ml-1 hidden md:inline-flex" />
 
-          {/* Desktop: workspace / page breadcrumb */}
-          <span className="hidden truncate font-display text-[15.5px] font-extrabold tracking-[-0.01em] md:inline">
-            {workspaceName} <span className="font-normal text-(--faint)">/</span> {pageTitle}
-          </span>
+          {/* Desktop: keep the workspace breadcrumb on routes that need it. */}
+          {!isSelfServeHome ? (
+            <span className="hidden truncate font-display text-[15.5px] font-extrabold tracking-[-0.01em] md:inline">
+              {workspaceName} <span className="font-normal text-(--faint)">/</span> {pageTitle}
+            </span>
+          ) : null}
 
-          {/* Mobile: condensed brand topbar */}
+          {/* Home keeps one title across breakpoints; other routes retain the
+              condensed product brand on mobile. */}
           {isSelfServeHome ? (
-            <h1 className="self-serve-home-title font-sans text-[20px] font-semibold tracking-[-0.02em] md:hidden">
+            <h1 className="self-serve-home-title font-sans text-[20px] font-semibold tracking-[-0.02em]">
               Home
             </h1>
           ) : (
@@ -255,16 +264,18 @@ export function SelfServeShell({
           )}
 
           {/* Industry chip — config-driven, no legacy class */}
-          <span
-            aria-label={`Workspace: ${workspaceName}`}
-            className="hidden shrink-0 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground lg:inline"
-          >
-            {niche.industry.label} · {workspaceRegion}
-          </span>
+          {!isSelfServeHome ? (
+            <span
+              aria-label={`Workspace: ${workspaceName}`}
+              className="hidden shrink-0 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground lg:inline"
+            >
+              {niche.industry.label} · {workspaceRegion}
+            </span>
+          ) : null}
 
           <div className={cn("ml-auto inline-flex items-center gap-2.5 md:gap-3", isSelfServeHome && "self-serve-home-actions max-md:[&>button]:min-h-11 max-md:[&>button]:min-w-11 max-md:[&>button]:rounded-(--r-ctl)")}>
             <CommandMenu />
-            <SidebarThemeToggle tokens />
+            {!isSelfServeHome ? <SidebarThemeToggle tokens /> : null}
             <AccountDropdown account={account} homeCompact={isSelfServeHome} />
           </div>
         </header>

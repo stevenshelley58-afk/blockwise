@@ -6,9 +6,11 @@ const home = readFileSync("src/components/self-serve/home-dashboard.tsx", "utf8"
 const activation = readFileSync("src/components/self-serve/activation-card.tsx", "utf8");
 const settings = readFileSync("src/app/(customer)/settings/settings-view.tsx", "utf8");
 
-test("home puts the activation task before reporting metrics in the rendered tree", () => {
-  assert.ok(home.indexOf("One server-resolved activation card") < home.indexOf("{/* KPI row */}"));
-  assert.match(home, /aria-label="Enquiry reporting unavailable"[^>]*>Unavailable/);
+test("Home recommends a creative instead of duplicating account and setup UI", () => {
+  assert.match(home, /creativeSuggestions/);
+  assert.match(home, /Use template/);
+  assert.doesNotMatch(home, /<ActivationCard|<WorkspaceDetails|<MobileSection|data\.workspaceName/);
+  assert.doesNotMatch(home, /Completed milestones|Enquiry reporting unavailable/);
 });
 
 test("completed milestones remain accessible without occupying first-run space", () => {

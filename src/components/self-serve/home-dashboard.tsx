@@ -1,13 +1,11 @@
 "use client";
 
-import { ArrowDownRight, ArrowUpRight, LibraryBig } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowRight, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
-import { navByVariant } from "@/components/sidebar-nav";
-import { niche } from "@/config/niche";
-
-import { ActivationCard, WorkspaceDetails, type ActivationCardData } from "./activation-card";
-import { ActionRow, MobileSection } from "@/components/ui/mobile-workspace";
+import type { HomeCreativeSuggestions } from "@/lib/home/creative-suggestions";
+import type { ActivationCardData } from "./activation-card";
 import type { HomeDailyPoint } from "./home-chart";
 
 export type HomeData = ActivationCardData & {
@@ -23,87 +21,121 @@ export type HomeData = ActivationCardData & {
     daily: HomeDailyPoint[];
     lastSyncedAt: string | null;
   } | null;
+  creativeSuggestions?: HomeCreativeSuggestions;
 };
 
-const money = (value: number) => `$${value.toFixed(2)}`;
-const compactNumber = (value: number) => new Intl.NumberFormat("en-AU", { notation: "compact", maximumFractionDigits: 1 }).format(value);
-const compactMoney = (value: number) => value >= 1000 ? `$${new Intl.NumberFormat("en-AU", { notation: "compact", maximumFractionDigits: 1 }).format(value)}` : money(value);
+const HEADLINES: Record<HomeCreativeSuggestions["audience"] | "fallback", string> = {
+  first_ad: "Make your first ad",
+  returning: "Try a different look",
+  unknown: "Find your next idea",
+  fallback: "Find your next idea",
+};
 
-function reportingFoot(lastSyncedAt: string | null): string {
-  if (!lastSyncedAt || !Number.isFinite(Date.parse(lastSyncedAt))) return "Provider time unavailable";
-  const formatted = new Intl.DateTimeFormat("en-AU", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(lastSyncedAt));
-  return `Last known provider data: ${formatted} UTC`;
+function itemsFor(suggestions: HomeCreativeSuggestions | undefined) {
+  return suggestions?.status === "ready" ? suggestions.items.slice(0, 3) : [];
 }
 
-function Delta({ current, previous, downIsGood = false }: { current: number | null; previous: number | null; downIsGood?: boolean }) {
-  if (current == null || previous == null || previous === 0) return null;
-  const change = (current - previous) / previous;
-  if (!Number.isFinite(change) || Math.abs(change) < 0.005) return null;
-  const up = change > 0;
-  const Icon = up ? ArrowUpRight : ArrowDownRight;
-  const good = downIsGood ? !up : up;
-  return <span className={good ? "text-success" : "text-error"}><Icon aria-hidden className="inline size-3" /> {Math.round(Math.abs(change) * 100)}%</span>;
-}
-
-function ResultMetric({ label, value, fullValue, foot, unavailable = false }: { label: string; value: string; fullValue?: string; foot?: React.ReactNode; unavailable?: boolean }) {
+function EmptyCreative({ status }: { status: HomeCreativeSuggestions["status"] | "missing" }) {
+  const detail = status === "unavailable"
+    ? "Template suggestions are unavailable right now."
+    : status === "exhausted" ? "Browse your templates for another idea." : "Templates will appear here when available.";
   return (
-    <div className="min-w-0 border-r border-(--line) px-3 py-2.5 first:pl-0 last:border-r-0 last:pr-0 sm:px-4 sm:first:pl-0 sm:last:pr-0">
-      <span className="block text-[13px] font-semibold leading-4 text-muted-foreground">{label}</span>
-      <p className={`mt-1 font-display font-extrabold tabular-nums tracking-[-0.02em] ${unavailable ? "text-[16px]" : "text-[clamp(1rem,6.2vw,1.5rem)]"}`} aria-label={unavailable ? `${label} unavailable` : fullValue ? `${label}: ${fullValue}` : undefined} title={fullValue ?? value}>{value}</p>
-      {foot ? <p className="mt-0.5 text-[12px] leading-4 text-muted-foreground">{foot}</p> : null}
+    <div>
+      <p className="text-[15px] leading-6 text-muted-foreground">{detail}</p>
+      <Link href="/ad-studio/templates" data-home-primary
+        className="mt-4 inline-flex min-h-11 w-fit items-center justify-center gap-2 rounded-(--r-ctl) border border-border px-4 text-[15px] font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        Browse templates <ArrowRight className="size-4" aria-hidden />
+      </Link>
     </div>
   );
 }
 
-function ReportingRecovery({ state }: { state: string }) {
-  if (state === "not_connected") {
-    return <><span>Connect Meta to see enquiry reporting.</span> <Link href="/settings#connections" className="font-semibold underline underline-offset-4">Connect Meta</Link></>;
-  }
-  if (state === "needs_attention") {
-    return <><span>Meta reporting needs attention.</span> <Link href="/settings#connections" className="font-semibold underline underline-offset-4">Review connection</Link></>;
-  }
-  if (state === "connected") {
-    return <><span>Provider reporting is unavailable right now.</span> <Link href="/results" className="font-semibold underline underline-offset-4">View results</Link></>;
-  }
-  return <><span>Provider reporting is unavailable right now.</span> <Link href="/ad-studio" className="font-semibold underline underline-offset-4">Create an ad</Link></>;
+function ReadyCreative({
+  item, hasNext, onNext,
+}: {
+  item: HomeCreativeSuggestions["items"][number];
+  hasNext: boolean;
+  onNext: () => void;
+}) {
+  const [failedId, setFailedId] = useState<string | null>(null);
+  const failed = failedId === item.templateId;
+  return (
+    <div className="grid items-start gap-6 md:grid-cols-[minmax(260px,0.95fr)_minmax(260px,1fr)] md:items-center md:gap-10">
+      <div className="flex min-w-0 justify-center md:justify-start">
+        {failed ? (
+          <div className="flex min-h-24 w-full max-w-[320px] flex-col justify-center py-4 md:max-w-[360px]">
+            <p className="text-[15px] font-semibold text-foreground">Preview unavailable</p>
+
+          </div>
+        ) : (
+          <div className="relative flex h-[300px] w-[240px] max-w-full items-center justify-center overflow-hidden rounded-(--r-card) bg-muted/40 md:h-[360px] md:w-[288px]">
+            <img src={item.previewUrl} alt={item.name + " template preview"} data-template-preview
+              className="h-full w-full object-contain" onError={() => setFailedId(item.templateId)} />
+          </div>
+        )}
+      </div>
+      <div className="min-w-0 md:py-2">
+        <h3 className="max-w-[30rem] font-display text-[18px] font-extrabold leading-tight tracking-[-0.02em] text-foreground md:text-[24px]">{item.name}</h3>
+        {failed ? (
+          hasNext ? (
+            <button type="button" onClick={onNext} aria-label="Next template"
+              className="mt-4 inline-flex size-11 shrink-0 items-center justify-center rounded-(--r-ctl) border border-border text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <ChevronRight className="size-5" aria-hidden />
+            </button>
+          ) : null
+        ) : (
+          <>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <Link href={item.href} data-home-primary
+                className="inline-flex min-h-12 w-fit items-center justify-center gap-2 rounded-(--r-ctl) bg-primary px-5 text-[15px] font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                Use template <ArrowRight className="size-4" aria-hidden />
+              </Link>
+              {hasNext ? (
+                <button type="button" onClick={onNext} aria-label="Next template"
+                  className="inline-flex size-11 shrink-0 items-center justify-center rounded-(--r-ctl) border border-border text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <ChevronRight className="size-5" aria-hidden />
+                </button>
+              ) : null}
+            </div>
+            <Link href="/ad-studio/templates"
+              className="mt-4 inline-flex min-h-11 w-fit items-center text-[15px] font-semibold text-muted-foreground underline decoration-border underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              Browse templates
+            </Link>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export function HomeDashboard({ data }: { data: HomeData }) {
-  const copy = niche.copy.home;
-  const { credits, ads, performance } = data;
-  const quickActions = copy.quickActions.filter((action) => !action.feature || niche.features[action.feature]);
+  const suggestions = data.creativeSuggestions;
+  const items = itemsFor(suggestions);
+  const [index, setIndex] = useState(0);
+  useEffect(() => {
+    setIndex((current) => items.length ? Math.min(current, items.length - 1) : 0);
+  }, [items.length]);
+
+  const audience = suggestions?.audience && suggestions.audience in HEADLINES ? suggestions.audience : "fallback";
+  const headline = suggestions?.status === "exhausted"
+    ? "What will you create next?"
+    : HEADLINES[audience];
+  const item = items[index];
 
   return (
-    <div className="mx-auto w-full max-w-[1120px] px-4 pt-5 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:px-6 md:pt-7 md:pb-12">
-      <div className="grid gap-0">
-        <div className="pb-4">
-          <h1 className="hidden font-display text-[24px] font-extrabold tracking-[-0.02em] md:block md:text-[27px]">Home</h1>
-          <p className="mt-1 text-[13px] text-muted-foreground">{data.workspaceName}</p>
+    <div data-home-creative
+      className="mx-auto w-full max-w-[1120px] px-4 pb-6 pt-5 md:px-6 md:pb-12 md:pt-7">
+      <section aria-labelledby="home-creative-heading">
+        <h2 id="home-creative-heading"
+          className="max-w-[34rem] font-display text-[24px] font-extrabold leading-[1.05] tracking-[-0.025em] text-foreground md:text-[30px]">
+          {headline}
+        </h2>
+        <div className="mt-5 md:mt-6">
+          {item ? <ReadyCreative item={item} hasNext={items.length > 1}
+            onNext={() => setIndex((current) => (current + 1) % items.length)} />
+            : <EmptyCreative status={suggestions?.status ?? "missing"} />}
         </div>
-
-        {/* One server-resolved activation card remains dominant. */}
-        <ActivationCard data={data} />
-
-        {/* KPI row */}
-        <MobileSection title="Results" className="mt-1">
-          {performance ? (
-            <>
-              <p className="mb-3 text-[12.5px] text-muted-foreground" role="status">Last 30 days. {reportingFoot(performance.lastSyncedAt)}.</p>
-              <div className="grid grid-cols-3 gap-0">
-                <ResultMetric label={copy.kpis.leads} value={compactNumber(performance.leads)} fullValue={String(performance.leads)} foot={<>{performance.previousLeads == null ? "Provider data" : <><Delta current={performance.leads} previous={performance.previousLeads} /> vs prior</>}</>} />
-                <ResultMetric label={copy.kpis.costPerLead} value={performance.cpl == null ? "N/A" : compactMoney(performance.cpl)} fullValue={performance.cpl == null ? undefined : money(performance.cpl)} unavailable={performance.cpl == null} foot={performance.cpl == null ? "No cost data yet" : <><Delta current={performance.cpl} previous={performance.previousCpl} downIsGood /> vs prior</>} />
-                <ResultMetric label={ads.live == null ? copy.kpis.adsCreated : copy.kpis.adsLive} value={compactNumber(ads.live ?? ads.created)} fullValue={String(ads.live ?? ads.created)} foot={ads.created > 0 ? copy.kpis.publishedThisWeek(ads.publishedThisWeek) : copy.kpis.noAdsYet} />
-              </div>
-            </>
-          ) : (
-            <p className="text-[13px] text-muted-foreground" role="status"><span aria-label="Enquiry reporting unavailable">Unavailable</span>. <ReportingRecovery state={data.meta.state} /></p>
-          )}
-        </MobileSection>
-
-        {quickActions.length > 0 ? <MobileSection title="Tools"><div>{quickActions.map((action) => { const Icon = navByVariant.self_serve.find((item) => item.href === action.href)?.icon ?? LibraryBig; return <ActionRow key={action.href} href={action.href} icon={<Icon size={17} />} title={action.title} subtitle={action.subtitle} />; })}</div></MobileSection> : null}
-
-        <WorkspaceDetails credits={credits} plan={data.plan} meta={data.meta} booking={data.booking} packEstimate={credits.remaining == null ? null : Math.floor(credits.remaining / 2)} />
-      </div>
+      </section>
     </div>
   );
 }
