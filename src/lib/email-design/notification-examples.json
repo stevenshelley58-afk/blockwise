@@ -44,7 +44,7 @@
         }
       ],
       "chart": {
-        "kind": "bars",
+        "kind": "line",
         "title": "Activity over the day",
         "unit": "New leads",
         "values": [
@@ -64,7 +64,9 @@
             "label": "Evening",
             "value": 0
           }
-        ]
+        ],
+        "imageUrl": "https://blockwise.sale/email-preview/email-assets/daily-line-light.png",
+        "darkImageUrl": "https://blockwise.sale/email-preview/email-assets/daily-line-dark.png"
       }
     },
     "quiet": {
@@ -142,7 +144,7 @@
         }
       ],
       "chart": {
-        "kind": "bars",
+        "kind": "line",
         "title": "Leads by day",
         "unit": "New leads",
         "values": [
@@ -174,7 +176,9 @@
             "label": "Mon",
             "value": 3
           }
-        ]
+        ],
+        "imageUrl": "https://blockwise.sale/email-preview/email-assets/weekly-line-light.png",
+        "darkImageUrl": "https://blockwise.sale/email-preview/email-assets/weekly-line-dark.png"
       }
     },
     "quiet": {

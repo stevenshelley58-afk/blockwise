@@ -1,6 +1,6 @@
 # Blockwise email library — Quiet card
 
-Version 1.3.1. Quiet card with the dark branded header, inset footer and compact actions approved by Steven on 8 September 2026.
+Version 1.4.0. Quiet card with the dark branded header, inset footer and compact actions approved by Steven on 8 September 2026.
 Daily, weekly and new-lead emails rebuilt with performance charts and ad previews on 8 September 2026.
 
 44 reusable templates in the existing Blockwise design system. This is a template
@@ -10,9 +10,9 @@ events, figures, dates and links are fictional. Do not send the examples.
 ## Open and reuse
 
 - Browse: https://blockwise.sale/email-preview/email-library
-- Stored in Frank: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.3.1/blockwise-email-library.zip?download=1
-- Frank README: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.3.1/README.md
-- Persistent VPS location: `/srv/frank/data/window/uploads/library/blockwise-email/2026-09-08-v1.3.1/`.
+- Stored in Frank: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.4/blockwise-email-library.zip?download=1
+- Frank README: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.4/README.md
+- Persistent VPS location: `/srv/frank/data/window/uploads/library/blockwise-email/2026-09-08-v1.4/`.
 
 Frank's existing file-download route serves this versioned library. No new Frank
 app screen, database, agent runtime or live-mail integration was created. The ZIP
@@ -93,7 +93,7 @@ node render.mjs weekly-performance --example=delayed ./review
 
 ### Optional visual inputs
 
-The daily and weekly reports accept `chart: { kind: "bars", title, unit,
+The daily and weekly reports accept `chart: { kind: "line", title, unit, imageUrl?, darkImageUrl?,
 values: [{ label, value }] }`. Supply one to seven explicit integer counts; do
 not derive a made-up distribution from a total. Every label is part of the
 plain-text companion. The reporting adapter, not the renderer, owns attribution,
@@ -154,7 +154,7 @@ rounded cards. Dark colours are neutral counterparts, not a new accent palette.
 
 The email uses HTML text and presentation tables, inline essentials, a hidden
 preheader, a fluid single-column layout capped at 600px, and a matching plain-text
-version. Reports use labelled table-based charts that need no image request, and
+version. Reports use smooth raster line graphs with labelled HTML data fallbacks, and
 small, explicitly sized JPEG ad previews with descriptive alternative text and
 HTML context. No remote fonts, scripts, tracking pixels or new dependencies are
 required. The logo remains a small HTML table with a text wordmark. Primary
@@ -214,3 +214,12 @@ References: [Gmail supported CSS](https://developers.google.com/workspace/gmail/
   previews and automated tests are not received-inbox certification.
 
 No emails have been sent and no weekly job has been scheduled by this library.
+
+## Launch collection — v1.4
+The preview collection=launch view and launch-inventory.json identify 23 launch essentials: account access and security, welcome/setup, invitations, ad review and publishing, connection attention, lead alerts, daily/weekly reports, receipts/subscriptions/payment recovery, credits and support. All 44 templates remain available, including the subscriber newsletter.
+
+Every template uses the approved dark masthead, inset footer and compact capsule actions. Detail rows and ad thumbnails follow the contact-first lead alert rather than oversized panels.
+
+Reports use smooth monotone line graphs generated from observed values, not forecasts. Optimized light/dark PNGs avoid relying on inline SVG in inboxes. Chart values remain HTML and plain text so blocking images does not hide the data. Production callers must generate images from their actual chart values and provide matching approved HTTPS imageUrl/darkImageUrl; omitting images intentionally renders data only, never a sample graph. The reusable source/line-chart.ts helper generates SVG for server-side rasterization (for example with sharp); do not embed that SVG directly in email. Included graph assets are fictional examples only.
+
+This is a reusable template release, not a live sender rollout. Before launch, wire real event data and recipient preferences, validate links, test delivery in actual mail clients, and check unsubscribe/idempotency/suppression handling. No sending settings are changed by the preview.

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { EMAIL_TEMPLATES, EMAIL_CATEGORIES, buildTemplate, requiredVariables } from "../src/lib/email-design/catalog.ts";
+import { EMAIL_TEMPLATES, EMAIL_CATEGORIES, LAUNCH_TEMPLATE_IDS, buildTemplate, requiredVariables } from "../src/lib/email-design/catalog.ts";
 import { exampleVariables, renderExample, exampleStates } from "../src/lib/email-design/examples.ts";
 
 const productionValues = id => JSON.parse(JSON.stringify(exampleVariables(id)).replaceAll("preview.blockwise.example", "blockwise.sale").replace("Blockwise · Sample business address. Replace before sending", "Test business identity for validation"));
@@ -135,7 +135,7 @@ test("notification visuals carry real fixture charts and ads, then clear for qui
 
 test("visual inputs fail closed at the chart and ad boundaries", () => {
   const values = productionValues("daily-digest");
-  const chart = { kind: "bars", title: "Daily leads", unit: "Leads", values: [{ label: "A", value: 1 }] };
+  const chart = { kind: "line", title: "Daily leads", unit: "Leads", values: [{ label: "A", value: 1 }] };
   for (const value of [NaN, Infinity, -1, 1.5, 1000001]) assert.throws(() => buildTemplate("daily-digest", { ...values, chart: { ...chart, values: [{ label: "A", value }] } }), /chart|value/i);
   assert.throws(() => buildTemplate("daily-digest", { ...values, chart: null }), /chart/i);
   assert.throws(() => buildTemplate("daily-digest", { ...values, chart: { ...chart, title: "" } }), /title/i);
@@ -189,7 +189,7 @@ test("visual text is escaped and validated, including controls and placeholders"
   assert.doesNotMatch(output.html, /<em>Lead/);
   const ad = values.ad_previews[0];
   const custom = buildTemplate("daily-digest", { ...values, ad_previews: [{ ...ad, width: 1200, height: 600 }] });
-  assert.match(custom.html, /width="220" height="110"/);
+  assert.match(custom.html, /width="52" height="26"/);
   assert.throws(() => buildTemplate("daily-digest", { ...values, ad_previews: [{ ...ad, width: 640, height: undefined }] }), /dimension/i);
   assert.throws(() => buildTemplate("new-lead", { ...productionValues("new-lead"), chart: base }), /chart/i);
   assert.throws(() => buildTemplate("welcome", { ...productionValues("welcome"), ad_previews: [ad] }), /visual/i);
@@ -229,4 +229,28 @@ test("new lead follows supplied contact-first reference and validates contact ac
   assert.throws(() => buildTemplate("new-lead", {...values, lead_email:"test@example.com?bcc=other@example.com"}), /email/);
   assert.ok(output.text.includes("0400 123 456"));
   assert.ok(output.text.includes("Anything else"));
+});
+
+test("reports use adaptive raster line charts with independent HTML data fallback", () => {
+  for (const id of ["daily-digest", "weekly-performance"]) {
+    const output = renderExample(id);
+    assert.match(output.html, /class="chart-light"/);
+    assert.match(output.html, /class="chart-dark"/);
+    assert.doesNotMatch(output.html, /class="chart-bar|<svg/);
+    const values = productionValues(id);
+    delete values.chart.imageUrl;
+    delete values.chart.darkImageUrl;
+    delete values.ad_previews;
+    const fallback = buildTemplate(id, values);
+    assert.doesNotMatch(fallback.html, /<img/);
+    for (const point of values.chart.values) assert.ok(fallback.html.includes(point.label));
+    assert.throws(() => buildTemplate(id, {...values, chart: {...values.chart, imageUrl:"javascript:alert(1)"}}), /URL|HTTPS/);
+    assert.throws(() => buildTemplate(id, {...values, chart: {...values.chart, kind:"bars"}}), /chart/);
+  }
+});
+
+test("launch collection contains unique valid templates", () => {
+  assert.equal(LAUNCH_TEMPLATE_IDS.length, 23);
+  assert.equal(new Set(LAUNCH_TEMPLATE_IDS).size, 23);
+  for (const id of LAUNCH_TEMPLATE_IDS) assert.ok(EMAIL_TEMPLATES.some(t => t.id === id), id);
 });

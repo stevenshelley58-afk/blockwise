@@ -2,17 +2,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { Button } from "@/components/ui/button";
-import { EMAIL_CATEGORIES, EMAIL_TEMPLATES, NOTIFICATION_TEMPLATE_IDS, getTemplate, requiredVariables } from "@/lib/email-design/catalog";
+import { EMAIL_CATEGORIES, EMAIL_TEMPLATES, NOTIFICATION_TEMPLATE_IDS, LAUNCH_TEMPLATE_IDS, getTemplate, requiredVariables } from "@/lib/email-design/catalog";
 import { renderExample, exampleStates, EXAMPLE_STATE_LABELS, type ExampleState } from "@/lib/email-design/examples";
 import type { EmailColorMode } from "@/lib/email-design/renderer";
 import { EmailPreviewFrame } from "./email-preview-frame";
 
-const FRANK_LIBRARY = "https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.3.1/blockwise-email-library.zip?download=1";
+const FRANK_LIBRARY = "https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.4/blockwise-email-library.zip?download=1";
 const fieldStyle = "mt-2 min-h-11 w-full min-w-0 rounded-xl border border-border bg-card px-3 text-[13px] text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 const deliveryLabel = { transactional: "Service email", "optional-service": "Optional notification", marketing: "Subscriber email" };
 
 export function EmailLibrary({ notificationsOnly = false }: { notificationsOnly?: boolean }) {
   const [id, setId] = useState(notificationsOnly ? "daily-digest" : "weekly-newsletter");
+  const [launchOnly, setLaunchOnly] = useState(false);
+  const availableTemplates = launchOnly ? EMAIL_TEMPLATES.filter(item => (LAUNCH_TEMPLATE_IDS as readonly string[]).includes(item.id)) : EMAIL_TEMPLATES;
   const [requestedState, setRequestedState] = useState<ExampleState>("standard");
   const state = exampleStates(id).includes(requestedState) ? requestedState : "standard";
   const [theme, setTheme] = useState<EmailColorMode>("light");
@@ -21,8 +23,11 @@ export function EmailLibrary({ notificationsOnly = false }: { notificationsOnly?
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requestedId = params.get("template");
+    const launch = !notificationsOnly && params.get("collection") === "launch";
+    setLaunchOnly(launch);
+    if (launch && !(LAUNCH_TEMPLATE_IDS as readonly string[]).includes(requestedId ?? "")) setId("sign-in");
     const requestedTheme = params.get("theme");
-    if ((notificationsOnly ? NOTIFICATION_TEMPLATE_IDS : EMAIL_TEMPLATES.map(item => item.id)).some(id => id === requestedId)) setId(requestedId!);
+    if ((notificationsOnly ? NOTIFICATION_TEMPLATE_IDS : launch ? LAUNCH_TEMPLATE_IDS : EMAIL_TEMPLATES.map(item => item.id)).some(id => id === requestedId)) setId(requestedId!);
     if (requestedTheme === "light" || requestedTheme === "dark" || requestedTheme === "system") setTheme(requestedTheme);
     if (params.get("device") === "mobile") setDevice("mobile");
     const requestedState = params.get("state");
@@ -30,8 +35,8 @@ export function EmailLibrary({ notificationsOnly = false }: { notificationsOnly?
     setReady(true);
   }, [notificationsOnly]);
   useEffect(() => {
-    if (ready) window.history.replaceState(null, "", `?${new URLSearchParams({ template: id, theme, device, state })}`);
-  }, [id, theme, device, state, ready]);
+    if (ready) window.history.replaceState(null, "", `?${new URLSearchParams({ template: id, theme, device, state, ...(launchOnly ? { collection: "launch" } : {}) })}`);
+  }, [id, theme, device, state, ready, launchOnly]);
   const template = getTemplate(id);
   const rendered = useMemo(() => renderExample(id, theme, state), [id, theme, state]);
   const adaptive = useMemo(() => renderExample(id, "system", state), [id, state]);
@@ -49,7 +54,8 @@ export function EmailLibrary({ notificationsOnly = false }: { notificationsOnly?
         <div className="max-w-[680px]">
           <BlockwiseLogo tokens className="text-foreground" />
 
-          <h1 className="mt-4 font-(family-name:--font-display) text-[24px] font-extrabold leading-[1.15] tracking-[-.02em] sm:text-[28px]">{notificationsOnly ? "Daily. Weekly. A new lead." : "Every email. One familiar feel."}</h1>
+          <h1 className="mt-4 font-(family-name:--font-display) text-[24px] font-extrabold leading-[1.15] tracking-[-.02em] sm:text-[28px]">{notificationsOnly ? "Daily. Weekly. A new lead." : launchOnly ? "Your launch emails." : "Every email. One familiar feel."}</h1>
+          {!notificationsOnly && <Button variant="outline" className="mt-4 mr-4 min-h-11" onClick={() => { setLaunchOnly(!launchOnly); if (!launchOnly) setId("sign-in"); }}>{launchOnly ? "All 44 templates" : "23 launch essentials"}</Button>}
           {!notificationsOnly && <a href="/email-preview/email-notifications" className="mt-4 inline-flex min-h-11 items-center text-[14px] font-semibold underline">View the three activity emails →</a>}
         </div>
         <a href={FRANK_LIBRARY} className="inline-flex min-h-11 w-fit items-center justify-center rounded-full bg-primary px-5 py-3 text-[13px] font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">Library in Frank ↗</a>
@@ -64,17 +70,17 @@ export function EmailLibrary({ notificationsOnly = false }: { notificationsOnly?
               <p className="hidden pt-3 text-[12px] leading-5 text-muted-foreground md:block">Three independent preferences. Choose any combination.</p>
             </div> : <>
             <label className="mt-4 block text-[12px] font-semibold">Category
-              <select aria-label="Template category" className={fieldStyle} value={template.category} onChange={event => setId(EMAIL_TEMPLATES.find(item => item.category === event.target.value)!.id)}>
-                {EMAIL_CATEGORIES.map(category => <option key={category}>{category}</option>)}
+              <select aria-label="Template category" className={fieldStyle} value={template.category} onChange={event => setId(availableTemplates.find(item => item.category === event.target.value)!.id)}>
+                {EMAIL_CATEGORIES.filter(category => availableTemplates.some(item => item.category === category)).map(category => <option key={category}>{category}</option>)}
               </select>
             </label>
             <label className="mt-4 block text-[12px] font-semibold">Email
               <select aria-label="Email template" className={fieldStyle} value={id} onChange={event => setId(event.target.value)}>
-                {EMAIL_TEMPLATES.filter(item => item.category === template.category).map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+                {availableTemplates.filter(item => item.category === template.category).map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
               </select>
             </label>
             <div className="mt-4 hidden space-y-1 border-t border-border pt-3 lg:block" aria-label="Templates in this category">
-              {EMAIL_TEMPLATES.filter(item => item.category === template.category).map(item => <Button key={item.id} variant={item.id === id ? "secondary" : "ghost"} aria-pressed={item.id === id} onClick={() => setId(item.id)} className="h-auto min-h-11 w-full justify-start whitespace-normal px-3 text-left text-[13px]">{item.label}</Button>)}
+              {availableTemplates.filter(item => item.category === template.category).map(item => <Button key={item.id} variant={item.id === id ? "secondary" : "ghost"} aria-pressed={item.id === id} onClick={() => setId(item.id)} className="h-auto min-h-11 w-full justify-start whitespace-normal px-3 text-left text-[13px]">{item.label}</Button>)}
             </div>
             </>}
             {exampleStates(id).length > 1 && <label className="mt-4 block border-t border-border pt-4 text-[12px] font-semibold">Example state
@@ -85,7 +91,7 @@ export function EmailLibrary({ notificationsOnly = false }: { notificationsOnly?
           <section className="hidden rounded-[20px] border border-border bg-background p-4 lg:block">
             <h2 className="text-[13px] font-bold">Adaptive in the inbox</h2>
             <p className="mt-2 text-[12px] leading-5 text-muted-foreground">One email contains both colour schemes. Supporting mail apps choose at opening time. Other apps may adjust colours themselves.</p>
-            <p className="mt-3 text-[12px] leading-5 text-muted-foreground">Charts stay readable without images. Ad previews are optimized, fonts are local, and every template includes plain text.</p>
+            <p className="mt-3 text-[12px] leading-5 text-muted-foreground">Chart values stay readable when images are blocked. Ad previews are optimized, fonts are local, and every template includes plain text.</p>
           </section>
         </aside>
 
@@ -109,7 +115,7 @@ export function EmailLibrary({ notificationsOnly = false }: { notificationsOnly?
             <EmailPreviewFrame html={rendered.html} title={`Quiet card: ${template.label}`} device={device} />
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-[12px] leading-5 text-muted-foreground">{(adaptive.bytes / 1024).toFixed(1)} KB HTML · {adaptive.html.includes("<img ") ? "Optimized ad previews · " : ""}Fictional sample content</p>
+            <p className="text-[12px] leading-5 text-muted-foreground">{(adaptive.bytes / 1024).toFixed(1)} KB HTML · {adaptive.html.includes("<img ") ? "Optimized images · " : ""}Fictional sample content</p>
             <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" className="min-h-11" onClick={() => downloadSample("html")}>Sample HTML</Button><Button size="sm" variant="outline" className="min-h-11" onClick={() => downloadSample("txt")}>Plain text</Button></div>
           </div>
           <details className="mt-4 border-t border-border pt-3 text-[12px] leading-5">

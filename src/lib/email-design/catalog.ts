@@ -10,6 +10,7 @@ export type TemplateDefinition = {
 };
 export type TemplateValues = Record<string, string | readonly EmailSection[] | EmailChart | readonly EmailAdPreview[] | undefined> & { chart?: EmailChart; ad_previews?: readonly EmailAdPreview[] };
 export const NOTIFICATION_TEMPLATE_IDS = ["daily-digest", "weekly-performance", "new-lead"] as const;
+export const LAUNCH_TEMPLATE_IDS = ["sign-in", "verify-email", "password-reset", "password-changed", "email-change", "new-sign-in", "team-invitation", "welcome", "setup-reminder", "ad-ready-review", "campaign-live", "publishing-failed", "connection-attention", "new-lead", "daily-digest", "weekly-performance", "payment-receipt", "payment-failed", "subscription-started", "subscription-cancelled", "credits-low", "support-received", "support-reply"] as const;
 export const EMAIL_LIBRARY_VERSION = data.version;
 export const EMAIL_TEMPLATES = data.templates as readonly TemplateDefinition[];
 export const EMAIL_CATEGORIES = [...new Set(EMAIL_TEMPLATES.map(item => item.category))];
@@ -47,10 +48,11 @@ function validateUrl(value: string, key: string, production: boolean) {
   }
 }
 
-function validateChart(value: unknown): asserts value is EmailChart {
+function validateChart(value: unknown, production: boolean): asserts value is EmailChart {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid chart");
   const chart = value as Record<string, unknown>;
-  if (chart.kind !== "bars") throw new Error("Invalid chart kind");
+  if (chart.kind !== "line") throw new Error("Invalid chart kind");
+  for (const key of ["imageUrl", "darkImageUrl"]) if (chart[key] !== undefined) { validateText(chart[key], key, 500); validateUrl(chart[key] as string, key, production); }
   validateText(chart.title, "chart title", 100);
   validateText(chart.unit, "chart unit", 40);
   if (!Array.isArray(chart.values) || chart.values.length < 1 || chart.values.length > 7) throw new Error("Chart values must contain 1 to 7 items");
@@ -133,7 +135,7 @@ export function buildTemplate(id: string, values: TemplateValues, options: { mod
   const adPreviews = raw.ad_previews;
   if ((chart !== undefined || adPreviews !== undefined) && !NOTIFICATION_TEMPLATE_IDS.includes(id as typeof NOTIFICATION_TEMPLATE_IDS[number])) throw new Error("Visuals are supported only on notification templates");
   if (chart !== undefined && id === "new-lead") throw new Error("Charts are not supported on new-lead notifications");
-  if (chart !== undefined) validateChart(chart);
+  if (chart !== undefined) validateChart(chart, production);
   if (adPreviews !== undefined) validateAdPreviews(adPreviews, production);
   if (chart !== undefined || adPreviews !== undefined) message.visual = { ...(chart !== undefined ? { chart } : {}), ...(adPreviews !== undefined ? { adPreviews } : {}) };
   else delete message.visual;

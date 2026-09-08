@@ -6,7 +6,9 @@ export type EmailSection = {
   link?: { label: string; href: string };
 };
 export type EmailChart = {
-  kind: "bars";
+  kind: "line";
+  imageUrl?: string;
+  darkImageUrl?: string;
   title: string;
   unit: string;
   values: ReadonlyArray<{ label: string; value: number }>;

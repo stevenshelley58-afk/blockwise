@@ -17,9 +17,9 @@ test("email archive includes verified raster assets and runs without installed d
     assert.equal(manifest.sendingEnabled, false);
     assert.equal(manifest.exampleContentOnly, true);
     assert.equal(manifest.templates.length, 44);
-    assert.equal(manifest.assets.length, 2);
+    assert.equal(manifest.assets.length, 6);
     for (const asset of manifest.assets) {
-      assert.match(asset.file, /^assets\/sample-[a-z-]+\.jpg$/);
+      assert.match(asset.file, /^assets\/(?:sample-[a-z-]+\.jpg|(?:daily|weekly)-line-(?:light|dark)\.png)$/);
       assert.ok(asset.bytes < 70000);
     }
     for (const [file, expected] of Object.entries(manifest.files)) {
