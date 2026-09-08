@@ -53,7 +53,7 @@ const BudgetPacingChart = dynamic(() => import("./BudgetPacingChart").then((m) =
 // for positive deltas in the KPI strip, not used as a series colour.
 const DATA_HUE = "var(--ui-data)";
 
-const panelClass = "rounded-(--r-panel) border border-(--line) bg-(--surface) p-5 shadow-card";
+const panelClass = "min-w-0 rounded-(--r-panel) border border-(--line) bg-(--surface) p-5 shadow-card";
 const panelTitleClass = "font-display text-[15.5px] font-extrabold tracking-[-0.015em]";
 const thClass = "font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase";
 
@@ -366,7 +366,7 @@ function Dashboard({
   const resultAds = attentionAds.length > 0 ? attentionAds : payload.ads.slice(0, 3);
   return (
     <div
-      className={`grid gap-3.5 transition-opacity duration-250 motion-reduce:transition-none ${
+      className={`grid min-w-0 gap-3.5 transition-opacity duration-250 motion-reduce:transition-none ${
         refreshing ? "opacity-55" : ""
       }`}
       // `inert` keeps keyboard focus out of the stale subtree while refreshing,
@@ -381,7 +381,7 @@ function Dashboard({
             : "This ad is active. Its details will appear here after reporting refreshes."}
         </p>
       ) : null}
-      <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5">
+      <div className="grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2.5 sm:gap-3.5">
         <MetaKpiCard
           icon={UserPlus}
           iconTone="green"
@@ -431,7 +431,7 @@ function Dashboard({
             <h3 className={panelTitleClass}>{chartConfig.title}</h3>
             {chartMetric === "cpl" ? <p className="mt-0.5 text-[11.5px] text-(--faint)">{copy.cplGapNote}</p> : null}
           </div>
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Results chart">
+          <div className="flex min-w-0 max-w-full flex-wrap gap-1.5" role="group" aria-label="Results chart">
             {(["spend", "leads", "cpl"] as const).map((metric) => (
               <button
                 key={metric}
@@ -441,7 +441,12 @@ function Dashboard({
                 onClick={() => setChartMetric(metric)}
                 className={chartMetric === metric ? "inline-flex min-h-8 items-center rounded-full bg-(--ink) px-3 text-[11.5px] font-bold text-white" : "inline-flex min-h-8 items-center rounded-full border border-(--line) px-3 text-[11.5px] font-bold text-muted-foreground hover:border-(--line-heavy) hover:text-foreground"}
               >
-                {metric === "spend" ? "Spend" : metric === "leads" ? "Leads" : "Cost per lead"}
+                {metric === "spend" ? "Spend" : metric === "leads" ? "Leads" : (
+                  <>
+                    <span className="sm:hidden">Cost/lead</span>
+                    <span className="hidden sm:inline">Cost per lead</span>
+                  </>
+                )}
               </button>
             ))}
           </div>
@@ -502,7 +507,7 @@ function Dashboard({
 
       <details className={panelClass}>
         <summary className="cursor-pointer text-[13px] font-bold">Open pacing and location details</summary>
-        <div className="mt-3 grid gap-3.5 lg:grid-cols-[2fr_3fr]">
+        <div className="mt-3 grid gap-3.5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           {payload.suburbPerformance.length > 0 ? (
             <section className={panelClass}>
               <h3 className={panelTitleClass}>{copy.areaBreakdown.title}</h3>
@@ -550,7 +555,7 @@ function AdResultRow({
           ? "Paused"
           : "Recent result";
   return (
-    <div className="flex items-center gap-2.5 py-3 first:pt-0 last:pb-0 sm:gap-3">
+    <div className="flex min-w-0 items-center gap-2.5 py-3 first:pt-0 last:pb-0 sm:gap-3">
       <CreativePreview ad={ad} size={44} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[12.5px] font-bold">{ad.suburb ?? ad.adName}</p>

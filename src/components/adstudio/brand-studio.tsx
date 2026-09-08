@@ -117,7 +117,7 @@ function ColorSwatch({ label, value, sitePalette, open, onOpen, onClose, onChang
 
   const pickerContent = (
     <>
-      <div ref={svRef} className="relative aspect-[5/3.4] w-full cursor-crosshair touch-none rounded-(--r-control) bg-[linear-gradient(0deg,#000,transparent),linear-gradient(90deg,#fff,transparent),var(--h,#888)]" style={{ ["--h" as string]: `hsl(${hsv.h},100%,50%)` }} onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); pickFromField(event); }} onPointerMove={(event) => { if (event.buttons === 1) pickFromField(event); }}>
+      <div ref={svRef} className="relative aspect-[5/3.4] w-full cursor-crosshair touch-none rounded-(--r-control)" style={{ ["--h" as string]: `hsl(${hsv.h},100%,50%)`, backgroundColor: `hsl(${hsv.h},100%,50%)`, backgroundImage: "linear-gradient(0deg,#000,transparent),linear-gradient(90deg,#fff,transparent)" }} onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); pickFromField(event); }} onPointerMove={(event) => { if (event.buttons === 1) pickFromField(event); }}>
         <span className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow" style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%` }} />
       </div>
       <input className="min-h-11 w-full accent-primary" type="range" min={0} max={360} value={hsv.h} aria-label={`${label} hue`} onChange={(event) => commit({ ...hsv, h: Number(event.target.value) })} />
@@ -578,17 +578,17 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
   }
 
   const brandName = kit.identity.businessName || "Your brand";
-  const voiceLine = (kit.tone.voice || "").split(".")[0];
   const approved = kit.reviewStatus === "approved";
   const logoDisplayName = logoFile?.name ?? (logoPreviewUrl ? "Primary logo" : undefined);
   const hasExternalPrimaryLogo = needsLogoImportRecovery(logoPreviewUrl);
+  const needsLogoAttention = hasExternalPrimaryLogo || !logoPreviewUrl;
   const reversedLogoUrl = kit.logos.lightLogoUrl ?? kit.logos.darkLogoUrl;
   return (
     <div className="tw min-h-full bg-background font-sans text-foreground" aria-label="Brand Pack">
       <div className="flex min-h-20 flex-wrap items-center gap-3 border-b border-border bg-card px-4 py-4 md:px-6">
         <Button variant="ghost-pill" size="sm" asChild><Link href={returnTo}><ArrowLeft size={15} aria-hidden /> Back</Link></Button>
         <div className="grid gap-0.5"><p className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Ad Studio</p><h1 className="font-display text-2xl font-extrabold tracking-[-0.02em] md:text-[27px]">Brand Pack</h1></div>
-        <Badge variant="secondary" className={approved ? "bg-success-soft text-success" : "bg-warning-soft text-warning"}>{approved ? <><Check size={13} aria-hidden /> Approved</> : "Pending review"}</Badge>
+        <Badge variant="secondary" className={needsLogoAttention ? "bg-warning-soft text-warning" : approved ? "bg-success-soft text-success" : "bg-warning-soft text-warning"}>{needsLogoAttention ? "Logo needs attention" : approved ? <><Check size={13} aria-hidden /> Approved</> : "Pending review"}</Badge>
         <div className="ml-auto flex min-h-11 flex-wrap items-center justify-end gap-3 text-sm font-semibold" aria-live="polite">
           {notice && <span role={notice.tone === "err" ? "alert" : undefined} className={`text-sm font-semibold ${notice.tone === "err" ? "text-error" : "text-success"}`}>{notice.text}</span>}
           <Button type="button" size="lg" disabled={busy !== ""} onClick={() => void approveKit()}><Check size={16} aria-hidden /> {busy === "approve" ? "Approving Brand Pack…" : "Approve Brand Pack"}</Button>
@@ -919,7 +919,7 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
           <aside className="order-first h-max md:sticky md:top-5">
             <Card className="grid gap-5 rounded-(--r-panel) border-border bg-card p-5 shadow-card md:p-6">
               <div className="flex items-start justify-between gap-3"><div><h2 className="font-display text-[17px] font-extrabold tracking-[-0.015em]">Live creative preview</h2><p className="mt-1 text-xs text-muted-foreground">Updates as you edit</p></div><Badge variant="secondary">Feed</Badge></div>
-              {hasExternalPrimaryLogo || !logoPreviewUrl ? <div className="rounded-(--r-card) border border-warning/25 bg-warning-soft p-3 text-xs text-foreground" role="status"><p className="font-semibold">Add a Blockwise-ready logo before approval.</p><p className="mt-1 text-muted-foreground">Open Logo below to rescan or upload a replacement.</p></div> : null}
+              {needsLogoAttention ? <div className="rounded-(--r-card) border border-warning/25 bg-warning-soft p-3 text-xs text-foreground" role="status"><p className="font-semibold">Add a Blockwise-ready logo before approval.</p><p className="mt-1 text-muted-foreground">Open Logo below to rescan or upload a replacement.</p></div> : null}
               <div className="flex flex-wrap justify-center gap-3">
                 <div className="relative aspect-[9/16] w-32 overflow-hidden rounded-(--r-card) bg-muted p-2 text-background">
                   <span className="rounded-full px-2 py-1 text-[9px] font-semibold" style={{ background: kit.colours.primary, color: kit.colours.text }}>
@@ -942,11 +942,6 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
                   </div>
                 </div>
               </div>
-              <p className="border-t border-border pt-4 text-sm text-muted-foreground">
-                Re-renders as you edit — voice line:
-                <br />
-                <b>{voiceLine || "describe your voice above"}</b>
-              </p>
             </Card>
           </aside>
         </div>

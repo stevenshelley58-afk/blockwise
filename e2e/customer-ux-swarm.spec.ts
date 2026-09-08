@@ -61,6 +61,7 @@ test.describe("simple customer app acceptance", () => {
     for (const route of ["/ad-studio", "/settings", "/results"]) {
       await page.goto(route);
       await page.evaluate(() => { document.body.style.zoom = "2"; });
+      await expect(page.locator("main[aria-busy=true]")).toHaveCount(0);
       await expect(page.getByRole("main")).toBeVisible();
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
       expect(overflow, route + " at double-size zoom").toBe(false);
@@ -73,7 +74,12 @@ test.describe("simple customer app acceptance", () => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/settings");
       await expect(page.locator("[data-settings-section]:visible")).toHaveCount(0);
-      await page.goto("/settings#notifications");
+      // Wait for an interactive control before changing the same-document hash.
+      // Navigating during the initial Next hydration can replace that URL.
+      await page.getByRole("button", { name: "Account", exact: true }).click();
+      await expect(page.getByRole("menu")).toBeVisible();
+      await page.keyboard.press("Escape");
+      await page.getByRole("link", { name: "Notifications", exact: true }).click();
       await expect(page.locator('[data-settings-section="notifications"]')).toBeVisible();
       await expect(page.locator("[data-settings-section]:visible")).toHaveCount(1);
       await page.getByRole("button", { name: "All settings", exact: true }).filter({ visible: true }).click();

@@ -163,7 +163,7 @@ test.describe("customer Ad Radar UX acceptance", () => {
     }
   });
 
-  test("mobile result cards lead with the image preview", async ({ page }) => {
+  test("mobile result cards lead with the image preview", async ({ page }, testInfo) => {
     const tile = page.getByRole("button", { name: "Open Example Realty ad", exact: true });
     await expect(tile).toBeVisible();
     const image = tile.locator("img").first();
@@ -175,6 +175,14 @@ test.describe("customer Ad Radar UX acceptance", () => {
     expect(imageBox).not.toBeNull();
     expect(nameBox).not.toBeNull();
     expect(imageBox!.y).toBeLessThanOrEqual(nameBox!.y);
+    await page.screenshot({ path: testInfo.outputPath("radar-mobile.png"), fullPage: true });
+  });
+
+  test("desktop Radar view is captured for review", async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/ad-radar?q=homes");
+    await expect(page.getByText("Example Realty", { exact: true }).first()).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("radar-desktop.png"), fullPage: true });
   });
 });
 

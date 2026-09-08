@@ -221,7 +221,6 @@ test.describe("customer navigation canary", () => {
       if (route.request().method() === "PATCH") return route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ message: "offline" }) });
       return route.continue();
     });
-    await page.goto(`/settings?workspaceId=${encodeURIComponent(workspaceId!)}`);
     await page.goto(`/settings?workspaceId=${encodeURIComponent(workspaceId!)}#workspace`);
     const workspaceSection = page.locator("#workspace");
     const name = workspaceSection.getByLabel("Workspace name");
@@ -247,7 +246,6 @@ test.describe("customer navigation canary", () => {
       return route.continue();
     });
     await page.route("**/api/workspace/onboarding-market", (route) => route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "Country service unavailable" }) }));
-    await page.goto(`/settings?workspaceId=${encodeURIComponent(workspaceId!)}`);
     await page.goto(`/settings?workspaceId=${encodeURIComponent(workspaceId!)}#workspace`);
     const workspaceSection = page.locator("#workspace");
     const country = workspaceSection.getByLabel("Country");

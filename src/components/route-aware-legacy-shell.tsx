@@ -74,7 +74,7 @@ export function RouteAwareLegacyShell({
           </div>
         ) : null}
       </aside>
-      <div className="main">
+      <div className="main" role={/^\/(?:leads|results|settings|connect-meta|ad-radar)(?:\/|$)/.test(pathname) ? "main" : undefined}>
         <header className="topbar">
           <Link className="topbar-brand" href={homeHref} aria-label="Blockwise">
             <BlockwiseLogo showWordmark={false} />

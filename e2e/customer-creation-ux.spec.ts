@@ -18,7 +18,6 @@ test.use({
   },
 });
 
-test.describe.configure({ mode: "serial" });
 test.describe("customer creation UX acceptance", () => {
   test.setTimeout(120_000);
   test.skip(!canRun, "Requires controlled canary URL and authenticated fixture");
@@ -46,19 +45,29 @@ test.describe("customer creation UX acceptance", () => {
 
       const preview = page.getByRole("heading", { name: "Live creative preview", exact: true });
       const website = page.getByLabel("Your website address", { exact: true });
+      const importDisclosure = page.locator("details").filter({ hasText: "Import from website" }).first();
+      const importSummary = importDisclosure.locator("summary");
       await expect(preview).toBeVisible();
-      await expect(website).toBeVisible();
+      await expect(importSummary).toBeVisible();
+      await expect(importDisclosure).not.toHaveAttribute("open", "");
+      await expect(website).toBeHidden();
       const hierarchy = await page.evaluate(() => {
         const preview = Array.from(document.querySelectorAll("h2")).find(node => node.textContent?.includes("Live creative preview"));
-        const website = document.getElementById("brand-website");
+        const disclosure = Array.from(document.querySelectorAll("details")).find(node => node.textContent?.includes("Import from website"));
         return {
           previewTop: preview?.getBoundingClientRect().top ?? Infinity,
-          websiteTop: website?.getBoundingClientRect().top ?? -Infinity,
+          disclosureTop: disclosure?.getBoundingClientRect().top ?? -Infinity,
           rootOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
         };
       });
-      expect(hierarchy.previewTop, "preview should precede the source form").toBeLessThanOrEqual(hierarchy.websiteTop);
+      expect(hierarchy.previewTop, "preview should precede the source disclosure").toBeLessThanOrEqual(hierarchy.disclosureTop);
       expect(hierarchy.rootOverflow, "Brand Pack should not create horizontal page overflow").toBe(false);
+
+      await importSummary.click();
+      await expect(website).toBeVisible();
+      await expect(website).toBeEditable();
+      await importSummary.click();
+      await expect(website).toBeHidden();
 
       const colours = page.locator("summary").filter({ hasText: "Colours" });
       await colours.click();
@@ -66,14 +75,31 @@ test.describe("customer creation UX acceptance", () => {
       await swatch.click();
       const overlay = width < 640 ? page.getByRole("dialog", { name: "Edit Primary colour", exact: true }) : page.locator("[data-radix-popper-content-wrapper]:visible").last();
       await expect(overlay).toBeVisible();
-      await page.screenshot({ path: testInfo.outputPath("brand-overlay-" + width + ".png"), fullPage: false });
+      const viewport = page.viewportSize()!;
+      await expect.poll(async () => {
+        const bounds = await overlay.boundingBox();
+        if (!bounds || bounds.width <= 0 || bounds.height <= 0) return false;
+        return bounds.x >= 0 && bounds.y >= 0 && bounds.x + bounds.width <= viewport.width && bounds.y + bounds.height <= viewport.height;
+      }, { timeout: 5_000, message: "colour picker should settle fully inside the viewport" }).toBe(true);
       const bounds = await overlay.boundingBox();
       expect(bounds, "colour picker should have a measurable overlay").not.toBeNull();
-      const viewport = page.viewportSize()!;
       expect(bounds!.x).toBeGreaterThanOrEqual(0);
       expect(bounds!.y).toBeGreaterThanOrEqual(0);
       expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(viewport.width);
       expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(viewport.height);
+      const picker = overlay.locator("div.cursor-crosshair");
+      await expect(picker).toBeVisible();
+      const initialPaint = await picker.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return { backgroundImage: style.backgroundImage, backgroundColor: style.backgroundColor };
+      });
+      expect(initialPaint.backgroundImage, "saturation/value picker should render its gradient layers").not.toBe("none");
+      expect(initialPaint.backgroundColor, "saturation/value picker should render its hue base").not.toBe("rgba(0, 0, 0, 0)");
+      const hue = overlay.getByRole("slider", { name: "Primary hue", exact: true });
+      const nextHue = (Number(await hue.inputValue()) + 120) % 360;
+      await hue.fill(String(nextHue));
+      await expect.poll(async () => picker.evaluate((element) => getComputedStyle(element).backgroundColor), { timeout: 5_000, message: "picker hue should update its base colour" }).not.toBe(initialPaint.backgroundColor);
+      await page.screenshot({ path: testInfo.outputPath("brand-overlay-" + width + ".png"), fullPage: false });
       await page.keyboard.press("Escape");
       await expect(overlay).toBeHidden();
       await expect(swatch).toBeFocused();
@@ -104,7 +130,20 @@ test.describe("customer creation UX acceptance", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/ad-studio/templates/" + encodeURIComponent(templateId!) + "/publish?adId=" + encodeURIComponent(adId));
     await expect(page.getByRole("heading", { name: "1. Creative & copy", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Download both formats", exact: true })).toBeVisible();
+    const downloadBoth = page.getByRole("button", { name: "Download both formats", exact: true });
+    await expect(downloadBoth).toBeVisible();
+    await downloadBoth.click();
+    const downloadMenuItem = page.getByRole("menuitem", { name: "Download both files", exact: true });
+    await expect(downloadMenuItem).toBeVisible();
+    const downloadEvents = [
+      page.waitForEvent("download", { predicate: (download) => download.suggestedFilename() === "blockwise-feed.png" }),
+      page.waitForEvent("download", { predicate: (download) => download.suggestedFilename() === "blockwise-story.png" }),
+    ];
+    await downloadMenuItem.click();
+    const downloads = await Promise.all(downloadEvents);
+    expect(downloads.map((download) => download.suggestedFilename()).sort()).toEqual(["blockwise-feed.png", "blockwise-story.png"]);
+    await page.keyboard.press("Escape");
+    await expect(downloadMenuItem).toBeHidden();
     await expect(page.locator("#publish-stage-2")).toBeHidden();
 
     await page.getByRole("button", { name: "2. Destination & form", exact: true }).click();

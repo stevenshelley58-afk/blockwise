@@ -78,7 +78,7 @@ test.describe("customer UX flows", () => {
     await expect(page.getByRole("button", { name: /refresh/i })).toHaveCount(1);
 
     await page.goto("/results?example=1");
-    await expect(page.getByText("Example report", { exact: true })).toBeVisible();
+    await expect(page.locator("span").filter({ hasText: /^Example report$/ })).toHaveCount(1);
     await expect(page.getByRole("button", { name: /refresh/i })).toHaveCount(0);
     await expect(page.getByRole("group", { name: /date range/i })).toHaveCount(0);
     await expect(page.getByRole("group", { name: "Results chart" })).toBeVisible();
@@ -92,10 +92,11 @@ test.describe("customer UX flows", () => {
   test("Meta connection keeps the essential step and makes optional help expandable", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/connect-meta");
-    await expect(page.getByRole("main", { name: "Share Meta assets" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Share your Meta assets with Blockwise", exact: true })).toBeVisible();
     const intro = page.getByRole("button", { name: /show me what to do/i });
     if (!(await intro.isVisible().catch(() => false))) {
-      await expect(page.getByRole("heading", { name: /ask a workspace owner or admin/i })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Your access details were sent", exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Check status", exact: true })).toBeVisible();
       return;
     }
     await intro.click();

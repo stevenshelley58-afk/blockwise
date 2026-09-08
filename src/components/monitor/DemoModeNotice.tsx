@@ -79,11 +79,11 @@ export function DemoModeNotice({ metaConnectHref }: { metaConnectHref: string })
       ) : (
         <section
           aria-live="polite"
-          className="flex flex-wrap items-center justify-between gap-3 rounded-(--r-card) border border-(--line) bg-(--surface-subtle) px-4 py-3.5 shadow-card"
+          className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-(--r-card) border border-(--line) bg-(--surface-subtle) px-4 py-3.5 shadow-card"
         >
-          <div className="flex items-start gap-2.5">
+          <div className="flex min-w-0 items-start gap-2.5">
             <span className="mt-1 size-[8px] shrink-0 rounded-full bg-warning" aria-hidden />
-            <div className="text-[13px] leading-snug">
+            <div className="min-w-0 text-[13px] leading-snug">
               <strong className="font-bold">{demoChip}</strong>{" "}
               <span className="text-muted-foreground">
                 Connect Meta to replace it with your real spend, leads, and ads.
