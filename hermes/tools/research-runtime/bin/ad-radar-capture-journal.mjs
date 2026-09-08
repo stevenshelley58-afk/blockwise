@@ -2,9 +2,10 @@ import { mkdir, readFile, writeFile, rename } from "node:fs/promises";
 import { join } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 
+const UUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/iu;
 const digest = (body) => createHash("sha256").update(body).digest("hex");
 function journalPath(root, runId) {
-  if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/iu.test(String(runId))) throw new Error("Invalid capture run ID");
+  if (!UUID.test(String(runId))) throw new Error("Invalid capture run ID");
   return join(root, "capture-journal", runId + ".json");
 }
 export async function saveCaptureJournal(root, input, { body, receipt, status }) {
@@ -47,4 +48,47 @@ export async function ensureFetchRun(rest, row) {
     + encodeURIComponent(row.idempotency_key) + "&limit=1");
   if (!existing?.[0]?.id || existing[0].advertiser_page_id !== row.advertiser_page_id) throw new Error("Fetch run identity was not confirmed");
   return existing[0].id;
+}
+
+
+// Parsing a saved response may improve; the original paid receipt must not change.
+export async function reconcileSavedCaptureSettlement({rest, settle, attemptId, runId, receipt, outcome}) {
+  if (typeof rest !== "function" || typeof settle !== "function" || !UUID.test(attemptId || "") || !UUID.test(runId || "")) {
+    throw new Error("saved capture settlement identity/handlers are required");
+  }
+  const credit = value => {
+    if ((typeof value !== "string" && typeof value !== "number") || String(value).trim() === "") return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  };
+  if (typeof receipt?.chargeKnown !== "boolean" || (receipt.chargeKnown && credit(receipt.credits) === null)) {
+    throw new Error("saved capture provider receipt mismatch");
+  }
+  const rows = await rest("research",
+    "provider_credit_attempts?select=attempt_id,provider,run_id,status,outcome,charge_known,actual_credits,reserved_credits,run_credit_cap"
+    + "&attempt_id=eq." + encodeURIComponent(attemptId) + "&run_id=eq." + encodeURIComponent(runId)
+    + "&provider=eq.scrapingbee&limit=1");
+  const attempt = Array.isArray(rows) && rows.length === 1 ? rows[0] : null;
+  if (!attempt || attempt.attempt_id !== attemptId || attempt.run_id !== runId || attempt.provider !== "scrapingbee") {
+    throw new Error("saved capture provider attempt identity mismatch");
+  }
+  if (attempt.status === "settled") {
+    const matchingCharge = attempt.charge_known === receipt.chargeKnown;
+    const matchingCredits = receipt.chargeKnown
+      ? credit(attempt.actual_credits) !== null && credit(attempt.actual_credits) === credit(receipt.credits)
+      : attempt.actual_credits === null;
+    if (!matchingCharge || !matchingCredits) throw new Error("saved capture provider receipt mismatch");
+    return {settlement:"skipped_already_settled",ledgerOutcome:attempt.outcome};
+  }
+  if (attempt.status !== "reserved" || attempt.charge_known !== null || attempt.actual_credits !== null) {
+    throw new Error("saved capture provider attempt has invalid unsettled state");
+  }
+  const reservation = credit(attempt.reserved_credits), cap = credit(attempt.run_credit_cap);
+  if (reservation === null || cap === null || reservation <= 0 || cap <= 0 ||
+      (receipt.chargeKnown && credit(receipt.credits) > Math.min(reservation, cap))) {
+    throw new Error("saved capture provider receipt exceeds reservation");
+  }
+  await settle({p_attempt_id:attemptId,p_outcome:outcome,p_charge_known:receipt.chargeKnown,
+    p_actual_credits:receipt.chargeKnown ? credit(receipt.credits) : null});
+  return {settlement:"settled",ledgerOutcome:outcome};
 }

@@ -30,7 +30,7 @@ import {
 } from "./scrapingbee-paid-attempt.mjs";
 import { publishCustomerReadModels } from "./customer-read-model-publisher.mjs";
 import { selectDueAdRadarPages, chunkIds } from "./ad-radar-scheduling.mjs";
-import { saveCaptureJournal, loadCaptureJournal, ensureFetchRun } from "./ad-radar-capture-journal.mjs";
+import { saveCaptureJournal, loadCaptureJournal, reconcileSavedCaptureSettlement, ensureFetchRun } from "./ad-radar-capture-journal.mjs";
 import { syncCustomerAdRadarInterests } from "./customer-freshness-sync.mjs";
 import {
   DIRECTORY_DISCOVERY_JOB_TYPE,
@@ -3056,9 +3056,13 @@ async function runScrapingBeePageCapture(input) {
       response: { status: savedCapture.status, ok: savedCapture.status >= 200 && savedCapture.status < 300 },
       body: savedCapture.body, receipt,
     });
-    await rpc("settle_provider_attempt_credits", {
-      p_attempt_id: attemptId, p_outcome: handled.attempt.outcome,
-      p_charge_known: receipt.chargeKnown, p_actual_credits: receipt.chargeKnown ? receipt.credits : null,
+    await reconcileSavedCaptureSettlement({
+      rest,
+      settle: (payload) => rpc("settle_provider_attempt_credits", payload),
+      attemptId,
+      runId: input.adFetchRunId,
+      receipt,
+      outcome: handled.attempt.outcome,
     });
     telemetry.provider_request_count = 1;
     telemetry.provider_credits = receipt.chargeKnown ? receipt.credits : runCreditCap;
@@ -5457,14 +5461,9 @@ async function loadPendingAdRadarLaneJobs(lane) {
 
 async function runAdRadarLanePass(lane) {
   const jobs = await loadPendingAdRadarLaneJobs(lane);
-  const orderedJobs = lane.name === "collector"
-    ? [
-      ...(jobs || []).filter((job) => job.payload?.scanMode === "initial_fill"),
-      ...(jobs || []).filter((job) => job.payload?.scanMode !== "initial_fill"),
-    ]
-    : jobs;
+  // The queue already orders customer refreshes ahead of first fill.
   const result = await runLaneBatch({
-    jobs: orderedJobs,
+    jobs,
     lane,
     runJob: (job) => runExactJob(job.id, lane),
   });

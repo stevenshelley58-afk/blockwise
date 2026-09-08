@@ -74,26 +74,32 @@ test("lane batch only invokes selected jobs and reports isolated failures", asyn
   assert.deepEqual(seen.sort(), ["a", "b"]);
   assert.deepEqual({ attempted: result.attempted, completed: result.completed, failed: result.failed }, { attempted: 2, completed: 1, failed: 1 });
 });
-test("independent loops continue while one lane pass is slow and stop drains", async () => {
-  const calls = [];
-  let releaseSlow;
-  const slow = new Promise((resolve) => { releaseSlow = resolve; });
-  const runner = startAdRadarLaneLoops({
-    lanes: [{ name: "slow" }, { name: "fast" }],
-    pollMs: 1,
-    sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-    runLanePass: async (lane) => {
+test("independent loops continue while one lane pass is slow and stop drains", {timeout:5000}, async t => {
+  const calls=[];
+  let releaseSlow, reachedFast;
+  const slow=new Promise(resolve=>{releaseSlow=resolve;});
+  const ready=new Promise(resolve=>{reachedFast=resolve;});
+  const runner=startAdRadarLaneLoops({
+    lanes:[{name:"slow"},{name:"fast"}],pollMs:1,
+    sleep:ms=>new Promise(resolve=>setTimeout(resolve,ms)),
+    runLanePass:async lane=>{
       calls.push(lane.name);
-      if (lane.name === "slow" && calls.filter((name) => name === "slow").length === 1) await slow;
-      else if (lane.name === "fast" && calls.filter((name) => name === "fast").length >= 3) releaseSlow();
+      if(lane.name==="slow" && calls.filter(name=>name==="slow").length===1) await slow;
+      if(lane.name==="fast" && calls.filter(name=>name==="fast").length===3) reachedFast();
     },
   }).start();
-  await new Promise((resolve) => setTimeout(resolve, 40));
-  assert.ok(calls.includes("fast"));
-  assert.ok(calls.filter((name) => name === "fast").length >= 3);
-  await runner.stop();
-  assert.equal(runner.stopping, true);
+  t.after(async()=>{releaseSlow();await runner.stop();});
+  await ready;
+  assert.equal(calls.filter(name=>name==="slow").length,1);
+  let drained=false;
+  const stopped=runner.stop().then(()=>{drained=true;});
+  await Promise.resolve();
+  assert.equal(drained,false,"shutdown must wait for the slow in-flight pass");
+  releaseSlow();
+  await stopped;
+  assert.equal(runner.stopping,true);
 });
+
 test("busy lane drains immediately and uses idle delay only after empty pass", async () => {
   const sleeps = [];
   let calls = 0;
@@ -125,4 +131,20 @@ test("standalone idle lane keeps its service process alive", async t => {
   assert.equal(child.exitCode,null,"idle worker must not silently exit with code zero");
   child.kill("SIGTERM");
   await exited;
+});
+test("collector preserves customer-before-first-fill priority from canonical queue", async () => {
+  const vm = await import("node:vm");
+  const start = supervisorSource.indexOf("async function runAdRadarLanePass(");
+  const end = supervisorSource.indexOf("\nasync function runAdDbWorkerOnce(",start);
+  const called=[];
+  const jobs=[
+    row("blockwise-ad-collector","ad-radar:collector:customer",{scanMode:"refresh"},"customer"),
+    row("blockwise-ad-collector","ad-radar:collector:first",{scanMode:"initial_fill"},"first"),
+  ];
+  const pass=vm.runInNewContext(supervisorSource.slice(start,end)+";runAdRadarLanePass",{
+    loadPendingAdRadarLaneJobs:async()=>jobs,runLaneBatch,
+    runExactJob:async id=>called.push(id),log:()=>{},
+  });
+  await pass(AD_RADAR_LANE_DEFAULTS.collector);
+  assert.deepEqual(called,["customer","first"]);
 });
