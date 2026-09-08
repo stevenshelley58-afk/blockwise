@@ -3,16 +3,17 @@
 ## Current status and scope
 
 As observed on 2026-09-08, the runtime is ACTIVE at exact SHA
-e351c56e8a3d626b42d2866248ccdca924d10c6f and the product is LIVE at exact
+a507d8eb1400269558b9d3092ee4f3cab04ad2a4 and the product is LIVE at exact
 SHA 674b512139961927191f3659a64737a2e0db1cdd. Product health is verified
 after two pagination canary and two public normal TLS passes. The deployed
 one-queue worker has witnessed all five bounded lanes: directory fanout 1
-(306 directory jobs and fanouts observed; all 15,256 entities queued), discovery entity 4 (about 2,871
-completed by 05:53 UTC), collector 4, media 4, and deterministic classifier 1
-(90+ deterministic saved-evidence decisions). WA first-fill remains RUNNING
-and NOT COMPLETE. This document
-records the observed evidence and the release procedure; it is not a claim
-of complete WA coverage.
+(306 jobs; the sweep is complete for 15,256/15,256 entities), discovery entity
+4 (about 2,871 completed by 05:53 UTC), collector 4, media 4, and deterministic
+classifier 1 (90+ deterministic saved-evidence decisions). The directory
+sweep is complete, while paid known-page fill remains RUNNING and NOT
+COMPLETE. The active service has NRestarts=0 and a five-minute stop timeout.
+This document records the observed evidence and the release procedure; it is
+not a claim of complete WA Facebook identity coverage.
 
 The isolated research database is authoritative for page scan state. Apply
 research migrations in filename order, including the signup-owned
@@ -24,8 +25,11 @@ The historical launch snapshot covered 389 eligible numeric Facebook
 pages, not the whole WA directory; 370 of those pages then lacked a latest
 comparable baseline. These are historical known-page baseline counts, not
 current completion counts or a claim of complete WA agent coverage. The
-current worker snapshot has 392 eligible numeric pages and 296 filled; this
-still is not full WA identity or directory completion. A fresh
+current worker snapshot has 392 eligible numeric pages, 306 completed initial
+fills, and 86 remaining: 70 latest partial_evidence, 12 latest failed, and 4
+pagination_unresolved. Active observed ads are 558. The directory sweep itself
+is complete, but paid known-page fill is deliberately backing off rather than
+blindly retrying; this is not full WA Facebook identity coverage. A fresh
 DEMIRS audit recorded 11,832 licenses, with 205 agents and 35 agencies
 appended from safe evidence; the current WA directory reports 12,349 agents
 and 2,907 agencies. Its 181 identity ambiguities remain explicit, and a
@@ -128,14 +132,16 @@ refresh; classification makes no LLM call. Provider/raw responses and
 verified media archives are distinct evidence. The data-preserving shared
 archive migration is live at e5f074fc587dfca2cb89658cb9dea79275e28473:
 12 shared physical archive files and 52 provenance references were verified
-by exact SHA/byte checks with zero downloads during verification. Media failure
+by exact SHA/byte checks with zero downloads during verification. This shared
+object migration is complete; media and display classification remain
+independent lanes. Media failure
 remains retryable and cannot report a fully successful media job. There is no fixed item-count
 ceiling that can silently truncate provider pagination; a provider stop,
 credit guard, timeout, or other bounded stop is recorded as partial with
 coverage unknown.
 
 The parallel lanes are deployed and active at the immutable runtime SHA
-e351c56e8a3d626b42d2866248ccdca924d10c6f. The systemd worker uses a five-minute
+a507d8eb1400269558b9d3092ee4f3cab04ad2a4. The systemd worker uses a five-minute
 stop timeout. The lane observations above are operational evidence, not a
 claim of complete WA directory coverage or failure-free pagination.
 ## Capture journal and charge safety
@@ -154,10 +160,12 @@ first. Do not create a paid request merely to prove queue health.
 
 ## Request and database budget
 
-The provider request limit is 25 credits per request. The database subscription
-maximum is 75,000, with 74,700 remaining at the current rehearsal snapshot.
-The 74,675 remaining figure in the launch evidence below is historical. These
-are operational observations, not permission to purchase credits. Do
+The provider request limit is 25 credits per request. The current ledger
+records 436 successes using 10,900 credits, 13 unparseable responses using
+325, one error using 25, and 13 blocked requests using zero credits. Budget
+spent is 11,550, reserved is zero, and provider balance remaining is 63,675.
+The older 75,000 subscription maximum and 74,700 rehearsal balance are
+historical operational observations, not permission to purchase credits. Do
 not add another overall ceiling, and do not purchase or top up provider
 credits. A bounded stop caused by these controls is recorded with its actual
 stop reason and unknown coverage.
@@ -167,11 +175,12 @@ stop reason and unknown coverage.
 The first paid GLC Residential capture confirmed zero ads using 25 credits
 and scheduled the next scan in 3 days. Same-job raw replay took 192 ms with
 one attempt; provider-used remained 325 before and after, with no extra
-credits. The later Jennings replay recovered four partial ads with one paid
-attempt and 25 credits unchanged; the final canary preserved page-scheduling
-JSON and the replay ledger exactly. The historical launch budget snapshot was a 75,000 subscription maximum
-with 74,675 remaining. These observations do not waive the release gates
-below.
+credits. The strict parser replay recovered four saved captures to confirmed
+absence with zero new provider calls; the ledger and page scheduling remained
+unchanged. The latest run then transactionally advanced to the 3-day zero-ad
+cadence and blocked one redundant queued retry. The historical launch budget
+snapshot was a 75,000 subscription maximum with 74,675 remaining. These
+observations do not waive the release gates below.
 
 ## Rehearsal and release procedure
 
@@ -182,7 +191,8 @@ runs advance through the 3/7/14/30 cadence, active pages remain daily, and a
 customer postcode produces postcode targets without changing service areas.
 Verify the historical 389-page known scope and the historical 370 pages
 without a latest comparable baseline; current observed scope is 392 eligible
-pages with 296 filled, not full WA directory completion. For new scheduler truth, test a successful run with a non-negative
+pages with 306 completed initial fills and 86 remaining, not full WA directory
+completion. For new scheduler truth, test a successful run with a non-negative
 active_ads value and test that missing, negative, or non-integer active_ads
 does not advance completion. Historical item_count/ads_seen rows may be
 reported separately but must not pass the new truth gate.
@@ -215,4 +225,5 @@ The deterministic classifier is active in the deployed runtime SHA above;
 its observed decisions are saved-evidence-only and do not make a completeness
 claim for provider pagination. Full repository checks recorded 1,184 tests,
 1,181 passes, 3 skips, and zero failures; NUL, typecheck, and build checks
-also passed.
+also passed. The final safe two-step deployment flow was proven for commit
+a507d8eb1400269558b9d3092ee4f3cab04ad2a4.
