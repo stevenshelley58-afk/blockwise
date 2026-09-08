@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import { CONSENT_KEY, getConsentStatus, type ConsentStatus } from "@/lib/analytics/consent";
@@ -41,18 +41,48 @@ function applyConsent(status: ConsentStatus): void {
 
 export function ConsentBanner() {
   const [visible, setVisible] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const bannerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const open = () => setVisible(true);
     window.addEventListener("blockwise:consent-open", open);
+    const syncModalState = () => {
+      setModalOpen(Boolean(document.querySelector('[role="dialog"][data-state="open"]')));
+    };
+    syncModalState();
+    const modalObserver = new MutationObserver(syncModalState);
+    modalObserver.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["data-state", "role"] });
     const stored = getConsentStatus();
     if (stored) {
       applyConsent(stored);
     } else {
       setVisible(true);
     }
-    return () => window.removeEventListener("blockwise:consent-open", open);
+    return () => {
+      window.removeEventListener("blockwise:consent-open", open);
+      modalObserver.disconnect();
+      document.documentElement.style.setProperty("--consent-banner-height", "0px");
+    };
   }, []);
+
+  useEffect(() => {
+    const node = bannerRef.current;
+    if (!node || !visible || modalOpen) {
+      document.documentElement.style.setProperty("--consent-banner-height", "0px");
+      return;
+    }
+    const publishHeight = () => {
+      document.documentElement.style.setProperty("--consent-banner-height", `${node.getBoundingClientRect().height}px`);
+    };
+    publishHeight();
+    const observer = new ResizeObserver(publishHeight);
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.setProperty("--consent-banner-height", "0px");
+    };
+  }, [modalOpen, visible]);
 
   function handleAccept() {
     localStorage.setItem(CONSENT_KEY, "granted");
@@ -66,10 +96,10 @@ export function ConsentBanner() {
     setVisible(false);
   }
 
-  if (!visible) return null;
+  if (!visible || modalOpen) return null;
 
   return (
-    <div className="consent-banner" role="region" aria-label="Cookie consent">
+    <div ref={bannerRef} className="consent-banner" role="region" aria-label="Cookie consent">
       <p className="consent-banner__text">
         We use cookies to understand how visitors use Blockwise and to improve our ads.{" "}
         <Link href="/privacy" className="consent-banner__link">

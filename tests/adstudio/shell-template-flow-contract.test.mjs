@@ -67,25 +67,27 @@ test("Home uses one obvious creation action without a second search", () => {
   assert.doesNotMatch(homeCommand, /studio-command|role="search"|Or search templates/);
 });
 
-test("template cards create the selected customer ad directly", () => {
-  assert.match(home, /async function createAdAction\(creationKey: string, formData: FormData\)/);
-  assert.match(home, /"use server"/);
-  assert.match(home, /requirePageSurfaceAccess\("adstudio"\)/);
-  assert.match(home, /const templateId = String\(formData\.get\("templateId"\) \?\? ""\)\.trim\(\)/);
-  assert.match(home, /const pack = await getTemplate\(supabase, templateId\)/);
-  assert.match(home, /createCustomerAd\(supabase, access\.workspaceId, pack, creationKey\)/);
-  assert.match(home, /redirect\(`\/ad-studio\/ads\/\$\{encodeURIComponent\(ad\.adId\)\}`\)/);
-  assert.match(home, /action=\{createAdAction\.bind\(null, crypto\.randomUUID\(\)\)\}/);
-  assert.match(home, /<input type="hidden" name="templateId" value=\{template\.templateId\} \/>/);
+ test("hub routes creation to templates while selected cards create directly", () => {
+  assert.match(homeCommand, /href="\/ad-studio\/templates"/);
+  assert.match(homeCommand, />New ad<\//);
+  assert.doesNotMatch(home, /createAdAction|createCustomerAd|"use server"/);
+
   assert.match(templates, /async function createAdAction\(formData: FormData\)/);
-  assert.match(templates, /const creationKey = String\(formData\.get\("creationKey"\)/);
+  assert.match(templates, /"use server"/);
+  assert.match(templates, /requirePageSurfaceAccess\("adstudio"\)/);
+  assert.match(templates, /const creationKey = String\(formData\.get\("creationKey"\) \?\? ""\)\.trim\(\)/);
+  assert.match(templates, /const templateId = String\(formData\.get\("templateId"\) \?\? ""\)\.trim\(\)/);
+  assert.match(templates, /Invalid creation request/);
+  assert.match(templates, /const pack = await getTemplate\(supabase, templateId\)/);
+  assert.match(templates, /createCustomerAd\(supabase, access\.workspaceId, pack, creationKey\)/);
+  assert.match(templates, /redirect\(/);
+  assert.match(templates, /createAction=\{createAdAction\}/);
   assert.match(gallery, /name="creationKey" value=\{crypto\.randomUUID\(\)\}/);
   assert.match(gallery, /name="templateId" value=\{template\.templateId\}/);
   assert.match(gallery, /Use template/);
   assert.match(gallery, /Preview template/);
   const templateCard = gallery.slice(gallery.indexOf("function TemplateCard"));
   assert.doesNotMatch(templateCard, /Preview Feed \+ Story|Reviewed|image inputs|text inputs|template\.description/);
-  assert.match(gallery, /href=\{`\/ad-studio\/templates\/\$\{encodeURIComponent\(template\.templateId\)\}`\}/);
+  assert.match(gallery, /href=\{`\/ad-studio\/templates/);
   assert.doesNotMatch(home, /listing|property/i);
 });
-

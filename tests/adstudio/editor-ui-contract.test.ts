@@ -29,7 +29,7 @@ describe("customer Ad Studio workbench contract", () => {
   it("constrains contextual editor geometry to the Studio viewport", () => {
     const studioShell = readFileSync("src/components/adstudio/studio-shell.tsx", "utf8");
     assert.match(studioShell, /contextual \? "h-dvh overflow-hidden" : "min-h-dvh"/);
-    assert.match(studioShell, /contextual \? "min-h-0 overflow-hidden"/);
+    assert.match(studioShell, /contextual \? "min-h-0 overflow-hidden pb-/);
     assert.match(studioShell, /<main className=\{cn\("min-w-0 flex-1"/);
   });
 
@@ -64,37 +64,36 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(canvas, /layer\.shape === "wave"/);
     assert.match(canvas, /layer\.shape === "ring"/);
     assert.match(canvas, /new fabric\.Path/);
-    assert.match(editor, /\[scrollbar-width:none\]/);
   });
 
   it("keeps mobile editor actions compact without hiding workflow controls", () => {
     const shell = readFileSync("src/components/adstudio/editor/editor-shell.tsx", "utf8");
-    assert.match(shell, /grid-cols-\[auto_minmax\(0,1fr\)_auto\]/);
-    assert.match(shell, /<span className="xl:hidden">Review<\/span>/);
-    assert.match(shell, /className="hidden xl:inline">\{state\.isSaving \? "Saving…" : "Save"\}<\/span>/);
+    assert.match(shell, /grid-cols-\[2\.75rem_minmax\(0,1fr\)_2\.75rem_auto\]/);
+    assert.match(shell, /aria-label="Ad format" value=\{placementView\}/);
+    assert.match(shell, /min-h-11 min-w-11/);
     assert.match(shell, /grid-cols-5/);
     assert.match(shell, /<Eye className="size-4" \/>Preview/);
-    assert.match(shell, /setPreviewMode\("meta"\)/);
-    assert.match(shell, /<Layers3 className="size-4" \/>Layers/);
+    assert.match(shell, /setMobilePreviewOpen\(true\)/);
+    assert.match(shell, /<Sheet open=\{mobilePreviewOpen\}/);
     assert.match(shell, /<Sheet open=\{mobileLayersOpen\}/);
   });
 
-  it("keeps Home cards contained and exposes exact edit/review destinations", () => {
+  it("keeps the compact Ads hub and exact edit/review destinations", () => {
     const home = readFileSync("src/app/(customer)/ad-studio/page.tsx", "utf8");
     const command = readFileSync("src/components/adstudio/home-command.tsx", "utf8");
-    assert.match(home, /<li key=\{template\.templateId\} className="min-w-0">/);
     assert.match(home, /<HomeCommand/);
-    assert.match(command, /Create your next ad/);
     assert.match(command, /aria-label="Create a new ad from a reviewed template"/);
-    assert.match(command, />Create ad <ArrowRight/);
-    assert.doesNotMatch(command, /Or search templates by goal or format|studio-command/);
-    assert.doesNotMatch(command, /Find a starting point/);
+    assert.match(command, />New ad<\//);
+    assert.match(command, /Recent ads/);
+    assert.match(command, /aria-label="Ad Studio links"/);
+    assert.match(command, /Media library/);
+    assert.doesNotMatch(command, /assetsError|assets\.length/);
+    assert.doesNotMatch(home, /kind: "assets"/);
+    assert.doesNotMatch(command, /Create a new ad<\/span>|Workspace shortcuts|Recent assets/);
     assert.match(command, /formatLastEdited\(ad\.updatedAt, timeZone, dateLocale\)/);
     assert.match(home, /timeZone/);
     assert.match(home, /resolveTimeZone\(auth\.claims\?\.user_metadata\?\.timezone, access\.region\)/);
     assert.match(home, /dateLocale = access\.region === "US" \? "en-US" : "en-AU"/);
-    assert.match(command, /href=\{`\/ad-studio\/ads\/\$\{encodeURIComponent\(ad\.adId\)\}`\}/);
-    assert.match(command, /href=\{`\/ad-studio\/templates\/\$\{encodeURIComponent\(ad\.templateId\)\}\/publish\?adId=\$\{encodeURIComponent\(ad\.adId\)\}`\}/);
     assert.match(command, /<Link[^>]*>Edit<\/Link>/);
     assert.match(command, /<Link[^>]*>Review<\/Link>/);
   });
@@ -124,6 +123,9 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(shell, /aria-label="Editor inspector"/);
     assert.match(shell, /setInspectorOpen/);
     assert.match(shell, /publish\?adId=/);
+    assert.match(shell, /guardedEditorNavigationHref/);
+    assert.match(shell, /router\.push\(href\)/);
+    assert.doesNotMatch(shell, /window\.location\.assign/);
     assert.match(shell, /e\.key\.toLowerCase\(\)/);
     assert.match(shell, /key === "y"/);
     assert.match(colours, /Template colours/);

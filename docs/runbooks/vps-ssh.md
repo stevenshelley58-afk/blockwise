@@ -1,32 +1,21 @@
-# VPS SSH
+# VPS access
 
-SSH over Tailscale is the operator path for the self-hosted product VPS and
-the separate Hermes research runtime. Use key authentication with
-`BatchMode=yes`; never copy a private key into the repository.
+Read the shared access bootstrap and engineering rules before connecting.
+From Steven's laptop use ssh vps. Cloud sessions use the client's Tailscale
+bootstrap. Do not invent a different key or change ingress for access.
 
-- Host: `100.78.126.112`
-- Routine user: `hermes`
-- Provisioning user: `root`
-- Product checkout: `/projects/blockwise`
-- Product env: `/srv/blockwise/product/.env`
-- Product backups: `/srv/blockwise/backups/product`
-- Hermes runtime: `/opt/blockwise`
+## Product locations
 
-    ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes hermes@100.78.126.112
+- Canonical repository: /projects/blockwise.
+- Protected configuration: /srv/blockwise/product/.env.
+- Product backups: /srv/blockwise/backups/product.
 
-From the committed release checkout (the retained working copy at the exact
-serving SHA, for example `/projects/blockwise-release-6f2f92ea`; not the old
-primary `/projects/blockwise` checkout, which predates the revision-aware
-health script), run the rendered Compose config and status checks without
-printing the env. For release evidence, run:
+Use a suitable isolated worktree, preserving concurrent work. Verify its base
+against the intended task and live release; the default branch is not
+automatically deployed. Do not print protected environment values.
 
-    export BLOCKWISE_PRODUCT_ENV_FILE=/srv/blockwise/product/.env
-    scripts/vps/product-health.sh <expected-full-git-sha>
-
-The expected full SHA checks the compiled app revision as well as readiness.
-The no-argument form is readiness-only.
-
-Product data operations use the guarded scripts in `scripts/vps/`; follow the
-[production readiness](production-readiness.md), [OSS migration](oss-product-migration.md),
-and [rollback](rollback.md) runbooks. Product and Hermes Compose projects,
-networks, volumes, env files, backups, and migration sets stay separate.
+[Production readiness](production-readiness.md) owns verification and release
+identity. [Rollback](rollback.md) owns recovery. Hermes is separate; its
+generation runtime selector is documented in
+/projects/frank/docs/AD_TEMPLATE_GENERATOR.md, not pinned to a repair worktree
+or hard-coded release in this access guide.

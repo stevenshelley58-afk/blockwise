@@ -5,7 +5,7 @@ upload assets to Supabase storage, and return the result for ad generation.
 
 ## Trigger
 
-Invoked by the Vercel API route `POST /api/adstudio/listing-extract` when a
+Invoked by the Blockwise API route `POST /api/adstudio/listing-extract` when a
 customer pastes a listing URL in the New Ad Dialog.
 
 ## Input

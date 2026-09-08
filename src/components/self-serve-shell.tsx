@@ -1,11 +1,12 @@
 "use client";
 
-import { Download, LifeBuoy, LogOut, MoreHorizontal } from "lucide-react";
+import { Download, LifeBuoy, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
+import { MobileBottomNav } from "@/components/app/mobile-bottom-nav";
 import { StudioShell } from "@/components/adstudio/studio-shell";
 import { CommandMenu } from "@/components/command-menu";
 import { SidebarThemeToggle } from "@/components/sidebar-theme-toggle";
@@ -19,30 +20,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarRail,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarTrigger } from "@/components/ui/sidebar";
 import { niche } from "@/config/niche";
-import { cssSpring } from "@/lib/motion";
 import { purgeLocalReadModels, syncReadModelIdentity } from "@/lib/read-models/browser-store";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -186,7 +165,7 @@ export function SelfServeShell({
   }, [userId, workspaceId]);
 
   if (pathname.startsWith("/ad-studio")) {
-    return <StudioShell workspaceName={workspaceName} accountName={account.name} metaConnectionStatus={metaConnectionStatus}>{children}</StudioShell>;
+    return <StudioShell workspaceName={workspaceName} account={account} metaConnectionStatus={metaConnectionStatus}>{children}</StudioShell>;
   }
 
   return (
@@ -254,7 +233,7 @@ export function SelfServeShell({
         <SidebarRail />
       </Sidebar>
 
-      <SidebarInset className="pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
+      <SidebarInset className="pb-[calc(4.75rem+env(safe-area-inset-bottom)+var(--consent-banner-height,0px))] md:pb-0">
         <header className="sticky top-0 z-20 flex min-h-[54px] items-center gap-2.5 border-b border-border bg-background/85 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:min-h-[60px] md:gap-3.5 md:px-7">
           <SidebarTrigger className="-ml-1 hidden md:inline-flex" />
 
@@ -292,143 +271,7 @@ export function SelfServeShell({
         {children}
       </SidebarInset>
 
-      <SelfServeMobileNav account={account} />
+      <MobileBottomNav variant="self_serve" homeHref="/self-serve" account={account} />
     </SidebarProvider>
-  );
-}
-
-// Mobile navigation for the self-serve shell: the five primary tabs from the
-// niche config (bottom tab bar, mockup pattern) plus a "More" sheet for the
-// remaining destinations. Hidden inside Ad Studio, which renders its own
-// studio navigation.
-function SelfServeMobileNav({ account }: { account: Account }) {
-  const pathname = usePathname() ?? "";
-  const [moreOpen, setMoreOpen] = useState(false);
-  const { signOut, isSigningOut } = useSignOut();
-
-  const copy = niche.copy.shell;
-
-  const { tabItems, overflowItems } = useMemo(() => {
-    const allItems = navByVariant.self_serve;
-    const tabs = allItems.filter((item) => item.mobileLabel);
-    const tabSet = new Set(tabs.map((item) => item.href));
-    return { tabItems: tabs, overflowItems: allItems.filter((item) => !tabSet.has(item.href)) };
-  }, []);
-
-  if (pathname.startsWith("/ad-studio")) {
-    return null;
-  }
-
-  return (
-    <>
-      <nav
-        aria-label="Primary mobile navigation"
-        className={`fixed inset-x-0 bottom-0 z-40 grid ${tabItems.length >= 5 ? "grid-cols-6" : "grid-cols-5"} gap-0.5 border-t border-border bg-card/95 px-1.5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur-2xl md:hidden`}
-      >
-        {tabItems.map((item) => {
-          const Icon = item.icon;
-          const active = isItemActive(pathname, item.href, navByVariant.self_serve);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active ? "page" : undefined}
-              style={{ transitionTimingFunction: cssSpring }}
-              className={cn(
-                "grid min-h-12 min-w-0 place-items-center gap-[3px] rounded-xl px-0.5 py-1 text-[9.5px] leading-[1.1] font-bold transition-[color,transform,background-color] duration-150 active:scale-[0.94] motion-reduce:transition-none",
-                active ? "bg-(--accent-tint) text-foreground" : "text-(--faint)",
-              )}
-            >
-              {Icon ? <Icon aria-hidden size={19} /> : null}
-              <span className="max-w-full truncate">{item.mobileLabel ?? item.label}</span>
-            </Link>
-          );
-        })}
-        <button
-          type="button"
-          onClick={() => setMoreOpen(true)}
-          aria-expanded={moreOpen}
-          style={{ transitionTimingFunction: cssSpring }}
-          className={cn(
-            "grid min-h-12 min-w-0 cursor-pointer place-items-center gap-[3px] rounded-xl border-0 bg-transparent px-0.5 py-1 text-[9.5px] leading-[1.1] font-bold transition-[color,transform,background-color] duration-150 active:scale-[0.94] motion-reduce:transition-none",
-            moreOpen ? "bg-(--accent-tint) text-foreground" : "text-(--faint)",
-          )}
-        >
-          <MoreHorizontal aria-hidden size={20} />
-          <span>{copy.more}</span>
-        </button>
-      </nav>
-
-      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-        <SheetContent
-          side="bottom"
-          className="max-h-[min(76dvh,640px)] rounded-t-(--r-panel) pb-[calc(1rem+env(safe-area-inset-bottom))]"
-        >
-          <SheetHeader className="px-4 pt-5">
-            <SheetTitle>{account.name}</SheetTitle>
-            <SheetDescription>
-              {account.role} · {account.email}
-            </SheetDescription>
-          </SheetHeader>
-
-          {overflowItems.length > 0 ? (
-            <div className="grid gap-1 px-3">
-              {overflowItems.map((item) => {
-                const Icon = item.icon;
-                const active = isItemActive(pathname, item.href, navByVariant.self_serve);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-current={active ? "page" : undefined}
-                    onClick={() => setMoreOpen(false)}
-                    className={cn(
-                      "flex min-h-11 items-center gap-3 rounded-(--r-card) px-3 text-sm font-semibold",
-                      active
-                        ? "bg-(--accent-tint) text-(--accent-strong)"
-                        : "text-foreground hover:bg-muted",
-                    )}
-                  >
-                    <Icon aria-hidden size={18} />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          ) : null}
-
-          <div className="mt-auto grid gap-2 px-4 pt-2">
-            <a
-              href="mailto:hello@blockwise.sale?subject=Blockwise%20support"
-              onClick={() => setMoreOpen(false)}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-(--r-card) border border-border bg-card px-4 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <LifeBuoy aria-hidden size={18} />
-              Contact support
-            </a>
-            <button
-              type="button"
-              onClick={() => {
-                requestInstallPrompt();
-                setMoreOpen(false);
-              }}
-              className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-(--r-card) border border-border bg-card px-4 text-sm font-semibold text-foreground hover:bg-muted"
-            >
-              <Download aria-hidden size={18} />
-              {copy.installApp}
-            </button>
-            <button
-              type="button"
-              onClick={() => void signOut()}
-              disabled={isSigningOut}
-              className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-(--r-card) border border-border bg-card px-4 text-sm font-semibold text-error hover:bg-muted disabled:opacity-60"
-            >
-              <LogOut aria-hidden size={18} />
-              {isSigningOut ? "…" : copy.signOut}
-            </button>
-          </div>
-        </SheetContent>
-      </Sheet>
-    </>
   );
 }

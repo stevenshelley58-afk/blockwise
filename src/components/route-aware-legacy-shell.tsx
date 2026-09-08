@@ -40,7 +40,8 @@ export function RouteAwareLegacyShell({
     return (
       <StudioShell
         workspaceName={studioWorkspaceName}
-        accountName={account.name}
+        homeHref={homeHref}
+        account={account}
         metaConnectionStatus={metaConnectionStatus}
       >
         {children}
@@ -96,7 +97,7 @@ export function RouteAwareLegacyShell({
         </header>
         {children}
       </div>
-      <MobileBottomNav variant={variant} account={account} />
+      <MobileBottomNav variant={variant} homeHref={homeHref} account={account} />
     </div>
   );
 }
