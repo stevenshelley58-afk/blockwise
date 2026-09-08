@@ -14,6 +14,8 @@ This index separates current operating guidance from retained history.
 
 ## Design previews
 
+- [Reporting chart-to-email loop](releases/2026-09-08-homepage-reporting-loop.md) - completion-driven crossfade, repeating chart reveal and accessible playback controls.
+
 - [Visual campaign controls](releases/2026-09-08-homepage-campaign-controls.md) - interactive creative, budget, campaign and email controls; verified combined preview.
 
 - [Pricing FAQ on homepage](releases/2026-09-08-homepage-pricing-faq.md) - six collapsible categories and all 15 current pricing questions.
