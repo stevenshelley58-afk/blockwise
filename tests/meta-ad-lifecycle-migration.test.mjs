@@ -171,6 +171,13 @@ test("supervisor uses the shared deterministic parser", () => {
   assert.match(supervisor, /import \{ classifyMetaAdLibraryPayload \} from "\.\/meta-ad-library-parser\.mjs";/);
 });
 
+test("pagination escalation remains one strict paid request", () => {
+  assert.match(supervisor, /payload\.paginationStrategy === "infinite_scroll"/);
+  assert.match(supervisor, /params\.set\("js_scenario"/);
+  assert.match(supervisor, /infinite_scroll: \{ max_count: 0, delay: 1_000 \}/);
+  assert.match(supervisor, /pagination_strategy: input\.paginationStrategy/);
+});
+
 test("per-job ScrapingBee credit caps are propagated to every reservation and request", () => {
   assert.match(supervisor, /function captureCreditCap\(payload\)/);
   assert.match(supervisor, /runCreditCap: captureCreditCap\(payload\)/);
