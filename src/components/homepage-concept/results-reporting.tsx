@@ -10,7 +10,7 @@ import {
   type ReportRange,
 } from "@/lib/homepage-concept/reporting";
 import { REPORT_EMAIL } from "@/lib/homepage-concept/reporting-email";
-import { durations, reportingReveal, reportingLoop, useReducedMotion } from "@/lib/motion";
+import { durations, reportingReveal, reportingLoop } from "@/lib/motion";
 
 type ReportingView = ReportRange | "email";
 const REPORT_RANGES: readonly ReportingView[] = ["week", "month", "email"];
@@ -27,7 +27,7 @@ export function ResultsReporting() {
   const [drawFinished, setDrawFinished] = useState(false);
   const [pageHidden, setPageHidden] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const reducedMotion = useReducedMotion();
+  const [reducedMotion, setReducedMotion] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
   const inView = useInView(chartRef, { once: false, amount: 0.4 });
   const gradientId = useId();
@@ -39,6 +39,14 @@ export function ResultsReporting() {
     duration: reducedMotion || instant ? 0 : durations.entrance,
     ease: EASE_OUT,
   };
+
+  useEffect(() => {
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const syncMotion = () => setReducedMotion(preference.matches);
+    syncMotion();
+    preference.addEventListener("change", syncMotion);
+    return () => preference.removeEventListener("change", syncMotion);
+  }, []);
 
   useEffect(() => {
     const syncVisibility = () => setPageHidden(document.hidden);

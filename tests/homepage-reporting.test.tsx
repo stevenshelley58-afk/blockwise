@@ -70,7 +70,9 @@ test("reporting stays isolated and follows the shared motion rules", async () =>
   const fixture = await readFile(new URL("../src/lib/homepage-concept/reporting.ts", import.meta.url), "utf8");
   const emailFixture = await readFile(new URL("../src/lib/homepage-concept/reporting-email.ts", import.meta.url), "utf8");
   assert.doesNotMatch(source + fixture + emailFixture, /fetch\s*\(|localStorage|sessionStorage|supabase|sendBeacon|setInterval/);
-  assert.match(source, /useReducedMotion/);
+  assert.match(source, /window.matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
+  assert.match(source, /preference.addEventListener\("change", syncMotion\)/);
+  assert.match(source, /preference.removeEventListener\("change", syncMotion\)/);
   assert.match(source, /durations\.entrance/);
   assert.match(source, /useInView\(chartRef, \{ once: false, amount: 0.4 \}\)/);
   assert.match(source, /animate=\{\{ d: chart\.line \}\}/);
