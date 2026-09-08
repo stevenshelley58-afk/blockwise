@@ -44,35 +44,95 @@ export const AD_EXAMPLES = [
   },
 ] as const;
 
-export const FAQS = [
+export const FAQ_GROUPS = [
   {
-    question: "What if I don't have a Meta ad account?",
-    answer:
-      "No problem. We can help you set one up in your name and connect it to Blockwise.",
+    heading: "Getting started",
+    faqs: [
+      {
+        question: "What if I don’t have a Meta ad account?",
+        answer: "We can help you set up a Meta ad account and connect it to Blockwise.",
+      },
+      {
+        question: "What do I need to provide?",
+        answer: "Your email to start, then your branding, photos and ad details. You review everything before launch.",
+      },
+      {
+        question: "How does managed service start?",
+        answer: "Book a call. We agree the scope and price before getting started.",
+      },
+    ],
   },
   {
-    question: "Do I need to know Meta Ads Manager?",
-    answer:
-      "Not at all. Blockwise guides you through creating and approving ads, with campaign updates, leads and reports in one place.",
+    heading: "Plans",
+    faqs: [
+      {
+        question: "What does the free option include?",
+        answer: "Try three Feed + Story ads and one campaign without a Blockwise subscription.",
+      },
+      {
+        question: "What happens after the free trial?",
+        answer: "Keep running your ads yourself for free, or choose self-serve or managed. No automatic upgrade.",
+      },
+    ],
   },
   {
-    question: "Will an ad go live without my approval?",
-    answer:
-      "No. You approve the design, wording, destination, budget and schedule before anything goes live.",
+    heading: "Costs",
+    faqs: [
+      {
+        question: "What does self-serve cost?",
+        answer: "A$249/month until cancelled. Your ad spend is separate.",
+      },
+      {
+        question: "Is Meta ad spend included?",
+        answer: "No. You pay Meta directly through your own ad account.",
+      },
+      {
+        question: "How are taxes and extras handled?",
+        answer: "GST is included where required. Extra brands, accounts or campaigns are quoted separately.",
+      },
+    ],
   },
   {
-    question: "Is ad spend included?",
-    answer:
-      "No. You pay Meta separately through your own ad account. We do it this way so your ad data stays yours, even if you leave Blockwise.",
+    heading: "Billing",
+    faqs: [
+      {
+        question: "Will the free trial charge my card?",
+        answer: "No card needed. You only pay Blockwise if you choose a paid plan.",
+      },
+      {
+        question: "How do I cancel self-serve?",
+        answer: "Cancel in billing settings or the Stripe portal to stop renewals. Paid access and remaining credits last until the billing period ends.",
+      },
+    ],
   },
   {
-    question: "What happens after the trial?",
-    answer:
-      "You can keep running and managing your ads yourself for free. Meta ad spend is still separate. Or choose a monthly plan or a managed account.",
+    heading: "Ownership and support",
+    faqs: [
+      {
+        question: "Who owns my Meta ad account and ad data?",
+        answer: "You do, even if you leave Blockwise.",
+      },
+      {
+        question: "Does Blockwise guarantee leads or sales?",
+        answer: "No. Results depend on your market, offer, budget and follow-up.",
+      },
+      {
+        question: "What support is included?",
+        answer: "Self-serve includes help when you’re stuck. Managed adds setup and weekly campaign reviews.",
+      },
+    ],
   },
   {
-    question: "Can my team review ads?",
-    answer:
-      "Yes. Your team can review the finished ad before it goes live.",
+    heading: "Let’s talk",
+    faqs: [
+      {
+        question: "Can I talk to someone before choosing?",
+        answer: "Yes. Book a call and we’ll arrange a time.",
+      },
+      {
+        question: "Can I arrange a Perth meeting?",
+        answer: "Yes. Request a Perth meeting by email and we’ll arrange the details.",
+      },
+    ],
   },
 ] as const;

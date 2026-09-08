@@ -23,7 +23,7 @@ import { useEffect, useRef, useState } from "react";
 import { AdPreview } from "@/components/homepage-concept/ad-preview";
 import { ResultsReporting } from "@/components/homepage-concept/results-reporting";
 import { WorkflowShowcase } from "@/components/homepage-concept/workflow-showcase";
-import { AD_EXAMPLES, FAQS, withBasePath } from "@/lib/homepage-concept/content";
+import { AD_EXAMPLES, FAQ_GROUPS, withBasePath } from "@/lib/homepage-concept/content";
 import { requestMockTrial, validateTrialEmail } from "@/lib/homepage-concept/mock-trial";
 
 type FormState = "idle" | "loading" | "success" | "error";
@@ -480,11 +480,21 @@ export function HomepageConcept() {
               <h2>FAQ</h2>
               <p>What to expect before you start.</p>
             </div>
-            <div className="hc-faq-list">
-              {FAQS.map((faq) => (
-                <details key={faq.question}>
-                  <summary>{faq.question}<span aria-hidden="true">+</span></summary>
-                  <p>{faq.answer}</p>
+            <div className="hc-faq-groups">
+              {FAQ_GROUPS.map((group, groupIndex) => (
+                <details className="hc-faq-group" key={group.heading}>
+                  <summary>
+                    <h3 id={`hc-faq-group-${groupIndex}`}>{group.heading}</h3>
+                    <span aria-hidden="true">+</span>
+                  </summary>
+                  <div className="hc-faq-list">
+                    {group.faqs.map((faq) => (
+                      <details key={faq.question}>
+                        <summary>{faq.question}<span aria-hidden="true">+</span></summary>
+                        <p>{faq.answer}</p>
+                      </details>
+                    ))}
+                  </div>
                 </details>
               ))}
             </div>

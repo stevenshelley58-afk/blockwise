@@ -713,12 +713,23 @@
 
 .hc-faq { padding-block: 112px; background: #fff; }
 .hc-faq-grid { display: grid; grid-template-columns: .7fr 1.3fr; gap: clamp(60px, 9vw, 140px); }
-.hc-faq-list { border-top: 1px solid var(--hc-line); }
-.hc-faq-list details { border-bottom: 1px solid var(--hc-line); }
-.hc-faq-list summary { display: flex; min-height: 72px; align-items: center; justify-content: space-between; gap: 18px; cursor: pointer; list-style: none; font-weight: 700; }
+.hc-faq-groups { min-width: 0; border-top: 1px solid var(--hc-line); }
+.hc-faq-group { border-bottom: 1px solid var(--hc-line); }
+.hc-faq-group > summary,
+.hc-faq-list summary { display: flex; min-height: 72px; align-items: center; justify-content: space-between; gap: 18px; cursor: pointer; list-style: none; }
+.hc-faq-group > summary::-webkit-details-marker,
 .hc-faq-list summary::-webkit-details-marker { display: none; }
-.hc-faq-list summary span { font-size: 23px; font-weight: 400; transition: transform 180ms ease; }
-.hc-faq-list details[open] summary span { transform: rotate(45deg); }
+.hc-faq-group > summary h3 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -.025em; }
+.hc-faq-group > summary > span,
+.hc-faq-list summary > span { flex: 0 0 auto; font-size: 23px; font-weight: 400; transition: transform 180ms ease; }
+.hc-faq-group[open] > summary > span,
+.hc-faq-list details[open] > summary > span { transform: rotate(45deg); }
+.hc-faq-group > summary:focus-visible,
+.hc-faq-list summary:focus-visible { outline: 2px solid var(--hc-blue); outline-offset: 4px; border-radius: 2px; }
+.hc-faq-list { margin: 0 0 18px 20px; border-top: 1px solid var(--hc-line); }
+.hc-faq-list details { border-bottom: 1px solid var(--hc-line); }
+.hc-faq-list details:last-child { border-bottom: 0; }
+.hc-faq-list summary { font-weight: 600; }
 .hc-faq-list p { max-width: 680px; padding: 0 46px 24px 0; color: var(--hc-muted); font-size: 14px; }
 
 .hc-trial { padding-block: 112px; background: var(--hc-dark); color: #fff; }
@@ -855,6 +866,10 @@
   .hc-detail-list summary,
   .hc-faq-list summary { min-height: 68px; font-size: 14px; }
   .hc-detail-list details p { padding: 0 0 20px; font-size: 13px; }
+  .hc-faq-group > summary { min-height: 68px; }
+  .hc-faq-group > summary h3 { font-size: 18px; }
+  .hc-faq-list { margin-left: 12px; }
+  .hc-faq-list summary { min-height: 68px; }
   .hc-faq-list p { padding: 0 28px 20px 0; font-size: 13px; }
   .hc-trial-points { display: grid; gap: 9px; margin-top: 22px; }
   .hc-trial-form { padding: 20px; }
