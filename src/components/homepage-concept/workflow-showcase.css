@@ -70,7 +70,6 @@
 .wf-field-value { display: block; height: 91px; padding: 10px; border: 1px solid var(--hc-line); border-radius: 8px; font-size: 10px; line-height: 1.5; color: var(--hc-ink); transition: border-color 300ms,box-shadow 300ms,background 300ms; }
 .wf-field-value--title { height: 62px; }
 .wf-fields label.is-editing .wf-field-value { border-color: #699bda; background: #f8fbff; box-shadow: 0 0 0 2px #2a78d618; }
-.wf-saved { display: flex; align-items: center; gap: 5px; color: var(--hc-muted); font-size: 9px; }
 .wf-review dd>span { display: inline-block; opacity: 0; transform: translateY(5px); transition: opacity 400ms ease,transform 500ms var(--wf-ease); }
 .wf-review dd>span.is-filled { opacity: 1; transform: translateY(0); }
 .wf-approve { display: flex; justify-content: center; align-items: center; gap: 6px; height: 38px; margin-top: 24px; border-radius: 999px; background: var(--hc-ink); color: white; font-size: 9px; font-weight: 650; transition: background 400ms,transform 250ms var(--wf-ease); }
@@ -139,7 +138,6 @@
   .hc-root .wf-fields h3 { grid-column: 1/-1; margin-bottom: 0; }
   .wf-fields label { margin: 0; gap: 4px; font-size: 8px; }
   .wf-field-value,.wf-field-value--title { height: 72px; padding: 7px; font-size: 9px; }
-  .wf-saved { display: none; }
   .wf-review dl { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 5px; }
   .wf-review dd { white-space: nowrap; font-size: 9px; }
   .wf-approve { height: 31px; margin-top: 6px; font-size: 9px; }

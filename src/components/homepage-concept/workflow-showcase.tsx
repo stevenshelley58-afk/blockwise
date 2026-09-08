@@ -49,13 +49,13 @@ function PropertyCreative({ template, title, editing = false }: {
 function StudioAd({ frame, title, post }: { frame: Frame; title: string; post: string }) {
   return <article className="wf-ad" aria-label="Example Facebook property ad">
     <div className="wf-ad-account"><span className="wf-avatar">{AD.initials}</span><span><strong>{AD.agency}</strong><small>Sponsored · <span aria-hidden="true">◎</span></small></span><MoreHorizontal size={16} /></div>
-    <p className={`wf-post${frame.index === 3 ? " is-editing" : ""}`}>{post}{frame.index === 3 && <i className="wf-caret" />}</p>
+    <p className={`wf-post${frame.index === 3 ? " is-editing" : ""}`}>{frame.template === 0 ? AD.appraisalCopy : post}{frame.index === 3 && <i className="wf-caret" />}</p>
     <div className="wf-ad-art-stack">
       {WORKFLOW_TEMPLATES.slice(0, 2).map((template, index) => <div key={template.id} className={`wf-ad-art-layer${frame.template === index ? " is-active" : ""}`} aria-hidden={frame.template !== index}>
         <PropertyCreative template={template} title={index === 1 ? title : undefined} editing={index === 1 && frame.index === 4} />
       </div>)}
     </div>
-    <div className="wf-ad-link"><span><small>{AD.domain}</small><strong>Explore the property</strong></span><span>Learn more</span></div>
+    <div className="wf-ad-link"><span><small>{AD.domain}</small><strong>{frame.template === 0 ? "Request an appraisal" : "Explore the property"}</strong></span><span>Learn more</span></div>
   </article>;
 }
 
@@ -70,7 +70,6 @@ function StudioInspector({ frame, post, title }: { frame: Frame; post: string; t
       <h3>Customise</h3>
       <label className={frame.index === 3 ? "is-editing" : ""}><span>Post copy</span><span className="wf-field-value">{post}{frame.index === 3 && <i className="wf-caret" />}</span></label>
       <label className={frame.index === 4 ? "is-editing" : ""}><span>Ad headline</span><span className="wf-field-value wf-field-value--title">{title}{frame.index === 4 && <i className="wf-caret" />}</span></label>
-      <span className="wf-saved"><Check size={12} />{frame.index < 4 ? "Changes saved" : "Creative updated"}</span>
     </div>
     <div className={`wf-inspector-pane wf-review${frame.step === 2 ? " is-current" : ""}`} aria-hidden={frame.step !== 2}>
       <h3>Review campaign</h3>

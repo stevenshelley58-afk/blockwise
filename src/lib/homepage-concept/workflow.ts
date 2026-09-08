@@ -20,6 +20,7 @@ export const WORKFLOW_TEMPLATES = [
 export const WORKFLOW_AD = {
   agency: "West Coast Home Co",
   initials: "WCH",
+  appraisalCopy: "Thinking of selling? Discover what your home could be worth.",
   startingCopy: "A fresh start in Subiaco. Explore the property.",
   editedCopy: "Your next chapter starts in Subiaco. View this Saturday.",
   startingTitle: "Discover Subiaco",
