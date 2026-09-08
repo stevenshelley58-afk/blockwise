@@ -71,3 +71,8 @@ FFmpeg/ffprobe so media archive tests exercise real video validation. Research-o
 migrations and database tests are restored to their separate research ownership
 paths, reusing the narrow isolation corrections preserved in old main. These are
 repository/CI corrections, not live database migrations or feature changes.
+
+The product database replay then exposed a stale template-activation test fixture.
+The fixture now records the required run-bound smoke evidence and explicitly
+asserts that missing or mismatched evidence is rejected. The activation policy
+and production database are unchanged.

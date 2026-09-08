@@ -2,7 +2,7 @@ create extension if not exists pgtap with schema extensions;
 
 begin;
 
-select plan(16);
+select plan(19);
 
 select has_column('public', 'ad_templates', 'library_status', 'templates have a customer library status');
 select has_column('public', 'ad_templates', 'library_review_run_id', 'review activation records the Hermes run');
@@ -46,6 +46,20 @@ select is(
 
 set local role service_role;
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+select throws_ok(
+  $$select * from public.activate_reviewed_ad_template('library-status-pgtest', 'trun_pgtest_001')$$,
+  'P0001', 'reviewed_template_smoke_test_required',
+  'activation refuses a template without a run-bound smoke result'
+);
+select lives_ok(
+  $$select * from public.record_ad_template_smoke_test('library-status-pgtest', 'trun_pgtest_001', '{"passed":true}'::jsonb)$$,
+  'service role records passing smoke evidence for the fixture review run'
+);
+select throws_ok(
+  $$select * from public.activate_reviewed_ad_template('library-status-pgtest', 'trun_pgtest_002')$$,
+  'P0001', 'reviewed_template_smoke_test_required',
+  'activation refuses smoke evidence from a different review run'
+);
 select lives_ok(
   $$select * from public.activate_reviewed_ad_template('library-status-pgtest', 'trun_pgtest_001')$$,
   'a complete template activates with review evidence'
