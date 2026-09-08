@@ -58,11 +58,11 @@
           },
           {
             "label": "Afternoon",
-            "value": 1
+            "value": 2
           },
           {
             "label": "Evening",
-            "value": 1
+            "value": 0
           }
         ]
       }
@@ -134,7 +134,7 @@
         },
         {
           "src": "https://blockwise.sale/email-preview/email-assets/sample-buyer-demand.jpg",
-          "alt": "Illustrative buyer enquiry ad preview for Rockingham",
+          "alt": "Illustrative seller-focused ad about buyer demand in Rockingham",
           "label": "Rockingham buyer demand",
           "detail": "Illustrative sample creative · 6 leads · A$138.00 spend · A$23.00 per lead",
           "width": 640,
