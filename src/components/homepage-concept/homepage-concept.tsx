@@ -5,12 +5,9 @@ import {
   BarChart3,
   Check,
   ChevronRight,
-  CircleDollarSign,
-  Clock3,
   Globe2,
   MessageCircle,
   MoreHorizontal,
-  MousePointer2,
   Send,
   Share2,
   ThumbsUp,
@@ -20,6 +17,8 @@ import {
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
+import { CampaignControls } from "@/components/homepage-concept/campaign-controls";
+import { HomepagePricing } from "@/components/homepage-concept/homepage-pricing";
 import { ResultsReporting } from "@/components/homepage-concept/results-reporting";
 import { WorkflowShowcase } from "@/components/homepage-concept/workflow-showcase";
 import { FAQ_GROUPS, withBasePath } from "@/lib/homepage-concept/content";
@@ -394,32 +393,9 @@ export function HomepageConcept() {
 
         <ResultsReporting />
 
-        <section className="hc-control" id="control">
-          <div className="hc-shell hc-control-grid">
-            <div className="hc-section-copy">
-              <h2>You&rsquo;re in control.</h2>
-              <p>Creative, budget, status and reporting, when you need the detail.</p>
-            </div>
-            <div className="hc-detail-list">
-              <details open>
-                <summary><span><MousePointer2 aria-hidden="true" size={20} /> Creative control</span><ChevronRight aria-hidden="true" size={20} /></summary>
-                <p>Change the property, offer, copy, call to action and brand details before approval.</p>
-              </details>
-              <details>
-                <summary><span><CircleDollarSign aria-hidden="true" size={20} /> Budget control</span><ChevronRight aria-hidden="true" size={20} /></summary>
-                <p>Review the daily budget and schedule. Meta ad spend is separate and paid from your connected ad account.</p>
-              </details>
-              <details>
-                <summary><span><BarChart3 aria-hidden="true" size={20} /> Campaign detail</span><ChevronRight aria-hidden="true" size={20} /></summary>
-                <p>See status, spend and lead activity, with deeper campaign detail available when needed.</p>
-              </details>
-              <details>
-                <summary><span><Clock3 aria-hidden="true" size={20} /> Helpful updates</span><ChevronRight aria-hidden="true" size={20} /></summary>
-                <p>Use the dashboard for the full view or receive a short optional email update.</p>
-              </details>
-            </div>
-          </div>
-        </section>
+        <CampaignControls />
+
+        <HomepagePricing />
 
         <section className="hc-faq" id="faq">
           <div className="hc-shell hc-faq-grid">

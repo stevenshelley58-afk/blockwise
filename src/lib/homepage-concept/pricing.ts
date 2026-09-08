@@ -1,0 +1,65 @@
+// Pricing-page content at revision 674b512139961927191f3659a64737a2e0db1cdd.
+export const HOMEPAGE_PLANS = [
+  {
+    id: "free",
+    name: "Free",
+    price: "A$0",
+    billing: "No Blockwise subscription fee",
+    bestFor: "Trying Blockwise",
+    outcome: "Create your first ads. No card needed.",
+    features: [
+      "Three Feed + Story ads",
+      "One trial campaign",
+      "Keep managing your ads for free",
+    ],
+    terms: "Ad spend is paid separately to Meta.",
+    cta: {
+      label: "Start free",
+      href: "/signup?offer=self-serve",
+      location: "pricing-summary-free",
+    },
+    featured: false,
+  },
+  {
+    id: "self-serve",
+    name: "Self-serve",
+    price: "A$249",
+    billing: "per month · until cancelled",
+    bestFor: "Running your own ads",
+    outcome: "Create, publish and track your ads.",
+    features: [
+      "Up to 50 Feed + Story packs/month",
+      "Five team members",
+      "One brand and Meta ad account",
+      "Help when you need it",
+    ],
+    terms: "Ad spend is separate. GST included where required.",
+    cta: {
+      label: "Create three ads free",
+      href: "/signup?offer=self-serve",
+      location: "pricing-summary-self-serve",
+    },
+    featured: true,
+  },
+  {
+    id: "managed",
+    name: "Managed",
+    price: "from A$1,500",
+    billing: "per month · plus Meta ad spend",
+    bestFor: "Getting it done for you",
+    outcome: "We set up and manage your ads.",
+    features: [
+      "Everything in self-serve",
+      "Up to four live campaigns",
+      "Weekly improvements",
+      "Monthly report",
+    ],
+    terms: "We agree the scope before you pay.",
+    cta: {
+      label: "Book a call",
+      href: "/#managed-setup",
+      location: "pricing-summary-managed",
+    },
+    featured: false,
+  },
+] as const;
