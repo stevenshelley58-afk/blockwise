@@ -1,5 +1,12 @@
 # Quiet card: performance and creative context
 
+Hallmark self-critique: Philosophy 5/5; Hierarchy 5/5; Execution 4/5;
+Specificity 5/5; Restraint 4/5; Variety 4/5.
+
+Handoff gates: contrast pass; honest data pass; no re-drawn chrome; token
+discipline pass; responsive pass at 320, 375, 414 and 768 CSS pixels. The
+preview also passes image-blocked and automatic light/dark fallback checks.
+
 ## Scope and direction
 
 Surface: the daily summary, weekly performance report and new-lead alert, with
