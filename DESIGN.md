@@ -113,6 +113,13 @@ components:
     rounded: "{rounded.pill}"
     padding: "0 16px"
     height: "36px"
+  home-primary-action:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.surface}"
+    typography: "{typography.label}"
+    rounded: "{rounded.control}"
+    padding: "0 16px"
+    height: "48px"
   button-secondary:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
@@ -242,6 +249,19 @@ controls while removing repetition.
 - complete loading/empty/success states — no dead ends
 - compact information density without crowding
 
+### Mobile Home pilot (scoped)
+
+The September 2026 mobile Home pilot applies only to `/self-serve`. It is a
+mobile-first expression of this existing system, not a new global visual
+language. The Home body is a continuous light surface with hairline section
+boundaries, one resolver-backed next action, compact result metrics, simple tool
+rows, and collapsed workspace details. The shared customer shell still owns the
+single five-destination mobile bar: Home, Ads, Results, Leads, and More.
+
+The pilot does not change other customer routes, operator surfaces, or the
+current light-only customer theme. Dark styling in the sidebar is not evidence
+of a full-page dark customer theme.
+
 ## 2. Colors
 
 The palette is near-monochrome and operational. Primary ink and action color are
@@ -294,6 +314,10 @@ data hue is the only vivid display accent. Do not introduce a third.
 **The Semantic Color Rule.** Green, amber, and red communicate state. They never
 decorate headings, cards, or illustrations.
 
+**Mobile Home surface rule.** The pilot remains light-only: `--bg`, `--surface`,
+`--surface-subtle`, `--line`, and semantic text tokens come from the existing
+Tailwind bridge. Do not infer a full-page dark mode from sidebar theme support.
+
 ## 3. Typography
 
 **Display Font:** Manrope (with Inter and system sans fallbacks) — `font-display`
@@ -327,6 +351,11 @@ Buttons, labels, data, and navigation use the body family.
 **The Sentence Case Rule.** Labels, actions, headings, helper text, errors, and
 status messages use sentence case. Uppercase is reserved for compact table or
 technical metadata, never decorative page introductions.
+
+**Mobile Home type rule.** Home uses Inter utility text at 15px for primary
+actions and tool labels, 13px for supporting text and metric labels, and a
+compact Inter 20px Home bar title. Section headings use 15.5px, with the next-step heading at 17px. Numeric results keep tabular figures
+and may use compact notation only when the complete value remains accessible.
 
 ## 4. Elevation
 
@@ -415,6 +444,10 @@ hand-building; use the token utilities below for layout and bespoke surfaces.
 
 ### Controls
 
+- **Home primary action (pilot only):** semantic primary background and
+  foreground, `--r-ctl` (10px), 48px minimum height, full width on mobile and
+  an appropriately bounded width on desktop. It is the one visible next-step
+  action, not a second summary of the heading.
 - **Ink button:** full pill, Operations Ink background, white label, 36px.
   Hover opacity, active scale — no bounce.
 - **Ghost button:** full pill, Clean Surface, Control Line boundary, ink label.
@@ -422,6 +455,20 @@ hand-building; use the token utilities below for layout and bespoke surfaces.
   unselected = surface + hairline.
 - **Input / select:** Clean Surface, hairline border, `card` radius, 36px, ink
   border on focus. Selects pair with a faint chevron.
+
+### Mobile Home pilot components
+
+- **Section:** a flat content group separated by a one-pixel `--line` hairline;
+  no nested card grid. Keep section headings in the 15.5px title voice.
+- **Action row:** a minimum 44px reachable row with a meaningful leading icon,
+  15px action label, 13px supporting text, and one trailing chevron.
+- **Disclosure:** native progressive disclosure with a minimum 44px summary;
+  use it for completed milestones and Workspace details, not required next
+  actions.
+- **Results:** three compact inline metrics on mobile. Credits belong in
+  Workspace details, not a fourth narrow metric column.
+- **Loading:** mirror this flat hierarchy with hairlines and token skeletons;
+  do not restore the old card-and-chart scaffold.
 
 ### Page head
 
@@ -439,6 +486,17 @@ hand-building; use the token utilities below for layout and bespoke surfaces.
 
 ### Do:
 
+- **Do** keep the mobile Home pilot primary task first and link it to the
+  server-resolved activation path.
+- **Do** keep Home flat by default: use sections, rows, hairlines, and
+  disclosures before rounded cards or chart scaffolds.
+- **Do** preserve actual data semantics. Show unavailable reporting as
+  unavailable with a contextual recovery link; never substitute zero.
+- **Do** make the 390px first viewport useful while preserving a natural scroll
+  at 320px and clearing the shared five-destination bar.
+- **Do** make future Home-like screens follow the same 15px action, 13px
+  supporting, 20px Home title, 10px control-radius, and 48px primary-action
+  rhythm only when their own design review adopts it.
 - **Do** make one next action or operational read visibly dominant.
 - **Do** use the shared ink accent, neutral layers, radius scale, Manrope/Inter,
   and existing primitives before adding route-local values.
