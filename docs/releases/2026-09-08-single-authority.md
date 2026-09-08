@@ -54,3 +54,12 @@ release and must be recorded as an incident.
 
 The paused UI audit created no mock users, rows, workspace, storage objects or
 provider/email activity before reconciliation started.
+
+## Retired automatic hosting
+
+PR validation exposed a still-connected Vercel Git integration launching builds.
+The root `vercel.json` now sets `git.deploymentEnabled` to `false`, with a
+regression test. This prevents new Git-triggered deployments for the consolidated
+source; it does not delete historical provider deployments or customer data.
+The optional Supabase Preview integration reported a failure; it is not one of
+the two required repository checks or the maintained production database.

@@ -180,7 +180,9 @@ Frank template packs and Hermes research remain separate systems. The sole
 maintained application source is `/projects/blockwise` on `main`, tracking
 `origin/main`. Production is released only from the same full Git SHA in a clean
 immutable checkout at `/srv/blockwise/releases/product/<full-sha>`. A feature
-checkout or an archive branch is not a deployment source. Release provenance
+checkout or an archive branch is not a deployment source. Root `vercel.json`
+disables Git-triggered Vercel deployments; retired managed-hosting integration
+statuses are not production release gates. Release provenance
 must match canonical HEAD, remote main, immutable checkout, image label, selected
 environment revision and the public compiled revision.
 
