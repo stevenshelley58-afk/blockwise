@@ -7,7 +7,10 @@ Read the compiled revision from live health and verify the intended full SHA
 with the product-health script. Dated releases below are historical evidence,
 not a fixed current release. [The index](../README.md) selects other procedures.
 
-## Release candidate (7 September 2026, beta readiness)
+## Historical candidate (7 September 2026, beta readiness)
+
+The following checkpoint and commands are historical only. They are superseded
+by the Single-authority release procedure under Current runtime below.
 
 The coordinated candidate checkout is `/projects/blockwise-beta-release-20260907`.
 At the latest validation checkpoint the application code revision is
@@ -42,7 +45,7 @@ OAuth writes, email sends, worker restart, or Caddy restart were performed.
 - No final image was built while product E2E and operations follow-up remained
   in progress.
 
-### Required gates before deployment
+### Historical candidate gates (superseded)
 
 1. Re-run `check:nul`, the complete test suite, typecheck, and build from the
    final clean candidate SHA. Resolve the package navigation expectation or

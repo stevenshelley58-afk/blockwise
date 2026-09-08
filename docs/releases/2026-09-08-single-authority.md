@@ -63,3 +63,11 @@ regression test. This prevents new Git-triggered deployments for the consolidate
 source; it does not delete historical provider deployments or customer data.
 The optional Supabase Preview integration reported a failure; it is not one of
 the two required repository checks or the maintained production database.
+
+## Inherited verification repairs
+
+Required CI exposed two baseline issues. The contract runner now installs
+FFmpeg/ffprobe so media archive tests exercise real video validation. Research-only
+migrations and database tests are restored to their separate research ownership
+paths, reusing the narrow isolation corrections preserved in old main. These are
+repository/CI corrections, not live database migrations or feature changes.

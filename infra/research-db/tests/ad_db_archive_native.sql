@@ -1,5 +1,5 @@
 -- Opt-in VPS verification against the currently applied migration state:
--- docker exec -i blockwise-research-db psql -U postgres -d blockwise_research -v ON_ERROR_STOP=1 < supabase/tests/ad_db_archive_native.sql
+-- docker exec -i blockwise-research-db psql -U postgres -d blockwise_research -v ON_ERROR_STOP=1 < infra/research-db/tests/ad_db_archive_native.sql
 -- Run from /root/work/blockwise on the VPS. Fixtures and assertions roll back.
 -- Do not concatenate migrations 011-014 into this command after they are live.
 
