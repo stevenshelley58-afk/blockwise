@@ -30,18 +30,29 @@ test("homepage concept is isolated, noindex and makes no API calls", async () =>
 test("homepage composition explains the product, flow, pricing and final signup", async () => {
   const component = await readFile(new URL("../src/components/homepage-concept/homepage-concept.tsx", import.meta.url), "utf8");
   for (const copy of [
-    "More leads. Less ad management.", "real estate agents",
-    "Example ad", "Example enquiry", "<WorkflowShowcase />", "<ResultsReporting />", "<HomepagePricing />",
+    "More leads.", "Less ad management.", "real estate agents",
+    "HeroAdShowcase", "<WorkflowShowcase />", "<ResultsReporting />", "<HomepagePricing />",
     "Ready to make your next ad?", "Start with three Feed and Story packs.",
   ]) assert.ok(component.includes(copy), `missing composition content: ${copy}`);
   assert.match(component, /TRIAL_SIGNUP_URL/);
   assert.match(component, /TRIAL_CTA_LABEL/);
+  assert.match(component, /<span>More leads\.<\/span><span className="hc-hero-prompt">Less ad management\.<\/span>/);
+  assert.doesNotMatch(component, /No card required\. Meta ad spend is separate\./);
   assert.doesNotMatch(component, /href="#trial"|CampaignControls|mock form/i);
   assert.doesNotMatch(component, /guarantee leads|guarantee sales/i);
   const sections = ["hc-hero", "hc-process", "<ResultsReporting />", "<HomepagePricing />", 'className="hc-faq"', "hc-trial"];
   const positions = sections.map((section) => component.indexOf(section));
   assert.ok(positions.every((position) => position >= 0), "approved sections remain present");
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
+});
+
+test("hero restores the previous animated ad deck without fabricated proof metrics", async () => {
+  const showcase = await readFile(new URL("../src/components/homepage-concept/hero-ad-showcase.tsx", import.meta.url), "utf8");
+  assert.match(showcase, /Example ads/);
+  assert.match(showcase, /IntersectionObserver/);
+  assert.match(showcase, /useReducedMotion/);
+  assert.match(showcase, /1850/);
+  assert.doesNotMatch(showcase, /reactions|comments/);
 });
 
 test("homepage FAQ remains grouped, collapsed and matches the offer", async () => {

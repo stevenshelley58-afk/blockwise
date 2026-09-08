@@ -42,6 +42,61 @@ async function assertNoWritesOrTracking() {
   expect(browserErrors, "preview must not cause browser or console errors").toEqual([]);
 }
 
+async function assertHeroTreatment(page: Page) {
+  const hero = page.locator(".hc-hero-copy");
+  await expect(hero).toContainText("No card required.");
+  await expect(hero).not.toContainText("Meta ad spend is separate");
+  const exampleLabel = page.getByText("Example ads", { exact: true });
+  await expect(exampleLabel).toBeVisible();
+  const [labelRect, frontAdRect] = await Promise.all([
+    exampleLabel.boundingBox(),
+    page.locator(".hc-meta-card.is-front article").boundingBox(),
+  ]);
+  expect(labelRect, "the example label must have a rendered rectangle").not.toBeNull();
+  expect(frontAdRect, "the front example ad must have a rendered rectangle").not.toBeNull();
+  expect(labelRect!.y + labelRect!.height, "the example label must not cover the ad header").toBeLessThanOrEqual(frontAdRect!.y + 1);
+
+  const lines = page.locator(".hc-hero-copy h1 > span");
+  await expect(lines).toHaveCount(2);
+  await expect(lines.nth(0)).toHaveText("More leads.");
+  await expect(lines.nth(1)).toHaveText("Less ad management.");
+  const geometry = await lines.evaluateAll((elements) => elements.map((element) => {
+    const rect = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return {
+      left: rect.left,
+      top: rect.top,
+      height: rect.height,
+      lineHeight: Number.parseFloat(style.lineHeight),
+      color: style.color,
+    };
+  }));
+  expect(Math.abs(geometry[0].left - geometry[1].left), "headline lines must share a left edge").toBeLessThanOrEqual(1);
+  expect(geometry[1].top, "the second headline phrase must render on its own line").toBeGreaterThan(geometry[0].top + 1);
+  for (const line of geometry) {
+    expect(line.height, "each requested headline phrase must remain a single line").toBeLessThanOrEqual(line.lineHeight * 1.25);
+  }
+  expect(geometry[1].color, "the second headline line must use the restored light blue").toBe("rgb(78, 156, 245)");
+}
+
+async function assertAnimatedHeroAdvances(page: Page) {
+  const frontAd = page.locator(".hc-meta-card.is-front article");
+  await expect(frontAd).toBeVisible();
+  const initialLabel = await frontAd.getAttribute("aria-label");
+  await page.waitForTimeout(2200);
+  await expect(frontAd).not.toHaveAttribute("aria-label", initialLabel!);
+}
+
+async function assertReducedMotionHeroFreezes(page: Page) {
+  const showcase = page.locator(".hc-meta-showcase");
+  await showcase.scrollIntoViewIfNeeded();
+  const frontAd = page.locator(".hc-meta-card.is-front article");
+  await expect(frontAd).toBeVisible();
+  const initialLabel = await frontAd.getAttribute("aria-label");
+  await page.waitForTimeout(2200);
+  await expect(frontAd).toHaveAttribute("aria-label", initialLabel!);
+}
+
 async function assertAllImagesLoaded(page: Page) {
   const images = await page.locator("img").evaluateAll((elements) => elements.map((image) => ({
     src: image.currentSrc || image.getAttribute("src"),
@@ -129,6 +184,7 @@ async function assertLayoutAt(page: Page, width: number, height = 844) {
   await page.reload({ waitUntil: "networkidle" });
   await page.evaluate(() => document.fonts.ready);
   await expect(page.getByRole("heading", { level: 1, name: "More leads. Less ad management." })).toBeVisible();
+  await assertHeroTreatment(page);
   await assertVisibleElementsFit(page);
   await assertLegible(page);
 }
@@ -187,6 +243,8 @@ test("homepage concept preview is contained, interactive, static, and explicitly
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/i);
   await expect(page.locator('meta[name="blockwise-preview-revision"]')).toHaveCount(1);
   await expect(page.locator("body")).not.toContainText(/actualproof/i);
+  await assertHeroTreatment(page);
+  await assertAnimatedHeroAdvances(page);
 
   const trialLinks = page.locator('a[href="' + SIGNUP_URL + '"]');
   expect(await trialLinks.count(), "every trial CTA must use the approved signup URL").toBeGreaterThanOrEqual(5);
@@ -277,6 +335,7 @@ test("homepage concept preview is contained, interactive, static, and explicitly
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.reload({ waitUntil: "networkidle" });
+  await assertReducedMotionHeroFreezes(page);
   await page.getByRole("group", { name: "Example campaign steps" }).getByRole("button", { name: "Customise" }).click();
   await expect(page.getByLabel("Ad headline")).toBeEditable();
 

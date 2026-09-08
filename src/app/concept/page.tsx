@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { HomepageConcept } from "@/components/homepage-concept/homepage-concept";
 
 import "./concept.css";
+import "@/components/homepage-concept/hero-ad-showcase.css";
 
 export const metadata: Metadata = {
   title: "More leads. Less ad management. | Blockwise",

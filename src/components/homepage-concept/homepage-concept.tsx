@@ -3,6 +3,7 @@
 import { ArrowRight, Check, ChevronDown, Mail, Menu, ShieldCheck } from "lucide-react";
 import { useEffect, useRef } from "react";
 
+import { HeroAdShowcase } from "@/components/homepage-concept/hero-ad-showcase";
 import { HomepagePricing } from "@/components/homepage-concept/homepage-pricing";
 import { ResultsReporting } from "@/components/homepage-concept/results-reporting";
 import { WorkflowShowcase } from "@/components/homepage-concept/workflow-showcase";
@@ -36,21 +37,6 @@ function MobileMenu() {
   return <details className="hc-mobile-menu" ref={menuRef}><summary aria-label="Open navigation"><Menu aria-hidden="true" size={20} /></summary><nav aria-label="Mobile navigation" onClick={() => menuRef.current?.removeAttribute("open")}><a href="#how-it-works">How it works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a><a href={LOGIN_HREF}>Log in</a></nav></details>;
 }
 
-function HeroPreview() {
-  return (
-    <figure className="hc-hero-preview" aria-label="Example appraisal ad leading to an enquiry">
-      <div className="hc-example-label">Example ad</div>
-      <article className="hc-hero-ad">
-        <header><span className="hc-hero-avatar">WCH</span><span><strong>West Coast Home Co</strong><small>Sponsored</small></span></header>
-        <p>Thinking of selling? Get a free property appraisal.</p>
-        <img src={withBasePath("/home/mt-lawley-federation.webp")} alt="" width="1080" height="1350" />
-        <div className="hc-hero-ad-link"><span><strong>Request an appraisal</strong></span><b>Learn more</b></div>
-      </article>
-      <div className="hc-enquiry-cue"><ArrowRight aria-hidden="true" size={17} /><span><strong>Example enquiry</strong><small>New appraisal request</small></span><Check aria-hidden="true" size={16} /></div>
-    </figure>
-  );
-}
-
 export function HomepageConcept() {
   return (
     <div className="hc-root">
@@ -62,7 +48,7 @@ export function HomepageConcept() {
         <MobileMenu />
       </header>
       <main>
-        <section className="hc-hero" id="top"><div className="hc-shell hc-hero-grid"><div className="hc-hero-copy"><h1>More leads. Less ad management.</h1><p>Blockwise helps real estate agents create, review and run Facebook and Instagram ads in one place.</p><div className="hc-hero-actions"><TrialLink>{TRIAL_CTA_LABEL} <ArrowRight aria-hidden="true" size={17} /></TrialLink><span><Check aria-hidden="true" size={16} /> No card required. Meta ad spend is separate.</span></div></div><div className="hc-hero-visual"><HeroPreview /></div></div></section>
+        <section className="hc-hero" id="top"><div className="hc-shell hc-hero-grid"><div className="hc-hero-copy"><h1><span>More leads.</span><span className="hc-hero-prompt">Less ad management.</span></h1><p>Blockwise helps real estate agents create, review and run Facebook and Instagram ads in one place.</p><div className="hc-hero-actions"><TrialLink>{TRIAL_CTA_LABEL} <ArrowRight aria-hidden="true" size={17} /></TrialLink><span><Check aria-hidden="true" size={16} /> No card required.</span></div></div><div className="hc-hero-visual"><HeroAdShowcase /></div></div></section>
         <section className="hc-process" id="how-it-works"><div className="hc-shell"><WorkflowShowcase /></div></section>
         <ResultsReporting />
         <HomepagePricing />
