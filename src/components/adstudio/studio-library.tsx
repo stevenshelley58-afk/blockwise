@@ -43,9 +43,9 @@ export function StudioLibrary({
     <div className="mx-auto w-full max-w-[1120px] px-4 pb-28 pt-8 md:px-6 md:pb-16 md:pt-10">
       <header>
         <div>
-          <h1 className="font-display text-[27px] font-extrabold tracking-[-.02em]">Library</h1>
+          <h1 className="font-display text-[27px] font-extrabold tracking-[-.02em]">Ads &amp; Photos &amp; logos</h1>
           <p className="mt-2 max-w-[62ch] text-sm leading-6 text-muted-foreground">
-            Find a saved ad to continue, or choose media to make the next one yours.
+            Pick up a saved ad or choose a photo or logo for the next one.
           </p>
         </div>
       </header>
@@ -59,7 +59,7 @@ export function StudioLibrary({
           </TabsTrigger>
           <TabsTrigger value="assets" className="min-h-11 gap-2 rounded-none px-3 text-xs sm:px-4 sm:text-sm">
             <Image className="size-4" aria-hidden />
-            Assets
+            Photos &amp; logos
             <span className="rounded-full bg-(--surface-subtle) px-2 py-0.5 text-[11px] tabular-nums text-muted-foreground">{assets.length}</span>
           </TabsTrigger>
         </TabsList>

@@ -16,7 +16,7 @@ const NOTIFICATION_OPTIONS: Array<{ key: string; label: string; description: str
   { key: "productUpdates", label: "Product updates", description: "New features, occasionally.", fallback: false },
 ];
 
-export function NotificationsSection({ supabase, userId, initial }: { supabase: SB; userId: string; initial: Record<string, boolean> }) {
+export function NotificationsSection({ supabase, userId, deliveryEmail, initial }: { supabase: SB; userId: string; deliveryEmail?: string; initial: Record<string, boolean> }) {
   const [prefs, setPrefs] = useState<Record<string, boolean>>(() => {
     const seeded: Record<string, boolean> = {};
     for (const opt of NOTIFICATION_OPTIONS) {
@@ -44,6 +44,9 @@ export function NotificationsSection({ supabase, userId, initial }: { supabase: 
 
   return (
     <Section id="notifications" title={niche.copy.settings.sections.notifications}>
+      <p className="text-xs text-muted-foreground">
+        Delivery destination: <span className="font-semibold text-foreground">{deliveryEmail || "Your account email"}</span>
+      </p>
       {NOTIFICATION_OPTIONS.map((opt) => (
         <div className="flex items-center justify-between gap-4" key={opt.key}>
           <div className="grid gap-0.5">
@@ -58,10 +61,15 @@ export function NotificationsSection({ supabase, userId, initial }: { supabase: 
         </div>
       ))}
       <Feedback message={message} />
-      <div>
+      <div className="flex flex-wrap items-center gap-2">
         <Button type="button" onClick={save} disabled={busy}>
           {busy ? "Saving" : "Save preferences"}
         </Button>
+        {message?.tone === "error" ? (
+          <Button type="button" variant="outline" onClick={save} disabled={busy}>
+            Retry
+          </Button>
+        ) : null}
       </div>
     </Section>
   );

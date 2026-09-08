@@ -7,7 +7,7 @@ import {
 
 export default function ResultsLoading() {
   return (
-    <SkeletonPage label="Performance">
+    <SkeletonPage label="Results">
       <SkeletonPageHead />
       <SkeletonStatRow count={6} />
       <div className="grid gap-3.5 md:grid-cols-3">

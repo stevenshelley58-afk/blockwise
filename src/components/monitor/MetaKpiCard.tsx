@@ -15,20 +15,22 @@ export function MetaKpiCard(props: {
   goodWhenDown?: boolean;
   /** 0–1 budget-consumed progress; renders the progress variant. */
   progress?: number;
+  /** Compact overview variant for fitting the primary KPI row on small screens. */
+  compact?: boolean;
 }) {
   const trend = props.trend ?? null;
   const isUp = trend != null && trend >= 0;
   const isGood = trend != null && (props.goodWhenDown ? trend <= 0 : trend >= 0);
 
   return (
-    <article className="rounded-(--r-card) border border-(--line) bg-(--surface) px-[18px] pt-[17px] pb-[15px] shadow-card">
-      <div className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
+    <article className={`rounded-(--r-card) border border-(--line) bg-(--surface) shadow-card ${props.compact ? "px-2.5 py-3 sm:px-[18px] sm:pt-[17px] sm:pb-[15px]" : "px-[18px] pt-[17px] pb-[15px]"}`}>
+      <div className={`font-mono font-medium tracking-[0.12em] text-(--faint) uppercase ${props.compact ? "text-[8.5px] sm:text-[9.5px]" : "text-[9.5px]"}`}>
         {props.label}
       </div>
-      <div className="mt-[7px] font-display text-[21px] font-extrabold tracking-[-0.02em] tabular-nums sm:text-[24px]">
+      <div className={`font-display font-extrabold tracking-[-0.02em] tabular-nums ${props.compact ? "mt-1 text-[18px] sm:mt-[7px] sm:text-[24px]" : "mt-[7px] text-[21px] sm:text-[24px]"}`}>
         {props.value}
       </div>
-      <div className="mt-[7px] flex flex-wrap items-center gap-1.5">
+      <div className={`flex flex-wrap items-center gap-1.5 ${props.compact ? "mt-1 sm:mt-[7px]" : "mt-[7px]"}`}>
         {trend != null ? (
           <span
             className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10.5px] font-bold tabular-nums ${

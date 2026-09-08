@@ -40,9 +40,6 @@ export default async function AdvertiserProfilePage({ params }: { params: Promis
         <Link className={ghostButtonClass} href="/ad-radar">
           Back to ads
         </Link>
-        <span className="rounded-lg bg-(--surface-subtle) px-2.5 py-1 font-mono text-[11px] font-medium text-(--faint)">
-          {id}
-        </span>
       </div>
 
       {error ? (

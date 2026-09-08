@@ -54,6 +54,7 @@ export function AdsLibrary({ ads, embedded = false }: AdsLibraryProps) {
         </Button>
       </header> : null}
 
+      {ads.length > 0 ? <>
       <SearchFilterPanel className={embedded ? "mt-0" : "mt-8"} label="Ad library controls">
         <SearchField id="ad-library-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search ads" label="Search ads" />
         <SearchFilterRow action={
@@ -81,8 +82,9 @@ export function AdsLibrary({ ads, embedded = false }: AdsLibraryProps) {
 
       <div className="mt-5 flex items-center justify-between gap-3 text-xs text-muted-foreground">
         <p aria-live="polite">{visibleAds.length} {visibleAds.length === 1 ? "ad" : "ads"}</p>
-        <p className="hidden sm:block">Real saved previews · exact ad identity</p>
+        <p className="hidden sm:block">Saved previews</p>
       </div>
+      </> : null}
 
       {ads.length === 0 ? (
         <EmptyAds />
@@ -116,7 +118,7 @@ function AdCard({ ad }: { ad: LibraryAdModel }) {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="truncate font-display text-[15.5px] font-extrabold">{ad.name}</h2>
-              <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground" title={ad.adId}>Ad ID · {ad.adId}</p>
+              <p className="mt-1 truncate text-[11px] text-muted-foreground">{ad.status === "draft" ? "Draft in progress" : "Saved creative"}</p>
             </div>
             {ad.feedDownloadPath || ad.storyDownloadPath ? (
               <div className="flex items-center gap-1">

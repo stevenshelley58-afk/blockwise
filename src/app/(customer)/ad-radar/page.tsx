@@ -20,6 +20,8 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
   const requestHeaders = await headers();
   const params = searchParams ? await searchParams : {};
   const searchTerm = firstParam(params.q ?? params.postcode).trim();
+  const initialAgency = firstParam(params.agency).trim();
+  const initialAgent = firstParam(params.agent).trim();
   const locationGuess = searchTerm
     ? resolveAdRadarLocationSearch(searchTerm)
     : resolveAdRadarLocationGuess(requestHeaders);
@@ -59,6 +61,8 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
       <AdRadarSearchPanel
         initialQuery={searchTerm}
         initialLocationLabel={locationLabel}
+        initialAgency={initialAgency}
+        initialAgent={initialAgent}
         initialNote=""
         autoSearchTerm={autoSearch?.searchTerm ?? null}
         autoSearchLabel={autoSearch?.label ?? null}

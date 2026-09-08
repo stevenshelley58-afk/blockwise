@@ -47,9 +47,6 @@ export function MetaAdLibraryCard({ card }: { card: CustomerMetaAdLibraryCard })
           <span className={`size-2 rounded-full ${statusTone.dot}`} aria-hidden />
           <span className={`text-[12.5px] font-bold ${statusTone.label}`}>{statusLabel}</span>
         </span>
-        <span className={headMetaClass}>
-          {card.libraryId ? `Library ID: ${card.libraryId}` : "Library ID unavailable"}
-        </span>
         {dateText ? <span className={headMetaClass}>{dateText}</span> : null}
         {card.platforms.length > 0 ? (
           <div className="mt-1 flex items-center gap-2 text-[11.5px] font-semibold text-muted-foreground">
@@ -219,7 +216,7 @@ function MediaPanel({ card }: { card: CustomerMetaAdLibraryCard }) {
   if (card.media.length === 0) {
     return (
       <div className="grid min-h-[180px] place-items-center border-t border-(--line) bg-(--surface-subtle) p-4 text-center">
-        <span className="text-[12.5px] font-bold text-muted-foreground">Text-only ad</span>
+        <span className="text-[12.5px] font-bold text-muted-foreground">{card.adType?.toLowerCase().includes("text") ? "Text-only ad" : "Preview unavailable"}</span>
       </div>
     );
   }

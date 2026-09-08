@@ -55,6 +55,7 @@ export default async function ResultsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const resolvedParams = await searchParams;
+  const showExample = resolvedParams.example === "1";
   const { supabase, access } = await requirePageSurfaceAccess("monitor");
   const requestedPlanId = typeof resolvedParams.planId === "string" ? resolvedParams.planId.trim() : "";
   let focusCampaignId: string | null = null;
@@ -106,6 +107,7 @@ export default async function ResultsPage({
       metaConnectHref="/connect-meta"
       oauthNotice={oauthNotice}
       focusCampaignId={focusCampaignId}
+      showExample={showExample}
     />
   );
 }

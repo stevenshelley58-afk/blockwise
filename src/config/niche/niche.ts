@@ -150,6 +150,7 @@ export type LeadsCopy = {
   neverSynced: string;
   noMatches: string;
   empty: { title: string; body: string };
+  disconnected: { title: string; body: string; connectCta: string };
 };
 
 export type PerformanceCopy = {
@@ -165,6 +166,7 @@ export type PerformanceCopy = {
   areaBreakdown: { title: string; empty: string };
   budgetPacing: string;
   demoChip: string;
+  viewExample: string;
   refresh: string;
   refreshing: string;
   customRange: string;

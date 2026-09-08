@@ -33,8 +33,11 @@ export const blockwise: NicheConfig = {
   nav: {
     items: [
       { href: "/self-serve", label: "Home", icon: "home", mobileLabel: "Home" },
-      { href: "/ad-studio", label: "Ad Studio", icon: "studio", mobileLabel: "Ads" },
-      { href: "/results", label: "Performance", icon: "performance", mobileLabel: "Results" },
+      { href: "/ad-studio", label: "Ads", icon: "studio", mobileLabel: "Ads" },
+      { href: "/ad-studio/templates", label: "Templates", icon: "studio", section: "Ads" },
+      { href: "/ad-studio/ads", label: "Saved ads", icon: "studio", section: "Ads" },
+      { href: "/ad-studio/assets", label: "Photos & logos", icon: "studio", section: "Ads" },
+      { href: "/results", label: "Results", icon: "performance", mobileLabel: "Results" },
       { href: "/ad-radar", label: "Ad Radar", icon: "radar", feature: "adRadar" },
       { href: "/property-check", label: "Property Check", icon: "property", feature: "propertyCheck" },
       { href: "/leads", label: "Leads", icon: "leads", mobileLabel: "Leads" },

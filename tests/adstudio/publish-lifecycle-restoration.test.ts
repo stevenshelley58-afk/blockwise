@@ -63,6 +63,6 @@ test("results resolves and focuses the campaign owned by the exact publish plan"
   assert.match(resultsPage, /focusCampaignId=\{focusCampaignId\}/);
   assert.match(resultsDashboard, /campaignRowDomId\(focusCampaignId\)/);
   assert.match(resultsDashboard, /Showing the ad created from your publish plan/);
-  assert.match(resultsDashboard, /Advanced ad settings/);
+  assert.match(resultsDashboard, /Manage campaigns and budgets/);
   assert.match(resultsDashboard, /open=\{focusCampaignId \? true : undefined\}/);
 });

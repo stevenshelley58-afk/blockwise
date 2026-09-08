@@ -21,7 +21,8 @@ describe("customer Ad Studio workbench contract", () => {
     assert.doesNotMatch(publishRoute, /fixed inset-0/);
     assert.match(editorRoute, /Use this template/);
     assert.match(stableEditorRoute, /<EditorShell/);
-    assert.match(stableEditorRoute, /h-full min-h-0 flex-col overflow-hidden/);
+    assert.match(stableEditorRoute, /h-\[calc\(100dvh-54px-4\.75rem-env\(safe-area-inset-top\)/);
+    assert.match(stableEditorRoute, /md:h-\[calc\(100dvh-60px\)/);
     assert.match(stableEditorRoute, /h-full min-h-0 overflow-y-auto/);
     assert.match(publishRoute, /<PublishFlow/);
   });
@@ -86,7 +87,7 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(command, />New ad<\//);
     assert.match(command, /Recent ads/);
     assert.match(command, /aria-label="Ad Studio links"/);
-    assert.match(command, /Media library/);
+    assert.match(command, /Photos &amp; logos/);
     assert.doesNotMatch(command, /assetsError|assets\.length/);
     assert.doesNotMatch(home, /kind: "assets"/);
     assert.doesNotMatch(command, /Create a new ad<\/span>|Workspace shortcuts|Recent assets/);
@@ -154,6 +155,15 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(inputs, /Use template image/);
     assert.match(publish, /variantIds: selectedVariants/);
     assert.match(publish, /selectedVariants\.length \* selectedAdSetCount/);
+    assert.match(publish, /hidden=\{activeStage !== 1\}/);
+    assert.match(publish, /const stageCanContinue = activeStage === 1[\s\S]{0,40}\? true/);
+    assert.match(publish, /activeStage === 2[\s\S]{0,80}formReady && destinationReady && fulfilmentReady/);
+    assert.match(publish, /activeStage === 3[\s\S]{0,80}targetReady/);
+    assert.match(publish, /DownloadFormats/);
+    assert.match(publish, /Download both formats/);
+    assert.match(publish, /Download both files/);
+    assert.match(publish, /individual links below/);
+    assert.match(publish, /Edit creative and copy/);
     assert.match(publish, /This ad includes an offer, guide or result promise/);
     assert.match(publish, /fulfilmentRequired: publishRequirements\.fulfilmentRequired/);
     assert.match(publish, /Fulfilment delivery URL/);

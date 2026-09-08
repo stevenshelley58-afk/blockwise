@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Clock } from "lucide-react";
 
 import { LeadStats } from "@/components/leads/lead-stats";
@@ -25,6 +26,16 @@ export default async function LeadsPage() {
   const highIntentCount = rows.filter((lead) => lead.quality === "high_intent").length;
   const duplicateCount = rows.filter((lead) => lead.duplicateCandidate).length;
   const canEditLeadQuality = access.role === "owner" || access.role === "admin" || access.role === "operator";
+
+  const { data: metaConnection } = await supabase
+    .from("provider_connections")
+    .select("status")
+    .eq("workspace_id", access.workspaceId)
+    .eq("provider", "meta")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const metaConnected = metaConnection?.status === "connected";
 
   const { data: workspaceRow } = await supabase
     .from("workspaces")
@@ -71,17 +82,28 @@ export default async function LeadsPage() {
             <Clock size={13} aria-hidden />
             {syncLabel}
           </span>
-          <LeadSyncButton workspaceId={access.workspaceId} />
+          {metaConnected || rows.length > 0 ? <LeadSyncButton workspaceId={access.workspaceId} /> : null}
         </div>
       </header>
 
-      <div className="mt-6">
-        <LeadStats total={rows.length} highIntent={highIntentCount} duplicates={duplicateCount} />
-      </div>
-
-      <div className="mt-3.5">
-        <LeadsTable rows={items} workspaceId={access.workspaceId} canEditQuality={canEditLeadQuality} />
-      </div>
+      {!metaConnected && rows.length === 0 ? (
+        <section className="mt-8 grid place-items-center rounded-(--r-panel) border border-dashed border-(--line-heavy) bg-(--surface) px-6 py-14 text-center shadow-card">
+          <h2 className="font-display text-[17px] font-extrabold tracking-[-0.015em]">{copy.disconnected.title}</h2>
+          <p className="mt-1.5 max-w-[340px] text-[13px] leading-relaxed text-muted-foreground">{copy.disconnected.body}</p>
+          <Link href="/connect-meta" className="mt-5 inline-flex h-10 items-center rounded-full bg-(--ink) px-5 text-[13px] font-bold text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.97]">
+            {copy.disconnected.connectCta}
+          </Link>
+        </section>
+      ) : (
+        <>
+          <div className="mt-6">
+            <LeadStats total={rows.length} highIntent={highIntentCount} duplicates={duplicateCount} />
+          </div>
+          <div className="mt-3.5">
+            <LeadsTable rows={items} workspaceId={access.workspaceId} canEditQuality={canEditLeadQuality} />
+          </div>
+        </>
+      )}
     </main>
   );
 }

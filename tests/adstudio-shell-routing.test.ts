@@ -22,7 +22,9 @@ test("route-aware boundary selects Studio or legacy chrome without overlays", ()
   assert.equal((routeAwareShell.match(/className="app-shell"/g) ?? []).length, 1);
 });
 
-test("self-serve shell retains its existing Studio route handoff", () => {
-  assert.match(selfServeShell, /if \(pathname\.startsWith\("\/ad-studio"\)\)/);
-  assert.match(selfServeShell, /<StudioShell[\s\S]*>\{children\}<\/StudioShell>/);
+test("self-serve shell keeps Ads inside the shared customer shell", () => {
+  assert.doesNotMatch(selfServeShell, /StudioShell/);
+  assert.match(selfServeShell, /<SidebarProvider/);
+  assert.match(selfServeShell, /<MobileBottomNav variant="self_serve"/);
+  assert.match(selfServeShell, /navByVariant\.self_serve/);
 });

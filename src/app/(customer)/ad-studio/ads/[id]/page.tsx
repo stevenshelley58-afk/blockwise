@@ -32,7 +32,7 @@ export default async function CustomerAdEditorPage({ params }: { params: Promise
     loadAdStudioBrandDefaults(supabase, access.workspaceId),
     loadAdStudioWorkspaceLibraryAssets(supabase, access.workspaceId),
   ]);
-  return <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground">
+  return <div className="flex h-[calc(100dvh-54px-4.75rem-env(safe-area-inset-top)-env(safe-area-inset-bottom)-var(--consent-banner-height,0px))] min-h-[200px] flex-col overflow-hidden bg-background text-foreground md:h-[calc(100dvh-60px)] md:min-h-[360px]">
     <div className="min-h-0 flex-1"><EditorShell pack={pack} adId={ad.adId} workspaceId={access.workspaceId} canSave brandColours={brand.colours} brandBusinessName={brand.businessName} brandLogoUrl={brand.logoUrl} libraryAssets={libraryAssets} initialDocument={ad.initialDocument} initialRevision={ad.revisionNumber} adName={ad.name} /></div>
   </div>;
 }

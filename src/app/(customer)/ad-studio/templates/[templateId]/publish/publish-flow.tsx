@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import Link from "next/link";
 
 import { InstantFormEditor } from "@/components/adstudio/instant-form-editor";
 import type { InstantForm } from "@/lib/adstudio/instant-form-types";
 import type { PublishRequirements } from "@/lib/adstudio/publish-adapter";
 import type { MetaParentState } from "@/lib/providers/meta-execution";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -201,8 +203,8 @@ export function PublishFlow({
   const [receiptRefreshError, setReceiptRefreshError] = useState<string | null>(null);
   const [clientMutationKey, setClientMutationKey] = useState(() => crypto.randomUUID());
   const receiptRequestVersion = useRef(0);
-  const previousStage = useRef<number | null>(null);
   const receiptRegionRef = useRef<HTMLDivElement>(null);
+  const [activeStage, setActiveStage] = useState(1);
 
   useEffect(() => {
     let current = true;
@@ -418,25 +420,31 @@ export function PublishFlow({
   );
   const plannedAds = selectedVariants.length * selectedAdSetCount;
   const ready = issues.length === 0 && formReady && destinationReady && fulfilmentReady && targetReady && plannedAds > 0 && Boolean(publishBuild.controls);
-  const currentStage = !formReady || !destinationReady || !fulfilmentReady || !targetReady
+  const stageCanContinue = activeStage === 1
+    ? true
+    : activeStage === 2
+      ? formReady && destinationReady && fulfilmentReady
+      : activeStage === 3 ? targetReady && Boolean(fieldsBuild.controls) : ready;
+  const nextStageLabel = activeStage === 1 ? "Destination and form" : activeStage === 2 ? "Audience and spend" : "Review and create";
+  const currentStage = !formReady || !destinationReady || !fulfilmentReady
     ? 2
-    : !setupConfirmed
+    : !targetReady || !setupConfirmed
       ? 3
       : 4;
 
+  const [fulfilmentDetailsOpen, setFulfilmentDetailsOpen] = useState(!fulfilmentReady);
+
+  useEffect(() => {
+    if (!fulfilmentReady) setFulfilmentDetailsOpen(true);
+  }, [fulfilmentReady]);
+
   useEffect(() => {
     if (notSaved) return;
-    if (previousStage.current === null) {
-      previousStage.current = currentStage;
-      return;
-    }
-    if (previousStage.current === currentStage) return;
-    previousStage.current = currentStage;
     const frame = requestAnimationFrame(() => {
-      document.getElementById(`publish-stage-${currentStage}`)?.focus({ preventScroll: false });
+      document.getElementById(`publish-stage-${activeStage}`)?.focus({ preventScroll: false });
     });
     return () => cancelAnimationFrame(frame);
-  }, [currentStage, notSaved]);
+  }, [activeStage, notSaved]);
 
   if (notSaved) {
     return (
@@ -461,7 +469,7 @@ export function PublishFlow({
     <div className="flex h-full flex-col bg-(--canvas)">
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         <nav aria-label="Publish progress" className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-3">
-          <p className="mb-2 text-xs font-semibold text-muted-foreground">Step {currentStage} of 4</p>
+          <p className="mb-2 text-xs font-semibold text-muted-foreground">Step {activeStage} of 4 · Next required step: {currentStage}</p>
           <ol className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
             {[
               [1, "Creative & copy", "publish-stage-1"],
@@ -469,10 +477,10 @@ export function PublishFlow({
               [3, "Audience & spend", "publish-stage-3"],
               [4, "Review & create", "publish-stage-4"],
             ].map(([step, label, target]) => (
-              <li key={step} aria-current={currentStage === step ? "step" : undefined}>
-                <a href={`#${target}`} className="flex min-h-11 items-center rounded-(--r-ctl) border border-border px-3 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[current=step]:border-primary aria-[current=step]:bg-primary/5">
+              <li key={step} aria-current={activeStage === Number(step) ? "step" : undefined}>
+                <button type="button" onClick={() => { setActiveStage(Number(step)); window.setTimeout(() => document.getElementById(String(target))?.focus({ preventScroll: false }), 0); }} className={`flex min-h-11 w-full items-center rounded-(--r-ctl) border border-border px-3 text-left font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${activeStage === Number(step) ? "border-primary bg-primary/5" : ""}`}>
                   {step}. {label}
-                </a>
+                </button>
               </li>
             ))}
           </ol>
@@ -490,17 +498,18 @@ export function PublishFlow({
           </div>
         )}
 
+        <section hidden={activeStage !== 1} aria-labelledby="publish-stage-1">
         {/* Saved creative */}
-        <h2 id="publish-stage-1" tabIndex={-1} className="mb-3 scroll-mt-4 text-base font-semibold focus:outline-none">1. Creative & copy</h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 id="publish-stage-1" tabIndex={-1} className="scroll-mt-4 text-base font-semibold focus:outline-none">1. Creative & copy</h2><Link href={`/ad-studio/ads/${encodeURIComponent(adId)}`} className="min-h-11 inline-flex items-center rounded-full border border-border px-3 text-xs font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Edit creative and copy</Link></div>
         <div className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
           <h3 className="mb-2 text-sm font-semibold">Saved creative</h3>
           {initialState ? (
              <div className="space-y-3 text-xs text-muted-foreground">
-               <p>
+               <div className="flex flex-wrap items-center justify-between gap-2"><p>
                  Exact saved revision <span className="font-semibold text-foreground">{initialState.revision.revisionNumber}</span>
                  {initialState.revision.createdAt ? ` · saved ${formatSavedAt(initialState.revision.createdAt)}` : ""}
                  {` · Feed ${shortHash(initialState.revision.feedPngHash)} · Story ${shortHash(initialState.revision.storyPngHash)}`}
-               </p>
+               </p><DownloadFormats feedUrl={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} storyUrl={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} /></div>
                <div className="grid gap-4 sm:grid-cols-2">
                  <div><p className="mb-2">Feed</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} alt="Saved Feed ad" className="w-full rounded-(--r-card) border border-border" /><a className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4" href={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} download="blockwise-feed.png">Download Feed PNG</a></div>
                  <div><p className="mb-2">Story</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} alt="Saved Story ad" className="w-full rounded-(--r-card) border border-border" /><a className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4" href={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} download="blockwise-story.png">Download Story PNG</a></div>
@@ -574,6 +583,9 @@ export function PublishFlow({
           ) : null}
         </div> : null}
 
+        </section>
+
+        <section hidden={activeStage !== 2} aria-labelledby="publish-stage-2">
         <h2 id="publish-stage-2" tabIndex={-1} className="mb-3 scroll-mt-4 text-base font-semibold focus:outline-none">2. Destination & form</h2>
         <div className="mb-6 space-y-3 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
           <h3 className="text-sm font-semibold">Set up this ad</h3>
@@ -659,7 +671,7 @@ export function PublishFlow({
               ? `This template requires fulfilment${publishRequirements.fulfilmentDependency ? `: ${publishRequirements.fulfilmentDependency}` : "."}`
               : "Turn this on when the ad promises something the customer must receive or a claim that needs evidence."}
           </p>
-          {fulfilmentActive ? <div className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
+          {fulfilmentActive ? <details open={fulfilmentDetailsOpen} onToggle={(event) => setFulfilmentDetailsOpen(event.currentTarget.open)} className="rounded-(--r-ctl) border border-border bg-muted/20"><summary className="flex min-h-11 cursor-pointer items-center px-3 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Offer and compliance details</summary><div className="grid gap-3 border-t border-border p-3 sm:grid-cols-2">
             {([
               ["exactOffer", "Exact offer"], ["eligibility", "Eligibility"], ["conditions", "Conditions"], ["timeframe", "Timeframe"],
               ["evidence", "Evidence"], ["approval", "Evidence approval"], ["disclaimer", "Disclaimer"], ["privacyUrl", "Privacy URL"],
@@ -681,10 +693,13 @@ export function PublishFlow({
             <p className="sm:col-span-2 rounded-(--r-ctl) bg-muted px-3 py-2 text-xs text-muted-foreground">
               The exact fulfilment URL is bound to the Instant Form thank-you action. It can match the ad destination only when you explicitly enter the same URL. A typed file name is not accepted.
             </p>
-          </div> : null}
+          </div></details> : null}
           {fulfilmentActive && !fulfilmentReady ? <p className="text-xs text-amber-700">Complete every promise field and add valid HTTPS privacy and fulfilment delivery URLs.</p> : null}
         </div>
 
+        </section>
+
+        <section hidden={activeStage !== 3} aria-labelledby="publish-stage-3">
         <h2 id="publish-stage-3" tabIndex={-1} className="mb-3 scroll-mt-4 text-base font-semibold focus:outline-none">3. Audience, budget & schedule</h2>
         <PublishSetupFields
           targetMode={targetMode}
@@ -728,6 +743,9 @@ export function PublishFlow({
         />
 
         {/* Provider mode */}
+        </section>
+
+        <section hidden={activeStage !== 4} aria-labelledby="publish-stage-4">
         <h2 id="publish-stage-4" tabIndex={-1} className="mb-3 scroll-mt-4 text-base font-semibold focus:outline-none">4. Review & create paused</h2>
         <div className="mb-4 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
           <h3 className="text-sm font-semibold">Exact setup to create</h3>
@@ -770,6 +788,7 @@ export function PublishFlow({
             setupSummary={publishedSetupSummary}
           />
         )}
+        </section>
       </div>
 
       <footer className="flex shrink-0 flex-col items-stretch gap-3 border-t border-(--line) bg-(--surface) px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
@@ -796,8 +815,9 @@ export function PublishFlow({
         ) : (
           <span />
         )}
-        <div className="w-full sm:ml-auto sm:w-auto">
-          <Button
+        <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:justify-end">
+          {activeStage > 1 ? <Button type="button" variant="outline" onClick={() => setActiveStage(activeStage - 1)} className="min-h-11 w-full rounded-full px-6 text-sm font-semibold sm:w-auto">Back</Button> : null}
+          {activeStage < 4 ? <Button type="button" disabled={!stageCanContinue} onClick={() => stageCanContinue && setActiveStage(activeStage + 1)} className="min-h-11 w-full rounded-full px-6 text-sm font-semibold sm:w-auto">Continue to {nextStageLabel}</Button> : <Button
             onClick={metaConnectionConnected ? handleAutomatedPublish : handleManualPublish}
             disabled={metaConnectionConnected ? !ready || submitting || Boolean(receipt && !receipt.error) : !canRequestManualPublish || !ready || submitting || manualPublish.status === "requested" || manualPublish.status === "in_review" || manualPublish.status === "published"}
             className="min-h-11 w-full rounded-full px-6 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
@@ -811,9 +831,45 @@ export function PublishFlow({
                 : manualPublish.status === "requested" || manualPublish.status === "in_review"
                   ? "Request sent"
                   : "Request manual publishing"}
-          </Button>
-        </div>
-      </footer>
+          </Button>}
+        </div>      </footer>
+    </div>
+  );
+}
+
+function DownloadFormats({ feedUrl, storyUrl }: { feedUrl: string; storyUrl: string }) {
+  const [downloadError, setDownloadError] = useState(false);
+  const downloadFile = (url: string, filename: string) => {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.rel = "noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+  const downloadBoth = () => {
+    try {
+      downloadFile(feedUrl, "blockwise-feed.png");
+      window.setTimeout(() => downloadFile(storyUrl, "blockwise-story.png"), 150);
+      setDownloadError(false);
+    } catch {
+      setDownloadError(true);
+    }
+  };
+  return (
+    <div className="grid justify-items-end gap-1">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" variant="outline" className="min-h-11 rounded-full px-4 text-xs font-semibold" aria-label="Download both formats">Download both formats</Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem onSelect={(event) => { event.preventDefault(); downloadBoth(); }}>Download both files</DropdownMenuItem>
+          <DropdownMenuItem asChild><a href={feedUrl} download="blockwise-feed.png">Download Feed PNG</a></DropdownMenuItem>
+          <DropdownMenuItem asChild><a href={storyUrl} download="blockwise-story.png">Download Story PNG</a></DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {downloadError ? <span role="alert" className="text-right text-[11px] text-red-700">Could not start both downloads. Use the individual links below.</span> : null}
     </div>
   );
 }

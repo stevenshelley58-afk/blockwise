@@ -1,16 +1,16 @@
 import type { PerformanceCopy } from "../niche";
 
 export const performance: PerformanceCopy = {
-  title: "Performance",
+  title: "Results",
   subtitle: "Spend, leads and cost per lead across your live ads.",
   ranges: { d7: "7 days", d30: "30 days", d90: "90 days" },
   rangesShort: { d7: "7d", d30: "30d", d90: "90d" },
   charts: {
     spend: "Spend over time",
     leads: "Valid leads over time",
-    cpl: "Valid CPL over time",
+    cpl: "Cost per lead over time",
   },
-  cplGapNote: "Gaps mark days with no valid leads — a $0 CPL is never shown.",
+  cplGapNote: "Days with no valid leads show no cost per lead.",
   leadResults: {
     title: "Lead results",
     subtitle: "Results by listing or offer, with lead quality, cost, and the next action.",
@@ -21,7 +21,8 @@ export const performance: PerformanceCopy = {
       'No suburb attribution yet. Suburbs come from lead records or the "Suburb - Name" ad set convention.',
   },
   budgetPacing: "Budget pacing",
-  demoChip: "Demo data",
+  demoChip: "Example report",
+  viewExample: "View example report",
   refresh: "Refresh",
   refreshing: "Refreshing",
   customRange: "Custom",

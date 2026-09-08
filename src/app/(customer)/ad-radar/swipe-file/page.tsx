@@ -29,11 +29,8 @@ export default async function SwipeFilePage() {
     <main className="mx-auto grid w-full max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
-            Competitor intelligence
-          </p>
           <h1 className="mt-1 font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">
-            Saved swipe file
+            Saved inspiration
           </h1>
           <p className="mt-1 text-[13px] text-muted-foreground">
             Saved competitor ads ready to review or use as Ad Studio inspiration.
@@ -47,13 +44,14 @@ export default async function SwipeFilePage() {
       {error || adDbError ? (
         <section className="rounded-(--r-panel) border border-error/25 bg-error-soft p-5">
           <h2 className="font-display text-[15.5px] font-extrabold tracking-[-0.015em] text-error">
-            Swipe file unavailable
+            Saved inspiration unavailable
           </h2>
           <p className="mt-1 text-xs text-error/80">Saved research ads could not be loaded right now.</p>
+          <a className={ghostButtonClass + " mt-4 w-fit"} href="/ad-radar/swipe-file">Retry</a>
         </section>
       ) : null}
 
-      <section className="rounded-(--r-panel) border border-(--line) bg-(--surface) p-5 shadow-card">
+      {!error && !adDbError ? <section className="rounded-(--r-panel) border border-(--line) bg-(--surface) p-5 shadow-card">
         <div className="flex items-center justify-between gap-3">
           <h2 className="font-display text-[15.5px] font-extrabold tracking-[-0.015em]">
             {saved.length} saved ad{saved.length === 1 ? "" : "s"}
@@ -65,6 +63,7 @@ export default async function SwipeFilePage() {
             const ad = ads.find((item) => item.id === row.observedAdId);
             return (
               <article className="grid gap-3 rounded-(--r-card) border border-(--line) bg-(--surface-subtle)/40 p-4" key={row.id}>
+                {ad?.media[0] ? (ad.media[0].kind === "video" ? <video src={ad.media[0].url} controls preload="none" playsInline className="aspect-[4/5] w-full rounded-(--r-card) bg-(--surface-subtle) object-cover sm:max-w-[280px]" /> : <img src={ad.media[0].url} alt="" loading="lazy" className="aspect-[4/5] w-full rounded-(--r-card) bg-(--surface-subtle) object-cover sm:max-w-[280px]" />) : null}
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <strong className="text-[13.5px] font-bold text-foreground">
@@ -100,7 +99,7 @@ export default async function SwipeFilePage() {
             </div>
           ) : null}
         </div>
-      </section>
+      </section> : null}
     </main>
   );
 }

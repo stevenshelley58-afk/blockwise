@@ -112,6 +112,14 @@ async function assertMobileNavUsable(page: Page) {
 test.describe("customer navigation canary", () => {
   test.skip(!canRun, "Set PLAYWRIGHT_BASE_URL and ADSTUDIO_E2E_WORKSPACE_ID; the controlled auth fixture must exist.");
 
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/*", async (route) => {
+      const request = route.request();
+      if (["GET", "HEAD", "OPTIONS"].includes(request.method())) return route.continue();
+      return route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: "Read-only UX acceptance: mutation blocked" }) });
+    });
+  });
+
   test("keeps one active destination, hides disabled tools, and supports the command shortcut", async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await useEssentialOnlyConsent(page);
@@ -127,15 +135,15 @@ test.describe("customer navigation canary", () => {
     await page.screenshot({ path: testInfo.outputPath("customer-home-desktop.png"), fullPage: true });
     await page.goto("/ad-studio?workspaceId=" + encodeURIComponent(workspaceId!));
     await expect(page).toHaveURL(/\/ad-studio/);
-    await expect(page.getByRole("heading", { name: "Start from a proven layout" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ads", exact: true })).toBeVisible();
     await settle(page);
     await assertNothingClipped(page);
     await page.screenshot({ path: testInfo.outputPath("customer-studio-desktop.png"), fullPage: true });
     await page.goto("/results?workspaceId=" + encodeURIComponent(workspaceId!));
     await expect(page.getByText(/recent sync/i)).toHaveCount(0);
     await expect(page).toHaveURL(/\/results/);
-    await expect(page.getByRole("main").getByText("Enquiries", { exact: true })).toBeVisible();
-    await expect(page.getByText("Example data", { exact: true })).toBeVisible();
+    await expect(page.getByRole("main").getByRole("link", { name: /Connect Meta/ }).first()).toBeVisible();
+    await expect(page.getByText("Example data", { exact: true })).toHaveCount(0);
     await expect(page.getByText(/^Last known /)).toHaveCount(0);
     await settle(page);
     await assertNothingClipped(page);
@@ -174,11 +182,11 @@ test.describe("customer navigation canary", () => {
       await assertMobileNavUsable(page);
       await page.screenshot({ path: testInfo.outputPath(`customer-home-${width}.png`), fullPage: true });
       await page.goto("/ad-studio?workspaceId=" + encodeURIComponent(workspaceId!));
-      const backToBlockwise = page.getByRole("link", { name: "Blockwise", exact: true });
+      const backToBlockwise = page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("link", { name: "Home", exact: true });
       await expect(backToBlockwise).toBeVisible();
       await expect(backToBlockwise).toHaveAttribute("href", /\/self-serve/);
       await expect(page).toHaveURL(/\/ad-studio/);
-      await expect(page.getByRole("heading", { name: "Start from a proven layout" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Ads", exact: true })).toBeVisible();
       await settle(page);
       await assertNothingClipped(page);
       await page.screenshot({ path: testInfo.outputPath("customer-studio-" + width + ".png"), fullPage: true });
@@ -187,8 +195,8 @@ test.describe("customer navigation canary", () => {
       await page.goto("/results?workspaceId=" + encodeURIComponent(workspaceId!));
       await expect(page.getByText(/recent sync/i)).toHaveCount(0);
       await expect(page).toHaveURL(/\/results/);
-      await expect(page.getByRole("main").getByText("Enquiries", { exact: true })).toBeVisible();
-      await expect(page.getByRole("main").getByText("Example data", { exact: true })).toBeVisible();
+      await expect(page.getByRole("main").getByRole("link", { name: /Connect Meta/ }).first()).toBeVisible();
+      await expect(page.getByRole("main").getByText("Example data", { exact: true })).toHaveCount(0);
       await expect(page.getByText(/^Last known /)).toHaveCount(0);
       await settle(page);
       await assertNothingClipped(page);
@@ -212,6 +220,7 @@ test.describe("customer navigation canary", () => {
       return route.continue();
     });
     await page.goto(`/settings?workspaceId=${encodeURIComponent(workspaceId!)}`);
+    await page.goto(`/settings?workspaceId=${encodeURIComponent(workspaceId!)}#workspace`);
     const workspaceSection = page.locator("#workspace");
     const name = workspaceSection.getByLabel("Workspace name");
     await name.fill("Canary workspace");
@@ -237,6 +246,7 @@ test.describe("customer navigation canary", () => {
     });
     await page.route("**/api/workspace/onboarding-market", (route) => route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "Country service unavailable" }) }));
     await page.goto(`/settings?workspaceId=${encodeURIComponent(workspaceId!)}`);
+    await page.goto(`/settings?workspaceId=${encodeURIComponent(workspaceId!)}#workspace`);
     const workspaceSection = page.locator("#workspace");
     const country = workspaceSection.getByLabel("Country");
     test.skip(await country.isDisabled(), "The controlled fixture has a market-bound country; use the isolated non-market-bound fixture for this case.");

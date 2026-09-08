@@ -8,21 +8,39 @@ type HomeCommandProps = {
   adsError: boolean;
   timeZone: string;
   dateLocale: "en-AU" | "en-US";
+  hasAvailableTemplates: boolean;
+  templatesLoadError: boolean;
 };
 
-export function HomeCommand({ ads, adsError, timeZone, dateLocale }: HomeCommandProps) {
+export function HomeCommand({ ads, adsError, timeZone, dateLocale, hasAvailableTemplates, templatesLoadError }: HomeCommandProps) {
   return (
     <div>
       <header className="flex min-h-11 items-center justify-between gap-4">
         <h1 className="font-display text-[clamp(26px,4vw,34px)] font-extrabold tracking-[-.025em]">Ads</h1>
-        <Link
-          href="/ad-studio/templates"
-          aria-label="Create a new ad from a reviewed template"
-          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-primary px-4 text-[12.5px] font-bold text-primary-foreground shadow-card transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          <Plus className="size-4" aria-hidden />
-          New ad
-        </Link>
+        {templatesLoadError ? (
+          <a
+            href="/ad-studio/templates"
+            className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-(--ui-error)/30 bg-(--ui-error-soft) px-4 text-[12.5px] font-bold text-(--ui-error) transition hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            Refresh templates
+          </a>
+        ) : hasAvailableTemplates ? (
+          <Link
+            href="/ad-studio/templates"
+            aria-label="Create a new ad from a reviewed template"
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-primary px-4 text-[12.5px] font-bold text-primary-foreground shadow-card transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <Plus className="size-4" aria-hidden />
+            New ad
+          </Link>
+        ) : (
+          <Link
+            href="/ad-studio/brand"
+            className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-border bg-card px-4 text-[12.5px] font-bold text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            Review Brand Pack
+          </Link>
+        )}
       </header>
 
       <section className="mt-7" aria-labelledby="recent-work-heading">
@@ -39,14 +57,20 @@ export function HomeCommand({ ads, adsError, timeZone, dateLocale }: HomeCommand
         ) : (
           <div className="mt-3 rounded-(--r-card) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 p-5 text-center">
             <h3 className="font-display text-[15.5px] font-extrabold">No saved ads yet</h3>
-            <Link href="/ad-studio/templates" className="mt-3 inline-flex min-h-11 items-center rounded-full bg-primary px-4 text-[12.5px] font-bold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">New ad</Link>
+            {templatesLoadError ? (
+              <a href="/ad-studio/templates" className="mt-3 inline-flex min-h-11 items-center rounded-full border border-(--ui-error)/30 bg-(--ui-error-soft) px-4 text-[12.5px] font-bold text-(--ui-error) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Refresh templates</a>
+            ) : hasAvailableTemplates ? (
+              <Link href="/ad-studio/templates" className="mt-3 inline-flex min-h-11 items-center rounded-full bg-primary px-4 text-[12.5px] font-bold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">New ad</Link>
+            ) : (
+              <Link href="/ad-studio/brand" className="mt-3 inline-flex min-h-11 items-center rounded-full border border-border bg-card px-4 text-[12.5px] font-bold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Review Brand Pack</Link>
+            )}
           </div>
         )}
       </section>
 
-      <nav className="mt-4 grid grid-cols-3 gap-2" aria-label="Ad Studio links">
+      <nav className="mt-4 grid gap-2 sm:grid-cols-3" aria-label="Ad Studio links">
         <SecondaryLink href="/ad-studio/templates" icon={<LayoutTemplate aria-hidden />}>Templates</SecondaryLink>
-        <SecondaryLink href="/ad-studio/library?view=assets" icon={<FolderOpen aria-hidden />}>Media library</SecondaryLink>
+        <SecondaryLink href="/ad-studio/library?view=assets" icon={<FolderOpen aria-hidden />}>Photos &amp; logos</SecondaryLink>
         <SecondaryLink href="/ad-studio/brand" icon={<Palette aria-hidden />}>Brand Pack</SecondaryLink>
       </nav>
     </div>

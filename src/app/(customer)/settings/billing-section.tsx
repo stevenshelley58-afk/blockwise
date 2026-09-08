@@ -47,6 +47,10 @@ export function BillingSection({
   const [message, setMessage] = useState<Msg>(null);
   const packEstimate = usage.remaining == null ? null : Math.floor(usage.remaining / 2);
   const currencyMark = workspace.currency === "USD" ? "US$" : "A$";
+  // This workspace exposes an intentionally implausible allowance/date sentinel.
+  // Keep it visibly separate from ordinary paid-plan billing.
+  const periodYear = workspace.billingPeriodEnd ? new Date(workspace.billingPeriodEnd).getUTCFullYear() : null;
+  const specialAllowance = workspace.billingAccessState === "unbilled" && ((usage.granted ?? 0) > 100000 || (periodYear != null && periodYear >= 2090));
 
   async function saveBillingEmail(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -128,9 +132,9 @@ export function BillingSection({
           }
         />
         <PlanTile
-          label="Render credits"
-          value={usage.remaining == null ? "Not issued yet" : `${usage.remaining} remaining`}
-          foot={packEstimate == null ? "Issued with your entitlement" : `Up to ${packEstimate} complete Feed + Story packs`}
+          label={specialAllowance ? "Special account allowance" : "Render credits"}
+          value={specialAllowance ? "See usage details" : usage.remaining == null ? "Not issued yet" : `${usage.remaining} remaining`}
+          foot={specialAllowance ? "Actual balance is shown in Usage this period." : packEstimate == null ? "Issued with your entitlement" : `Up to ${packEstimate} complete Feed + Story packs`}
         />
         <PlanTile
           label="Current invoice"
@@ -143,9 +147,11 @@ export function BillingSection({
         />
         <PlanTile
           label={workspace.cancelAtPeriodEnd ? "Access ends" : "Next renewal"}
-          value={workspace.billingPeriodEnd ? formatDate(workspace.billingPeriodEnd) : "Not scheduled"}
+          value={specialAllowance ? "Not a renewal date" : workspace.billingPeriodEnd ? formatDate(workspace.billingPeriodEnd) : "Not scheduled"}
           foot={
-            workspace.cancelAtPeriodEnd
+            specialAllowance
+              ? "Special account allowance. Subscription renewal is not scheduled from this allowance."
+              : workspace.cancelAtPeriodEnd
               ? "Already-paid credits remain until this date."
               : `${currencyMark}249 each following month`
           }

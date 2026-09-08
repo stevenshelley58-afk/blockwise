@@ -71,7 +71,7 @@ test("Home distinguishes missing, zero, mismatched source, and mismatched period
   assert.equal(mismatchedPeriod, null);
 });
 
-function header(lastSyncedAt: string | null, isSample: boolean): string {
+function header(lastSyncedAt: string | null, isSample: boolean, isConnected: boolean): string {
   return renderToStaticMarkup(
     createElement(MetaMonitorHeader, {
       range: {
@@ -86,6 +86,7 @@ function header(lastSyncedAt: string | null, isSample: boolean): string {
       lastSyncedAt,
       isRefreshing: false,
       isSample,
+      isConnected,
       onRangeChange() {},
       onCustomRangeChange() {},
       onRefresh() {},
@@ -94,16 +95,23 @@ function header(lastSyncedAt: string | null, isSample: boolean): string {
 }
 
 test("Results labels samples plainly and never invents a recent timestamp", () => {
-  const sample = header(null, true);
+  const sample = header(null, true, true);
   assert.match(sample, /Example data/);
   assert.doesNotMatch(sample, /Last known|just now/);
 
-  const unknown = header(null, false);
+  const unknown = header(null, false, true);
   assert.match(unknown, /Not synced yet/);
   assert.doesNotMatch(unknown, /Last known|just now/);
 
-  const real = header("2026-08-01T02:03:00.000Z", false);
+  const real = header("2026-08-01T02:03:00.000Z", false, true);
   assert.match(real, /Last known/);
+});
+
+test("Results labels a disconnected account plainly and hides sync controls", () => {
+  const disconnected = header(null, false, false);
+  assert.match(disconnected, /Not connected/);
+  assert.doesNotMatch(disconnected, /Not synced yet/);
+  assert.doesNotMatch(disconnected, /Refresh/);
 });
 
 

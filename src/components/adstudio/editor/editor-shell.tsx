@@ -69,9 +69,9 @@ export interface EditorShellProps {
 
 type InspectorTab = "creative" | "copy" | "colours";
 const INSPECTOR_TABS: Array<{ value: InspectorTab; label: string; icon: typeof PencilLine }> = [
-  { value: "creative", label: "Media", icon: PencilLine },
+  { value: "creative", label: "Photos", icon: PencilLine },
   { value: "copy", label: "Content", icon: AlignLeft },
-  { value: "colours", label: "Appearance", icon: Palette },
+  { value: "colours", label: "Style", icon: Palette },
 ];
 
 export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColours = null, brandBusinessName = "", libraryAssets, brandLogoUrl = null, initialDocument, initialRevision, adName = "Untitled ad" }: EditorShellProps) {
@@ -186,7 +186,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     const missingImages = pack.imageInputs.filter(input => input.required !== false
       && !input.defaultAssetKey
       && !state.imageValues.find(value => value.inputKey === input.key)?.dataUrl);
-    const missingText = editorTextInputs(pack).filter(input => !(state.textValues[input.key] ?? input.placeholder).trim());
+    const missingText = editorTextInputs(pack).filter(input => !(state.textValues[input.key] ?? "").trim());
     if (missingImages.length > 0 || missingText.length > 0) {
       const requirements = [
         missingImages.length > 0 ? `Add required images: ${missingImages.map(input => input.label).join(", ")}.` : "",
@@ -512,6 +512,11 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
   const metaPreview = state.activePlacement === "feed" ? feedMetaPreview : storyMetaPreview;
   const inspector = <InspectorContent tab={inspectorTab} pack={pack} state={state} defaultImageValues={defaultImageValues} brandColours={brandColours} brandBusinessName={brandBusinessName} libraryAssets={libraryAssets} onTextChange={updateTextValue} onImageChange={handleImageChange} onCropClick={openCropForInput} onMetaChange={updateMetaCopy} onDestinationChange={updateDestinationUrl} onColourModeChange={handleColourModeChange} onCustomColourChange={handleCustomColourChange} onTemplateCopyChange={handleTemplateCopyChange} onBusinessNameChange={handleBusinessNameChange} onLibraryPick={handleLibraryPick} proposalBrief={proposalBrief} proposal={proposal} proposalBusy={proposalBusy} onBriefChange={setProposalBrief} onPropose={proposeCopy} onUseAllProposal={useAllProposal} />;
   const saveStatus = pendingImageUploads > 0 ? "Uploading…" : state.isSaving ? "Saving…" : hasUnsavedWork ? "Unsaved changes" : state.lastSavedRevision !== null ? "Saved" : "Not saved yet";
+  const missingRequiredCount = pack.imageInputs.filter(input => input.required !== false && !defaultImageValues[input.key] && !state.imageValues.find(value => value.inputKey === input.key)?.dataUrl).length
+    + pack.textInputs.filter(input => !(state.textValues[input.key] ?? input.placeholder).trim()).length;
+  const readinessStatus = missingRequiredCount > 0
+    ? missingRequiredCount + " required " + (missingRequiredCount === 1 ? "item" : "items") + " left"
+    : "Ready to review";
   const workingLayout = state.activePlacement === "feed" ? pack.feedLayout : pack.storyLayout;
   const selectedLayer = workingLayout.layers.find(layer => layer.layerId === state.selectedLayerId) ?? null;
   const choosePlacementView = (value: string) => {
@@ -558,7 +563,7 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
     <header className="shrink-0 border-b border-border bg-card">
       <div className="grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem_auto] gap-1 px-2 py-1.5 xl:hidden">
         <Button variant="ghost" size="icon" aria-label="Back to library" className="min-h-11 min-w-11 rounded-full" onClick={handleBackToLibrary}><ArrowLeft className="size-4" /></Button>
-        <div className="min-w-0 self-center"><input aria-label="Ad name" maxLength={120} value={name} onChange={event => setName(event.target.value)} onBlur={() => void persistName()} onKeyDown={event => { if (event.key === "Enter") event.currentTarget.blur(); }} className="block w-full truncate border-0 bg-transparent px-1 text-base font-semibold xl:text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /><span className="block truncate px-1 text-[10px] text-muted-foreground" role="status" aria-live="polite">{saveStatus}</span></div>
+        <div className="min-w-0 self-center"><input aria-label="Ad name" maxLength={120} value={name} onChange={event => setName(event.target.value)} onBlur={() => void persistName()} onKeyDown={event => { if (event.key === "Enter") event.currentTarget.blur(); }} className="block w-full truncate border-0 bg-transparent px-1 text-base font-semibold xl:text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /><span className="block truncate px-1 text-[10px] text-muted-foreground" role="status" aria-live="polite">{saveStatus} · {readinessStatus}</span></div>
         <Button variant="outline" size="icon" onClick={handleSave} disabled={!canSave || state.isSaving || pendingImageUploads > 0} aria-label={state.isSaving ? "Saving" : "Save"} className="min-h-11 min-w-11 rounded-full"><Save className="size-4" /></Button>
         <Button onClick={handlePublish} disabled={!canSave || state.isSaving || pendingImageUploads > 0} className="min-h-11 rounded-full px-3 text-xs">Review</Button>
         <div className="col-span-4 flex min-w-0 items-center justify-between gap-2">
@@ -569,7 +574,7 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
       <div className="relative hidden h-16 items-center justify-between gap-2 px-4 xl:flex">
         <div className="flex min-w-0 items-center gap-2"><Button variant="ghost" size="icon" aria-label="Back to library" className="min-h-11 min-w-11 rounded-full" onClick={handleBackToLibrary}><ArrowLeft className="size-4" /></Button><input aria-label="Ad name" maxLength={120} value={name} onChange={event => setName(event.target.value)} onBlur={() => void persistName()} onKeyDown={event => { if (event.key === "Enter") event.currentTarget.blur(); }} className="min-w-0 max-w-[220px] truncate border-0 bg-transparent px-1 text-base font-semibold xl:text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></div>
         <div className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 justify-center"><Tabs value={placementView} onValueChange={choosePlacementView} className="pointer-events-auto"><TabsList aria-label="Ad format" className="bg-muted/60"><TabsTrigger value="feed" className="min-h-11 px-4 text-sm">Feed</TabsTrigger><TabsTrigger value="story" className="min-h-11 px-4 text-sm">Story</TabsTrigger><TabsTrigger value="both" className="min-h-11 px-4 text-sm">Both</TabsTrigger></TabsList></Tabs></div>
-        <div className="ml-auto flex items-center gap-1"><span className="w-24 truncate text-right text-xs text-muted-foreground" role="status" aria-live="polite">{saveStatus}</span><Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo} aria-label="Undo" className="min-h-11 min-w-11 rounded-full"><RotateCcw /></Button><Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo} aria-label="Redo" className="min-h-11 min-w-11 rounded-full"><RotateCw /></Button><Button variant="outline" onClick={handleSave} disabled={!canSave || state.isSaving || pendingImageUploads > 0} className="min-h-11 rounded-full px-4"><span>{state.isSaving ? "Saving…" : "Save"}</span><Save className="ml-1.5 size-4" /></Button><Button variant="ghost" size="icon" aria-label={inspectorOpen ? "Hide inspector" : "Show inspector"} aria-pressed={inspectorOpen} className="min-h-11 min-w-11 rounded-full" onClick={() => setInspectorOpen(value => !value)}>{inspectorOpen ? <PanelRightClose /> : <PanelRightOpen />}</Button><Button onClick={handlePublish} disabled={!canSave || state.isSaving || pendingImageUploads > 0} className="min-h-11 rounded-full px-4 text-sm">Review & publish</Button></div>
+        <div className="ml-auto flex items-center gap-1"><span className="max-w-36 truncate text-right text-xs text-muted-foreground" role="status" aria-live="polite">{saveStatus} · {readinessStatus}</span><Button variant="ghost" size="icon" onClick={undo} disabled={!canUndo} aria-label="Undo" className="min-h-11 min-w-11 rounded-full"><RotateCcw /></Button><Button variant="ghost" size="icon" onClick={redo} disabled={!canRedo} aria-label="Redo" className="min-h-11 min-w-11 rounded-full"><RotateCw /></Button><Button variant="outline" onClick={handleSave} disabled={!canSave || state.isSaving || pendingImageUploads > 0} className="min-h-11 rounded-full px-4"><span>{state.isSaving ? "Saving…" : "Save"}</span><Save className="ml-1.5 size-4" /></Button><Button variant="ghost" size="icon" aria-label={inspectorOpen ? "Hide inspector" : "Show inspector"} aria-pressed={inspectorOpen} className="min-h-11 min-w-11 rounded-full" onClick={() => setInspectorOpen(value => !value)}>{inspectorOpen ? <PanelRightClose /> : <PanelRightOpen />}</Button><Button onClick={handlePublish} disabled={!canSave || state.isSaving || pendingImageUploads > 0} className="min-h-11 rounded-full px-4 text-sm">Review & publish</Button></div>
       </div>
     </header>
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden xl:flex-row">

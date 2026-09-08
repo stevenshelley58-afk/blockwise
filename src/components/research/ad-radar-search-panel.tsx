@@ -27,6 +27,8 @@ type Props = {
   initialQuery: string;
   initialLocationLabel: string;
   initialNote: string;
+  initialAgency?: string;
+  initialAgent?: string;
   /** Search fired on mount when the visitor did not type a query. */
   autoSearchTerm?: string | null;
   autoSearchLabel?: string | null;
@@ -39,12 +41,14 @@ export function AdRadarSearchPanel({
   initialQuery,
   initialLocationLabel,
   initialNote,
+  initialAgency = "",
+  initialAgent = "",
   autoSearchTerm = null,
   autoSearchLabel = null,
   autoSearchSource = null,
 }: Props) {
   const [query, setQuery] = useState(initialQuery);
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [filters, setFilters] = useState<Filters>({ agency: initialAgency, agent: initialAgent });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [agencyOptions, setAgencyOptions] = useState<string[]>([]);
   const [agentOptions, setAgentOptions] = useState<string[]>([]);
@@ -113,10 +117,25 @@ export function AdRadarSearchPanel({
     }, 300);
   }
 
+  function syncUrl(q: string, nextFilters: Filters, mode: "push" | "replace" = "replace") {
+    const url = new URL(window.location.href);
+    if (q.trim()) url.searchParams.set("q", q.trim());
+    else url.searchParams.delete("q");
+    if (nextFilters.agency) url.searchParams.set("agency", nextFilters.agency);
+    else url.searchParams.delete("agency");
+    if (nextFilters.agent) url.searchParams.set("agent", nextFilters.agent);
+    else url.searchParams.delete("agent");
+    const href = url.pathname + url.search + url.hash;
+    const state = { ...(window.history.state ?? {}), adRadar: true, scrollY: window.scrollY };
+    if (mode === "push") window.history.pushState(state, "", href);
+    else window.history.replaceState(state, "", href);
+  }
+
   function onSearch(q: string) {
     setQuery(q);
     setAgencyOptions([]);
     setAgentOptions([]);
+    syncUrl(q, filters, "push");
     doSearch(q, filters, false);
   }
 
@@ -128,12 +147,14 @@ export function AdRadarSearchPanel({
   function onChangeFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
     const next = { ...filters, [key]: value };
     setFilters(next);
+    syncUrl(activeSearchTermRef.current, next);
     if (searched && activeSearchTermRef.current.trim()) doSearch(activeSearchTermRef.current, next, false);
   }
 
   function onClearFilters() {
     if (activeFilterCount === 0) return;
     setFilters(EMPTY_FILTERS);
+    syncUrl(activeSearchTermRef.current, EMPTY_FILTERS);
     if (searched && activeSearchTermRef.current.trim()) doSearch(activeSearchTermRef.current, EMPTY_FILTERS, false);
   }
 
@@ -145,6 +166,31 @@ export function AdRadarSearchPanel({
       doSearch(autoSearchTerm, filters, false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    function restoreFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const nextQuery = params.get("q") ?? "";
+      const nextFilters = { agency: params.get("agency") ?? "", agent: params.get("agent") ?? "" };
+      setQuery(nextQuery);
+      setFilters(nextFilters);
+      setAgencyOptions([]);
+      setAgentOptions([]);
+      if (nextQuery.trim()) {
+        doSearch(nextQuery, nextFilters, false);
+      } else {
+        requestRef.current?.abort();
+        setCards([]);
+        setNextCursor(null);
+        setSearched(false);
+        setSearchError(null);
+      }
+      const scrollY = window.history.state?.scrollY;
+      if (typeof scrollY === "number") window.requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: "auto" }));
+    }
+    window.addEventListener("popstate", restoreFromUrl);
+    return () => window.removeEventListener("popstate", restoreFromUrl);
   }, []);
 
   useEffect(() => {
@@ -160,8 +206,6 @@ export function AdRadarSearchPanel({
   );
 
   const advertiserCount = unique(cards.map((c) => c.pageId ?? c.pageName)).length;
-  const mediaReady = cards.filter((c) => c.media.length > 0).length;
-  const allPostcodes = unique(cards.flatMap((c) => c.adAreaPostcodes));
   const newestSeenAt = cards
     .map((c) => c.lastSeenAt)
     .filter((v): v is string => Boolean(v))
@@ -207,7 +251,7 @@ export function AdRadarSearchPanel({
 
             <Link href="/ad-radar/swipe-file" className={ghostButtonClass}>
               <Bookmark size={13} aria-hidden />
-              Swipe file
+              Saved inspiration
             </Link>
 
             <span className="ml-auto flex min-w-0 items-center gap-1.5 text-[11.5px] text-(--faint) sm:hidden">
@@ -264,15 +308,6 @@ export function AdRadarSearchPanel({
           {newestSeenAt ? `Last seen ${formatDateTime(newestSeenAt)}` : "No live observations yet"}
         </div>
       </section>
-
-      {searched && !searchError ? (
-        <section className="grid grid-cols-2 gap-3.5 xl:grid-cols-4">
-          <StatTile label="Ads in view" value={String(cards.length)} note="Current matching ads" />
-          <StatTile label="Advertisers" value={String(advertiserCount)} note="Pages with visible ads" />
-          <StatTile label="Postcodes" value={String(allPostcodes.length)} note="Matched ad areas" />
-          <StatTile label="Media visible" value={String(mediaReady)} note="Images, videos, or carousel media" />
-        </section>
-      ) : null}
 
       {searchError ? (
         <>
@@ -366,15 +401,6 @@ function SelectWrap({ children }: { children: ReactNode }) {
   );
 }
 
-function StatTile({ label, value, note }: { label: string; value: string; note: string }) {
-  return (
-    <article className="rounded-(--r-card) border border-(--line) bg-(--surface) px-[18px] pt-[17px] pb-[15px] shadow-card">
-      <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">{label}</p>
-      <p className="mt-[6px] font-display text-[24px] font-extrabold tracking-[-0.02em] tabular-nums">{value}</p>
-      <p className="mt-[7px] text-[10.5px]/[11.5px] text-muted-foreground">{note}</p>
-    </article>
-  );
-}
 
 
 function mergeOptions(prev: string[], incoming: Array<string | null>): string[] {

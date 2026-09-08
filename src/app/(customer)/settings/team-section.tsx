@@ -244,28 +244,32 @@ export function TeamSection({
         </p>
       ) : null}
 
-      <form className="flex flex-wrap items-center gap-2" onSubmit={invite}>
-        <Input
-          type="email"
-          aria-label="Teammate email"
-          value={inviteEmail}
-          onChange={(e) => setInviteEmail(e.target.value)}
-          placeholder="teammate@email.com"
-          required
-          disabled={!canInvite}
-          className="min-w-[220px] flex-1"
-        />
-        <select aria-label="Invite role" className={cn(selectClass, "w-32")} value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} disabled={!canInvite}>
-          {ASSIGNABLE_ROLES.filter((role) => role !== "owner").map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
-        <Button type="submit" disabled={busy || !canInvite}>
-          {busy ? "Inviting" : "Invite"}
-        </Button>
-      </form>
+      {canInvite ? (
+        <details className="rounded-(--r-card) border border-(--line) bg-(--surface-subtle) p-3">
+          <summary className="cursor-pointer text-[12.5px] font-bold">Invite a member</summary>
+          <form className="mt-3 flex flex-wrap items-center gap-2" onSubmit={invite}>
+            <Input
+              type="email"
+              aria-label="Teammate email"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              placeholder="teammate@email.com"
+              required
+              className="min-w-[220px] flex-1"
+            />
+            <select aria-label="Invite role" className={cn(selectClass, "w-32")} value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>
+              {ASSIGNABLE_ROLES.filter((role) => role !== "owner").map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+            <Button type="submit" disabled={busy}>
+              {busy ? "Inviting" : "Invite"}
+            </Button>
+          </form>
+        </details>
+      ) : null}
       <Feedback message={message} />
     </Section>
   );

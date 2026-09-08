@@ -49,8 +49,9 @@ test("template and saved-ad empty states stay focused at narrow widths", () => {
   assert.match(gallery, /const hasActiveFilter = Boolean\(query\) \|\| lead !== "all"/);
   assert.match(gallery, /if \(!hasAvailableTemplates\)/);
   assert.match(gallery, /Templates are in final review/);
-  assert.match(gallery, /Your saved ads remain available/);
-  assert.match(gallery, /href="\/ad-studio\/library\?view=ads"/);
+  assert.match(gallery, /Review Brand Pack/);
+  assert.match(gallery, /Return to Ad Studio/);
+  assert.doesNotMatch(gallery, /href="\/ad-studio\/library\?view=ads"/);
   assert.match(templates, /templates\.length > 0 \? <form/);
   assert.doesNotMatch(templates, /No templates have been imported yet/);
   assert.match(adsLibrary, /<li className="min-w-0">/);

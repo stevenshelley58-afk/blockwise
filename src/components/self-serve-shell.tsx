@@ -7,7 +7,6 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { MobileBottomNav } from "@/components/app/mobile-bottom-nav";
-import { StudioShell } from "@/components/adstudio/studio-shell";
 import { CommandMenu } from "@/components/command-menu";
 import { SidebarThemeToggle } from "@/components/sidebar-theme-toggle";
 import { isItemActive, navByVariant, type NavItem } from "@/components/sidebar-nav";
@@ -38,7 +37,6 @@ type SelfServeShellProps = {
     role: string;
   };
   trialStatus: React.ReactNode;
-  metaConnectionStatus: "connected" | "attention" | "not_connected" | "unknown";
 };
 
 type NavGroup = {
@@ -154,7 +152,6 @@ export function SelfServeShell({
   workspaceRegion,
   account,
   trialStatus,
-  metaConnectionStatus,
 }: SelfServeShellProps) {
   const pathname = usePathname() ?? "";
   const groups = useMemo(() => groupNavItems(navByVariant.self_serve), []);
@@ -163,10 +160,6 @@ export function SelfServeShell({
   useEffect(() => {
     void syncReadModelIdentity({ userId, workspaceId });
   }, [userId, workspaceId]);
-
-  if (pathname.startsWith("/ad-studio")) {
-    return <StudioShell workspaceName={workspaceName} account={account} metaConnectionStatus={metaConnectionStatus}>{children}</StudioShell>;
-  }
 
   return (
     <SidebarProvider
