@@ -3105,13 +3105,16 @@ async function runScrapingBeePageCapture(input) {
     handled.result.costUsd = telemetry.provider_cost_usd;
     return handled.result;
   }
+  const nativePagination = env.HERMES_AD_RADAR_NATIVE_PAGINATION === "true";
   const params = new URLSearchParams({
     url,
     mode: "auto",
     max_cost: String(runCreditCap),
     wait: String(scrapingBeeWaitMs),
-    json_response: "true",
-    js_scenario: JSON.stringify(buildMetaPaginationScenario()),
+    ...(nativePagination ? {
+      json_response: "true",
+      js_scenario: JSON.stringify(buildMetaPaginationScenario()),
+    } : {}),
   });
 
   try {
@@ -3134,7 +3137,7 @@ async function runScrapingBeePageCapture(input) {
         provider_credit_attempt_id: attemptId,
         tier: "auto_mode",
         request_url_host: "app.scrapingbee.com",
-        request_params: { mode: "auto", max_cost: runCreditCap, wait_ms: scrapingBeeWaitMs, json_response: true, pagination: "native_cursor_v1", target_host: new URL(url).host },
+        request_params: { mode: "auto", max_cost: runCreditCap, wait_ms: scrapingBeeWaitMs, json_response: nativePagination, pagination: nativePagination ? "native_cursor_v2_canary" : "initial_html", target_host: new URL(url).host },
         outcome: "error",
         error: "reserved_before_provider_request",
         started_at: new Date(requestStartedAt).toISOString(),
