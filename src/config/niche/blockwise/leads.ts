@@ -7,7 +7,7 @@ export const leads: LeadsCopy = {
       ? "1 captured in the last 30 days."
       : `${count} captured in the last 30 days.`,
   syncedAt: (time) => `Synced ${time}`,
-  syncCta: "Sync from Meta",
+  syncCta: "Sync leads",
   stats: {
     leads: "Leads",
     highIntent: "High intent",
@@ -31,10 +31,15 @@ export const leads: LeadsCopy = {
   },
   status: { newLead: "New", possibleDuplicate: "Possible duplicate" },
   showing: (shown, total) => `Showing ${shown} of ${total}`,
-  neverSynced: "Never synced",
+  neverSynced: "Not synced yet",
   noMatches: "No leads match your search or filters.",
   empty: {
     title: "No leads yet",
     body: "Leads land here as soon as your first ad is live.",
+  },
+  disconnected: {
+    title: "Connect Meta to see leads",
+    body: "Connect your Meta ad account before syncing lead forms.",
+    connectCta: "Connect Meta",
   },
 };

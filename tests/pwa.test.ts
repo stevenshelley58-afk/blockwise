@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import vm from "node:vm";
 import test from "node:test";
 
 import manifest from "../src/app/manifest.ts";
@@ -84,8 +85,131 @@ test("generated service worker source includes versioned cache and cleanup polic
   assert.match(source, new RegExp(`const THUMBNAIL_CACHE_NAME = "${THUMBNAIL_CACHE_NAME}"`));
   assert.match(source, new RegExp(`const THUMBNAIL_CACHE_MAX_ENTRIES = ${THUMBNAIL_CACHE_MAX_ENTRIES}`));
   assert.match(source, /boundedThumbnailCacheFirst/);
-  assert.match(source, /keys\.length - STATIC_CACHE_MAX_ENTRIES/);
+  assert.match(source, /keys\.length - limit/);
   assert.match(source, new RegExp(`const OFFLINE_FALLBACK_URL = "${OFFLINE_FALLBACK_URL}"`));
   assert.match(source, /caches\.delete\(key\)/);
   assert.match(source, /request\.mode === "navigate"/);
+});
+
+
+test("service worker serves network assets when cache reads fail", async () => {
+  const listeners: Record<string, (event: any) => void> = {};
+  let fetchCalls = 0;
+  const context: any = {
+    self: { location: { origin: ORIGIN }, addEventListener: (name: string, fn: any) => { listeners[name] = fn; } },
+    caches: { open: async () => { throw new Error("cache unavailable"); } },
+    fetch: async () => { fetchCalls += 1; return { ok: true, clone: () => ({}) }; },
+    Response,
+    Promise,
+    URL,
+  };
+  vm.runInNewContext(createServiceWorkerSource(), context);
+  let response: any;
+  const event = { request: { method: "GET", url: `${ORIGIN}/_next/static/app.js`, destination: "script" }, respondWith: (p: Promise<any>) => { response = p; }, waitUntil: () => undefined };
+  listeners.fetch(event);
+  assert.equal((await response).ok, true);
+  assert.equal(fetchCalls, 1);
+});
+
+test("service worker returns network response before cache maintenance settles", async () => {
+  const listeners: Record<string, (event: any) => void> = {};
+  let releasePut!: () => void;
+  const putFinished = new Promise<void>((resolve) => { releasePut = resolve; });
+  const cache = { match: async () => undefined, put: async () => putFinished, keys: async () => [] };
+  const context: any = {
+    self: { location: { origin: ORIGIN }, addEventListener: (name: string, fn: any) => { listeners[name] = fn; } },
+    caches: { open: async () => cache },
+    fetch: async () => ({ ok: true, clone: () => ({}) }),
+    Response,
+    Promise,
+    URL,
+  };
+  vm.runInNewContext(createServiceWorkerSource(), context);
+  let response: any;
+  const waits: Promise<any>[] = [];
+  const event = { request: { method: "GET", url: `${ORIGIN}/_next/static/app.js`, destination: "script" }, respondWith: (p: Promise<any>) => { response = p; }, waitUntil: (p: Promise<any>) => { waits.push(p); } };
+  listeners.fetch(event);
+  assert.equal((await response).ok, true);
+  assert.equal(waits.length, 1);
+  releasePut();
+  await waits[0];
+});
+
+test("service worker uses a cache hit without fetching", async () => {
+  const listeners: Record<string, (event: any) => void> = {};
+  let fetchCalls = 0;
+  const context: any = {
+    self: { location: { origin: ORIGIN }, addEventListener: (name: string, fn: any) => { listeners[name] = fn; } },
+    caches: { open: async () => ({ match: async () => ({ ok: true, cached: true }) }) },
+    fetch: async () => { fetchCalls += 1; throw new Error("unexpected network"); },
+    Response,
+    Promise,
+    URL,
+  };
+  vm.runInNewContext(createServiceWorkerSource(), context);
+  let response: any;
+  const event = { request: { method: "GET", url: `${ORIGIN}/_next/static/app.js`, destination: "script" }, respondWith: (p: Promise<any>) => { response = p; }, waitUntil: () => undefined };
+  listeners.fetch(event);
+  assert.equal((await response).cached, true);
+  assert.equal(fetchCalls, 0);
+});
+
+test("service worker tolerates cache maintenance failures", async () => {
+  for (const failure of ["match", "put", "keys"]) {
+    const listeners: Record<string, (event: any) => void> = {};
+    const cache: any = { match: async () => undefined, put: async () => undefined, keys: async () => [] };
+  let opens = 0;
+    cache[failure] = async () => { throw new Error(failure); };
+    const context: any = {
+      self: { location: { origin: ORIGIN }, addEventListener: (name: string, fn: any) => { listeners[name] = fn; } },
+      caches: { open: async () => cache },
+      fetch: async () => new Response("css", { status: 200, headers: { "content-type": "text/css" } }),
+      Response, Promise, URL,
+    };
+    vm.runInNewContext(createServiceWorkerSource(), context);
+    let response: Promise<Response>;
+    const waits: Promise<any>[] = [];
+    const event = { request: { method: "GET", url: `${ORIGIN}/_next/static/app.css`, destination: "style" }, respondWith: (p: Promise<Response>) => { response = p; }, waitUntil: (p: Promise<any>) => waits.push(p) };
+    listeners.fetch(event);
+    assert.equal((await response!).status, 200);
+    await Promise.all(waits);
+  }
+});
+
+test("service worker propagates network failure when cache misses", async () => {
+  const listeners: Record<string, (event: any) => void> = {};
+  const context: any = {
+    self: { location: { origin: ORIGIN }, addEventListener: (name: string, fn: any) => { listeners[name] = fn; } },
+    caches: { open: async () => ({ match: async () => undefined }) },
+    fetch: async () => { throw new Error("network down"); }, Response, Promise, URL,
+  };
+  vm.runInNewContext(createServiceWorkerSource(), context);
+  let response: Promise<Response>;
+  const event = { request: { method: "GET", url: `${ORIGIN}/_next/static/app.js`, destination: "script" }, respondWith: (p: Promise<Response>) => { response = p; }, waitUntil: () => undefined };
+  listeners.fetch(event);
+  await assert.rejects(response!, /network down/);
+});
+
+test("service worker clones response before delayed cache open", async () => {
+  const listeners: Record<string, (event: any) => void> = {};
+  let releaseOpen!: () => void;
+  const opening = new Promise<void>((resolve) => { releaseOpen = resolve; });
+  let stored!: Response;
+  const cache: any = { match: async () => undefined, put: async (_request: any, response: Response) => { stored = response; }, keys: async () => [] };
+  let opens = 0;
+  const context: any = {
+    self: { location: { origin: ORIGIN }, addEventListener: (name: string, fn: any) => { listeners[name] = fn; } },
+    caches: { open: async () => { opens += 1; if (opens > 1) await opening; return cache; } },
+    fetch: async () => new Response("css", { status: 200 }), Response, Promise, URL,
+  };
+  vm.runInNewContext(createServiceWorkerSource(), context);
+  let response: Promise<Response>;
+  const waits: Promise<any>[] = [];
+  const event = { request: { method: "GET", url: `${ORIGIN}/_next/static/app.css`, destination: "style" }, respondWith: (p: Promise<Response>) => { response = p; }, waitUntil: (p: Promise<any>) => waits.push(p) };
+  listeners.fetch(event);
+  const original = await response!;
+  assert.equal(await original.text(), "css");
+  releaseOpen();
+  await Promise.all(waits);
+  assert.equal(await stored.text(), "css");
 });

@@ -357,7 +357,7 @@ function stageConfiguration(
       resumePath: "/settings#connections",
     },
     complete_checkout: { nextAction: "Add a payment method", allowedActions: ["start_checkout"], resumePath: "/settings#billing" },
-    launch_first_campaign: { nextAction: "Launch your first campaign", allowedActions: ["publish"], resumePath: "/ad-studio" },
+    launch_first_campaign: { nextAction: "Run your first ad", allowedActions: ["publish"], resumePath: "/ad-studio" },
     confirm_first_invoice: { nextAction: "Confirming your subscription", allowedActions: ["reconcile_billing"], resumePath: "/settings#billing" },
     complete: { nextAction: "Open your workspace", allowedActions: ["generate", "publish", "invite_team", "book_onboarding"], resumePath: "/self-serve" },
   };

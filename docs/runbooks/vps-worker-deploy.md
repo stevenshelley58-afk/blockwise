@@ -55,18 +55,6 @@ print the env, use plain `docker compose config`, or inspect a container's
 environment. The worker is read-only, runs without Linux capabilities, and
 uses `no-new-privileges`.
 
-When the OSS Mautic/Chatwoot projection lane is enabled, provision these
-three root-owned `0600` files before starting the profile:
-`/srv/blockwise/secrets/mautic_token`,
-`/srv/blockwise/secrets/chatwoot_api_token`, and
-`/srv/blockwise/secrets/ops_correlation_key`. Set the corresponding
-`*_HOST_FILE` values in the rendered env if the paths differ. Compose mounts
-them read-only at the fixed container paths used by Hermes; it never copies
-their contents into the image or ordinary environment variables. The worker
-also requires `BLOCKWISE_WORKER_REVISION` to be the full 40-character image
-SHA so Frank publication provenance cannot fall back to a mutable database
-setting.
-
 ## Build the exact release
 
 Run the repository release gates before building. Set `REVISION` to the full
@@ -80,9 +68,13 @@ RELEASE_ROOT='/srv/blockwise/worker-releases'
 RELEASE_DIR="$RELEASE_ROOT/$REVISION"
 IMAGE="ghcr.io/stevenshelley58-afk/blockwise-worker:$REVISION"
 mkdir -p "$RELEASE_ROOT"
-git clone --filter=blob:none --no-checkout https://github.com/stevenshelley58-afk/blockwise.git "$RELEASE_DIR"
-git -C "$RELEASE_DIR" fetch --depth 1 origin "$REVISION"
-git -C "$RELEASE_DIR" checkout --detach "$REVISION"
+git -C /projects/blockwise cat-file -e "$REVISION^{commit}"
+if [ -d "$RELEASE_DIR" ]; then
+  test "$(git -C "$RELEASE_DIR" rev-parse HEAD)" = "$REVISION"
+  git -C "$RELEASE_DIR" diff --quiet HEAD --
+else
+  git -C /projects/blockwise worktree add --detach "$RELEASE_DIR" "$REVISION"
+fi
 BUILD_DATE="$(git -C "$RELEASE_DIR" show -s --format='%cI' "$REVISION")"
 docker build --pull --build-arg GIT_SHA="$REVISION" --build-arg BUILD_DATE="$BUILD_DATE" -f "$RELEASE_DIR/worker/Dockerfile" -t "$IMAGE" "$RELEASE_DIR"
 test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$IMAGE")" = "$REVISION"

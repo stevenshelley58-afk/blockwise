@@ -86,7 +86,7 @@ export function ManagedSetupForm({ idPrefix, variant }: ManagedSetupFormProps) {
       }
 
       // Fire conversion events only on a confirmed save.
-      trackLead({ content_name: "managed_setup_request", suburb: payload.suburb || undefined });
+      trackLead({ form_type: "managed_setup" });
       if (GOOGLE_ADS_ID) gtagConversionDemoForm(GOOGLE_ADS_ID);
       form.reset();
       setStatus("success");
@@ -190,6 +190,7 @@ export function ManagedSetupForm({ idPrefix, variant }: ManagedSetupFormProps) {
         onSubmit={handleSubmit}
         noValidate={false}
         aria-describedby={error ? errorId : undefined}
+        data-clarity-mask="true"
       >
         {fields.name}
         {fields.email}

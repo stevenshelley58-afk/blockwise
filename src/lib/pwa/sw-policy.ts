@@ -222,31 +222,55 @@ function canUseOfflineFallbackForNavigation(request) {
   return request.mode === "navigate" || request.destination === "document";
 }
 
-async function cacheFirst(request) {
-  const cached = await caches.match(request);
-  if (cached) {
-    return cached;
+async function trimCache(cache, limit) {
+  try {
+    const keys = await cache.keys();
+    await Promise.all(keys.slice(0, Math.max(0, keys.length - limit)).map((key) => cache.delete(key)));
+  } catch (_) {
+    // Cache maintenance must never turn a successful asset response into an error.
+  }
+}
+
+async function cacheResponse(cacheName, limit, request, response) {
+  try {
+    const cache = await caches.open(cacheName);
+    await cache.put(request, response);
+    await trimCache(cache, limit);
+  } catch (_) {
+    // Cache maintenance is best effort; the network response is still usable.
+  }
+}
+
+async function cacheFirst(request, event) {
+  try {
+    const cache = await caches.open(STATIC_CACHE_NAME);
+    const cached = await cache.match(request);
+    if (cached) return cached;
+  } catch (_) {
+    // A broken cache must fall back to the network.
   }
 
   const response = await fetch(request);
   if (response.ok) {
-    const cache = await caches.open(STATIC_CACHE_NAME);
-    await cache.put(request, response.clone());
-    const keys = await cache.keys();
-    await Promise.all(keys.slice(0, Math.max(0, keys.length - STATIC_CACHE_MAX_ENTRIES)).map((key) => cache.delete(key)));
+    const cacheCopy = response.clone();
+    event.waitUntil(cacheResponse(STATIC_CACHE_NAME, STATIC_CACHE_MAX_ENTRIES, request, cacheCopy));
   }
   return response;
 }
 
-async function boundedThumbnailCacheFirst(request) {
-  const cache = await caches.open(THUMBNAIL_CACHE_NAME);
-  const cached = await cache.match(request);
-  if (cached) return cached;
+async function boundedThumbnailCacheFirst(request, event) {
+  try {
+    const cache = await caches.open(THUMBNAIL_CACHE_NAME);
+    const cached = await cache.match(request);
+    if (cached) return cached;
+  } catch (_) {
+    // A broken cache must fall back to the network.
+  }
   const response = await fetch(request);
-  if (!response.ok) return response;
-  await cache.put(request, response.clone());
-  const keys = await cache.keys();
-  await Promise.all(keys.slice(0, Math.max(0, keys.length - THUMBNAIL_CACHE_MAX_ENTRIES)).map((key) => cache.delete(key)));
+  if (response.ok) {
+    const cacheCopy = response.clone();
+    event.waitUntil(cacheResponse(THUMBNAIL_CACHE_NAME, THUMBNAIL_CACHE_MAX_ENTRIES, request, cacheCopy));
+  }
   return response;
 }
 
@@ -298,12 +322,12 @@ self.addEventListener("fetch", (event) => {
   if (!isCacheableStaticAssetRequest(request)) {
     const url = new URL(request.url);
     if (request.method === "GET" && isSameOrigin(url) && isAdStudioThumbnailPath(url.pathname)) {
-      event.respondWith(boundedThumbnailCacheFirst(request));
+      event.respondWith(boundedThumbnailCacheFirst(request, event));
     }
     return;
   }
 
-  event.respondWith(cacheFirst(request));
+  event.respondWith(cacheFirst(request, event));
 });
 `.trim();
 }

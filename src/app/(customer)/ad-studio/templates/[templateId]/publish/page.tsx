@@ -96,7 +96,7 @@ export default async function PublishPage({
   const templateName = metadata?.title?.trim() || pack.metadata.title || pack.templateId;
 
   return (
-    <div className="flex min-h-[calc(100dvh-54px)] flex-col bg-background text-foreground md:min-h-[calc(100dvh-60px)]">
+    <div className="flex h-[calc(100dvh-54px-4.75rem-env(safe-area-inset-top)-env(safe-area-inset-bottom)-var(--consent-banner-height,0px))] min-h-[200px] flex-col bg-background text-foreground md:h-[calc(100dvh-60px)] md:min-h-[360px]">
       <header className="flex min-h-12 shrink-0 items-center border-b border-border bg-card px-4 md:px-5">
         <Link
           href={`/ad-studio/ads/${encodeURIComponent(adId)}`}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CookiePreferencesButton } from "@/components/consent-banner";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -13,7 +14,7 @@ export default function PrivacyPolicyPage() {
   return (
     <>
       <p style={{ color: "#475569", fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5 }}>
-        Last updated: 27 July 2026
+        Last updated: 7 September 2026
       </p>
       <h1 style={{ fontSize: 36, margin: "8px 0 24px", fontWeight: 600 }}>Privacy Policy</h1>
 
@@ -156,10 +157,9 @@ export default function PrivacyPolicyPage() {
       </ul>
 
       <h2 style={{ fontSize: 22, marginTop: 32, fontWeight: 600 }}>6. Sub-processors</h2>
-      <p>We use the following infrastructure providers, who are contractually bound to confidentiality:</p>
+      <p>Blockwise operates the application, authentication, PostgreSQL database, and object storage on a self-hosted VPS behind Caddy.</p>
+      <p>We use the following third-party providers, who are contractually bound to confidentiality where applicable:</p>
       <ul>
-        <li>Vercel (application hosting)</li>
-        <li>Supabase (authentication, application database, encrypted storage)</li>
         <li>Stripe (Checkout, payment methods, tax calculation, subscriptions, and receipts)</li>
         <li>Cal.com (hosted onboarding scheduling)</li>
         <li>Meta (connected business assets, campaign delivery, lead forms, and reporting)</li>
@@ -197,8 +197,10 @@ export default function PrivacyPolicyPage() {
         </li>
       </ol>
       <p>
-        Deletion requests are normally completed within 30 days. Some backup systems may retain a
-        copy for up to 90 days before being permanently overwritten.
+        Deletion requests are normally completed within 30 days. New scheduled product backups are
+        encrypted on the Blockwise VPS and retained by the scheduled job for approximately 90 days.
+        Legacy or manual backups are separate and may follow different controls. This does not remove
+        copies held by Stripe, Meta, Cal.com, or other providers.
       </p>
 
       <h2 style={{ fontSize: 22, marginTop: 32, fontWeight: 600 }}>8. Security</h2>
@@ -214,6 +216,20 @@ export default function PrivacyPolicyPage() {
         <br />
         General contact: <a href="mailto:hello@blockwise.sale">hello@blockwise.sale</a>
       </p>
+
+      <h2 style={{ fontSize: 22, marginTop: 32, fontWeight: 600 }}>Website cookies and analytics</h2>
+      <p>
+        If you choose Accept all, we use Google Analytics to understand visits and interactions
+        on our public website. Google receives website activity and device information. We do
+        not include form contents, email addresses, URL query strings, or private workspace pages
+        in our custom Analytics events. Optional advertising tags also depend on this choice.
+      </p>
+      <p>
+        Essential only keeps optional tracking off. Our separate cookie-free page counter remains
+        active. You can change your choice at any time below; choosing Essential only stops further
+        optional tracking. It does not delete information already collected.
+      </p>
+      <p><CookiePreferencesButton /></p>
 
       <h2 style={{ fontSize: 22, marginTop: 32, fontWeight: 600 }}>10. Changes to this policy</h2>
       <p>

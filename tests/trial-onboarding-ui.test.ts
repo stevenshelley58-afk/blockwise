@@ -19,6 +19,7 @@ test("onboarding wizard completes the progressive website and Brand Pack path in
   assert.match(wizard, /\/api\/adstudio\/brand-kits\/extract/);
   assert.match(wizard, /\/api\/adstudio\/brand-kits\/\$\{encodeURIComponent\(review\.id\)\}\/approve/);
   assert.match(wizard, /router\.push\("\/ad-studio\?first=1"\)/);
+  assert.doesNotMatch(wizard, /Confetti|setTimeout\(/);
   assert.doesNotMatch(wizard, /\/campaigns/);
   assert.doesNotMatch(wizard, /Skip for now/);
 });

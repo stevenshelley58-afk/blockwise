@@ -2,12 +2,79 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  assertProviderConnectionActive,
+  clearStoredProviderTokenSet,
+  clearStoredProviderTokens,
+  shouldRevokeMetaOAuthGrant,
   ensureRuntimeProviderToken,
   loadRuntimeProviderToken,
   upsertRuntimeProviderToken,
 } from "../src/lib/providers/provider-connections.ts";
 
 const encryptionKey = "0123456789abcdef0123456789abcdef";
+
+
+
+test("provider execution rejects a revoked connection before token use", async () => {
+  const statuses: string[][] = [];
+  const service = {
+    from(table: string) {
+      assert.equal(table, "provider_connections");
+      const query = {
+        select() { return query; },
+        eq() { return query; },
+        in(_column: string, values: string[]) { statuses.push(values); return query; },
+        async maybeSingle() { return { data: null, error: null }; },
+      };
+      return query;
+    },
+  } as unknown as Parameters<typeof assertProviderConnectionActive>[0];
+
+  await assert.rejects(
+    assertProviderConnectionActive(service, { connectionId: "revoked-connection", workspaceId: "workspace-123", provider: "meta" }),
+    /disconnected or unavailable/,
+  );
+  assert.deepEqual(statuses, [["connected", "needs_attention"]]);
+});
+
+
+test("Meta disconnect clears all historical vault rows and skips partner grant revocation", async () => {
+  const ids: string[] = [];
+  const service = {
+    async rpc(name: string, args: Record<string, unknown>) {
+      assert.equal(name, "provider_token_vault_clear");
+      ids.push(String(args.p_provider_connection_id));
+      return { data: null, error: null };
+    },
+  } as unknown as Parameters<typeof clearStoredProviderTokenSet>[0];
+  await clearStoredProviderTokenSet(service, ["new-row", "old-row"]);
+  assert.deepEqual(ids, ["new-row", "old-row"]);
+  assert.equal(shouldRevokeMetaOAuthGrant({ connectionMethod: "partner_access" }), false);
+  assert.equal(shouldRevokeMetaOAuthGrant({}), true);
+});
+
+test("workspace provider disconnect clears the private token vault and surfaces failures", async () => {
+  const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
+  const service = {
+    async rpc(name: string, args: Record<string, unknown>) {
+      calls.push({ name, args });
+      return { data: null, error: null };
+    },
+  } as unknown as Parameters<typeof clearStoredProviderTokens>[0];
+
+  await clearStoredProviderTokens(service, "connection-123");
+  assert.deepEqual(calls, [{
+    name: "provider_token_vault_clear",
+    args: { p_provider_connection_id: "connection-123" },
+  }]);
+
+  const failingService = {
+    async rpc() {
+      return { data: null, error: { message: "vault unavailable" } };
+    },
+  } as unknown as Parameters<typeof clearStoredProviderTokens>[0];
+  await assert.rejects(clearStoredProviderTokens(failingService, "connection-123"), /vault_clear failed: vault unavailable/);
+});
 
 test("runtime provider credentials round-trip only through the service-role RPC", { concurrency: false }, async () => {
   const previousKey = process.env.TOKEN_ENCRYPTION_KEY;

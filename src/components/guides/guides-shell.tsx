@@ -12,13 +12,10 @@ export function GuidesShell({ children }: { children: ReactNode }) {
           <Link href="/" className="bw-guides-brand" aria-label="Blockwise home">
             <BlockwiseLogo />
           </Link>
-          <nav aria-label="Guides">
-            <Link href="/guides" aria-current="page">Guides</Link>
+          <nav aria-label="Publication navigation">
+            <Link href="/guides">Guide library</Link>
             <Link href="/pricing">Pricing</Link>
           </nav>
-          <Link href="/signup" className="bw-guides-header-cta">
-            Create three ads free
-          </Link>
         </div>
       </header>
       {children}
@@ -28,10 +25,10 @@ export function GuidesShell({ children }: { children: ReactNode }) {
             <Link href="/" className="bw-guides-brand bw-guides-brand-light">
               <BlockwiseLogo />
             </Link>
-            <p>Practical advertising guides for real-estate teams.</p>
+            <p>Field notes for real-estate teams making advertising more useful.</p>
           </div>
           <div className="bw-guides-footer-links">
-            <Link href="/guides">Guides</Link>
+            <Link href="/guides">Guide library</Link>
             <Link href="/pricing">Pricing</Link>
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>

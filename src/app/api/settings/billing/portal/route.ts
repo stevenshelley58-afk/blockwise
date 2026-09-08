@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { canManageProviderConnections } from "@/lib/auth/access-control";
 import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import { BillingNotConfiguredError, createBillingPortalSession } from "@/lib/billing/stripe-scaffold";
+import { publicOrigin } from "@/lib/config/public-origin";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     const session = await createBillingPortalSession({
       workspaceId: access.workspaceId,
       stripeCustomerId,
-      returnUrl: new URL("/settings", request.url).toString(),
+      returnUrl: `${publicOrigin(request.url)}/settings`,
     });
     return NextResponse.json({ url: session.url });
   } catch (error) {

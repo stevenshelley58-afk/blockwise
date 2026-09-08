@@ -1,16 +1,13 @@
 "use client";
 
-import { ArrowRight, Check, Globe2, Palette, PartyPopper, RotateCcw } from "lucide-react";
+import { ArrowRight, Check, Globe2, Palette, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Confetti } from "@/components/ui/confetti";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { niche } from "@/config/niche";
-import { useReducedMotion } from "@/lib/motion";
 
 type Market = "AU" | "US";
 type JsonObject = Record<string, unknown>;
@@ -56,12 +53,10 @@ type ExtractedBrandKit = {
 
 const MARKETS: Array<{ value: Market; name: string; currency: string }> = [
   { value: "AU", name: "Australia", currency: "AUD" },
-  { value: "US", name: "United States", currency: "USD" },
 ];
 
 export function OnboardingWizard({ workspaceId, country, brandKit, canConfirmMarket }: WizardProps) {
   const router = useRouter();
-  const reducedMotion = useReducedMotion();
   const initialReview = brandKit ? reviewFromRow(brandKit) : null;
   const [step, setStep] = useState<"website" | "review">(initialReview ? "review" : "website");
   const [market, setMarket] = useState<Market>(country.toUpperCase() === "US" ? "US" : "AU");
@@ -73,17 +68,8 @@ export function OnboardingWizard({ workspaceId, country, brandKit, canConfirmMar
   );
   const [scanFailed, setScanFailed] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [celebrating, setCelebrating] = useState(false);
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
-  useEffect(() => {
-    if (!celebrating) return;
-    const timer = setTimeout(() => {
-      router.push("/ad-studio?first=1");
-      router.refresh();
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, [celebrating, router]);
 
   async function prepareMarket(): Promise<string> {
     const response = await fetch("/api/workspace/onboarding-market", {
@@ -190,12 +176,8 @@ export function OnboardingWizard({ workspaceId, country, brandKit, canConfirmMar
       if (!response.ok) {
         throw new Error(payload.error ?? "We couldn't approve this Brand Pack.");
       }
-      if (reducedMotion) {
-        router.push("/ad-studio?first=1");
-        router.refresh();
-      } else {
-        setCelebrating(true);
-      }
+      router.push("/ad-studio?first=1");
+      router.refresh();
     } catch (error) {
       setMessage({
         tone: "error",
@@ -424,35 +406,7 @@ export function OnboardingWizard({ workspaceId, country, brandKit, canConfirmMar
         </div>
       ) : null}
 
-      {celebrating ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-(--ink)/40 px-6 backdrop-blur-[2px]">
-          <Confetti
-            className="pointer-events-none absolute inset-0"
-            options={{
-              particleCount: 120,
-              spread: 70,
-              startVelocity: 30,
-              origin: { y: 0.55 },
-              colors: [niche.theme.data, "#16181d", "#9aa0ad"],
-            }}
-          />
-          <div className="relative rounded-(--r-panel) border border-(--line) bg-(--surface) px-9 py-7 text-center shadow-float">
-            <span className="mx-auto grid size-12 place-items-center rounded-full bg-success-soft text-success">
-              <PartyPopper size={22} aria-hidden />
-            </span>
-            <h2 className="mt-3 font-display text-[17px] font-extrabold tracking-[-0.015em]">
-              Brand Pack approved
-            </h2>
-            <p className="mt-1 text-[13px] text-muted-foreground">Opening Ad Studio…</p>
-            <Link
-              className="mt-3 inline-flex items-center gap-1.5 text-[12.5px] font-bold underline-offset-4 hover:underline"
-              href="/connect-meta"
-            >
-              Connect your Meta ad account <ArrowRight size={14} aria-hidden />
-            </Link>
-          </div>
-        </div>
-      ) : null}
+
     </section>
   );
 }

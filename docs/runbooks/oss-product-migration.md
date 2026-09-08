@@ -1,3 +1,11 @@
+> **Historical migration procedure (2026-08-29), not current deployment status.**
+> The self-hosted stack now serves the controlled public origin. See
+> [production readiness](production-readiness.md) for current release evidence.
+> The compatibility, import ordering, backup and restore commands below remain
+> useful for rehearsals; old blockers/phase descriptions describe their date,
+> not proof that an export is absent or an integration is enabled today.
+> All commands run on the VPS. Never replay imports against the live database.
+
 # OSS Product VPS Migration
 
 Status: target implemented, live cutover gated (2026-08-29). The compose
@@ -6,16 +14,6 @@ claimed complete. The previous managed endpoint remains only as a retained
 rollback source until the gates below are signed off.
 
 ## Target architecture
-
-The open-source mail foundation is documented in
-[`stalwart-mail.md`](stalwart-mail.md). The optional `product-mail` Compose
-profile runs Stalwart with durable config/data volumes and exposes only the
-SMTP listeners required by GoTrue/outbox and approved server-to-server mail.
-`BLOCKWISE_MAIL_ENABLED=true` is a fail-closed production gate. DNS, TLS,
-mailbox credentials, queue operations and external signup acceptance are
-separate operator gates; no DNS value or secret is assumed here. Customer
-operations uses the existing product-mail Stalwart instance for private IMAP
-and the reviewed Chatwoot email-channel API bootstrap.
 
 `infra/coolify/docker-compose.product.yml` is the deployment contract for the
 self-hosted product. It runs PostgreSQL 17, PostgREST, GoTrue, Storage API,
@@ -211,7 +209,7 @@ provider-write enablement are separate reviewed changes.
 5. **Decommission (later, separately approved):** only after the retention
    window and restore rehearsal are complete may managed services be cancelled.
 
-## Known blockers and hazards
+## Historical blockers and hazards (2026-08-29)
 
 - Read-only VPS inspection is confirmed: the existing `frank-caddy` edge and
   the `/projects/blockwise` checkout are present, while the product env is not

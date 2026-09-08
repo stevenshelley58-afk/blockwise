@@ -14,13 +14,6 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   assert.match(compose, /supabase\/gotrue:v2\.189\.0/);
   assert.match(compose, /supabase\/storage-api:v1\.60\.4/);
   assert.match(compose, /supabase\/realtime:v2\.102\.3/);
-  assert.match(compose, /stalwartlabs\/stalwart:v0\.16\.20@sha256:74ca4f7f6885fe302f38a99381f36a208547afce1033d8734d9e6d8d3eba7446/);
-  assert.match(compose, /profiles: \[mail\]/);
-  assert.match(compose, /STALWART_PUBLIC_URL/);
-  assert.match(compose, /healthz\/ready/);
-  assert.match(compose, /blockwise-product-mail-config/);
-  assert.match(compose, /blockwise-product-mail-data/);
-  assert.doesNotMatch(compose, /product-mail:[\s\S]*?ports:[\s\S]*?(?:143|993|8080):/);
   assert.match(compose, /blockwise-product-db-data/);
   assert.match(compose, /blockwise-product-storage-data/);
   assert.match(compose, /PGRST_DB_URI: postgres:\/\/\$\{BLOCKWISE_DB_AUTHENTICATOR/);
@@ -105,8 +98,6 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   assert.ok(envExample.includes("FRANK_PRODUCT_EDGE_IP=172.30.0.2"));
   assert.ok(envExample.includes("TRUSTED_PROXY_RANGES=172.30.0.2/32"));
   assert.ok(envExample.includes("BLOCKWISE_PRODUCT_NETWORK_IP_RANGE=172.30.0.128/25"));
-  assert.ok(envExample.includes("BLOCKWISE_MAIL_ENABLED=true"));
-  assert.ok(envExample.includes("BLOCKWISE_AUTH_SMTP_HOST=product-mail"));
   assert.match(envExample, /^META_APP_SECRET=$/m);
   assert.match(envExample, /^BLOCKWISE_DB_VOLUME_NAME=blockwise-product-db-data$/m);
   assert.match(envExample, /^BLOCKWISE_STORAGE_VOLUME_NAME=blockwise-product-storage-data$/m);
@@ -123,10 +114,11 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   assert.equal(packageJson.scripts["build:packages"], "npm run --workspace @blockwise/ad-template-contract build && npm run --workspace @blockwise/ad-template-renderer build");
   assert.equal(packageJson.scripts.prebuild, "npm run build:packages");
   assert.equal(packageJson.scripts.pretypecheck, "npm run build:packages");
-  const workspaceBuild = dockerfile.search(/^RUN npm run build:packages$/m);
-  const nextBuild = dockerfile.search(/^RUN npm run build$/m);
-  assert.ok(workspaceBuild >= 0, "Docker must build internal workspace packages");
-  assert.ok(nextBuild > workspaceBuild, "Next build must run after internal workspace packages");
+  assert.match(dockerfile, /^RUN npm run build$/m);
+  assert.doesNotMatch(dockerfile, /^RUN npm run build:packages$/m, "npm prebuild already builds the packages");
+  assert.match(dockerfile, /ENV BLOCKWISE_BUILD_REVISION=\$GIT_SHA/);
+  assert.match(dockerfile, /LABEL org\.opencontainers\.image\.revision=\$GIT_SHA/);
+  assert.match(compose, /GIT_SHA: \$\{BLOCKWISE_GIT_SHA:\?/);
 });
 
 test("product readiness is fatal while liveness remains process-only", async () => {

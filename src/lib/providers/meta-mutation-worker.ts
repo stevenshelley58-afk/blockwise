@@ -1,5 +1,5 @@
 import { executeMetaPlanMutation, type MetaPlanMutation, type MetaPlanMutationAction } from "./meta-mutations.ts";
-import { loadStoredProviderTokens } from "./provider-connections.ts";
+import { assertProviderConnectionActive, loadStoredProviderTokens } from "./provider-connections.ts";
 import { metaPublishProviderWritesEnabled } from "./meta-provider-write-gate.ts";
 import { loadMetaPublishPlan } from "./meta-execution.ts";
 import { queueReportingRefresh } from "../meta-monitor/reporting-refresh-queue.ts";
@@ -64,6 +64,12 @@ export async function executeMetaMutationById(input: {
     : null;
   const providerConnectionId = publishPlan?.providerConnectionId ??
     await resolveWorkspaceMetaConnectionId(input.serviceSupabase, input.workspaceId);
+  await assertProviderConnectionActive(input.serviceSupabase, {
+    connectionId: providerConnectionId,
+    workspaceId: input.workspaceId,
+    provider: "meta",
+  });
+
   const approvalStatus = mutation.approvalRequestId
     ? await loadApprovalStatus(input.serviceSupabase, input.workspaceId, mutation.approvalRequestId)
     : "draft";
@@ -202,7 +208,7 @@ export async function resolveWorkspaceMetaConnectionId(
     .select("id,status")
     .eq("workspace_id", workspaceId)
     .eq("provider", "meta")
-    .neq("status", "not_connected")
+    .in("status", ["connected", "needs_attention"])
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();

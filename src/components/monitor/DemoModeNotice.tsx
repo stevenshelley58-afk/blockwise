@@ -79,11 +79,11 @@ export function DemoModeNotice({ metaConnectHref }: { metaConnectHref: string })
       ) : (
         <section
           aria-live="polite"
-          className="flex flex-wrap items-center justify-between gap-3 rounded-(--r-card) border border-(--line) bg-(--surface-subtle) px-4 py-3.5 shadow-card"
+          className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-(--r-card) border border-(--line) bg-(--surface-subtle) px-4 py-3.5 shadow-card"
         >
-          <div className="flex items-start gap-2.5">
+          <div className="flex min-w-0 items-start gap-2.5">
             <span className="mt-1 size-[8px] shrink-0 rounded-full bg-warning" aria-hidden />
-            <div className="text-[13px] leading-snug">
+            <div className="min-w-0 text-[13px] leading-snug">
               <strong className="font-bold">{demoChip}</strong>{" "}
               <span className="text-muted-foreground">
                 Connect Meta to replace it with your real spend, leads, and ads.
@@ -118,7 +118,7 @@ export function DemoModeNotice({ metaConnectHref }: { metaConnectHref: string })
             </DialogTitle>
             <DialogDescription className="text-[13px] leading-relaxed">
               Everything on this page is <strong className="text-foreground">demo data</strong> — a preview of what
-              Performance looks like once your ads are running. Getting set up takes about a minute.
+              Results looks like once your ads are running. Getting set up takes about a minute.
             </DialogDescription>
           </DialogHeader>
 
@@ -126,10 +126,10 @@ export function DemoModeNotice({ metaConnectHref }: { metaConnectHref: string })
             <GuideStep icon={<Plug aria-hidden size={15} />} title="Connect your Meta ad account">
               The demo data is dropped the moment you connect — only your real results are shown.
             </GuideStep>
-            <GuideStep icon={<ChartNoAxesCombined aria-hidden size={15} />} title="Watch Performance fill with your numbers">
+            <GuideStep icon={<ChartNoAxesCombined aria-hidden size={15} />} title="Watch Results fill with your numbers">
               Spend, leads, cost per lead, and ad-by-ad performance — updated automatically.
             </GuideStep>
-            <GuideStep icon={<Star aria-hidden size={15} />} title="Create your next ad in Ad Studio">
+            <GuideStep icon={<Star aria-hidden size={15} />} title="Create your next ad in Ads">
               Turn a curated template into on-brand Feed and Story creatives in minutes.
             </GuideStep>
           </ol>

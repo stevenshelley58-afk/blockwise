@@ -21,6 +21,12 @@ case "$provider" in
     ;;
 esac
 
+# A running timer is safe before launch; only this explicit gate may cause mail to be claimed.
+if [[ "${EMAIL_OUTBOX_DELIVERY_ENABLED:-false}" != "true" ]]; then
+  echo "email drain disabled: EMAIL_OUTBOX_DELIVERY_ENABLED is not true"
+  exit 0
+fi
+
 timestamp="$(date +%s)"
 nonce="$(openssl rand -hex 16)"
 scope="email.drain"

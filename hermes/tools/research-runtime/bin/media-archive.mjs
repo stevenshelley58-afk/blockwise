@@ -97,11 +97,11 @@ export function sniffMedia(bytes) {
     return "image/webp";
   return null;
 }
-export async function verifyVideoBytes(bytes, execFileImpl = execFile) {
+export async function verifyVideoBytes(bytes) {
   const path = join(tmpdir(), "blockwise-ad-video-" + randomUUID() + ".mp4");
   try {
     await writeFile(path, bytes, { flag: "wx" });
-    const result = await execFileImpl(
+    const result = await execFile(
       "ffprobe",
       [
         "-v",
@@ -118,7 +118,7 @@ export async function verifyVideoBytes(bytes, execFileImpl = execFile) {
     );
     if (result.stdout.trim() !== "video")
       throw new Error("ffprobe found no video stream");
-    const frame = await execFileImpl(
+    const frame = await execFile(
       "ffmpeg",
       [
         "-v",
@@ -150,11 +150,7 @@ export async function verifyVideoBytes(bytes, execFileImpl = execFile) {
     await rm(path, { force: true });
   }
 }
-export async function assertMediaMatches(
-  bytes,
-  declaredMime,
-  videoVerifier = verifyVideoBytes,
-) {
+export async function assertMediaMatches(bytes, declaredMime) {
   const magic = sniffMedia(bytes),
     declared = String(declaredMime || "")
       .split(";")[0]
@@ -165,7 +161,7 @@ export async function assertMediaMatches(
   if (magic.startsWith("image/")) {
     const sharp = (await import("sharp")).default;
     await sharp(bytes, { failOn: "error", limitInputPixels: 40000000 }).stats();
-  } else await videoVerifier(bytes);
+  } else await verifyVideoBytes(bytes);
   return magic;
 }
 export async function downloadVerifiedMedia(
@@ -175,7 +171,6 @@ export async function downloadVerifiedMedia(
     fetchImpl = fetch,
     lookupImpl = lookup,
     allowedHosts = META_MEDIA_HOSTS,
-    videoVerifier = verifyVideoBytes,
   } = {},
 ) {
   let url = await assertSafeSourceUrl(sourceUrl, lookupImpl, allowedHosts);
@@ -218,7 +213,6 @@ export async function downloadVerifiedMedia(
       mimeType: await assertMediaMatches(
         bytes,
         response.headers.get("content-type"),
-        videoVerifier,
       ),
       sha256: createHash("sha256").update(bytes).digest("hex"),
     };

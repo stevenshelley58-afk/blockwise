@@ -324,6 +324,7 @@ describe("Meta Feed and Story previews", () => {
 
 describe("publish reports active state honestly with safe retry", () => {
   const flow = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/publish-flow.tsx", "utf8");
+  const publishPage = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/page.tsx", "utf8");
   const route = readFileSync("src/app/api/adstudio/ads/[id]/publish/route.ts", "utf8");
 
   it("uses the paused or preview path for connected accounts and manual handoff otherwise", () => {
@@ -371,6 +372,6 @@ describe("publish reports active state honestly with safe retry", () => {
 
   it("the publish UI reserves ACTIVE language for the explicit activation receipt", () => {
     assert.match(flow, /Activated on Meta/);
-    assert.match(flow, /explicit approval to make the exact objects/);
+    assert.match(flow, /This confirms that the reviewed ads can start running on Meta\. No new ads are created\./);
   });
 });

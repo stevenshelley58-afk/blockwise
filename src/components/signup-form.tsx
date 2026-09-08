@@ -9,6 +9,8 @@ import {
   TurnstileVerification,
 } from "@/components/auth/turnstile-verification";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { validateEmail } from "@/lib/auth/form-validation";
+import { adRadarSignupMetadata } from "@/lib/research/ad-radar-signup";
 
 export function SignupForm() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -39,8 +41,9 @@ export function SignupForm() {
       return;
     }
 
-    if (!email) {
-      setError("Enter your work email.");
+    const emailError = validateEmail(email, "work email");
+    if (emailError) {
+      setError(emailError);
       return;
     }
 
@@ -59,6 +62,7 @@ export function SignupForm() {
         shouldCreateUser: true,
         data: {
           signup_flow: "trial_self_serve",
+          ...adRadarSignupMetadata(location.search),
         },
       },
     });
@@ -92,6 +96,7 @@ export function SignupForm() {
       className="login-form signup-form"
       onSubmit={submit}
       noValidate
+      data-clarity-mask="true"
       aria-describedby={`${error ? "signup-error " : ""}signup-consent`}
     >
       <label htmlFor="signup-email">

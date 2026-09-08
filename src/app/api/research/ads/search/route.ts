@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
   try {
     const result = await searchAdDbAds({ ...parsed.input, limit: 50 });
     return NextResponse.json(
-      { cards: result.items.map(mapAdDbRowToCustomerMetaCard) },
+      { cards: result.items.map(mapAdDbRowToCustomerMetaCard), page: result.page },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {

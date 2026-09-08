@@ -32,6 +32,8 @@ type WorkspaceRow = {
   stripe_cancel_at_period_end?: boolean | null;
   stripe_latest_invoice_status?: string | null;
   stripe_latest_invoice_amount_paid?: number | null;
+  trial_state?: string | null;
+  trial_ends_at?: string | null;
 };
 
 type PlanRow = {
@@ -167,7 +169,7 @@ export default async function SettingsPage() {
   );
 
   return (
-    <main className="mx-auto w-full max-w-[880px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16" aria-label="Settings">
+    <section className="mx-auto w-full max-w-[880px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16" aria-label="Settings">
       <header className="mb-5">
         <h1 className="font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">{niche.copy.settings.title}</h1>
       </header>
@@ -197,6 +199,8 @@ export default async function SettingsPage() {
           stripeCustomerId: w?.stripe_customer_id ?? null,
           subscriptionStatus: w?.stripe_subscription_status ?? null,
           billingAccessState: w?.billing_access_state ?? "unbilled",
+          trialState: w?.trial_state ?? null,
+          trialEndsAt: w?.trial_ends_at ?? null,
           billingPeriodStart: w?.stripe_current_period_start ?? walletRow?.period_start ?? null,
           billingPeriodEnd: w?.stripe_current_period_end ?? walletRow?.period_end ?? null,
           cancelAtPeriodEnd: Boolean(w?.stripe_cancel_at_period_end),
@@ -248,6 +252,6 @@ export default async function SettingsPage() {
         metaConnectHref={`/connect-meta?workspaceId=${wsQuery}`}
         googleConnectHref={`/api/integrations/google/connect?workspaceId=${wsQuery}`}
       />
-    </main>
+    </section>
   );
 }

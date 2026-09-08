@@ -24,6 +24,7 @@ export type AdDbSearchInput = {
   locationRelation?:
     "office" | "service_area" | "property" | "copy_mention" | "meta_targeting";
   limit?: number;
+  cursor?: string;
 };
 
 export type AdDbSearchResult = {
@@ -64,6 +65,7 @@ const ALLOWED_PARAMS = new Set([
   "adType",
   "format",
   "hook",
+  "cursor",
 ]);
 const LOCATION_RELATIONS = new Set([
   "office",
@@ -129,6 +131,13 @@ export function parseAdDbSearchParams(
   if (relation)
     input.locationRelation = relation as AdDbSearchInput["locationRelation"];
 
+  const cursor = params.get("cursor")?.trim();
+  if (params.has("cursor") && !cursor)
+    return { ok: false, error: "cursor must not be empty." };
+  if (cursor && (cursor.length > 512 || !/^[A-Za-z0-9._~+/=-]+$/u.test(cursor)))
+    return { ok: false, error: "cursor is invalid." };
+  if (cursor) input.cursor = cursor;
+
   const hasExplicitLocation = Boolean(
     input.state || input.suburb || input.postcode,
   );
@@ -163,6 +172,7 @@ export async function searchAdDbAds(
     ["suburb", input.suburb],
     ["postcode", input.postcode],
     ["locationRelation", input.locationRelation],
+    ["cursor", input.cursor],
   ];
   for (const [name, value] of pairs)
     if (value) url.searchParams.set(name, value);

@@ -23,7 +23,7 @@ import {
 } from "./meta-mutations.ts";
 import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
 import { resolveMetaPageAccessToken } from "./meta-assets.ts";
-import { loadStoredProviderTokens } from "./provider-connections.ts";
+import { assertProviderConnectionActive, loadStoredProviderTokens } from "./provider-connections.ts";
 import { metaPublishProviderWritesEnabled } from "./meta-provider-write-gate.ts";
 import { deterministicUuid } from "../adstudio/id.ts";
 import {
@@ -164,6 +164,12 @@ export async function executeMetaPublishPlan(input: {
   ) {
     throw new Error("Meta publish plan must be approved before worker execution.");
   }
+
+  await assertProviderConnectionActive(input.serviceSupabase, {
+    connectionId: input.plan.providerConnectionId,
+    workspaceId: input.plan.workspaceId,
+    provider: "meta",
+  });
 
   let freeLive: PreparedFreeLiveConversion | null;
   try {
@@ -358,6 +364,7 @@ async function prepareFreeLiveConversion(input: {
     .eq("workspace_id", input.plan.workspaceId)
     .eq("id", input.plan.providerConnectionId)
     .eq("provider", "meta")
+    .in("status", ["connected", "needs_attention"])
     .single();
   const billing =
     kind === "legacy_trial"

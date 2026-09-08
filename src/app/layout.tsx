@@ -5,6 +5,7 @@ import Script from "next/script";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { ConsentBanner } from "@/components/consent-banner";
 import { MarketingAnalytics } from "@/components/marketing-analytics";
+import { ClarityAnalytics } from "@/components/clarity-analytics";
 import { ServiceWorkerRegistrar } from "@/components/pwa/ServiceWorkerRegistrar";
 
 // globals.css and landing.css are imported by tailwind.css into the `legacy`
@@ -34,6 +35,8 @@ const jetbrainsMono = JetBrains_Mono({
 const META_PIXEL_ID = "1699948581050851";
 const META_APP_ID = process.env.META_APP_ID;
 const GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID;
+const GA4_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID;
+const CLARITY_PROJECT_ID = process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID;
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://blockwise.sale";
 const SITE_TITLE = "Blockwise | Real Estate Meta Ads Workflow";
@@ -95,7 +98,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </Script>
       </head>
       <body>
-        <MarketingAnalytics metaPixelId={META_PIXEL_ID} googleAdsId={GOOGLE_ADS_ID} />
+        <MarketingAnalytics metaPixelId={META_PIXEL_ID} googleAdsId={GOOGLE_ADS_ID} ga4MeasurementId={GA4_MEASUREMENT_ID} />
+        <ClarityAnalytics projectId={CLARITY_PROJECT_ID} />
         {children}
         <ServiceWorkerRegistrar />
         <PageViewTracker />

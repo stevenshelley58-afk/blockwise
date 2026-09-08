@@ -7,6 +7,8 @@
  * script has initialised.
  */
 
+import { trackMarketingEvent } from "@/lib/analytics/marketing";
+
 type FbqArgs =
   | ["track", string, Record<string, unknown>?]
   | ["trackCustom", string, Record<string, unknown>?]
@@ -31,6 +33,7 @@ function fbq(...args: FbqArgs): void {
 /** Standard "Lead" conversion — fire when a demo/access request is submitted. */
 export function trackLead(params?: Record<string, unknown>): void {
   fbq("track", "Lead", params);
+  trackMarketingEvent("generate_lead", params as Record<string, string | number | boolean | undefined>);
 }
 
 /** Standard "Contact" event — generic contact intent. */
@@ -45,9 +48,11 @@ export function trackContact(params?: Record<string, unknown>): void {
  */
 export function trackCtaClick(label: string, params?: Record<string, unknown>): void {
   fbq("trackCustom", "cta_click", { cta: label, ...(params ?? {}) });
+  trackMarketingEvent("cta_clicked", { cta_location: label });
 }
 
 /** Custom intent event — fire when a visitor clicks a "Book a demo" CTA. */
 export function trackDemoCtaClick(location: string): void {
   fbq("trackCustom", "BookDemoClick", { location });
+  trackMarketingEvent("demo_requested", { cta_location: location });
 }

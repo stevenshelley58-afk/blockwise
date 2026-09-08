@@ -349,8 +349,8 @@ export function FreeTrial() {
     <div className="hw-band hw-band--wide hw-trial">
       <h2>Create three complete ads free.</h2>
       <p className="hw-sub">
-        Start with only your email. Build and review three Feed + Story ad packs before connecting
-        Meta or adding a card.
+        Start with only your email — no card required. Build and review three Feed + Story ad packs
+        before connecting Meta.
       </p>
       <CtaLink location="free_trial" href="/signup" className="hw-btn hw-btn--dark">
         Continue with email <span className="hw-arr">→</span>
@@ -362,11 +362,11 @@ export function FreeTrial() {
         </div>
         <div className="hw-trial-fact">
           <h3>No card</h3>
-          <p>Add payment details only when you choose to run a campaign.</p>
+          <p>Add payment details only when you choose to subscribe.</p>
         </div>
         <div className="hw-trial-fact">
-          <h3>One live setup free</h3>
-          <p>Your Meta ad spend is always paid separately to Meta.</p>
+          <h3>One trial campaign</h3>
+          <p>You approve the budget and end date with Meta. Ad spend is paid separately to Meta.</p>
         </div>
       </div>
     </div>
@@ -380,7 +380,7 @@ export function ManagedSetup() {
         <div className="hw-ms-copy">
           <h2>Want Blockwise to run it with you?</h2>
           <p className="hw-sub">
-            Managed service starts at US$1,500/month or A$2,500/month, plus ad spend. Book a call
+            Managed service starts at A$1,500/month, plus ad spend. Book a call
             so we can confirm the scope and onboarding plan before you pay.
           </p>
           <ul className="hw-control-points hw-control-points--ink">

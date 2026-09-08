@@ -1,6 +1,6 @@
 "use client";
 
-import { Image, LibraryBig, Megaphone, RefreshCw } from "lucide-react";
+import { Image, Megaphone, RefreshCw } from "lucide-react";
 import { useState } from "react";
 
 import { AdsLibrary } from "@/components/adstudio/ads-library";
@@ -41,17 +41,13 @@ export function StudioLibrary({
 
   return (
     <div className="mx-auto w-full max-w-[1120px] px-4 pb-28 pt-8 md:px-6 md:pb-16 md:pt-10">
-      <header className="flex flex-wrap items-start justify-between gap-4">
+      <header>
         <div>
-          <h1 className="font-display text-[27px] font-extrabold tracking-[-.02em]">Library</h1>
+          <h1 className="font-display text-[27px] font-extrabold tracking-[-.02em]">Ads &amp; Photos &amp; logos</h1>
           <p className="mt-2 max-w-[62ch] text-sm leading-6 text-muted-foreground">
-            Find a saved ad to continue, or choose media to make the next one yours.
+            Pick up a saved ad or choose a photo or logo for the next one.
           </p>
         </div>
-        <p className="hidden items-center gap-2 rounded-full border border-(--line) bg-(--surface) px-3 py-2 text-xs text-muted-foreground sm:flex">
-          <LibraryBig className="size-4" aria-hidden />
-          One workspace, one source of truth
-        </p>
       </header>
 
       <Tabs value={tab} onValueChange={changeTab} className="mt-7">
@@ -63,7 +59,7 @@ export function StudioLibrary({
           </TabsTrigger>
           <TabsTrigger value="assets" className="min-h-11 gap-2 rounded-none px-3 text-xs sm:px-4 sm:text-sm">
             <Image className="size-4" aria-hidden />
-            Assets
+            Photos &amp; logos
             <span className="rounded-full bg-(--surface-subtle) px-2 py-0.5 text-[11px] tabular-nums text-muted-foreground">{assets.length}</span>
           </TabsTrigger>
         </TabsList>

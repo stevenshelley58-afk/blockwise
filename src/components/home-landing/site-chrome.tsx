@@ -14,7 +14,6 @@ export function SiteHeader() {
         </Link>
         <nav className="hw-nav" aria-label="Main">
           <Link href="/#start">How it works</Link>
-          <Link href="/#property-check">Property Check</Link>
           <Link href="/pricing">Pricing</Link>
           <Link href="/guides">Guides</Link>
         </nav>

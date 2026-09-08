@@ -10,21 +10,28 @@ import "./guides.css";
 export const metadata: Metadata = {
   title: "Practical guides for real-estate advertising",
   description:
-    "Choose the next advertising decision, then work through a practical plan your team can review before spending.",
+    "A practical library for choosing an offer, building a campaign, and learning from what happens next.",
   alternates: { canonical: "/guides" },
   openGraph: {
     type: "website",
     title: "Practical guides for real-estate advertising | Blockwise",
     description:
-      "Choose the next advertising decision, then work through a practical plan your team can review before spending.",
+      "A practical library for choosing an offer, building a campaign, and learning from what happens next.",
     url: "/guides",
-    images: [{ url: "/guides/og-guides-index.webp", width: 1200, height: 630, alt: "Blockwise guides for real-estate advertising" }],
+    images: [
+      {
+        url: "/guides/og-guides-index.webp",
+        width: 1200,
+        height: 630,
+        alt: "Blockwise guides for real-estate advertising",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Practical guides for real-estate advertising | Blockwise",
     description:
-      "Choose the next advertising decision, then work through a practical plan your team can review before spending.",
+      "A practical library for choosing an offer, building a campaign, and learning from what happens next.",
     images: ["/guides/og-guides-index.webp"],
   },
 };
@@ -36,12 +43,7 @@ type Guide = {
   summary: string;
   readTime: string;
 };
-
-type GuideGroup = {
-  title: string;
-  description: string;
-  guides: Guide[];
-};
+type GuideGroup = { title: string; description: string; guides: Guide[] };
 
 const flagship: Guide = {
   href: "/guides/sold-price-list-seller-leads",
@@ -55,7 +57,8 @@ const flagship: Guide = {
 const guideGroups: GuideGroup[] = [
   {
     title: "Choose the offer",
-    description: "Start with what you can make useful before you ask someone to talk.",
+    description:
+      "Start with what you can make useful before you ask someone to talk.",
     guides: [
       flagship,
       {
@@ -78,7 +81,8 @@ const guideGroups: GuideGroup[] = [
   },
   {
     title: "Build the campaign",
-    description: "Turn the offer into creative and delivery choices you can actually test.",
+    description:
+      "Turn the offer into creative and delivery choices you can actually test.",
     guides: [
       {
         href: "/guides/real-estate-creative-portfolio-meta-ads",
@@ -136,60 +140,90 @@ function groupId(title: string) {
 
 export default function GuidesIndexPage() {
   if (!niche.features.guides) notFound();
-
   return (
     <GuidesShell>
       <main className="bw-guides-index" id="main-content">
-        <section className="bw-guides-index-intro" aria-labelledby="guides-title">
-          <p className="bw-guides-label">Guides for the next campaign decision</p>
-          <h1 id="guides-title">Better real-estate leads. A clear next step.</h1>
+        <section
+          className="bw-guides-index-intro"
+          aria-labelledby="guides-title"
+        >
+          <p className="bw-guides-label">The Blockwise guide library</p>
+          <h1 id="guides-title">
+            Practical notes for real-estate advertising.
+          </h1>
           <p className="bw-guides-index-deck">
-            Practical guidance for the moment before you spend: choose an offer, build the campaign, and set the review point.
+            A small, useful library for the decisions around an ad: what to
+            offer, how to build it, and what to learn after it runs.
           </p>
-          <Link href={flagship.href} className="bw-guides-primary-link">
-            Start with the sold-price list <span aria-hidden>→</span>
-          </Link>
         </section>
-
         <section className="bw-guides-feature" aria-labelledby="featured-guide">
           <div className="bw-guides-feature-copy">
-            <span className="bw-guides-feature-kicker">Flagship guide · seller leads</span>
+            <span className="bw-guides-feature-kicker">
+              Featured guide · seller leads
+            </span>
             <h2 id="featured-guide">{flagship.title}</h2>
             <p>{flagship.summary}</p>
+            <ul className="bw-guides-feature-list">
+              <li>A sample sold-price resource</li>
+              <li>The ad and form that offer it</li>
+              <li>A delivery email and review plan</li>
+            </ul>
             <dl className="bw-guides-feature-details">
-              <div><dt>Read time</dt><dd>{flagship.readTime}</dd></div>
-              <div><dt>Best for</dt><dd>A first seller-lead test</dd></div>
+              <div>
+                <dt>Read time</dt>
+                <dd>{flagship.readTime}</dd>
+              </div>
+              <div>
+                <dt>Best for</dt>
+                <dd>A first seller-lead test</dd>
+              </div>
             </dl>
             <Link href={flagship.href} className="bw-guides-read-link">
               Read the guide <span aria-hidden>→</span>
             </Link>
           </div>
         </section>
-
         <section className="bw-guides-groups" aria-labelledby="all-guides">
           <div className="bw-guides-groups-heading">
-            <p className="bw-guides-label">The guide shelf</p>
-            <h2 id="all-guides">Find the decision you need to make.</h2>
+            <div>
+              <p className="bw-guides-label">Browse by topic</p>
+              <nav className="bw-guides-topic-nav" aria-label="Guide topics">
+                {guideGroups.map((group) => (
+                  <a key={group.title} href={`#${groupId(group.title)}`}>
+                    {group.title}
+                  </a>
+                ))}
+              </nav>
+            </div>
+            <h2 id="all-guides">Choose a useful place to begin.</h2>
           </div>
           {guideGroups.map((group) => (
-            <section key={group.title} className="bw-guides-group" aria-labelledby={groupId(group.title)}>
+            <section
+              key={group.title}
+              className="bw-guides-group"
+              aria-labelledby={groupId(group.title)}
+            >
               <div className="bw-guides-group-heading">
                 <h3 id={groupId(group.title)}>{group.title}</h3>
                 <p>{group.description}</p>
               </div>
               <div className="bw-guide-list">
                 {group.guides.map((guide) => (
-                  <Link key={guide.href} href={guide.href} className="bw-guide-card">
-                    <div className="bw-guide-card-body">
-                      <span className="bw-guide-card-category">{guide.label}</span>
-                      <h4>{guide.title}</h4>
-                      <p>{guide.summary}</p>
-                      <div className="bw-guide-card-foot">
-                        <span>{guide.readTime} read</span>
-                        <span aria-hidden>→</span>
+                  <article key={guide.href} className="bw-guide-card">
+                    <Link href={guide.href} className="bw-guide-card-link">
+                      <div className="bw-guide-card-body">
+                        <span className="bw-guide-card-category">
+                          {guide.label}
+                        </span>
+                        <h4>{guide.title}</h4>
+                        <p>{guide.summary}</p>
+                        <div className="bw-guide-card-foot">
+                          <span>{guide.readTime} read</span>
+                          <span aria-hidden>→</span>
+                        </div>
                       </div>
-                    </div>
-                  </Link>
+                    </Link>
+                  </article>
                 ))}
               </div>
             </section>

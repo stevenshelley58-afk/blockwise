@@ -40,7 +40,8 @@ export function RouteAwareLegacyShell({
     return (
       <StudioShell
         workspaceName={studioWorkspaceName}
-        accountName={account.name}
+        homeHref={homeHref}
+        account={account}
         metaConnectionStatus={metaConnectionStatus}
       >
         {children}
@@ -73,7 +74,7 @@ export function RouteAwareLegacyShell({
           </div>
         ) : null}
       </aside>
-      <div className="main">
+      <div className="main" role={/^\/(?:leads|results|settings|connect-meta|ad-radar)(?:\/|$)/.test(pathname) ? "main" : undefined}>
         <header className="topbar">
           <Link className="topbar-brand" href={homeHref} aria-label="Blockwise">
             <BlockwiseLogo showWordmark={false} />
@@ -96,7 +97,7 @@ export function RouteAwareLegacyShell({
         </header>
         {children}
       </div>
-      <MobileBottomNav variant={variant} account={account} />
+      <MobileBottomNav variant={variant} homeHref={homeHref} account={account} />
     </div>
   );
 }

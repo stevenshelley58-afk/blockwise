@@ -327,3 +327,47 @@ function normalizeProviderConnectionRow(row: ProviderConnectionRow): ProviderCon
     lastSyncAt: row.last_sync_at,
   };
 }
+
+/** Ensure a provider connection belongs to the requested workspace and is usable. */
+export async function assertProviderConnectionActive(
+  serviceSupabase: SupabaseServiceClient,
+  input: { connectionId: string; workspaceId: string; provider: MonitorProvider },
+): Promise<void> {
+  const { data, error } = await serviceSupabase
+    .from("provider_connections")
+    .select("id,status")
+    .eq("id", input.connectionId)
+    .eq("workspace_id", input.workspaceId)
+    .eq("provider", input.provider)
+    .in("status", ["connected", "needs_attention"])
+    .maybeSingle();
+
+  if (error) throw new Error(`provider connection lookup failed: ${error.message}`);
+  if (!data) throw new Error(`The ${input.provider} provider connection is disconnected or unavailable.`);
+}
+
+export function shouldRevokeMetaOAuthGrant(metadata: Record<string, unknown> | null): boolean {
+  return metadata?.connectionMethod !== "partner_access";
+}
+
+export async function clearStoredProviderTokenSet(
+  serviceSupabase: SupabaseServiceClient,
+  connectionIds: string[],
+): Promise<void> {
+  for (const connectionId of connectionIds) {
+    await clearStoredProviderTokens(serviceSupabase, connectionId);
+  }
+}
+
+export async function clearStoredProviderTokens(
+  serviceSupabase: SupabaseServiceClient,
+  connectionId: string,
+): Promise<void> {
+  const { error } = await serviceSupabase.rpc("provider_token_vault_clear", {
+    p_provider_connection_id: connectionId,
+  });
+
+  if (error) {
+    throw new Error(`provider_token_vault_clear failed: ${error.message}`);
+  }
+}

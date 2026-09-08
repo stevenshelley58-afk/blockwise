@@ -1,5 +1,7 @@
 "use client";
 
+import { trackMarketingEvent } from "@/lib/analytics/marketing";
+
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -123,7 +125,7 @@ function fireSafe(event: string, properties: Record<string, string>) {
     gtag?: (...args: unknown[]) => void;
   };
   try {
-    trackingWindow.gtag?.("event", event, properties);
+    trackMarketingEvent(event, properties);
   } catch {
     /* analytics is best effort */
   }

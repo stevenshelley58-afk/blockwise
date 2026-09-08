@@ -10,8 +10,10 @@ import {
   gallerySampleProxyUrl,
   listTemplates,
   parseTemplateJson,
+  parseTemplateJsonForSavedAdHistory,
   templateAssetProxyUrl,
   templateAssetStoragePath,
+  templateLeadType,
 } from "../../src/lib/adstudio/pack-gallery.ts";
 import { adTemplateSchema } from "../../packages/ad-template-contract/src/schema.ts";
 
@@ -21,6 +23,15 @@ function fixture(): Record<string, unknown> {
 }
 
 describe("Ad Studio direct layered template gallery", () => {
+  it("classifies templates into customer lead types", () => {
+    assert.equal(templateLeadType("Just listed property feature"), "buyer");
+    assert.equal(templateLeadType("Free home appraisal"), "appraisal");
+    assert.equal(templateLeadType("Open home follow-up"), "open_home");
+    assert.equal(templateLeadType("Quarterly suburb market report"), "market_update");
+    assert.equal(templateLeadType("Vendor listing nurture"), "seller");
+    assert.equal(templateLeadType("Agency brand campaign"), "other");
+  });
+
   it("accepts the direct layered template contract", () => {
     const parsed = parseTemplateJson(fixture());
     assert.ok(parsed);
@@ -103,12 +114,54 @@ describe("Ad Studio direct layered template gallery", () => {
   it("resolves a quarantined template only for an exact workspace-owned saved ad", async () => {
     const quarantinedTemplate = fixture();
     quarantinedTemplate.templateId = "quarantined-template";
+    quarantinedTemplate.fonts = [{ file: "arimo-600.woff2" }];
+    quarantinedTemplate.textInputs = [{ key: "headline", label: "Headline", placeholder: "Saved headline", maxLength: 80 }];
+    (quarantinedTemplate.feedLayout as { layers: unknown[] }).layers.push({
+      type: "text",
+      layerId: "feed-legacy-headline",
+      inputKey: "headline",
+      font: { file: "arimo-600.woff2" },
+      fontSize: 22,
+      lineHeight: 1.1,
+      tracking: 0,
+      alignment: "left",
+      maxCharacters: 80,
+      maxLines: 2,
+      colourRole: "mainText",
+      overflowBehaviour: "scale_down",
+      geometry: { x: 0.1, y: 0.1, width: 0.8, height: 0.2 },
+    });
+    (quarantinedTemplate.storyLayout as { layers: unknown[] }).layers.push({
+      type: "text",
+      layerId: "story-legacy-headline",
+      inputKey: "headline",
+      font: { file: "arimo-600.woff2" },
+      fontSize: 18,
+      lineHeight: 1.1,
+      tracking: 0,
+      alignment: "left",
+      maxCharacters: 80,
+      maxLines: 2,
+      colourRole: "mainText",
+      overflowBehaviour: "scale_down",
+      geometry: { x: 0.1, y: 0.1, width: 0.8, height: 0.2 },
+    });
     const { client: internalClient, calls: internalCalls } = templateClient([{
       template_id: "quarantined-template",
       template_json: quarantinedTemplate,
       created_at: "2026-09-03T02:00:00.000Z",
       library_status: "quarantined",
     }]);
+
+    assert.equal(parseTemplateJson(quarantinedTemplate), null, "new-template parsing must keep the Story readability floor");
+    const historyParsed = parseTemplateJsonForSavedAdHistory(quarantinedTemplate);
+    const historicalFeedText = historyParsed?.feedLayout.layers.find(layer => layer.type === "text");
+    const historicalText = historyParsed?.storyLayout.layers.find(layer => layer.type === "text");
+    assert.equal(historicalFeedText?.type, "text");
+    assert.equal(historicalFeedText?.fontSize, 22, "Feed history must preserve its exact authored size");
+    assert.equal(historicalText?.type, "text");
+    assert.equal(historicalText?.fontSize, 18, "saved history must preserve the exact authored font size");
+    assert.equal(await getTemplateForInternalInspection(internalClient as never, "quarantined-template"), null, "internal release inspection stays strict");
 
     const owned = await getTemplateForExistingCustomerAd({
       customerSupabase: customerAdClient(true) as never,
@@ -118,6 +171,7 @@ describe("Ad Studio direct layered template gallery", () => {
       templateId: "quarantined-template",
     });
     assert.equal(owned?.templateId, "quarantined-template");
+    assert.equal(owned?.storyLayout.layers.find(layer => layer.type === "text")?.fontSize, 18);
 
     const callsBeforeDenial = internalCalls.length;
     const denied = await getTemplateForExistingCustomerAd({
@@ -129,6 +183,11 @@ describe("Ad Studio direct layered template gallery", () => {
     });
     assert.equal(denied, null);
     assert.equal(internalCalls.length, callsBeforeDenial, "denied ownership must not reach the internal template reader");
+
+    const malformed = structuredClone(quarantinedTemplate);
+    const legacyLayer = (malformed.storyLayout as { layers: Array<Record<string, unknown>> }).layers.find(layer => layer.layerId === "story-legacy-headline");
+    if (legacyLayer) legacyLayer.tracking = 99;
+    assert.equal(parseTemplateJsonForSavedAdHistory(malformed), null, "saved history cannot bypass current non-font safety constraints");
   });
 
   it("omits quarantined templates from discovery while preserving internal inspection", async () => {
@@ -153,6 +212,7 @@ describe("Ad Studio direct layered template gallery", () => {
     const assetRoute = readFileSync("src/app/api/adstudio/templates/[templateId]/assets/[assetKey]/route.ts", "utf8");
     const sampleRoute = readFileSync("src/app/api/adstudio/templates/[templateId]/sample/route.ts", "utf8");
     const saveRoute = readFileSync("src/app/api/adstudio/ads/[id]/save/route.ts", "utf8");
+    const renderAssets = readFileSync("src/lib/adstudio/render-assets.ts", "utf8");
     const copyRoute = readFileSync("src/app/api/adstudio/ads/[id]/copy-proposal/route.ts", "utf8");
     const formRoute = readFileSync("src/app/api/adstudio/ads/[id]/instant-form/route.ts", "utf8");
     const publishRoute = readFileSync("src/app/api/adstudio/ads/[id]/publish/route.ts", "utf8");
@@ -162,8 +222,10 @@ describe("Ad Studio direct layered template gallery", () => {
     assert.match(publishPage, /templateSupabase: serviceSupabase/);
     assert.match(assetRoute, /requestedAdId[\s\S]*getTemplateForExistingCustomerAd/);
     assert.match(sampleRoute, /requestedAdId[\s\S]*getTemplateForExistingCustomerAd/);
-    assert.match(saveRoute, /getTemplateForInternalInspection/);
-    assert.match(saveRoute, /templateSupabase: serviceSupabase/);
+    assert.match(renderAssets, /getTemplateForInternalInspection/);
+    assert.match(renderAssets, /templateAssetStoragePath/);
+    assert.match(saveRoute, /resolveTemplateAssetValuesShared/);
+    assert.match(saveRoute, /render-assets/);
     assert.match(copyRoute, /createSupabaseServiceClient/);
     assert.match(formRoute, /createSupabaseServiceClient/);
     assert.match(publishRoute, /templateSupabase: serviceSupabase/);

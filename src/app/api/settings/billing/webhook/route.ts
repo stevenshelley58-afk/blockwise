@@ -5,6 +5,7 @@ import {
   type BillingFunnelEventName,
 } from "@/lib/analytics/progressive-funnel";
 import { applyStripeBillingEvent } from "@/lib/billing/billing-domain";
+import { markCheckoutSessionBestEffort } from "@/lib/billing/checkout-sessions";
 import {
   BillingNotConfiguredError,
   constructStripeWebhookEvent,
@@ -39,6 +40,7 @@ export async function POST(request: NextRequest) {
   try {
     const authoritativeEvent = await expandStripeReferences(event);
     const service = createSupabaseServiceClient();
+    await syncCheckoutSessionBookkeeping(service, authoritativeEvent);
     const result = await applyStripeBillingEvent(service, authoritativeEvent);
     if (result.outcome === "applied") {
       await recordAppliedBillingEvents(service, authoritativeEvent, result.workspaceIds);
@@ -51,6 +53,23 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("[stripe-billing-webhook] domain sync failed", error);
     return NextResponse.json({ error: "Stripe billing sync failed." }, { status: 500 });
+  }
+}
+
+/**
+ * Keep local Checkout session rows in sync so a retried Checkout reuses the
+ * eligible open session and never creates a competing subscription.
+ */
+async function syncCheckoutSessionBookkeeping(
+  service: ReturnType<typeof createSupabaseServiceClient>,
+  event: StripeWebhookEvent,
+): Promise<void> {
+  const sessionId = typeof event.data.object.id === "string" ? event.data.object.id : null;
+  if (!sessionId) return;
+  if (event.type === "checkout.session.completed") {
+    await markCheckoutSessionBestEffort(service, sessionId, "completed");
+  } else if (event.type === "checkout.session.expired") {
+    await markCheckoutSessionBestEffort(service, sessionId, "expired");
   }
 }
 

@@ -19,12 +19,13 @@ test("authenticated home is driven by the activation resolver and shared credit 
   assert.match(loader, /onboarding_booked_at/);
   assert.doesNotMatch(page, /INCLUDED_AD_PACKS|usedAdPacks|remainingAdPacks/);
   assert.doesNotMatch(dashboard, /HomeSetupCard/);
-  assert.match(dashboard, /<ActivationCard data=\{data\}/);
+  assert.match(dashboard, /creativeSuggestions/);
+  assert.doesNotMatch(dashboard, /<ActivationCard/);
   assert.match(card, /Enough for up to \$\{packEstimate\} complete Feed \+ Story/);
   assert.match(card, /activation\.resumePath/);
 });
 
-test("onboarding starts with an explicit AU or US website scan and canonical Brand Pack review", () => {
+test("onboarding starts with an AU-only website scan and canonical Brand Pack review", () => {
   const wizard = read("src/components/onboarding/onboarding-wizard.tsx");
   const route = read("src/app/api/workspace/onboarding-market/route.ts");
 
@@ -35,10 +36,11 @@ test("onboarding starts with an explicit AU or US website scan and canonical Bra
   assert.match(wizard, /Add the essentials instead/);
   assert.match(wizard, /Review all details/);
   assert.doesNotMatch(wizard, /Confirm your profile|Connect your ad accounts/);
+  assert.doesNotMatch(wizard, /United States/);
 
-  assert.match(route, /country !== "AU" && country !== "US"/);
+  assert.match(route, /country !== "AU"/);
   assert.match(route, /AU: "AUD"/);
-  assert.match(route, /US: "USD"/);
+  assert.match(route, /supports Australia only/);
   assert.match(route, /recordCustomerActivationMilestone/);
   assert.match(route, /milestone: "country_confirmed"/);
   assert.match(route, /billing_checkout_completed_at/);

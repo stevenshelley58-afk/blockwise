@@ -40,6 +40,7 @@ export function CreativeViewer({
   onIndexChange,
   primaryAction,
   secondaryAction,
+  actionMessage,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -48,11 +49,14 @@ export function CreativeViewer({
   onIndexChange: (index: number) => void;
   primaryAction?: CreativeViewerAction;
   secondaryAction?: CreativeViewerAction;
+  actionMessage?: string | null;
 }) {
   const item = items[index];
   const [muted, setMuted] = useState(true);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const pushedHistory = useRef(false);
+  const onOpenChangeRef = useRef(onOpenChange);
+  onOpenChangeRef.current = onOpenChange;
 
   const goTo = useCallback(
     (next: number) => {
@@ -66,12 +70,12 @@ export function CreativeViewer({
   useEffect(() => {
     if (!open) return;
 
-    window.history.pushState({ creativeViewer: true }, "");
+    window.history.pushState({ ...(window.history.state ?? {}), creativeViewer: true }, "");
     pushedHistory.current = true;
 
     function onPopState() {
       pushedHistory.current = false;
-      onOpenChange(false);
+      onOpenChangeRef.current(false);
     }
 
     window.addEventListener("popstate", onPopState);
@@ -82,7 +86,7 @@ export function CreativeViewer({
         window.history.back();
       }
     };
-  }, [open, onOpenChange]);
+  }, [open]);
 
   // Reset audio state between openings so a muted default always holds.
   useEffect(() => {
@@ -191,9 +195,12 @@ export function CreativeViewer({
           ) : null}
 
           {primaryAction || secondaryAction ? (
-            <div className="flex shrink-0 gap-2.5 px-3.5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+            <div className="grid shrink-0 gap-2.5 px-3.5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+              {actionMessage ? <p role="status" aria-live="polite" className="text-center text-[11.5px] font-semibold text-white/75">{actionMessage}</p> : null}
+              <div className="flex gap-2.5">
               {secondaryAction ? <ActionButton action={secondaryAction} tone="secondary" /> : null}
               {primaryAction ? <ActionButton action={primaryAction} tone="primary" /> : null}
+              </div>
             </div>
           ) : null}
         </DialogPrimitive.Content>
@@ -208,7 +215,7 @@ function Stage({ item, muted }: { item: CreativeViewerItem; muted: boolean }) {
   if (!item.media) {
     return (
       <div className="grid max-h-full w-full max-w-sm place-items-center rounded-(--r-card) border border-white/15 px-6 py-16 text-center text-[12.5px] font-bold text-white/60">
-        Text-only ad
+        Preview unavailable
       </div>
     );
   }
@@ -258,8 +265,9 @@ function ActionButton({ action, tone }: { action: CreativeViewerAction; tone: "p
   }`;
 
   if (action.href) {
+    const external = /^https?:/iu.test(action.href);
     return (
-      <a className={className} href={action.href} target="_blank" rel="noreferrer">
+      <a className={className} href={action.href} {...(external ? { target: "_blank", rel: "noreferrer" } : {})}>
         {action.label}
       </a>
     );

@@ -30,7 +30,7 @@ describe("release hard-reset + typecheck contracts", () => {
     assert.match(gate.stdout, /Hard-reset static verification passed/);
   });
 
-  it("the canonical typecheck is non-writing: tsc --noEmit --incremental false passes on an unwritable workspace and creates no build-info file", { skip: process.platform === "win32" ? "Windows does not enforce chmod-based unwritable-directory semantics; covered on Linux/VPS." : false }, () => {
+  it("the canonical typecheck is non-writing: tsc --noEmit --incremental false passes on an unwritable workspace and creates no build-info file", { skip: process.platform === "win32" ? "Windows does not enforce chmod-based unwritable-directory semantics; covered on Linux/VPS." : process.getuid?.() === 0 ? "Root bypasses chmod-based unwritable-directory semantics; covered by non-root operators." : false }, () => {
     const work = mkdtempSync(join(os.tmpdir(), "adstudio-typecheck-"));
     try {
       writeFileSync(
@@ -46,17 +46,21 @@ describe("release hard-reset + typecheck contracts", () => {
       try {
         // stale contract reproduces the release blocker: incremental tsc tries
         // to write the build-info file into the unwritable workspace
-        const stale = run(TSC, ["--noEmit", "-p", work], { cwd: REPO });
+        const unprivileged = process.getuid?.() === 0 ? { uid: 65534, gid: 65534 } : {};
+        const stale = run(TSC, ["--noEmit", "-p", work], { cwd: REPO, ...unprivileged });
+        assert.equal(stale.error, undefined, String(stale.error));
         assert.notEqual(stale.status, 0, "stale incremental typecheck must fail on an unwritable workspace");
+        assert.match(stale.stderr + stale.stdout, /EACCES|permission denied|tsbuildinfo/i);
+
+        const fixed = run(TSC, ["--noEmit", "--incremental", "false", "-p", work], { cwd: REPO, ...unprivileged });
+        assert.equal(fixed.error, undefined, String(fixed.error));
+        assert.equal(fixed.status, 0, fixed.stdout + fixed.stderr);
+        assert.deepEqual(findBuildInfo(work), [], "non-incremental typecheck must not create build-info files");
       } finally {
         chmodSync(work, 0o755);
         chmodSync(join(work, "tsconfig.json"), 0o644);
         chmodSync(join(work, "a.ts"), 0o644);
       }
-      // fixed contract: non-incremental typecheck passes and writes nothing
-      const fixed = run(TSC, ["--noEmit", "--incremental", "false", "-p", work], { cwd: REPO });
-      assert.equal(fixed.status, 0, fixed.stdout + fixed.stderr);
-      assert.deepEqual(findBuildInfo(work), [], "non-incremental typecheck must not create build-info files");
     } finally {
       try {
         chmodSync(work, 0o755);

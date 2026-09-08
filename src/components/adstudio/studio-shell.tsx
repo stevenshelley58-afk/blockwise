@@ -10,13 +10,15 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { MobileBottomNav } from "@/components/app/mobile-bottom-nav";
 import { BlockwiseLogo } from "@/components/blockwise-logo";
 import { cn } from "@/lib/utils";
 
 type StudioShellProps = {
   children: ReactNode;
   workspaceName: string;
-  accountName: string;
+  homeHref?: string;
+  account: { email: string; name: string; role: string };
   metaConnectionStatus: "connected" | "attention" | "not_connected" | "unknown";
 };
 
@@ -36,7 +38,8 @@ function activePath(pathname: string, href: string, exact?: boolean) {
 export function StudioShell({
   children,
   workspaceName,
-  accountName,
+  account,
+  homeHref = "/self-serve",
   metaConnectionStatus,
 }: StudioShellProps) {
   const pathname = usePathname() ?? "/ad-studio";
@@ -116,9 +119,9 @@ export function StudioShell({
           </Link>
           <p
             className="truncate px-3 text-[10px] text-white/35"
-            title={`${workspaceName} · ${accountName}`}
+            title={`${workspaceName} · ${account.name}`}
           >
-            {workspaceName} · {accountName}
+            {workspaceName} · {account.name}
           </p>
         </div>
       </aside>
@@ -127,12 +130,12 @@ export function StudioShell({
           <header className="flex min-h-14 items-center border-b border-border bg-(--ink) px-4 text-(--surface) md:hidden">
             <Link
               href="/self-serve"
-              className="grid size-8 shrink-0 place-items-center rounded-lg bg-transparent text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-              aria-label="Back to Blockwise"
+              className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-1 text-[12px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
-              <BlockwiseLogo tokens showWordmark={false} />
+              <ArrowLeft size={16} aria-hidden />
+              <span>Blockwise</span>
             </Link>
-            <span className="min-w-0 truncate font-display text-[15.5px] font-extrabold">
+            <span className="ml-3 min-w-0 truncate font-display text-[15.5px] font-extrabold">
               Ad Studio
             </span>
             <span
@@ -143,37 +146,10 @@ export function StudioShell({
             </span>
           </header>
         ) : null}
-        <main className={cn("min-w-0 flex-1", contextual ? "min-h-0 overflow-hidden" : "pb-24 md:pb-0")}>
+        <main className={cn("min-w-0 flex-1", contextual ? "min-h-0 overflow-hidden pb-[calc(5rem+env(safe-area-inset-bottom)+var(--consent-banner-height,0px))] md:pb-0" : "pb-[calc(5rem+env(safe-area-inset-bottom)+var(--consent-banner-height,0px))] md:pb-0")}>
           {children}
         </main>
-        {!contextual ? (
-          <nav
-            className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-border bg-card px-1 pt-1.5 pb-[calc(.5rem+env(safe-area-inset-bottom))] md:hidden"
-            aria-label="Studio mobile navigation"
-          >
-            {items.map(({ href, label, icon: Icon, exact, matches }) => {
-              const active = matches
-                ? matches.some(match => activePath(pathname, match))
-                : activePath(pathname, href, exact);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "grid min-h-11 place-items-center gap-0.5 rounded-xl px-1 text-[10px] font-bold",
-                    active
-                      ? "bg-muted text-foreground"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  <Icon size={18} aria-hidden />
-                  <span>{label === "Brand Pack" ? "Brand" : label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        ) : null}
+        <MobileBottomNav variant="self_serve" homeHref={homeHref} account={account} />
       </div>
     </div>
   );

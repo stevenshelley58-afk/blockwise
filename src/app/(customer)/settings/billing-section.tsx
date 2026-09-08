@@ -43,9 +43,14 @@ export function BillingSection({
   const [billingEmail, setBillingEmail] = useState(workspace.billingEmail);
   const [busy, setBusy] = useState(false);
   const [portalBusy, setPortalBusy] = useState(false);
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [message, setMessage] = useState<Msg>(null);
   const packEstimate = usage.remaining == null ? null : Math.floor(usage.remaining / 2);
   const currencyMark = workspace.currency === "USD" ? "US$" : "A$";
+  // This workspace exposes an intentionally implausible allowance/date sentinel.
+  // Keep it visibly separate from ordinary paid-plan billing.
+  const periodYear = workspace.billingPeriodEnd ? new Date(workspace.billingPeriodEnd).getUTCFullYear() : null;
+  const specialAllowance = workspace.billingAccessState === "unbilled" && ((usage.granted ?? 0) > 100000 || (periodYear != null && periodYear >= 2090));
 
   async function saveBillingEmail(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,6 +67,32 @@ export function BillingSection({
     }
     setMessage({ tone: "success", text: "Billing email saved." });
     router.refresh();
+  }
+
+  async function startCheckout() {
+    setCheckoutBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/settings/billing/checkout", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          workspaceId: workspace.id,
+          product: "self_serve",
+          clientMutationId: crypto.randomUUID(),
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (res.ok && data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      setMessage({ tone: "error", text: data.error ?? "Couldn't start Checkout right now." });
+    } catch {
+      setMessage({ tone: "error", text: "Couldn't start Checkout right now." });
+    } finally {
+      setCheckoutBusy(false);
+    }
   }
 
   async function openPortal() {
@@ -91,17 +122,19 @@ export function BillingSection({
       <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         <PlanTile
           label="Current plan"
-          value={workspace.billingAccessState === "paid" ? "Self-serve paid" : plan?.name ?? "Creation trial"}
+          value={workspace.billingAccessState === "paid" ? "Self-serve paid" : plan?.name ?? "Free trial"}
           foot={
-            <StatusPill tone={workspace.billingAccessState === "paid" ? "green" : workspace.billingAccessState === "payment_recovery" ? "rose" : "blue"}>
-              {workspace.billingAccessState.replaceAll("_", " ")}
-            </StatusPill>
+            <span className="flex flex-col items-start gap-1.5">
+              <StatusPill tone={workspace.billingAccessState === "paid" ? "green" : workspace.billingAccessState === "payment_recovery" ? "rose" : "blue"}>
+                {trialFoot(workspace)}
+              </StatusPill>
+            </span>
           }
         />
         <PlanTile
-          label="Render credits"
-          value={usage.remaining == null ? "Not issued yet" : `${usage.remaining} remaining`}
-          foot={packEstimate == null ? "Issued with your entitlement" : `Up to ${packEstimate} complete Feed + Story packs`}
+          label={specialAllowance ? "Special account allowance" : "Render credits"}
+          value={specialAllowance ? "See usage details" : usage.remaining == null ? "Not issued yet" : `${usage.remaining} remaining`}
+          foot={specialAllowance ? "Actual balance is shown in Usage this period." : packEstimate == null ? "Issued with your entitlement" : `Up to ${packEstimate} complete Feed + Story packs`}
         />
         <PlanTile
           label="Current invoice"
@@ -114,11 +147,13 @@ export function BillingSection({
         />
         <PlanTile
           label={workspace.cancelAtPeriodEnd ? "Access ends" : "Next renewal"}
-          value={workspace.billingPeriodEnd ? formatDate(workspace.billingPeriodEnd) : "Not scheduled"}
+          value={specialAllowance ? "Not a renewal date" : workspace.billingPeriodEnd ? formatDate(workspace.billingPeriodEnd) : "Not scheduled"}
           foot={
-            workspace.cancelAtPeriodEnd
+            specialAllowance
+              ? "Special account allowance. Subscription renewal is not scheduled from this allowance."
+              : workspace.cancelAtPeriodEnd
               ? "Already-paid credits remain until this date."
-              : `${currencyMark}499 each following month`
+              : `${currencyMark}249 each following month`
           }
         />
       </div>
@@ -177,6 +212,23 @@ export function BillingSection({
 
       {canManage ? (
         <>
+          {workspace.billingAccessState !== "paid" && workspace.billingAccessState !== "trialing" ? (
+            <div className="rounded-(--r-card) border border-(--line) bg-(--surface-subtle) p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-[13px] font-bold">Subscribe — A$249/month</h3>
+                  <p className="mt-1 max-w-[560px] text-[11.5px]/[15px] text-muted-foreground">
+                    Recurring A$249 monthly until you cancel in the billing portal. Includes 50 complete
+                    Feed + Story ad packs monthly, one business or brand, one Meta ad account, and up to five
+                    members. Meta advertising spend is separate and paid directly to Meta.
+                  </p>
+                </div>
+                <Button type="button" onClick={startCheckout} disabled={checkoutBusy}>
+                  {checkoutBusy ? "Opening Checkout" : "Subscribe — A$249/month"}
+                </Button>
+              </div>
+            </div>
+          ) : null}
           {workspace.stripeCustomerId ? (
             <div className="flex flex-wrap items-center justify-between gap-4">
               <span className="text-sm font-medium">Manage payment method & invoices</span>
@@ -214,6 +266,18 @@ export function BillingSection({
       <Feedback message={message} />
     </Section>
   );
+}
+
+function trialFoot(workspace: { billingAccessState: string; trialState: string | null; trialEndsAt: string | null }): string {
+  const stateLabel = workspace.billingAccessState.replaceAll("_", " ");
+  if (workspace.billingAccessState !== "unbilled" || !workspace.trialState) return stateLabel;
+  if (workspace.trialState === "pending_delivery") {
+    return `${stateLabel} · trial starts when your first ad delivers`;
+  }
+  if (workspace.trialEndsAt) {
+    return `${stateLabel} · trial ends ${formatDate(workspace.trialEndsAt)}`;
+  }
+  return stateLabel;
 }
 
 function formatMoney(cents: number, currency: string): string {

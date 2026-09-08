@@ -1,5 +1,7 @@
 "use client";
 
+import { trackMarketingEvent } from "@/lib/analytics/marketing";
+
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
@@ -19,7 +21,7 @@ function fire(event: string, props: AnalyticsProps = {}) {
     // pixel may be blocked
   }
   try {
-    w.gtag?.("event", event, props);
+    trackMarketingEvent(event, props);
   } catch {
     // gtag may be absent
   }

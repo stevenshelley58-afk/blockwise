@@ -15,10 +15,12 @@ function includesCopy(source: string, copy: string) {
 
 test("Terms state the exact self-serve trigger, credit, seat, and Meta-spend rules", () => {
   for (const required of [
-    "three complete Feed and Story ad creations",
-    "seven-day trial",
-    "US$99/A$99 when the campaign launches or seven days after",
-    "US$499/A$499 monthly until cancelled",
+    "three complete Feed and Story ad packs",
+    "one live trial campaign",
+    "The trial never charges you automatically",
+    "start when Meta first reports actual delivery",
+    "A$249 per month, recurring until you cancel",
+    "no introductory price",
     "100 render credits per billing period",
     "Credits expire at the end of the",
     "do not roll over or transfer",
@@ -31,8 +33,7 @@ test("Terms state the exact self-serve trigger, credit, seat, and Meta-spend rul
 
 test("Terms distinguish managed scope and cancellation from deletion", () => {
   for (const required of [
-    "US$1,500 per month",
-    "A$2,500 per month",
+    "A$1,500 per month",
     "weekly optimization of up to",
     "four live campaigns",
     "monthly report",

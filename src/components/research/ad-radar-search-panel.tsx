@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { AdRadarLocationForm } from "@/components/research/ad-radar-location-form";
 import { AdRadarResultsGrid } from "@/components/research/ad-radar-results-grid";
+import { mergeCards } from "@/lib/research/ad-radar-pagination";
 import { niche } from "@/config/niche";
 import type { CustomerMetaAdLibraryCard } from "@/lib/research/customer-meta-card";
 
@@ -26,24 +27,28 @@ type Props = {
   initialQuery: string;
   initialLocationLabel: string;
   initialNote: string;
+  initialAgency?: string;
+  initialAgent?: string;
   /** Search fired on mount when the visitor did not type a query. */
   autoSearchTerm?: string | null;
   autoSearchLabel?: string | null;
   autoSearchSource?: "brand_pack" | "location" | null;
 };
 
-type SearchResponse = { cards?: CustomerMetaAdLibraryCard[]; error?: string };
+type SearchResponse = { cards?: CustomerMetaAdLibraryCard[]; page?: { nextCursor: string | null; limit: number }; error?: string };
 
 export function AdRadarSearchPanel({
   initialQuery,
   initialLocationLabel,
   initialNote,
+  initialAgency = "",
+  initialAgent = "",
   autoSearchTerm = null,
   autoSearchLabel = null,
   autoSearchSource = null,
 }: Props) {
   const [query, setQuery] = useState(initialQuery);
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [filters, setFilters] = useState<Filters>({ agency: initialAgency, agent: initialAgent });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [agencyOptions, setAgencyOptions] = useState<string[]>([]);
   const [agentOptions, setAgentOptions] = useState<string[]>([]);
@@ -51,17 +56,25 @@ export function AdRadarSearchPanel({
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestRef = useRef<AbortController | null>(null);
+  const activeSearchTermRef = useRef(initialQuery || autoSearchTerm || "");
 
   function doSearch(
     q: string,
     activeFilters: Filters = filters,
+    append = false,
   ) {
     if (timerRef.current) clearTimeout(timerRef.current);
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
+    activeSearchTermRef.current = q;
+    if (!append) {
+      setCards([]);
+      setNextCursor(null);
+    }
     setLoading(true);
     setSearchError(null);
     timerRef.current = setTimeout(async () => {
@@ -69,13 +82,16 @@ export function AdRadarSearchPanel({
         const params = new URLSearchParams({ q });
         if (activeFilters.agency) params.set("agency", activeFilters.agency);
         if (activeFilters.agent) params.set("agent", activeFilters.agent);
+        if (append && nextCursor) params.set("cursor", nextCursor);
         const res = await fetch(`/api/research/ads/search?${params.toString()}`, {
           signal: controller.signal,
         });
         const data = (await res.json().catch(() => ({}))) as SearchResponse;
+        if (controller.signal.aborted || requestRef.current !== controller) return;
         if (!res.ok) throw new Error(searchFailureMessage(res.status));
         const nextCards = data.cards ?? [];
-        setCards(nextCards);
+        setCards((previous) => append ? mergeCards(previous, nextCards) : nextCards);
+        setNextCursor(data.page?.nextCursor ?? null);
         setSearched(true);
         setSearchError(null);
         // Accumulate agency/agent options across the query session so picking
@@ -84,7 +100,8 @@ export function AdRadarSearchPanel({
         setAgentOptions((prev) => mergeOptions(prev, nextCards.map((c) => c.agentName)));
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        setCards([]);
+        if (controller.signal.aborted || requestRef.current !== controller) return;
+        if (!append) setCards([]);
         setSearched(true);
         setSearchError(
           error instanceof Error
@@ -100,33 +117,80 @@ export function AdRadarSearchPanel({
     }, 300);
   }
 
+  function syncUrl(q: string, nextFilters: Filters, mode: "push" | "replace" = "replace") {
+    const url = new URL(window.location.href);
+    if (q.trim()) url.searchParams.set("q", q.trim());
+    else url.searchParams.delete("q");
+    if (nextFilters.agency) url.searchParams.set("agency", nextFilters.agency);
+    else url.searchParams.delete("agency");
+    if (nextFilters.agent) url.searchParams.set("agent", nextFilters.agent);
+    else url.searchParams.delete("agent");
+    const href = url.pathname + url.search + url.hash;
+    const state = { ...(window.history.state ?? {}), adRadar: true, scrollY: window.scrollY };
+    if (mode === "push") window.history.pushState(state, "", href);
+    else window.history.replaceState(state, "", href);
+  }
+
   function onSearch(q: string) {
     setQuery(q);
     setAgencyOptions([]);
     setAgentOptions([]);
-    doSearch(q, filters);
+    syncUrl(q, filters, "push");
+    doSearch(q, filters, false);
+  }
+
+  function loadMore() {
+    if (!nextCursor || loading || !activeSearchTermRef.current) return;
+    doSearch(activeSearchTermRef.current, filters, true);
   }
 
   function onChangeFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
     const next = { ...filters, [key]: value };
     setFilters(next);
-    if (searched && query.trim()) doSearch(query, next);
+    syncUrl(activeSearchTermRef.current, next);
+    if (searched && activeSearchTermRef.current.trim()) doSearch(activeSearchTermRef.current, next, false);
   }
 
   function onClearFilters() {
     if (activeFilterCount === 0) return;
     setFilters(EMPTY_FILTERS);
-    if (searched && query.trim()) doSearch(query, EMPTY_FILTERS);
+    syncUrl(activeSearchTermRef.current, EMPTY_FILTERS);
+    if (searched && activeSearchTermRef.current.trim()) doSearch(activeSearchTermRef.current, EMPTY_FILTERS, false);
   }
 
   useEffect(() => {
     if (initialQuery) {
-      doSearch(initialQuery);
+      doSearch(initialQuery, filters, false);
     } else if (autoSearchTerm) {
       // Lazy first paint: the panel renders immediately, results stream in.
-      doSearch(autoSearchTerm);
+      doSearch(autoSearchTerm, filters, false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    function restoreFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const nextQuery = params.get("q") ?? "";
+      const nextFilters = { agency: params.get("agency") ?? "", agent: params.get("agent") ?? "" };
+      setQuery(nextQuery);
+      setFilters(nextFilters);
+      setAgencyOptions([]);
+      setAgentOptions([]);
+      if (nextQuery.trim()) {
+        doSearch(nextQuery, nextFilters, false);
+      } else {
+        requestRef.current?.abort();
+        setCards([]);
+        setNextCursor(null);
+        setSearched(false);
+        setSearchError(null);
+      }
+      const scrollY = window.history.state?.scrollY;
+      if (typeof scrollY === "number") window.requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: "auto" }));
+    }
+    window.addEventListener("popstate", restoreFromUrl);
+    return () => window.removeEventListener("popstate", restoreFromUrl);
   }, []);
 
   useEffect(() => {
@@ -142,8 +206,6 @@ export function AdRadarSearchPanel({
   );
 
   const advertiserCount = unique(cards.map((c) => c.pageId ?? c.pageName)).length;
-  const mediaReady = cards.filter((c) => c.media.length > 0).length;
-  const allPostcodes = unique(cards.flatMap((c) => c.adAreaPostcodes));
   const newestSeenAt = cards
     .map((c) => c.lastSeenAt)
     .filter((v): v is string => Boolean(v))
@@ -156,7 +218,7 @@ export function AdRadarSearchPanel({
         <AdRadarLocationForm
           buttonLabel={loading ? "Searching..." : "Search"}
           initialNote={initialNote}
-          initialValue={initialQuery}
+          initialValue={query}
           inputLabel="Search Ad Radar"
           isSubmitting={loading}
           onSearch={onSearch}
@@ -189,7 +251,7 @@ export function AdRadarSearchPanel({
 
             <Link href="/ad-radar/swipe-file" className={ghostButtonClass}>
               <Bookmark size={13} aria-hidden />
-              Swipe file
+              Saved inspiration
             </Link>
 
             <span className="ml-auto flex min-w-0 items-center gap-1.5 text-[11.5px] text-(--faint) sm:hidden">
@@ -247,16 +309,8 @@ export function AdRadarSearchPanel({
         </div>
       </section>
 
-      {searched && !searchError ? (
-        <section className="grid grid-cols-2 gap-3.5 xl:grid-cols-4">
-          <StatTile label="Ads in view" value={String(cards.length)} note="Current matching ads" />
-          <StatTile label="Advertisers" value={String(advertiserCount)} note="Pages with visible ads" />
-          <StatTile label="Postcodes" value={String(allPostcodes.length)} note="Matched ad areas" />
-          <StatTile label="Media visible" value={String(mediaReady)} note="Images, videos, or carousel media" />
-        </section>
-      ) : null}
-
       {searchError ? (
+        <>
         <section
           className="grid gap-3 rounded-(--r-card) border border-error/25 bg-error-soft px-5 py-4 text-error"
           role="alert"
@@ -272,13 +326,26 @@ export function AdRadarSearchPanel({
           <button
             type="button"
             className="inline-flex min-h-11 w-fit cursor-pointer items-center gap-2 rounded-full bg-(--ink) px-4 text-[12.5px] font-bold text-white hover:opacity-85"
-            onClick={() => doSearch(query, filters)}
+            onClick={() => doSearch(activeSearchTermRef.current, filters, Boolean(cards.length && nextCursor))}
             disabled={loading}
           >
             <RotateCw size={14} aria-hidden />
             {loading ? "Trying again…" : "Try again"}
           </button>
         </section>
+        {cards.length > 0 ? (
+          <section className="grid gap-3.5">
+            <AdRadarResultsGrid cards={cards} />
+            {nextCursor ? (
+              <div className="flex justify-center">
+                <button type="button" className={ghostButtonClass} onClick={loadMore} disabled={loading}>
+                  {loading ? "Loading more..." : "Load more"}
+                </button>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+        </>
       ) : searched ? (
         <section className="grid gap-3.5">
           <div>
@@ -294,7 +361,16 @@ export function AdRadarSearchPanel({
           </div>
 
           {cards.length > 0 ? (
-            <AdRadarResultsGrid cards={cards} />
+            <>
+              <AdRadarResultsGrid cards={cards} />
+              {nextCursor ? (
+                <div className="flex justify-center">
+                  <button type="button" className={ghostButtonClass} onClick={loadMore} disabled={loading}>
+                    {loading ? "Loading more..." : "Load more"}
+                  </button>
+                </div>
+              ) : null}
+            </>
           ) : activeFilterCount > 0 ? (
             <div className="rounded-(--r-card) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 px-6 py-10 text-center">
               <h3 className="font-display text-[15.5px] font-extrabold">No ads matched your filters</h3>
@@ -325,15 +401,7 @@ function SelectWrap({ children }: { children: ReactNode }) {
   );
 }
 
-function StatTile({ label, value, note }: { label: string; value: string; note: string }) {
-  return (
-    <article className="rounded-(--r-card) border border-(--line) bg-(--surface) px-[18px] pt-[17px] pb-[15px] shadow-card">
-      <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">{label}</p>
-      <p className="mt-[6px] font-display text-[24px] font-extrabold tracking-[-0.02em] tabular-nums">{value}</p>
-      <p className="mt-[7px] text-[10.5px]/[11.5px] text-muted-foreground">{note}</p>
-    </article>
-  );
-}
+
 
 function mergeOptions(prev: string[], incoming: Array<string | null>): string[] {
   const next = new Set(prev);

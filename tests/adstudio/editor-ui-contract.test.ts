@@ -21,7 +21,8 @@ describe("customer Ad Studio workbench contract", () => {
     assert.doesNotMatch(publishRoute, /fixed inset-0/);
     assert.match(editorRoute, /Use this template/);
     assert.match(stableEditorRoute, /<EditorShell/);
-    assert.match(stableEditorRoute, /h-full min-h-0 flex-col overflow-hidden/);
+    assert.match(stableEditorRoute, /h-\[calc\(100dvh-54px-4\.75rem-env\(safe-area-inset-top\)/);
+    assert.match(stableEditorRoute, /md:h-\[calc\(100dvh-60px\)/);
     assert.match(stableEditorRoute, /h-full min-h-0 overflow-y-auto/);
     assert.match(publishRoute, /<PublishFlow/);
   });
@@ -29,7 +30,7 @@ describe("customer Ad Studio workbench contract", () => {
   it("constrains contextual editor geometry to the Studio viewport", () => {
     const studioShell = readFileSync("src/components/adstudio/studio-shell.tsx", "utf8");
     assert.match(studioShell, /contextual \? "h-dvh overflow-hidden" : "min-h-dvh"/);
-    assert.match(studioShell, /contextual \? "min-h-0 overflow-hidden"/);
+    assert.match(studioShell, /contextual \? "min-h-0 overflow-hidden pb-/);
     assert.match(studioShell, /<main className=\{cn\("min-w-0 flex-1"/);
   });
 
@@ -54,38 +55,46 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(canvas, /const w = geometry\.width, h = geometry\.height/);
     assert.match(geometry, /values\.every\(\(value\) => Math\.abs\(value\) <= 1\.001\)/);
     assert.doesNotMatch(canvas, /new fabric\.Rect\(\{ \.\.\.geometry/);
-    assert.match(canvas, /ensureLocalFont/);
-    assert.match(canvas, /fontStem\(layer\.font\.file\)/);
+    assert.match(canvas, /ensureTemplateFont/);
+    assert.match(canvas, /templateAssetProxyUrl\(templateId, assetKey, existingAdId\)/);
+    assert.match(canvas, /could not be loaded from the template asset/);
+    assert.match(canvas, /templateFontFamily\(templateId, layer\.font\.file\)/);
+    assert.match(canvas, /loadedFontFaces.delete\(cacheKey\)/);
+    // Font identity and failed-load recovery are exercised in template-font-loader.test.ts.
     assert.match(canvas, /layer\.shape === "notched"/);
     assert.match(canvas, /layer\.shape === "wave"/);
     assert.match(canvas, /layer\.shape === "ring"/);
     assert.match(canvas, /new fabric\.Path/);
-    assert.match(editor, /\[scrollbar-width:none\]/);
   });
 
   it("keeps mobile editor actions compact without hiding workflow controls", () => {
     const shell = readFileSync("src/components/adstudio/editor/editor-shell.tsx", "utf8");
-    assert.match(shell, /grid-cols-\[auto_minmax\(0,1fr\)_auto\]/);
-    assert.match(shell, /<span className="xl:hidden">Review<\/span>/);
-    assert.match(shell, /className="hidden xl:inline">\{state\.isSaving \? "Saving…" : "Save"\}<\/span>/);
+    assert.match(shell, /grid-cols-\[2\.75rem_minmax\(0,1fr\)_2\.75rem_auto\]/);
+    assert.match(shell, /aria-label="Ad format" value=\{placementView\}/);
+    assert.match(shell, /min-h-11 min-w-11/);
     assert.match(shell, /grid-cols-5/);
     assert.match(shell, /<Eye className="size-4" \/>Preview/);
-    assert.match(shell, /setPreviewMode\("meta"\)/);
-    assert.match(shell, /<Layers3 className="size-4" \/>Layers/);
+    assert.match(shell, /setMobilePreviewOpen\(true\)/);
+    assert.match(shell, /<Sheet open=\{mobilePreviewOpen\}/);
     assert.match(shell, /<Sheet open=\{mobileLayersOpen\}/);
   });
 
-  it("keeps Home cards contained and exposes exact edit/review destinations", () => {
+  it("keeps the compact Ads hub and exact edit/review destinations", () => {
     const home = readFileSync("src/app/(customer)/ad-studio/page.tsx", "utf8");
     const command = readFileSync("src/components/adstudio/home-command.tsx", "utf8");
-    assert.match(home, /<li key=\{template\.templateId\} className="min-w-0">/);
     assert.match(home, /<HomeCommand/);
+    assert.match(command, /aria-label="Create a new ad from a reviewed template"/);
+    assert.match(command, />New ad<\//);
+    assert.match(command, /Recent ads/);
+    assert.match(command, /aria-label="Ad Studio links"/);
+    assert.match(command, /Photos &amp; logos/);
+    assert.doesNotMatch(command, /assetsError|assets\.length/);
+    assert.doesNotMatch(home, /kind: "assets"/);
+    assert.doesNotMatch(command, /Create a new ad<\/span>|Workspace shortcuts|Recent assets/);
     assert.match(command, /formatLastEdited\(ad\.updatedAt, timeZone, dateLocale\)/);
     assert.match(home, /timeZone/);
     assert.match(home, /resolveTimeZone\(auth\.claims\?\.user_metadata\?\.timezone, access\.region\)/);
     assert.match(home, /dateLocale = access\.region === "US" \? "en-US" : "en-AU"/);
-    assert.match(command, /href=\{`\/ad-studio\/ads\/\$\{encodeURIComponent\(ad\.adId\)\}`\}/);
-    assert.match(command, /href=\{`\/ad-studio\/templates\/\$\{encodeURIComponent\(ad\.templateId\)\}\/publish\?adId=\$\{encodeURIComponent\(ad\.adId\)\}`\}/);
     assert.match(command, /<Link[^>]*>Edit<\/Link>/);
     assert.match(command, /<Link[^>]*>Review<\/Link>/);
   });
@@ -101,8 +110,13 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(inputs, /rounded-\(--r-card\)/);
     assert.match(copy, /id="meta-copy-cta"/);
     assert.match(copy, /border border-input/);
-    assert.match(shell, /AI brief/);
+    assert.match(shell, /AI Copy Assist/);
     assert.match(shell, /Generate copy/);
+    assert.match(shell, /Review generated copy/);
+    assert.match(shell, /Use all/);
+    assert.match(shell, /aria-label=\{`Use \$\{label\}`\}/);
+    assert.match(shell, /setProposal\(\{ onImage:/);
+    assert.doesNotMatch(shell, /if \(!response\.ok \|\| !body\.copy\)[\s\S]{0,180}applyGeneratedCopy/);
     assert.match(shell, /"design" \| "meta" \| "split"/);
     assert.match(shell, /TabsTrigger value="both"/);
     assert.match(shell, /aria-label="Canvas tools"/);
@@ -110,6 +124,9 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(shell, /aria-label="Editor inspector"/);
     assert.match(shell, /setInspectorOpen/);
     assert.match(shell, /publish\?adId=/);
+    assert.match(shell, /guardedEditorNavigationHref/);
+    assert.match(shell, /router\.push\(href\)/);
+    assert.doesNotMatch(shell, /window\.location\.assign/);
     assert.match(shell, /e\.key\.toLowerCase\(\)/);
     assert.match(shell, /key === "y"/);
     assert.match(colours, /Template colours/);
@@ -138,6 +155,15 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(inputs, /Use template image/);
     assert.match(publish, /variantIds: selectedVariants/);
     assert.match(publish, /selectedVariants\.length \* selectedAdSetCount/);
+    assert.match(publish, /hidden=\{activeStage !== 1\}/);
+    assert.match(publish, /const stageCanContinue = activeStage === 1[\s\S]{0,40}\? true/);
+    assert.match(publish, /activeStage === 2[\s\S]{0,80}formReady && destinationReady && fulfilmentReady/);
+    assert.match(publish, /activeStage === 3[\s\S]{0,80}targetReady/);
+    assert.match(publish, /DownloadFormats/);
+    assert.match(publish, /Download both formats/);
+    assert.match(publish, /Download both files/);
+    assert.match(publish, /individual links below/);
+    assert.match(publish, /Edit creative and copy/);
     assert.match(publish, /This ad includes an offer, guide or result promise/);
     assert.match(publish, /fulfilmentRequired: publishRequirements\.fulfilmentRequired/);
     assert.match(publish, /Fulfilment delivery URL/);

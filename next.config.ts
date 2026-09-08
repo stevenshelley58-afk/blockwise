@@ -19,6 +19,12 @@ function sentryIngestOrigin(dsn: string | undefined): string | null {
 }
 
 const nextConfig: NextConfig = {
+  // Embedded at build time: a mutable runtime env must not impersonate a release.
+  env: {
+    BLOCKWISE_BUILD_REVISION: /^[a-f0-9]{40}$/i.test(process.env.BLOCKWISE_BUILD_REVISION ?? "")
+      ? process.env.BLOCKWISE_BUILD_REVISION
+      : "",
+  },
   poweredByHeader: false,
   reactStrictMode: true,
   typedRoutes: true,
@@ -79,7 +85,8 @@ const nextConfig: NextConfig = {
     //   rendered by Ad Radar/creative viewer (*.fbcdn.net,
     //   *.cdninstagram.com), Facebook page images.
     // - connect: self, Supabase REST/auth, Sentry ingest, Vercel analytics,
-    //   Google Analytics/gtag collect endpoints.
+    //   Google Analytics/gtag collect endpoints, including regional collection:
+    //   https://developers.google.com/tag-platform/security/guides/csp
     const supabaseOrigin = safeOrigin(process.env.NEXT_PUBLIC_SUPABASE_URL);
     const researchStorageOrigin = safeOrigin(process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL);
     const sentryOrigin = sentryIngestOrigin(process.env.NEXT_PUBLIC_SENTRY_DSN);
@@ -88,14 +95,19 @@ const nextConfig: NextConfig = {
       supabaseOrigin,
       sentryOrigin,
       "https://va.vercel-scripts.com",
-      "https://www.google-analytics.com",
+      "https://*.google-analytics.com",
+      "https://*.analytics.google.com",
       "https://analytics.google.com",
       "https://www.googletagmanager.com",
+      "https://www.clarity.ms",
+      "https://c.clarity.ms",
     ]
       .filter((value): value is string => Boolean(value))
       .join(" ");
     const imgSrc = [
       "'self'",
+      "https://*.google-analytics.com",
+      "https://www.googletagmanager.com",
       "data:",
       "blob:",
       researchStorageOrigin,
@@ -126,7 +138,7 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://www.googletagmanager.com https://va.vercel-scripts.com",
+              "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://www.googletagmanager.com https://www.clarity.ms https://va.vercel-scripts.com",
               "style-src 'self' 'unsafe-inline'",
               "img-src " + imgSrc,
               "media-src " + mediaSrc,

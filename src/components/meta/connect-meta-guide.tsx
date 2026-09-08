@@ -581,63 +581,57 @@ function Guide({
               <strong className="text-foreground">Tip:</strong> {item.tip}
             </p>
           </div>
-          <div className="overflow-hidden rounded-(--r-card) border border-(--line-heavy) bg-white p-2 sm:p-3">
-            <Image
-              className="mx-auto h-auto w-auto max-w-full"
-              src={item.image}
-              width={item.width}
-              height={item.height}
-              alt={item.alt}
-              priority={step === 0}
-              sizes="(min-width: 1024px) 620px, 100vw"
-            />
-            <div className="mt-2 flex justify-center">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="min-h-11"
-                    aria-label={`View full-size Meta step ${step + 1} screenshot`}
-                  >
-                    <ZoomIn />
-                    View full-size screenshot
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-[min(1100px,92vw)]">
-                  <DialogHeader>
-                    <DialogTitle>
-                      Step {step + 1}: {item.title} — full-size Meta screenshot
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="max-h-[70vh] overflow-auto rounded-(--r-card) border border-(--line-heavy) bg-white p-2">
-                    <Image
-                      className="mx-auto h-auto w-auto max-w-full"
-                      src={"fullImage" in item ? item.fullImage : item.image}
-                      width={"fullImage" in item ? item.fullWidth : item.width}
-                      height={"fullImage" in item ? item.fullHeight : item.height}
-                      alt={item.alt}
-                      sizes="(min-width: 1100px) 1050px, 92vw"
-                    />
-                  </div>
-                  <p className="text-[11.5px] text-muted-foreground">
-                    Press Escape to close.{" "}
-                    <a
-                      className="underline"
-                      href={item.image}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Open the image file in a new tab
-                    </a>{" "}
-                    if you prefer.
-                  </p>
-                </DialogContent>
-              </Dialog>
+          <details className="rounded-(--r-card) border border-(--line-heavy) bg-(--surface-subtle) p-2 sm:p-3">
+            <summary className="cursor-pointer px-2 py-2 text-[12.5px] font-bold">Help with this step</summary>
+            <div className="mt-2 overflow-hidden rounded-(--r-card) border border-(--line-heavy) bg-white p-2">
+              <Image
+                className="mx-auto h-auto w-auto max-w-full"
+                src={item.image}
+                width={item.width}
+                height={item.height}
+                alt={item.alt}
+                priority={step === 0}
+                sizes="(min-width: 1024px) 620px, 100vw"
+              />
+              <div className="mt-2 flex justify-center">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="min-h-11" aria-label="View full-size Meta screenshot">
+                      <ZoomIn />
+                      View full-size screenshot
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-[min(1100px,92vw)]">
+                    <DialogHeader>
+                      <DialogTitle>
+                        Step {step + 1}: {item.title}: full-size Meta screenshot
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="max-h-[70vh] overflow-auto rounded-(--r-card) border border-(--line-heavy) bg-white p-2">
+                      <Image
+                        className="mx-auto h-auto w-auto max-w-full"
+                        src={"fullImage" in item ? item.fullImage : item.image}
+                        width={"fullImage" in item ? item.fullWidth : item.width}
+                        height={"fullImage" in item ? item.fullHeight : item.height}
+                        alt={item.alt}
+                        sizes="(min-width: 1100px) 1050px, 92vw"
+                      />
+                    </div>
+                    <p className="text-[11.5px] text-muted-foreground">
+                      Press Escape to close.{" "}
+                      <a className="underline" href={item.image} target="_blank" rel="noopener noreferrer">
+                        Open the image file in a new tab
+                      </a>{" "}
+                      if you prefer.
+                    </p>
+                  </DialogContent>
+                </Dialog>
+              </div>
+              <p className="mt-1.5 text-center text-[11.5px] text-muted-foreground">
+                Real Meta Business Settings screen. Meta may change labels.
+              </p>
             </div>
-            <p className="mt-1.5 text-center text-[11.5px] text-muted-foreground">
-              Real Meta Business Settings screen. Meta may change labels.
-            </p>
-          </div>
+          </details>
         </div>
         <div className="mt-4 flex flex-wrap justify-between gap-2 border-t border-(--line) pt-4">
           <Button variant="outline" className="min-h-11" onClick={onBack}>

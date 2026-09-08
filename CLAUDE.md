@@ -1,22 +1,5 @@
-# Blockwise Claude Instructions
+# Blockwise agent entry point
 
-Follow `AGENTS.md` as the source of truth for Blockwise engineering rules.
-
-**CRITICAL RULE: Homepage Updates**
-The homepage UI is split into separate desktop and mobile components in `src/components/home-landing`. Whenever you are asked to update the homepage copy, links, or sections, you MUST update both the `Desktop` and `Mobile` component variants.
-
-## VPS / Deploy access
-
-To SSH into the production VPS or redeploy Hermes, follow
-`docs/runbooks/vps-ssh.md`. Access is key-based over Tailscale; do not store an
-SSH private key in this repository or fall back to password authentication.
-
-## External Reference Repositories
-
-Use these repositories as reference material when they are relevant to the
-current task — guidance only, do not copy large blocks of code:
-
-- https://github.com/affaan-m/ECC
-- https://github.com/multica-ai/andrej-karpathy-skills
-- https://github.com/safishamsi/graphify
-- https://github.com/pbakaus/impeccable
+Read [AGENTS.md](AGENTS.md), which points to the shared rulebook and the sole
+current [documentation index](docs/README.md). This file contains no separate
+Claude deployment, verification or product policy.
