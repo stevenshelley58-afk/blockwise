@@ -170,6 +170,9 @@ const scrapingBeeOrder = String(env.HERMES_SCRAPINGBEE_ORDER || "fallback").toLo
 const scrapingBeeMaxCostPerCapture = Math.min(positiveInt("HERMES_SCRAPINGBEE_MAX_CREDITS_PER_CAPTURE", 25), 100);
 const scrapingBeeMonthlyCreditCap = positiveInt("HERMES_SCRAPINGBEE_MONTHLY_CREDIT_CAP", 200_000);
 const scrapingBeeTimeoutMs = positiveInt("HERMES_SCRAPINGBEE_TIMEOUT_MS", 120_000);
+// Auto-Mode chooses proxy/rendering tiers but does not wait for page-specific
+// asynchronous results. Meta Ad Library needs a short post-render settle time.
+const scrapingBeeWaitMs = Math.min(positiveInt("HERMES_SCRAPINGBEE_WAIT_MS", 5_000), 35_000);
 const RAW_EVIDENCE_BUCKET = env.HERMES_RESEARCH_RAW_EVIDENCE_BUCKET || "research-raw-evidence";
 const META_BROWSER_CHALLENGE_DISABLED_UNTIL_SETTING = "meta_browser_challenge_disabled_until";
 const META_BROWSER_CHALLENGE_RESUME_SPREAD_MS = 15 * 60 * 1000;
@@ -3004,6 +3007,7 @@ async function runScrapingBeePageCapture(input) {
     url,
     mode: "auto",
     max_cost: String(runCreditCap),
+    wait: String(scrapingBeeWaitMs),
   });
 
   try {
@@ -3026,7 +3030,7 @@ async function runScrapingBeePageCapture(input) {
         provider_credit_attempt_id: attemptId,
         tier: "auto_mode",
         request_url_host: "app.scrapingbee.com",
-        request_params: { mode: "auto", max_cost: runCreditCap, target_host: new URL(url).host },
+        request_params: { mode: "auto", max_cost: runCreditCap, wait_ms: scrapingBeeWaitMs, target_host: new URL(url).host },
         outcome: "error",
         error: "reserved_before_provider_request",
         started_at: new Date(requestStartedAt).toISOString(),
@@ -3103,7 +3107,7 @@ async function runMetaPageCapture(input) {
   // attempt is never followed by a second paid attempt for the same page.
   let scrapingBeeAttempted = false;
 
-  const tryScrapingBee = async (metadataExtras = {}) => {
+  const tryScrapingBee = async (metadataExtras = {}, preserveFailure = false) => {
     if (!scrapingBeeEnabled || scrapingBeeAttempted) return null;
     scrapingBeeAttempted = true;
     const spb = await runScrapingBeePageCapture(input);
@@ -3119,19 +3123,19 @@ async function runMetaPageCapture(input) {
       meta_page_id: input.metaPageId,
       error: spb.errorMessage,
     }, "warn");
-    return null;
+    return preserveFailure
+      ? {
+          outcome: { ...spb, metadata: { ...(spb.metadata || {}), ...metadataExtras } },
+          sourceProvider: META_SCRAPINGBEE_SOURCE_PROVIDER,
+          captureMode: captureModeForSourceProvider(META_SCRAPINGBEE_SOURCE_PROVIDER),
+        }
+      : null;
   };
 
   if (scrapingBeeEnabled && scrapingBeeOrder === "primary") {
-    const primary = await tryScrapingBee();
-    if (primary) return primary;
-    const fallback = await runFallbackMetaPageCapture(input, fallbackSourceProvider);
-    const sourceProvider = fallback.provider || fallbackSourceProvider;
-    return {
-      outcome: fallback,
-      sourceProvider,
-      captureMode: captureModeForSourceProvider(sourceProvider, "after_scrapingbee_failure"),
-    };
+    // Primary paid collection fails closed. A provider error must not invoke
+    // an unrelated browser path or make a second provider request.
+    return tryScrapingBee({}, true);
   }
 
   if (metaOfficialApiEnabled) {
@@ -4269,7 +4273,20 @@ async function handleAdCollector(job) {
       resolution: { advertiser_page_id: payload.advertiserPageId, meta_page_id: payload.metaPageId, provider: sourceProvider, error: outcome.errorMessage },
       resolved_advertiser_page_id: payload.advertiserPageId,
     });
-    throw new Error(outcome.errorMessage || "Meta capture failed");
+    return {
+      status: "blocked",
+      blocked_reason: "collector_capture_failed",
+      result: {
+        handler: "blockwise-ad-collector",
+        advertiser_page_id: payload.advertiserPageId,
+        meta_page_id: payload.metaPageId,
+        provider: sourceProvider,
+        capture_mode,
+        collection_failed: true,
+        error: outcome.errorMessage || "Meta capture failed",
+        ingest_tables: ingestTables,
+      },
+    };
   }
   const checkedAt = now();
   // Coverage contract: a run is complete/comparable only when pagination ran
@@ -4468,7 +4485,7 @@ async function handleMediaCollector(job) {
   if (!uuid.test(payload.adCreativeId || "") || !uuid.test(payload.observedAdId || "")) {
     return { status: "blocked", blocked_reason: "media_collector_missing_creative", result: { handler: "blockwise-media-collector" } };
   }
-  const load = () => rest("research", "media_assets?select=*&ad_creative_id=eq." + payload.adCreativeId + "&observed_ad_id=eq." + payload.observedAdId + "&capture_status=in.(pending,failed,captured)&archive_object_id=is.null&order=created_at.asc&limit=20");
+  const load = () => rest("research", "media_assets?select=*&ad_creative_id=eq." + payload.adCreativeId + "&observed_ad_id=eq." + payload.observedAdId + "&capture_status=in.(pending,failed,captured)&archive_object_id=is.null&order=created_at.asc&limit=250");
   let assets = await load();
   let seeded = 0;
   if (!assets.length) {
