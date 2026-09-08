@@ -36,3 +36,5 @@ This index separates current operating guidance from retained history.
 - [8 September homepage template gallery](releases/2026-09-08-homepage-template-gallery.md)
 
 - [8 September homepage gallery removal](releases/2026-09-08-homepage-gallery-removal.md)
+
+- [8 September homepage pricing cards](releases/2026-09-08-homepage-pricing-cards.md)
