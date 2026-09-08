@@ -395,3 +395,34 @@ test("font.file stays authoritative for path declarations instead of falling bac
   assert.deepEqual(pathDeclared.png, basenameDeclared.png, "path-style font refs must resolve to the registered Manrope alias");
   assert.deepEqual(misleadingHostFamily.png, basenameDeclared.png, "font.file must not be replaced by an installed host family");
 });
+
+test("failed fit reports measured requirements that make the same text render", async () => {
+  const template = templateFixture();
+  const text = "Maximum editable content Maximum editabl";
+  template.fonts = [{ file: "manrope-800.woff2" }];
+  template.textInputs = [{ key: "check", label: "Check", placeholder: text, maxLength: 40 }];
+  const layer = {
+    type: "text" as const, layerId: "story-check", inputKey: "check",
+    font: { file: "manrope-800.woff2" }, fontSize: 32, lineHeight: 1.2, tracking: 0,
+    alignment: "left" as const, maxCharacters: 40, maxLines: 1,
+    colourRole: "mainText" as const, overflowBehaviour: "scale_down" as const,
+    geometry: { x: 120, y: 500, width: 355, height: 40 },
+  };
+  template.storyLayout.layers.push(layer);
+  const input = { template, imageValues: {}, textValues: { check: text }, colourMap: colours };
+  const error = await renderPlacement(input, "story").then(() => null, (failure: unknown) => failure);
+  assert.ok(error instanceof TextPreflightError);
+  const failure = error.violations[0];
+  assert.equal(failure?.kind, "cannot_fit_readability_floor");
+  assert.ok(failure && failure.kind === "cannot_fit_readability_floor");
+  assert.ok(failure.requiredLinesAtFloor! >= 2);
+  assert.ok(failure.requiredHeightAtFloorPx! > 40);
+  assert.ok(failure.requiredWidthAtFloorPx! <= 355);
+  layer.maxLines = failure.requiredLinesAtFloor!;
+  layer.geometry.height = failure.requiredHeightAtFloorPx!;
+  const output = await renderPlacement(input, "story");
+  assert.ok(output.png.length > 0);
+  assert.equal(layer.fontSize, 32);
+  assert.equal(input.textValues.check, text);
+  assert.equal(template.textInputs[0]?.maxLength, 40);
+});
