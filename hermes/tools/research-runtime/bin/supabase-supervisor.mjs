@@ -2735,9 +2735,6 @@ function captureInput(payload) {
     activeStatus: ["active", "inactive", "all"].includes(payload.activeStatus) ? payload.activeStatus : "all",
     resultsLimit: Math.max(1, Math.min(Number.parseInt(payload.resultsLimit || ("" + metaCaptureResultsLimit), 10) || metaCaptureResultsLimit, 250)),
     runCreditCap: captureCreditCap(payload),
-    paginationStrategy: payload.paginationStrategy === "infinite_scroll"
-      ? "infinite_scroll"
-      : "standard",
     realEstateGate: payload.realEstateGate,
     resolverDecisionId: payload.resolverDecisionId || null,
   };
@@ -3082,14 +3079,6 @@ async function runScrapingBeePageCapture(input) {
     max_cost: String(runCreditCap),
     wait: String(scrapingBeeWaitMs),
   });
-  if (input.paginationStrategy === "infinite_scroll") {
-    // This is a single paid request, used only after a standard capture proves
-    // the result set is paginated. ScrapingBee's strict scenario fails the
-    // request rather than silently returning an unscrolled first page.
-    params.set("js_scenario", json({
-      instructions: [{ infinite_scroll: { max_count: 0, delay: 1_000 } }],
-    }));
-  }
 
   try {
     return await executeScrapingBeePaidAttempt({
@@ -3111,13 +3100,7 @@ async function runScrapingBeePageCapture(input) {
         provider_credit_attempt_id: attemptId,
         tier: "auto_mode",
         request_url_host: "app.scrapingbee.com",
-        request_params: {
-          mode: "auto",
-          max_cost: runCreditCap,
-          wait_ms: scrapingBeeWaitMs,
-          pagination_strategy: input.paginationStrategy,
-          target_host: new URL(url).host,
-        },
+        request_params: { mode: "auto", max_cost: runCreditCap, wait_ms: scrapingBeeWaitMs, target_host: new URL(url).host },
         outcome: "error",
         error: "reserved_before_provider_request",
         started_at: new Date(requestStartedAt).toISOString(),
