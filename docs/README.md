@@ -14,6 +14,8 @@ This index separates current operating guidance from retained history.
 
 ## Design previews
 
+- [Reporting loop without playback button](releases/2026-09-08-homepage-reporting-no-pause.md) - automatic chart-to-email loop with only the three content selectors visible.
+
 - [Reporting chart-to-email loop](releases/2026-09-08-homepage-reporting-loop.md) - completion-driven crossfade, repeating chart reveal and accessible playback controls.
 
 - [Visual campaign controls](releases/2026-09-08-homepage-campaign-controls.md) - interactive creative, budget, campaign and email controls; verified combined preview.
