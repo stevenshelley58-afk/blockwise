@@ -53,3 +53,15 @@ for (const status of ['empty', 'exhausted', 'unavailable'] as const) {
     await expect(page.locator('[data-home-creative]')).not.toContainText(/Try a different look|new creative|easy template|setup steps|Workspace details/);
   });
 }
+
+test('a failed preview does not leave a broken image or duplicate actions', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('bw-consent', 'essential'));
+  await page.route('**/*', route => ['GET', 'HEAD', 'OPTIONS'].includes(route.request().method()) ? route.continue() : route.fulfill({ status: 409, body: 'Read-only acceptance' }));
+  await page.route('**/api/home-preview-fixture/broken', route => route.fulfill({ status: 404, body: 'Fixture preview unavailable' }));
+  await page.route('**/api/home-dashboard', route => route.fulfill({ status: 200, json: { creativeSuggestions: { audience: 'returning', status: 'ready', items: [{ templateId: 'broken', name: 'Preview fixture', previewUrl: '/api/home-preview-fixture/broken', href: '/ad-studio/templates/broken' }] } } }));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`/self-serve?workspaceId=${workspaceId}`);
+  await expect(page.getByText('Preview unavailable', { exact: true })).toBeVisible();
+  await expect(page.locator('img[data-template-preview]')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Browse templates', exact: true })).toHaveCount(1);
+});

@@ -65,6 +65,10 @@ function ReadyCreative({
         {failed ? (
           <div className="flex min-h-24 w-full max-w-[320px] flex-col justify-center py-4 md:max-w-[360px]">
             <p className="text-[15px] font-semibold text-foreground">Preview unavailable</p>
+            <Link href="/ad-studio/templates" data-home-primary
+              className="mt-3 inline-flex min-h-11 w-fit items-center gap-2 rounded-(--r-ctl) border border-border px-4 text-[15px] font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              Browse templates <ArrowRight className="size-4" aria-hidden />
+            </Link>
 
           </div>
         ) : (
@@ -119,7 +123,7 @@ export function HomeDashboard({ data }: { data: HomeData }) {
   const audience = suggestions?.audience && suggestions.audience in HEADLINES ? suggestions.audience : "fallback";
   const headline = suggestions?.status === "exhausted"
     ? "What will you create next?"
-    : HEADLINES[audience];
+    : suggestions?.status === "ready" ? HEADLINES[audience] : HEADLINES.fallback;
   const item = items[index];
 
   return (
