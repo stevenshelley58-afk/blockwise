@@ -5,6 +5,11 @@ This is the sole current Blockwise documentation index. Read
 [AGENTS.md](../AGENTS.md) first. Older worktree and branch documents are
 snapshots, not alternate current rules.
 
+The application has one source authority: `/projects/blockwise` on `main`,
+tracking `origin/main`. Normal releases use the guarded single-authority procedure
+in production readiness below. Isolated previews and archived work are not
+alternate production versions.
+
 ## Current authorities
 
 - [Architecture overview](architecture/overview.md)
@@ -37,6 +42,8 @@ release authority. Keep published resource files aligned with their source
 guides. Third-party licence text is retained unchanged.
 
 ## Plans and historical evidence
+
+- [8 September single application authority](releases/2026-09-08-single-authority.md)
 
 - [8 September lead-management baseline](plans/2026-09-08-lead-management-baseline.md)
 

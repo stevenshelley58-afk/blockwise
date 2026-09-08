@@ -176,9 +176,44 @@ optional Realtime, and a separately gated durable worker. The worker stays
 omitted while `BLOCKWISE_ENABLE_PROVIDER_WRITES=false`. Supabase client
 packages are protocol clients pointed at the product Caddy origin.
 
-Frank template packs and Hermes research remain separate systems. The main
-branch contains divergent customer-ops work and is not an automatic deployment
-source. Release provenance must identify the exact full Git SHA and image.
+Frank template packs and Hermes research remain separate systems. The sole
+maintained application source is `/projects/blockwise` on `main`, tracking
+`origin/main`. Production is released only from the same full Git SHA in a clean
+immutable checkout at `/srv/blockwise/releases/product/<full-sha>`. A feature
+checkout or an archive branch is not a deployment source. Release provenance
+must match canonical HEAD, remote main, immutable checkout, image label, selected
+environment revision and the public compiled revision.
+
+### Single-authority release procedure
+
+Use `scripts/vps/product-release.sh` as the only normal app release entry point.
+It serializes releases, refuses source drift, builds an immutable image, and
+requires a passing repository/canary acceptance receipt before activation.
+From `/projects/blockwise`, run `scripts/vps/product-release.sh --prepare`
+to fetch and build the current verified main candidate. After the checks and
+controlled canary pass, run `scripts/vps/product-release.sh --deploy <full-sha>
+--receipt <absolute-receipt.json>` on one line. The bounded receipt contains
+exactly `sha`, `canary_pass: true`, and `repository_checks: "pass"`; retain the
+actual detailed logs and any explicit skipped-test reasons separately. Run
+`scripts/vps/product-release-preflight.sh <full-sha> --check-live` to verify the
+source/image/live chain without changing it. Preparation does not change
+production. Activation recreates only the application service; database, Auth,
+Storage, Caddy, worker and provider activation remain separately gated changes.
+
+Run the repository gates below against the candidate. Verify the candidate in
+one isolated controlled canary with outbound credentials disabled, then record
+its exact SHA and passing checks in the acceptance receipt. Do not fabricate a
+receipt or treat a build alone as customer acceptance. The release script checks
+the selected image and source again immediately before activation. Post-release
+verification must compare `/api/health` with the same full SHA and image label.
+A failed activation restores the prior environment and app selection; preserve
+the prior image and immutable source until the rollback window closes.
+
+The normal source must not stay intentionally divergent from production. A
+short-lived candidate between verified preparation and activation is expected;
+unreleased work remains on a feature branch, not on a competing canonical
+checkout. A failed release is an incident with an explicit retained baseline,
+not a reason to resume ad-hoc worktree deployments.
 
 ## Health gate
 

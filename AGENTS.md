@@ -37,6 +37,23 @@ existing shadcn/Tailwind token bridge and `src/components/ui/`; operator UI
 keeps its existing CSS shell. Reuse existing navigation metadata and
 components; do not create a parallel design system.
 
+## Single application authority
+
+- `/projects/blockwise` on `main`, tracking `origin/main`, is the sole maintained
+  application source. Production must serve that exact verified revision.
+- Feature branches and design previews are unfinished work, not alternate
+  application authorities. Preserve them; integrate accepted changes into
+  `main` before release. Never deploy the customer app from a feature checkout.
+- Release only through `scripts/vps/product-release.sh`, using a clean immutable
+  checkout under `/srv/blockwise/releases/product/<full-sha>`. The release guard
+  must verify canonical source, remote main, immutable source, image and live
+  compiled revision. Do not bypass the guard with ad-hoc Compose commands.
+- Rollbacks are the explicit exception: use a retained verified release, record
+  the incident, and reconcile `main` before the next normal release.
+- Historical branches under `archive/` preserve unreleased work and provenance;
+  they are not deployment candidates. Do not merge them wholesale to remove
+  divergence or rewrite their published history.
+
 ## Verification and release
 
 Use [production readiness](docs/runbooks/production-readiness.md) for required

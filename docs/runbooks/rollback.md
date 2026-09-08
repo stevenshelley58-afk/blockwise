@@ -13,6 +13,12 @@ export BLOCKWISE_PRODUCT_ENV_FILE=/srv/blockwise/product/.env
 export COMPOSE_FILE=/path/to/the/verified/release/infra/coolify/docker-compose.product.yml
 ```
 
+Normal releases use `scripts/vps/product-release.sh` from the canonical `main`
+authority. The direct image-selection commands below are incident-only rollback
+procedures, not alternate paths for releasing feature branches. After rollback,
+record the serving full SHA and reconcile canonical `main` before the next normal
+release. Never rebuild an old release from a changed working tree.
+
 ## Current runtime posture
 
 - Caddy is the public ingress for the product VPS and routes the Next
