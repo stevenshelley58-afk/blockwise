@@ -43,7 +43,14 @@ test("one studio, ad and template rail stay mounted through all phases", async()
 
 test("workflow displays the exact owner-selected heading and subheading", async () => {
   const source = await readFile(new URL("../src/components/homepage-concept/workflow-showcase.tsx", import.meta.url), "utf8");
-  assert.ok(source.includes("<h2>More leads. Less ad management.</h2>"));
+  assert.ok(source.includes('<h2><span>More leads.</span>{" "}<span>Less ad management.</span></h2>'));
   assert.ok(source.includes("<p>Customise a proven template and publish your lead-generating ad, all in one place.</p>"));
   assert.ok(!source.includes("<h2>Create real estate ads"));
+});
+
+test("owner-selected heading stays on two responsive lines", async () => {
+  const css = await readFile(new URL("../src/components/homepage-concept/workflow-showcase.css", import.meta.url), "utf8");
+  assert.ok(css.includes("container-type: inline-size"));
+  assert.ok(css.includes("font-size: min(58px,9.8cqi)"));
+  assert.ok(css.includes(".hc-process-copy h2 > span { display: block; white-space: nowrap; }"));
 });

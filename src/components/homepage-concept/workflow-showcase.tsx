@@ -109,7 +109,7 @@ export function WorkflowShowcase() {
 
   return <div className="hc-process-layout">
     <div className="hc-process-copy">
-      <h2>More leads. Less ad management.</h2>
+      <h2><span>More leads.</span>{" "}<span>Less ad management.</span></h2>
       <p>Customise a proven template and publish your lead-generating ad, all in one place.</p>
       <div className="hc-process-steps" aria-label="How Blockwise works">{WORKFLOW_STEPS.map((step, index) => <button type="button" key={step} aria-pressed={frame.step === index} onClick={() => setPhase(WORKFLOW_STEP_STARTS[index])}><span className="hc-process-step-mark" aria-hidden="true" /><strong>{step}</strong></button>)}</div>
       <div className="hc-process-actions"><a className="hc-button hc-button--primary" href="#trial">Start free trial<ArrowRight size={17} aria-hidden="true" /></a></div>
