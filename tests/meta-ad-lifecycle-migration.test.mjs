@@ -158,13 +158,13 @@ test("paid failed attempts are recorded, never dropped", () => {
 
 test("/usage is cached for 65 seconds and fresh authenticated evidence gates reservation", () => {
   assert.match(supervisor, /Date\.now\(\) - scrapingBeeUsageCache\.at < 65_000/);
-  assert.match(supervisor, /balance = await scrapingBeeBalanceEvidence\(\)/);
+  assert.match(supervisor, /balance = savedCapture \? \{ verifiedAt: savedCapture.capturedAt \} : await scrapingBeeBalanceEvidence\(\)/);
   assert.match(supervisor, /p_provider_balance_verified_at: balance\.verifiedAt/);
 });
 
 test("coverage_complete derives only from page_info, never from result-list size", () => {
   assert.match(supervisor, /const paginationExhausted = classified\.pageInfo\.hasNextPage === false;/);
-  assert.match(supervisor, /coverageComplete: confirmedAbsence \|\| paginationExhausted,/);
+  assert.match(supervisor, /coverageComplete: !partialEvidence && \(confirmedAbsence \|\| paginationExhausted\),/);
 });
 
 test("supervisor uses the shared deterministic parser", () => {

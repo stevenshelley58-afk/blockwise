@@ -1,0 +1,25 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { mkdtemp, rm, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { saveCaptureJournal, loadCaptureJournal, ensureFetchRun } from "../hermes/tools/research-runtime/bin/ad-radar-capture-journal.mjs";
+
+const RUN = "11111111-1111-4111-8111-111111111111";
+const PAGE = "123456789";
+const input = { adFetchRunId: RUN, metaPageId: PAGE };
+async function temp(fn) { const root = await mkdtemp(join(tmpdir(), "ad-radar-journal-")); try { await fn(root); } finally { await rm(root, { recursive: true, force: true }); } }
+
+test("saves and reloads exact paid response with receipt and checksum", async () => temp(async (root) => { const saved = await saveCaptureJournal(root, input, { body: "<html>ad</html>", receipt: { requestId: "abc", credits: 25 }, status: 200 }); const loaded = await loadCaptureJournal(root, input); assert.equal(loaded.body, "<html>ad</html>"); assert.deepEqual(loaded.receipt, saved.receipt); assert.equal(loaded.sha256, saved.sha256); }));
+test("missing journal is recoverably absent", async () => temp(async (root) => assert.equal(await loadCaptureJournal(root, input), null)));
+test("different page cannot replay a saved body", async () => temp(async (root) => { await saveCaptureJournal(root, input, { body: "x", receipt: {}, status: 200 }); await assert.rejects(loadCaptureJournal(root, { ...input, metaPageId: "987" }), /identity|checksum/); }));
+test("different run cannot replay a saved body", async () => temp(async (root) => { await saveCaptureJournal(root, input, { body: "x", receipt: {}, status: 200 }); assert.equal(await loadCaptureJournal(root, { ...input, adFetchRunId: "22222222-2222-4222-8222-222222222222" }), null); }));
+test("corrupt body checksum is rejected", async () => temp(async (root) => { await saveCaptureJournal(root, input, { body: "x", receipt: {}, status: 200 }); const path = join(root, "capture-journal", RUN + ".json"); const record = JSON.parse(await readFile(path, "utf8")); record.body = "tampered"; await writeFile(path, JSON.stringify(record)); await assert.rejects(loadCaptureJournal(root, input), /identity|checksum/); }));
+test("unsafe run ids never create a journal path", async () => temp(async (root) => { await assert.rejects(saveCaptureJournal(root, { ...input, adFetchRunId: "../../etc/passwd" }, { body: "x", receipt: {}, status: 200 }), /Invalid capture run ID/); }));
+test("empty evidence is rejected", async () => temp(async (root) => { await assert.rejects(saveCaptureJournal(root, input, { body: "", receipt: {}, status: 200 }), /Empty capture evidence/); }));
+test("ensureFetchRun sends a normal POST with representation return", async () => { const row = { idempotency_key: "k", advertiser_page_id: "page-a" }; const calls = []; const rest = async (...args) => { calls.push(args); return [{ id: RUN }]; }; assert.equal(await ensureFetchRun(rest, row), RUN); assert.equal(calls.length, 1); assert.equal(calls[0][1], "ad_fetch_runs"); assert.equal(calls[0][2].headers.Prefer, "return=representation"); });
+test("ensureFetchRun reuses identity after a real 409 conflict", async () => { const row = { idempotency_key: "k", advertiser_page_id: "page-a" }; let calls = 0; const rest = async () => { calls += 1; if (calls === 1) throw new Error("HTTP 409 duplicate key"); return [{ id: RUN, advertiser_page_id: "page-a" }]; }; assert.equal(await ensureFetchRun(rest, row), RUN); assert.equal(calls, 2); });
+test("ensureFetchRun reuses identity after postgres 23505", async () => { const row = { idempotency_key: "k", advertiser_page_id: "page-a" }; let calls = 0; const rest = async () => { calls += 1; if (calls === 1) throw new Error("23505 unique violation"); return [{ id: RUN, advertiser_page_id: "page-a" }]; }; assert.equal(await ensureFetchRun(rest, row), RUN); assert.equal(calls, 2); });
+test("ensureFetchRun rejects duplicate key attached to another page", async () => { const row = { idempotency_key: "k", advertiser_page_id: "page-a" }; const rest = async (...args) => args[1] === "ad_fetch_runs" ? Promise.reject(new Error("409")) : [{ id: RUN, advertiser_page_id: "page-b" }]; await assert.rejects(ensureFetchRun(rest, row), /identity/); });
+test("ensureFetchRun rejects missing duplicate lookup", async () => { const row = { idempotency_key: "k", advertiser_page_id: "page-a" }; let calls = 0; const rest = async () => (++calls === 1 ? Promise.reject(new Error("409")) : []); await assert.rejects(ensureFetchRun(rest, row), /identity/); });
+test("non-conflict POST failures reject without lookup or retry", async () => { const row = { idempotency_key: "k", advertiser_page_id: "page-a" }; const calls = []; const rest = async (...args) => { calls.push(args); throw new Error("503 unavailable"); }; await assert.rejects(ensureFetchRun(rest, row), /503/); assert.equal(calls.length, 1); assert.equal(calls[0][1], "ad_fetch_runs"); });
