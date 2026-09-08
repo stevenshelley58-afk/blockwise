@@ -34,3 +34,7 @@ No new claims, sections, pricing tiers, provider behavior or imagery are invente
 ## Boundary and verification
 
 Preview only at `/homepage-preview/concept`. Fake form and fake campaign approval. No production product deployment, credentials, persistence or provider requests. Existing framework, motion library, assets and preview container/router tooling suffice; no new dependency is needed. Release evidence is recorded separately after checks and live verification.
+
+## Workflow refinement, 8 September 2026
+
+The owner retained the stage progression but rejected the restored animation's transitions, oversized creative text and disappearing template rail. The [continuous-studio rebuild](../releases/2026-09-08-homepage-workflow-continuity.md) supersedes that workflow implementation only. The established seven-section page structure is unchanged.
