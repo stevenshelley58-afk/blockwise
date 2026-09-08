@@ -109,17 +109,18 @@ test("homepage FAQ mirrors pricing in grouped collapsed disclosures", async () =
 
 test("homepage reconciliation preserves approved sections and their order", async () => {
   const component = await readFile(new URL("../src/components/homepage-concept/homepage-concept.tsx", import.meta.url), "utf8");
-  const sections = ['id="top"', 'id="how-it-works"', '<ResultsReporting />', 'id="control"', 'id="faq"', 'id="trial"'];
+  const sections = ['id="top"', 'id="how-it-works"', '<ResultsReporting />', '<CampaignControls />', 'id="faq"', 'id="trial"'];
   const positions = sections.map((section) => component.indexOf(section));
   assert.ok(positions.every((position) => position >= 0), "All approved sections remain present");
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
   assert.match(component, /href="#how-it-works">How it works/);
   assert.match(component, /className="hc-login"[^>]*href="https:\/\/blockwise\.sale\/login"/);
   assert.match(component, /https:\/\/blockwise\.sale\/pricing/);
-  assert.match(component, /Creative control/);
-  assert.match(component, /Budget control/);
-  assert.match(component, /Campaign detail/);
-  assert.match(component, /Helpful updates/);
+  const controls = await readFile(new URL("../src/components/homepage-concept/campaign-controls.tsx", import.meta.url), "utf8");
+  assert.match(controls, /Creative control/);
+  assert.match(controls, /Budget control/);
+  assert.match(controls, /Campaign detail/);
+  assert.match(controls, /Helpful updates/);
   assert.doesNotMatch(component, /id="examples"|href="#examples"/);
   assert.doesNotMatch(component, /EditingPreview/);
 });
@@ -131,4 +132,17 @@ test("preview form cannot submit before its mock handler is hydrated", async () 
   assert.match(component, /useEffect\(\(\) => setHydrated\(true\), \[\]\)/);
   assert.equal((component.match(/disabled=\{!hydrated \|\| state === "loading"\}/g) ?? []).length, 2);
   assert.match(component, /<noscript>/);
+});
+
+test("campaign control preview keeps interaction local and accessible", async () => {
+  const source = await readFile(new URL("../src/components/homepage-concept/campaign-controls.tsx", import.meta.url), "utf8");
+  assert.match(source, /role="tablist"/);
+  assert.match(source, /role="tabpanel"/);
+  assert.match(source, /inert=\{active !== index\}/);
+  assert.match(source, /ArrowDown/);
+  assert.match(source, /budget \* days/);
+  assert.match(source, /setPaused\(!paused\)/);
+  assert.match(source, /setFrequency\(value\)/);
+  assert.match(source, /useReducedMotion/);
+  assert.doesNotMatch(source, /fetch\(|localStorage|setInterval|\u2014/);
 });
