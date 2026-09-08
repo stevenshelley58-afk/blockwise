@@ -6,12 +6,15 @@ import { adTemplateSchema } from "../../packages/ad-template-contract/src/schema
 import { renderPlacement } from "../../packages/ad-template-renderer/src/renderer.ts";
 
 const review = {
-  process: "exact-clone" as const, sourcePlacement: "feed" as const, targetPlacement: "feed" as const, likenessThreshold: 9.8,
-  comparator: { overall: 9.8, geometry: 9.8, colourEffects: 9.8, compositionCrop: 9.8, typography: 9.8, decision: "ready" as const },
+  policy: "section-98-font-exempt-no-obvious-errors-v1" as const,
+  process: "exact-clone" as const, sourcePlacement: "feed" as const, targetPlacement: "story" as const,
+  sectionThreshold: 9.8, fontMatchRequired: false as const,
+  comparator: { geometry: 9.8, colourEffects: 9.8, compositionCrop: 9.8, typography: 9.8, details: 9.8, decision: "ready" as const },
   finalReviewers: [
-    { id: "reviewer-one", route: "vision/one", overall: 9.6, minimum: 9.5, decision: "pass" as const },
-    { id: "reviewer-two", route: "vision/two", overall: 9.7, minimum: 9.5, decision: "pass" as const },
-  ], warnings: [], fontSubstitution: null,
+    { id: "reviewer-one", route: "vision/one", minimum: 9.8, decision: "pass" as const },
+    { id: "reviewer-two", route: "vision/two", minimum: 9.8, decision: "pass" as const },
+  ], overallCheck: { noObviousErrors: true as const }, warnings: [],
+  fontSubstitution: { source: "Unavailable Display", used: "Bodoni Moda", reason: "Closest bundled face" },
 };
 
 function template(layer: LayoutLayer): AdTemplate {
@@ -34,6 +37,29 @@ test("exact-clone metadata is strict and requires two passing independent review
   const sameRoute = template(baseLayer);
   sameRoute.metadata.generationReview!.finalReviewers[1]!.route = "vision/one";
   assert.equal(adTemplateSchema.safeParse(sameRoute).success, false);
+});
+
+test("current review requires every scored section at 9.8 and one obvious-error pass", () => {
+  const lowSection = JSON.parse(JSON.stringify(template(baseLayer)));
+  lowSection.metadata.generationReview.comparator.details = 9.79;
+  assert.equal(adTemplateSchema.safeParse(lowSection).success, false);
+
+  const obviousError = JSON.parse(JSON.stringify(template(baseLayer)));
+  obviousError.metadata.generationReview.overallCheck.noObviousErrors = false;
+  assert.equal(adTemplateSchema.safeParse(obviousError).success, false);
+});
+
+test("legacy review metadata remains readable", () => {
+  const legacy = JSON.parse(JSON.stringify(template(baseLayer)));
+  legacy.metadata.generationReview = {
+    process: "exact-clone", sourcePlacement: "feed", targetPlacement: "story", likenessThreshold: 9.8,
+    comparator: { overall: 9.8, geometry: 9.8, colourEffects: 9.8, compositionCrop: 9.8, typography: 9.8, decision: "ready" },
+    finalReviewers: [
+      { id: "legacy-one", route: "vision/one", overall: 9.6, minimum: 9.5, decision: "pass" },
+      { id: "legacy-two", route: "vision/two", overall: 9.7, minimum: 9.5, decision: "pass" },
+    ], warnings: [], fontSubstitution: null,
+  };
+  assert.equal(adTemplateSchema.safeParse(legacy).success, true);
 });
 
 test("saved renderer materially applies every fidelity appearance field", async () => {
