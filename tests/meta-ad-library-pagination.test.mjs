@@ -90,16 +90,26 @@ function capture(records, extra = {}) {
 test("scenario recorder is bounded and has valid JS", () => {
   const scenario = buildMetaPaginationScenario();
   assert.equal(scenario.strict, true);
-  assert.match(scenario.instructions[1].evaluate, /scrollHeight/);
-  assert.match(scenario.instructions[1].evaluate, /scrollTop/);
-  assert.match(scenario.instructions[1].evaluate, /window.scrollBy/);
-  assert.match(scenario.instructions[1].evaluate, /maxIterations = 12/);
+  const scrolls = scenario.instructions.filter(
+    (instruction) =>
+      typeof instruction.evaluate === "string" &&
+      instruction.evaluate.includes("scrollHeight"),
+  );
+  assert.equal(scrolls.length, 8);
+  assert.match(scrolls[0].evaluate, /scrollTop/);
+  assert.match(scrolls[0].evaluate, /window\.scrollTo/);
+  assert.doesNotMatch(scrolls[0].evaluate, /Promise|async/);
   assert.match(scenario.instructions[0].evaluate, /XMLHttpRequest/);
   assert.match(scenario.instructions[0].evaluate, /window\.fetch/);
-  assert.match(scenario.instructions[3].evaluate, /metaPaginationRecords/);
+  const read = scenario.instructions.find(
+    (instruction) =>
+      typeof instruction.evaluate === "string" &&
+      instruction.evaluate.includes("metaPaginationRecords"),
+  );
+  assert.ok(read);
   assert.doesNotThrow(() => new vm.Script(scenario.instructions[0].evaluate));
-  assert.doesNotThrow(() => new vm.Script(scenario.instructions[1].evaluate));
-  assert.doesNotThrow(() => new vm.Script(scenario.instructions[3].evaluate));
+  assert.doesNotThrow(() => new vm.Script(scrolls[0].evaluate));
+  assert.doesNotThrow(() => new vm.Script(read.evaluate));
 });
 
 test("30 initial ads plus two ordered native pages produce complete coverage", () => {
@@ -354,4 +364,29 @@ test("encoded provider request line fits the upstream limit with header authenti
   assert.ok(
     Buffer.byteLength("GET /api/v1/?" + query.toString() + " HTTP/1.1") < 8190,
   );
+});
+
+test("every evaluator compiles and synchronous scroll reaches the real container bottom", () => {
+  const scenario = buildMetaPaginationScenario();
+  const elements = [
+    { scrollTop: 0, scrollHeight: 24000 },
+    { scrollTop: 0, scrollHeight: 8000 },
+  ];
+  const calls = [];
+  const context = {
+    document: { querySelectorAll: () => elements },
+    window: { scrollTo: (...args) => calls.push(args) },
+  };
+  for (const instruction of scenario.instructions) {
+    if (!instruction.evaluate) continue;
+    assert.doesNotThrow(() => new vm.Script(instruction.evaluate));
+    if (instruction.evaluate.includes("scrollTop")) {
+      const result = vm.runInNewContext(instruction.evaluate, context);
+      assert.equal(result?.then, undefined);
+    }
+  }
+  assert.equal(calls.length, 8);
+  assert.equal(elements[0].scrollTop, 24000);
+  assert.equal(elements[1].scrollTop, 8000);
+  assert.ok(calls.every(([x, y]) => x === 0 && y >= 24000));
 });

@@ -3,7 +3,7 @@
  */
 import { classifyMetaAdLibraryPayload } from "./meta-ad-library-parser.mjs";
 
-const DEFAULT_SCROLLS = 12,
+const DEFAULT_SCROLLS = 8,
   MAX_SCROLLS = 16,
   BUDGET = 40000;
 const RECORDER_INSTALL =
@@ -11,41 +11,7 @@ const RECORDER_INSTALL =
 const RECORDER_READ =
   "(() => { const r=window.__hermesMetaPagination&&window.__hermesMetaPagination.records; return {metaPaginationRecords:Array.isArray(r)?r:[]}; })()";
 
-function nativeScrollScript(scrolls, delay) {
-  return (
-    "(async () => {\n" +
-    "  const maxIterations = " +
-    scrolls +
-    ";\n" +
-    "  const delayMs = " +
-    delay +
-    ";\n" +
-    "  const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));\n" +
-    "  const candidates = () => {\n" +
-    "    const roots = [document.scrollingElement, document.documentElement, document.body];\n" +
-    "    try { roots.push(...document.querySelectorAll('main,[role=main],[data-pagelet],div')); } catch {}\n" +
-    "    return [...new Set(roots)].filter((element) => {\n" +
-    "      try { return element && element.scrollHeight > element.clientHeight + 100; } catch { return false; }\n" +
-    "    }).sort((a, b) => b.scrollHeight - a.scrollHeight).slice(0, 12);\n" +
-    "  };\n" +
-    "  let moved = 0;\n" +
-    "  for (let iteration = 0; iteration < maxIterations; iteration += 1) {\n" +
-    "    let progressed = false;\n" +
-    "    for (const element of candidates()) {\n" +
-    "      try {\n" +
-    "        const before = element.scrollTop;\n" +
-    "        const target = Math.min(element.scrollHeight, before + Math.max(element.clientHeight || 800, 800));\n" +
-    "        if (target > before) { if (typeof element.scrollTo === 'function') element.scrollTo(0, target); else element.scrollTop = target; progressed = true; }\n" +
-    "      } catch {}\n" +
-    "    }\n" +
-    "    try { const before = window.scrollY; window.scrollBy(0, Math.max(window.innerHeight || 800, 800)); progressed = progressed || window.scrollY > before; } catch {}\n" +
-    "    if (progressed) moved += 1;\n" +
-    "    await pause(delayMs);\n" +
-    "  }\n" +
-    "  return { scrollIterations: maxIterations, scrollsMoved: moved };\n" +
-    "})()"
-  );
-}
+const NATIVE_SCROLL_TO_BOTTOM = String.raw`(()=>{for(const e of document.querySelectorAll("main,div"))e.scrollTop=e.scrollHeight;window.scrollTo(0,1e9)})()`;
 
 // Provider GET request lines are limited to 8190 bytes. Remove indentation
 // from our own scripts without changing tokens, quoted strings or regexes.
@@ -71,15 +37,18 @@ export function buildMetaPaginationScenario({
     settle = positive(settleMs, 1500, 4000);
   if (scrolls * delay + settle + 5000 >= BUDGET)
     throw new Error("Meta pagination scenario exceeds 40 second budget");
-  return {
-    strict: true,
-    instructions: [
-      { evaluate: compactScript(RECORDER_INSTALL) },
-      { evaluate: compactScript(nativeScrollScript(scrolls, delay)) },
-      { wait: settle },
-      { evaluate: compactScript(RECORDER_READ) },
-    ],
-  };
+  const instructions = [{ evaluate: compactScript(RECORDER_INSTALL) }];
+  for (let index = 0; index < scrolls; index += 1) {
+    instructions.push(
+      { evaluate: compactScript(NATIVE_SCROLL_TO_BOTTOM) },
+      { wait: delay },
+    );
+  }
+  instructions.push(
+    { wait: settle },
+    { evaluate: compactScript(RECORDER_READ) },
+  );
+  return { strict: true, instructions };
 }
 function unwrap(raw) {
   if (raw && typeof raw === "object" && !Array.isArray(raw)) return raw;

@@ -228,3 +228,12 @@ test("Auto Mode initial blocking status does not discard a validated final respo
   assert.doesNotMatch(block, /receipt\.initialStatus/);
   assert.match(supervisor, /\["challenge", "login_wall", "unparseable"\]\.includes\(classified\.outcome\)/);
 });
+
+test("native pagination is selective and its partial results cannot recursively queue paid continuations", () => {
+  assert.match(supervisor, /const nativePagination = priorPartial\.length > 0/);
+  assert.match(supervisor, /source_provider=eq\.scrapingbee_meta_ad_library&status=eq\.success&coverage_complete=eq\.false/);
+  assert.match(supervisor, /outcome\.metadata\?\.capture_strategy === "initial_html"/);
+  assert.match(supervisor, /outcome\.metadata\?\.page_info\?\.hasNextPage === true/);
+  assert.match(supervisor, /pagination_parent_run_id: adFetchRunId/);
+  assert.match(supervisor, /ad-radar:collector:\$\{payload\.advertiserPageId\}:pagination:\$\{adFetchRunId\}/);
+});

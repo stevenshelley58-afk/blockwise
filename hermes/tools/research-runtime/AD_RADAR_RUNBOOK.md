@@ -1,5 +1,33 @@
 # Ad Radar collector and scheduler runbook
 
+## Current free-first runtime: 8 September 2026, 12:46 UTC
+
+The single research worker is active at immutable runtime
+7e41b02d53f3f1c2967d01c4c74737e496c53fa9. The customer application was not
+deployed by this change. Discovery and collection each have eight concurrent
+slots, with four media slots, one classifier and one directory fanout slot.
+The bounded production pass handled all 13 selected jobs without failure.
+
+927 saved-reference entity jobs were prioritised in the canonical v2 sweep.
+Olivia Porteous's original page row was resolved from free Facebook HTML and
+reactivated only after exact identity proof. A complete 25-credit Ad Library
+capture then observed zero active ads for that exact page. The one-credit
+identity fallback and ten-credit Google light search were separately observed
+working. Saved paid evidence was replayed without another provider request.
+The data repair preserved ownership and original URLs while repairing 878
+handles; research migrations 202609080004 through 202609080006 are applied.
+
+At 12:47 UTC, 429 WA-linked numeric pages were eligible and 401 had completed
+initial fills. These are changing known-page totals, not complete WA coverage.
+The v2 view then had 89 completed entity receipts out of 15,256 entities.
+The directory fanout and all independent collection stages continue.
+
+Native scrolling remains disabled in the serving release pending its own
+successful exact-page canary. Plain HTML collection is the proven default;
+larger pages remain explicitly partial, never falsely complete. Failed native
+canaries did not trigger a subscription-wide rollout. Evidence and gate logs
+are in /srv/blockwise/e2e-runs/ad-radar-20260908/facebook-discovery-repair.
+
 ## Historical runtime observations (8 September 2026)
 
 Before the free-first release, the runtime was observed active at exact SHA
@@ -177,13 +205,13 @@ a newly verified eligible page can enter first-fill scheduling immediately.
 VPS discovery/classification code does not call an LLM. Coding subagents are
 separate from the production collection process.
 
-The source changes below require a new immutable deployment and live canary.
+The free-first changes are deployed above; further capture-strategy changes require their own immutable deployment and live canary.
 Refer to the latest dated deployment evidence, not historical counts, for
 the serving revision and current fill status.
 
 ## Native ad pagination
 
-The collector uses the same single accounted ScrapingBee capture and stores
+The optional native path uses a separately accounted capture and stores
 the complete raw response before ingestion. A bounded browser scenario lets
 Meta issue its own pagination requests. The recorder keeps only safe query
 fields and response evidence, not session tokens or complete request bodies.

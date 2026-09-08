@@ -3074,6 +3074,7 @@ async function runScrapingBeePageCapture(input) {
               challenge_detected: false,
               connection_count: classified.connectionCount,
               pagination_records: classified.paginationRecords || 0,
+              capture_strategy: html.trimStart().startsWith("{") && html.includes('"js_scenario_report"') ? "native_cursor" : "initial_html",
               page_info: classified.pageInfo,
               parser_outcome: classified.outcome,
               partial_evidence: partialEvidence,
@@ -3105,7 +3106,14 @@ async function runScrapingBeePageCapture(input) {
     handled.result.costUsd = telemetry.provider_cost_usd;
     return handled.result;
   }
-  const nativePagination = env.HERMES_AD_RADAR_NATIVE_PAGINATION === "true";
+  // Small and zero-ad pages keep the cheaper/faster HTML capture. Only a
+  // saved, positive, explicitly non-exhausted result needs native scrolling.
+  const priorPartial = env.HERMES_AD_RADAR_NATIVE_PAGINATION === "true" && input.advertiserPageId
+    ? await rest("research", "ad_fetch_runs?select=id&advertiser_page_id=eq." + encode(input.advertiserPageId)
+      + "&source_provider=eq.scrapingbee_meta_ad_library&status=eq.success&coverage_complete=eq.false"
+      + "&result_summary->>active_ads=gt.0&result_summary->metadata->page_info->>hasNextPage=eq.true&limit=1")
+    : [];
+  const nativePagination = priorPartial.length > 0;
   const params = new URLSearchParams({
     url,
     mode: "auto",
@@ -4547,6 +4555,18 @@ async function handleAdCollector(job) {
     pagination_exhausted: paginationExhausted,
     stop_reason: outcome.stopReason || (coverageComplete ? "page_exhausted" : "results_limit_reached"),
   });
+  if (env.HERMES_AD_RADAR_NATIVE_PAGINATION === "true" && !coverageComplete && activeCount > 0
+    && outcome.metadata?.capture_strategy === "initial_html" && outcome.metadata?.page_info?.hasNextPage === true) {
+    // One different capture strategy, in the same canonical queue. A partial
+    // native capture cannot recursively create another immediate paid job.
+    await enqueueFollowUp({
+      queue_name: "research", job_type: "blockwise-ad-collector",
+      dedupe_key: `ad-radar:collector:${payload.advertiserPageId}:pagination:${adFetchRunId}`,
+      advertiser_page_id: payload.advertiserPageId,
+      priority: job.priority || 10, status: "pending", available_at: now(), max_attempts: 3,
+      payload: { ...payload, build_run_id: buildRunId, pagination_parent_run_id: adFetchRunId },
+    }, job);
+  }
   const reconciliation = await reconcileMissingObservedAds({
     advertiserPageId: payload.advertiserPageId,
     seenExternalAdIds: ingested.map((item) => item.external_ad_id),
