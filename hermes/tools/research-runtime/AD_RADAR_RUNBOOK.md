@@ -27,7 +27,7 @@ comparable baseline. These are historical known-page baseline counts, not
 current completion counts or a claim of complete WA agent coverage. The
 current worker snapshot has 392 eligible WA-linked numeric pages, 389
 completed initial fills, and 3 remaining high-volume pages with genuine
-pagination_unresolved evidence. Active observed ads are 605. The Relay
+pagination_unresolved evidence. Active observed ads are 621. The Relay
 preloader-correlation fix recovered 63 saved complete zero-result captures
 without a new provider request; the provider-credit ledger was byte-for-byte
 unchanged across that replay. Scheduled collection now requests active ads
