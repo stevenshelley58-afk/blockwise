@@ -1,8 +1,15 @@
 # Blockwise production readiness
 
-## Current release (6 September 2026)
+## Current verification authority
 
-The public app serves `3b2770eb4dec62217589b074be999ae9fa9fda06` from
+Use Current runtime, Health gate and Separate gates below for verification.
+Read the compiled revision from live health and verify the intended full SHA
+with the product-health script. Dated releases below are historical evidence,
+not a fixed current release. [The index](../README.md) selects other procedures.
+
+## Historical release (6 September 2026)
+
+The 6 September release served `3b2770eb4dec62217589b074be999ae9fa9fda06` from
 `blockwise-app:3b2770eb4dec62217589b074be999ae9fa9fda06` (image ID
 `sha256:f787e10b3dc8cbf8e4213393a9e96907d3f30c2b8c0fc54c30d436c4b5c0689a`).
 This app-only release combines the focused lead-first usability cleanup with

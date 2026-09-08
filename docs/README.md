@@ -1,17 +1,50 @@
-# Documentation index
+# Blockwise documentation
 
-This index separates current operating guidance from retained history.
+This is the sole current Blockwise documentation index. Read
+`/projects/frank/docs/standards/engineering-rules.md` and
+[AGENTS.md](../AGENTS.md) first. Older worktree and branch documents are
+snapshots, not alternate current rules.
 
-## Current references
+## Current authorities
 
 - [Architecture overview](architecture/overview.md)
 - [Product map](architecture/product-map.md)
 - [Extension guide](architecture/extension-guide.md)
-- [Production readiness](runbooks/production-readiness.md)
-- [6 September release evidence](releases/2026-09-06-template-editor.md)
-- [VPS SSH](runbooks/vps-ssh.md)
+- [Production verification and release](runbooks/production-readiness.md)
+- [VPS access](runbooks/vps-ssh.md)
 - [Rollback](runbooks/rollback.md)
+- [Product worker deployment](runbooks/vps-worker-deploy.md)
+- [Client-data isolation](security/client-data-isolation.md)
+- [Product-agent safety](security/agent-safety.md)
 
-## Migration and historical references
+The maintained production target is the self-hosted VPS product stack behind
+Caddy. Verify its current revision through the production runbook; an old
+release record is not a permanently current version.
 
-[OSS product migration](runbooks/oss-product-migration.md) records the self-hosting design, rehearsal sequence, and outstanding cutover evidence. It is not proof that migration, SMTP, provider access, or data reconciliation has completed. Other dated plans, evidence, and submission runbooks are retained for audit and should not be treated as current deployment instructions unless linked above.
+The single cross-system template-generation policy and operator guide is
+`/projects/frank/docs/AD_TEMPLATE_GENERATOR.md`. Blockwise consumes that
+contract and does not keep another copy of its score, review or approval rules.
+
+## Component references
+
+[Hermes source components](../hermes/README.md) describe skills and tools,
+not a second runtime or proof that a component is enabled. Component skills,
+infra and operations READMEs apply only to their named component and cannot
+override the shared rules or the current release guides.
+
+Files under `docs/content/guides/` are customer education, not operational
+release authority. Keep published resource files aligned with their source
+guides. Third-party licence text is retained unchanged.
+
+## Plans and historical evidence
+
+- [8 September documentation audit](releases/2026-09-08-docs-alignment.md)
+- [6 September template-editor release](releases/2026-09-06-template-editor.md)
+- [OSS migration record](runbooks/oss-product-migration.md)
+
+Dated plans, submission records, work logs and sections marked historical record
+the intent or evidence at that time. They do not prove current deployment,
+provider approval, SMTP, billing, migration, template quality or customer-data
+readiness. Retired Vercel and managed-Supabase procedures are not fallback
+deployment instructions. Plans are proposals unless implementation and current
+verification are separately recorded.

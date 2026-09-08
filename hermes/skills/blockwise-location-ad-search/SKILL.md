@@ -1,3 +1,8 @@
+
+> Source-interface status (8 September 2026): normal supervisor scheduling is
+> disabled in this repository. The handler/schema remain for manual inputs;
+> their presence is not permission to enable or enqueue work. See
+> ../../README.md and the current project guides before applying this recipe.
 # blockwise-location-ad-search
 
 ## Purpose
