@@ -8149,18 +8149,18 @@ a.operator-file-row {
 /* Home mobile pilot: keep the app shell quiet and native without changing
    desktop or the other customer routes. */
 @media (max-width: 767px) {
-  .self-serve-home-topbar {
+  .tw .self-serve-home-topbar {
     min-height: 56px;
     gap: 8px;
     padding-right: 12px;
     padding-left: 16px;
   }
 
-  .self-serve-home-topbar > div {
+  .tw .self-serve-home-topbar > div {
     gap: 8px;
   }
 
-  .self-serve-home-topbar > div > button:first-child {
+  .tw .self-serve-home-topbar > div > button:first-child {
     display: inline-grid;
     width: 36px;
     height: 36px;
@@ -8169,24 +8169,25 @@ a.operator-file-row {
     font-size: 0;
   }
 
-  .self-serve-home-topbar > div > button:first-child kbd {
+  .tw .self-serve-home-topbar > div > button:first-child kbd {
     display: none;
   }
 
-  .self-serve-home-topbar > div > button:first-child svg {
+  .tw .self-serve-home-topbar > div > button:first-child svg {
     flex: none;
   }
 
-  .self-serve-home-account {
+
+  .tw .self-serve-home-actions > button:nth-child(2) {
+    width: 44px;
+    height: 44px;
+  }
+  .tw .self-serve-home-account {
     width: 44px;
     height: 44px;
   }
 
-  .self-serve-home-inset {
-    background: var(--background);
-  }
-
-  .mobile-bottom-nav--customer-home {
+  .tw .mobile-bottom-nav--customer-home {
     gap: 0;
     border-top-color: var(--line);
     background: var(--surface);
@@ -8196,20 +8197,20 @@ a.operator-file-row {
     backdrop-filter: none;
   }
 
-  .mobile-bottom-nav--customer-home .mobile-bottom-nav-item {
+  .tw .mobile-bottom-nav--customer-home .mobile-bottom-nav-item {
     position: relative;
     min-height: 52px;
     border-radius: 0;
     color: var(--muted);
   }
 
-  .mobile-bottom-nav--customer-home .mobile-bottom-nav-item.active,
-  .mobile-bottom-nav--customer-home .mobile-bottom-nav-item:focus-visible {
+  .tw .mobile-bottom-nav--customer-home .mobile-bottom-nav-item.active,
+  .tw .mobile-bottom-nav--customer-home .mobile-bottom-nav-item:focus-visible {
     background: transparent;
     color: var(--ink);
   }
 
-  .mobile-bottom-nav--customer-home .mobile-bottom-nav-item.active::before {
+  .tw .mobile-bottom-nav--customer-home .mobile-bottom-nav-item.active::before {
     position: absolute;
     top: 0;
     width: 32px;

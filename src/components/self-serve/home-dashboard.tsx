@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownRight, ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, LibraryBig } from "lucide-react";
 import Link from "next/link";
 
 import { navByVariant } from "@/components/sidebar-nav";
@@ -26,6 +26,8 @@ export type HomeData = ActivationCardData & {
 };
 
 const money = (value: number) => `$${value.toFixed(2)}`;
+const compactNumber = (value: number) => new Intl.NumberFormat("en-AU", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+const compactMoney = (value: number) => value >= 1000 ? `$${new Intl.NumberFormat("en-AU", { notation: "compact", maximumFractionDigits: 1 }).format(value)}` : money(value);
 
 function reportingFoot(lastSyncedAt: string | null): string {
   if (!lastSyncedAt || !Number.isFinite(Date.parse(lastSyncedAt))) return "Provider time unavailable";
@@ -43,11 +45,11 @@ function Delta({ current, previous, downIsGood = false }: { current: number | nu
   return <span className={good ? "text-success" : "text-error"}><Icon aria-hidden className="inline size-3" /> {Math.round(Math.abs(change) * 100)}%</span>;
 }
 
-function ResultMetric({ label, value, foot, unavailable = false }: { label: string; value: string; foot?: React.ReactNode; unavailable?: boolean }) {
+function ResultMetric({ label, value, fullValue, foot, unavailable = false }: { label: string; value: string; fullValue?: string; foot?: React.ReactNode; unavailable?: boolean }) {
   return (
     <div className="min-w-0 border-r border-(--line) px-3 py-2.5 first:pl-0 last:border-r-0 last:pr-0 sm:px-4 sm:first:pl-0 sm:last:pr-0">
       <span className="block text-[13px] font-semibold leading-4 text-muted-foreground">{label}</span>
-      <p className={`mt-1 font-display font-extrabold tabular-nums tracking-[-0.02em] ${unavailable ? "text-[16px]" : "text-[clamp(1rem,6.2vw,1.5rem)]"}`} aria-label={unavailable ? `${label} unavailable` : undefined} title={value}>{value}</p>
+      <p className={`mt-1 font-display font-extrabold tabular-nums tracking-[-0.02em] ${unavailable ? "text-[16px]" : "text-[clamp(1rem,6.2vw,1.5rem)]"}`} aria-label={unavailable ? `${label} unavailable` : fullValue ? `${label}: ${fullValue}` : undefined} title={fullValue ?? value}>{value}</p>
       {foot ? <p className="mt-0.5 text-[12px] leading-4 text-muted-foreground">{foot}</p> : null}
     </div>
   );
@@ -59,6 +61,9 @@ function ReportingRecovery({ state }: { state: string }) {
   }
   if (state === "needs_attention") {
     return <><span>Meta reporting needs attention.</span> <Link href="/settings#connections" className="font-semibold underline underline-offset-4">Review connection</Link></>;
+  }
+  if (state === "connected") {
+    return <><span>Provider reporting is unavailable right now.</span> <Link href="/results" className="font-semibold underline underline-offset-4">View results</Link></>;
   }
   return <><span>Provider reporting is unavailable right now.</span> <Link href="/ad-studio" className="font-semibold underline underline-offset-4">Create an ad</Link></>;
 }
@@ -85,9 +90,9 @@ export function HomeDashboard({ data }: { data: HomeData }) {
             <>
               <p className="mb-3 text-[12.5px] text-muted-foreground" role="status">Last 30 days. {reportingFoot(performance.lastSyncedAt)}.</p>
               <div className="grid grid-cols-3 gap-0">
-                <ResultMetric label={copy.kpis.leads} value={String(performance.leads)} foot={<>{performance.previousLeads == null ? "Provider data" : <><Delta current={performance.leads} previous={performance.previousLeads} /> vs prior</>}</>} />
-                <ResultMetric label={copy.kpis.costPerLead} value={performance.cpl == null ? "N/A" : money(performance.cpl)} unavailable={performance.cpl == null} foot={performance.cpl == null ? "No cost data yet" : <><Delta current={performance.cpl} previous={performance.previousCpl} downIsGood /> vs prior</>} />
-                <ResultMetric label={ads.live == null ? copy.kpis.adsCreated : copy.kpis.adsLive} value={String(ads.live ?? ads.created)} foot={ads.created > 0 ? copy.kpis.publishedThisWeek(ads.publishedThisWeek) : copy.kpis.noAdsYet} />
+                <ResultMetric label={copy.kpis.leads} value={compactNumber(performance.leads)} fullValue={String(performance.leads)} foot={<>{performance.previousLeads == null ? "Provider data" : <><Delta current={performance.leads} previous={performance.previousLeads} /> vs prior</>}</>} />
+                <ResultMetric label={copy.kpis.costPerLead} value={performance.cpl == null ? "N/A" : compactMoney(performance.cpl)} fullValue={performance.cpl == null ? undefined : money(performance.cpl)} unavailable={performance.cpl == null} foot={performance.cpl == null ? "No cost data yet" : <><Delta current={performance.cpl} previous={performance.previousCpl} downIsGood /> vs prior</>} />
+                <ResultMetric label={ads.live == null ? copy.kpis.adsCreated : copy.kpis.adsLive} value={compactNumber(ads.live ?? ads.created)} fullValue={String(ads.live ?? ads.created)} foot={ads.created > 0 ? copy.kpis.publishedThisWeek(ads.publishedThisWeek) : copy.kpis.noAdsYet} />
               </div>
             </>
           ) : (
@@ -95,7 +100,7 @@ export function HomeDashboard({ data }: { data: HomeData }) {
           )}
         </MobileSection>
 
-        {quickActions.length > 0 ? <MobileSection title="Tools"><div>{quickActions.map((action) => { const Icon = navByVariant.self_serve.find((item) => item.href === action.href)?.icon ?? ArrowRight; return <ActionRow key={action.href} href={action.href} icon={<Icon size={17} />} title={action.title} subtitle={action.subtitle} />; })}</div></MobileSection> : null}
+        {quickActions.length > 0 ? <MobileSection title="Tools"><div>{quickActions.map((action) => { const Icon = navByVariant.self_serve.find((item) => item.href === action.href)?.icon ?? LibraryBig; return <ActionRow key={action.href} href={action.href} icon={<Icon size={17} />} title={action.title} subtitle={action.subtitle} />; })}</div></MobileSection> : null}
 
         <WorkspaceDetails credits={credits} plan={data.plan} meta={data.meta} booking={data.booking} packEstimate={credits.remaining == null ? null : Math.floor(credits.remaining / 2)} />
       </div>

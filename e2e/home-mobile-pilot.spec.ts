@@ -28,7 +28,7 @@ test.describe("Home mobile pilot", () => {
     await page.goto(`/self-serve?workspaceId=${encodeURIComponent(workspaceId!)}`);
     await expect(page).not.toHaveURL(/\/login/);
     await expect(page.getByRole("heading", { name: "Home", exact: true })).toHaveCount(1);
-    if (width <= 768) await expect(page.getByRole("navigation", { name: "Primary mobile navigation" })).toBeVisible();
+    if (width < 768) await expect(page.getByRole("navigation", { name: "Primary mobile navigation" })).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     await page.waitForTimeout(1000);
   }
@@ -77,7 +77,7 @@ test.describe("Home mobile pilot", () => {
     test(`fits the flat Home layout at ${width}px`, async ({ page }, testInfo) => {
       await openHome(page, width, width <= 390 ? (width === 320 ? 667 : 844) : 900);
       await assertNoHorizontalOverflow(page);
-      await assertFiveTabTargets(page);
+      if (width < 768) await assertFiveTabTargets(page);
       await page.screenshot({ path: testInfo.outputPath(`home-mobile-${width}.png`), fullPage: true });
     });
   }

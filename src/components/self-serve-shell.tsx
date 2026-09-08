@@ -114,7 +114,7 @@ function AccountDropdown({ account, homeCompact = false }: { account: Account; h
         <button
           type="button"
           aria-label="Account"
-          className={cn("inline-grid size-8 cursor-pointer place-items-center rounded-full border border-border bg-(--accent-tint) font-display text-[11.5px] font-extrabold text-foreground transition-opacity duration-150 hover:opacity-80 md:size-9", homeCompact && "self-serve-home-account")}
+          className={cn("inline-grid cursor-pointer place-items-center rounded-full border border-border bg-(--accent-tint) font-display text-[11.5px] font-extrabold text-foreground transition-opacity duration-150 hover:opacity-80 md:size-9", homeCompact ? "size-11 self-serve-home-account" : "size-8")}
         >
           <Avatar className="size-full">
             <AvatarFallback className="bg-transparent font-display text-[11.5px] font-extrabold">
@@ -227,8 +227,8 @@ export function SelfServeShell({
         <SidebarRail />
       </Sidebar>
 
-      <SidebarInset className={cn("pb-[calc(4.75rem+env(safe-area-inset-bottom)+var(--consent-banner-height,0px))] md:pb-0", isSelfServeHome && "self-serve-home-inset")}>
-        <header className={cn("sticky top-0 z-20 flex min-h-[54px] items-center gap-2.5 border-b border-border bg-background/85 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:min-h-[60px] md:gap-3.5 md:px-7", isSelfServeHome && "self-serve-home-topbar")}>
+      <SidebarInset className={cn("pb-[calc(4.75rem+env(safe-area-inset-bottom)+var(--consent-banner-height,0px))] md:pb-0", isSelfServeHome && "self-serve-home-inset bg-(--surface)")}>
+        <header className={cn("sticky top-0 z-20 flex items-center gap-2.5 border-b border-border px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:min-h-[60px] md:gap-3.5 md:px-7", isSelfServeHome ? "self-serve-home-topbar min-h-[56px] bg-(--surface)" : "min-h-[54px] bg-background/85")}>
           <SidebarTrigger className="-ml-1 hidden md:inline-flex" />
 
           {/* Desktop: workspace / page breadcrumb */}
@@ -262,7 +262,7 @@ export function SelfServeShell({
             {niche.industry.label} · {workspaceRegion}
           </span>
 
-          <div className="ml-auto inline-flex items-center gap-2.5 md:gap-3">
+          <div className={cn("ml-auto inline-flex items-center gap-2.5 md:gap-3", isSelfServeHome && "self-serve-home-actions max-md:[&>button]:min-h-11 max-md:[&>button]:min-w-11 max-md:[&>button]:rounded-(--r-ctl)")}>
             <CommandMenu />
             <SidebarThemeToggle tokens />
             <AccountDropdown account={account} homeCompact={isSelfServeHome} />

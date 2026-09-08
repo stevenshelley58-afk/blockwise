@@ -75,7 +75,7 @@ export function ActivationCard({ data }: { data: ActivationCardData }) {
         </div>
       ) : null}
 
-      <Link href={ctaHref} className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-(--r-control) bg-primary px-5 text-[15px] font-bold text-primary-foreground transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <Link href={ctaHref} className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-(--r-ctl) bg-primary px-5 text-[15px] font-bold text-primary-foreground md:w-auto md:min-w-[240px] transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
         {ctaLabel}
         <ArrowRight size={15} aria-hidden />
       </Link>
@@ -122,7 +122,7 @@ export function WorkspaceDetails({
       </summary>
       <dl className="divide-y divide-(--line) text-[12px]">
         <DetailRow label="Plan and billing" value={planLabel(plan.accessState)} foot={billingTiming(plan)} />
-        <DetailRow label="Direct Meta connection" value={metaLabel(meta.state)} foot={meta.accountName ?? "Not connected"} />
+        <DetailRow label="Direct Meta connection" value={metaLabel(meta.state)} foot={meta.accountName ?? "Direct connection and assisted partner access are tracked separately."} />
         <DetailRow label="Onboarding call" value={bookingLabel(booking.state)} foot={bookingFoot(booking.state)} />
         <DetailRow label="Render credits" value={credits.remaining == null ? "Not issued yet" : `${credits.remaining} remaining`} foot={packEstimate == null ? "Credits appear after entitlement setup." : `Enough for up to ${packEstimate} complete Feed + Story ${packEstimate === 1 ? "pack" : "packs"}.`} />
       </dl>

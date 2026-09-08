@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, ChevronDown } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
@@ -44,7 +44,7 @@ export function ActionRow({
         <span className="block text-[15px] font-bold">{title}</span>
         {subtitle ? <span className="mt-0.5 block text-[13px] leading-4 text-muted-foreground">{subtitle}</span> : null}
       </span>
-      <ArrowRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+      <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
     </Link>
   );
 }
