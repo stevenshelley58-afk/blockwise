@@ -112,13 +112,23 @@ const gallerySampleSchema = z.object({
   assetKey: z.string().min(1).optional(), placement: z.enum(["feed", "story"]), purpose: z.string().min(1),
 }).strict();
 const formQuestionSchema = z.object({ key: z.string().min(1), label: z.string().min(1), type: z.enum(["short_answer", "email", "phone", "multiple_choice"]), required: z.boolean(), options: z.array(z.string().min(1)).optional() }).strict();
-const generationReviewSchema = z.object({
+const legacyGenerationReviewSchema = z.object({
   process: z.literal("exact-clone"), sourcePlacement: z.enum(["feed", "story"]), targetPlacement: z.enum(["feed", "story"]),
   likenessThreshold: z.number().min(9.8).max(10),
   comparator: z.object({ overall: z.number().min(0).max(10), geometry: z.number().min(0).max(10), colourEffects: z.number().min(0).max(10), compositionCrop: z.number().min(0).max(10), typography: z.number().min(0).max(10), decision: z.enum(["revise", "ready"]) }).strict(),
   finalReviewers: z.array(z.object({ id: z.string().min(1), route: z.string().min(1), overall: z.number().min(0).max(10), minimum: z.number().min(9.5).max(10), decision: z.enum(["pass", "fail"]) }).strict()).length(2),
   warnings: z.array(z.string()), fontSubstitution: z.object({ source: z.string().min(1), used: z.string().min(1), reason: z.string().min(1) }).strict().nullable(),
 }).strict();
+const currentGenerationReviewSchema = z.object({
+  policy: z.literal("section-98-font-exempt-no-obvious-errors-v1"),
+  process: z.literal("exact-clone"), sourcePlacement: z.enum(["feed", "story"]), targetPlacement: z.enum(["feed", "story"]),
+  sectionThreshold: z.number().min(9.8).max(10), fontMatchRequired: z.literal(false),
+  comparator: z.object({ geometry: z.number().min(0).max(10), colourEffects: z.number().min(0).max(10), compositionCrop: z.number().min(0).max(10), typography: z.number().min(0).max(10), details: z.number().min(0).max(10), decision: z.enum(["revise", "ready"]) }).strict(),
+  finalReviewers: z.array(z.object({ id: z.string().min(1), route: z.string().min(1), minimum: z.number().min(9.8).max(10), decision: z.enum(["pass", "fail"]) }).strict()).length(2),
+  overallCheck: z.object({ noObviousErrors: z.literal(true) }).strict(),
+  warnings: z.array(z.string()), fontSubstitution: z.object({ source: z.string().min(1), used: z.string().min(1), reason: z.string().min(1) }).strict().nullable(),
+}).strict();
+const generationReviewSchema = z.union([currentGenerationReviewSchema, legacyGenerationReviewSchema]);
 
 const metadataSchema = z.object({
   title: z.string().min(1), description: z.string(),
@@ -189,8 +199,14 @@ export const adTemplateSchema = z.object({
   }
   const review = template.metadata.generationReview;
   if (review) {
-    if (review.comparator.decision !== "ready" || review.comparator.overall < review.likenessThreshold) {
-      report("generation comparator must meet the likeness threshold and be ready");
+    if ("policy" in review) {
+      const scores = [review.comparator.geometry, review.comparator.colourEffects, review.comparator.compositionCrop, review.comparator.typography, review.comparator.details];
+      if (review.comparator.decision !== "ready" || scores.some((score) => score < review.sectionThreshold)) {
+        report("every generation comparator section must meet the threshold and be ready");
+      }
+      if (!review.overallCheck.noObviousErrors) report("generation review contains an obvious error");
+    } else if (review.comparator.decision !== "ready" || review.comparator.overall < review.likenessThreshold) {
+      report("legacy generation comparator must meet the likeness threshold and be ready");
     }
     if (new Set(review.finalReviewers.map((reviewer) => reviewer.id)).size !== review.finalReviewers.length) {
       report("final generation reviewers must be independent");
@@ -198,8 +214,18 @@ export const adTemplateSchema = z.object({
     if (new Set(review.finalReviewers.map((reviewer) => reviewer.route)).size !== review.finalReviewers.length) {
       report("final generation reviewer routes must be independent");
     }
-    for (const reviewer of review.finalReviewers) {
-      if (reviewer.decision !== "pass" || reviewer.overall < reviewer.minimum) report("final generation reviewer did not pass its minimum");
+    if ("policy" in review) {
+      for (const reviewer of review.finalReviewers) {
+        if (reviewer.decision !== "pass") report("final generation reviewer did not pass");
+        if (reviewer.minimum < review.sectionThreshold) report("final generation reviewer did not meet every section minimum");
+      }
+    } else {
+      for (const reviewer of review.finalReviewers) {
+        if (reviewer.decision !== "pass") report("legacy final generation reviewer did not pass");
+        if (reviewer.overall < reviewer.minimum) {
+          report("legacy final generation reviewer did not pass its minimum");
+        }
+      }
     }
   }
 });
