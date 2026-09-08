@@ -25,14 +25,47 @@
         {
           "layout": "list-item",
           "heading": "Taylor Reed",
-          "body": "Buyer enquiry · Rockingham · 1:18 pm AWST"
+          "body": "Seller enquiry · Rockingham · 1:18 pm AWST"
         },
         {
           "layout": "list-item",
           "heading": "Casey Lee",
           "body": "Seller appraisal · Baldivis · 10:06 am AWST"
         }
-      ]
+      ],
+      "ad_previews": [
+        {
+          "src": "https://blockwise.sale/email-preview/email-assets/sample-seller-appraisal.jpg",
+          "alt": "Illustrative seller appraisal ad preview for Baldivis",
+          "label": "Baldivis seller appraisals",
+          "detail": "Illustrative sample creative",
+          "width": 640,
+          "height": 1138
+        }
+      ],
+      "chart": {
+        "kind": "bars",
+        "title": "Activity over the day",
+        "unit": "New leads",
+        "values": [
+          {
+            "label": "Morning",
+            "value": 1
+          },
+          {
+            "label": "Midday",
+            "value": 1
+          },
+          {
+            "label": "Afternoon",
+            "value": 1
+          },
+          {
+            "label": "Evening",
+            "value": 1
+          }
+        ]
+      }
     },
     "quiet": {
       "report_preview": "No new leads in this reporting period. Your summary is ready.",
@@ -86,10 +119,63 @@
         },
         {
           "layout": "list-item",
-          "heading": "Rockingham buyer enquiries",
+          "heading": "Rockingham buyer demand",
           "body": "6 leads · A$138.00 spend · A$23.00 per lead"
         }
-      ]
+      ],
+      "ad_previews": [
+        {
+          "src": "https://blockwise.sale/email-preview/email-assets/sample-seller-appraisal.jpg",
+          "alt": "Illustrative seller appraisal ad preview for Baldivis",
+          "label": "Baldivis seller appraisals",
+          "detail": "Illustrative sample creative · 12 leads · A$240.00 spend · A$20.00 per lead",
+          "width": 640,
+          "height": 1138
+        },
+        {
+          "src": "https://blockwise.sale/email-preview/email-assets/sample-buyer-demand.jpg",
+          "alt": "Illustrative buyer enquiry ad preview for Rockingham",
+          "label": "Rockingham buyer demand",
+          "detail": "Illustrative sample creative · 6 leads · A$138.00 spend · A$23.00 per lead",
+          "width": 640,
+          "height": 1138
+        }
+      ],
+      "chart": {
+        "kind": "bars",
+        "title": "Leads by day",
+        "unit": "New leads",
+        "values": [
+          {
+            "label": "Tue",
+            "value": 2
+          },
+          {
+            "label": "Wed",
+            "value": 3
+          },
+          {
+            "label": "Thu",
+            "value": 2
+          },
+          {
+            "label": "Fri",
+            "value": 3
+          },
+          {
+            "label": "Sat",
+            "value": 2
+          },
+          {
+            "label": "Sun",
+            "value": 3
+          },
+          {
+            "label": "Mon",
+            "value": 3
+          }
+        ]
+      }
     },
     "quiet": {
       "report_preview": "No new leads in this reporting period. Your summary is ready.",
@@ -128,7 +214,17 @@
       "event_time": "8 September 2026 · 3:42 pm AWST",
       "lead_url": "https://preview.blockwise.example/leads/alex-morgan",
       "preferences_url": "https://preview.blockwise.example/settings/notifications",
-      "unsubscribe_url": "https://preview.blockwise.example/notifications/new-leads/unsubscribe"
+      "unsubscribe_url": "https://preview.blockwise.example/notifications/new-leads/unsubscribe",
+      "ad_previews": [
+        {
+          "src": "https://blockwise.sale/email-preview/email-assets/sample-seller-appraisal.jpg",
+          "alt": "Illustrative seller appraisal ad preview for Baldivis",
+          "label": "Baldivis seller appraisals",
+          "detail": "Illustrative sample creative",
+          "width": 640,
+          "height": 1138
+        }
+      ]
     }
   }
 }

@@ -18,7 +18,11 @@ test("44 distinct templates cover seven categories and remain lean in every colo
     assert.ok(result.html.includes("max-width:400px"));
     assert.ok(result.text.includes("The Blockwise team"));
     assert.ok(!/\{\{|undefined|\[object Object\]/.test(result.html), template.id);
-    assert.ok(!/<script\b|<img\b|@font-face|url\(/i.test(result.html));
+    if (["daily-digest", "weekly-performance", "new-lead"].includes(template.id)) {
+      assert.ok((result.html.match(/<img\b/gi) ?? []).length >= 1);
+      assert.match(result.html, /<img[^>]+alt="[^"]+"/i);
+      assert.ok(result.html.includes("https://blockwise.sale/email-preview/email-assets/"));
+    } else assert.ok(!/<script\b|<img\b|@font-face|url\(/i.test(result.html));
     assert.equal(result.html.includes("prefers-color-scheme:dark"), theme === "system");
     assert.equal(result.html.includes("Unsubscribe"), template.delivery !== "transactional");
     assert.equal(result.text.includes("Unsubscribe:"), template.delivery !== "transactional");
@@ -89,7 +93,7 @@ test("daily and weekly reports render normal, zero-activity and delayed-data sta
     for (const state of exampleStates(id)) for (const theme of ["system", "light", "dark"]) {
       const rendered = renderExample(id, theme, state);
       assert.ok(rendered.bytes < 25000);
-      assert.ok(!/undefined|\{\{|NaN|Infinity|<script|<img|—/.test(rendered.html));
+      assert.ok(!/undefined|\{\{|NaN|Infinity|<script|—/.test(rendered.html));
       if (state === "quiet") {
         assert.ok(rendered.text.includes("New leads: 0"));
         assert.ok(rendered.text.includes("Cost per lead: Not available"));
@@ -111,6 +115,82 @@ test("summary values and activity rows are safely escaped and preserved in plain
   assert.ok(result.html.includes("&lt;b&gt;4&lt;/b&gt;"));
   assert.ok(result.html.includes("&lt;img src=x&gt;"));
   assert.ok(result.text.includes("A & B"));
-  assert.ok(!result.html.includes("<img"));
+  assert.ok(!result.html.includes("<img src=x"));
   assert.throws(() => buildTemplate("daily-digest", { ...values, activity_items: [{ layout: "script", heading: "Bad", body: "Bad" }] }), /Invalid section layout/);
+});
+
+
+test("notification visuals carry real fixture charts and ads, then clear for quiet or delayed states", () => {
+  const daily = renderExample("daily-digest");
+  const weekly = renderExample("weekly-performance");
+  assert.match(daily.html, /Morning/); assert.match(daily.html, /Evening/);
+  assert.match(weekly.html, /Tue/); assert.match(weekly.html, /Mon/);
+  assert.ok((weekly.html.match(/sample-(?:seller-appraisal|buyer-demand)\.jpg/g) ?? []).length >= 2);
+  for (const id of ["daily-digest", "weekly-performance"]) for (const state of ["quiet", "delayed"]) {
+    const rendered = renderExample(id, "system", state);
+    assert.ok(!/<img\b|<svg\b/i.test(rendered.html), id + " " + state);
+    assert.ok(!/Morning|Tue|sample-seller|sample-buyer/i.test(rendered.html), id + " " + state);
+  }
+});
+
+test("visual inputs fail closed at the chart and ad boundaries", () => {
+  const values = productionValues("daily-digest");
+  const chart = { kind: "bars", title: "Daily leads", unit: "Leads", values: [{ label: "A", value: 1 }] };
+  for (const value of [NaN, Infinity, -1, 1.5, 1000001]) assert.throws(() => buildTemplate("daily-digest", { ...values, chart: { ...chart, values: [{ label: "A", value }] } }), /chart|value/i);
+  assert.throws(() => buildTemplate("daily-digest", { ...values, chart: null }), /chart/i);
+  assert.throws(() => buildTemplate("daily-digest", { ...values, chart: { ...chart, title: "" } }), /title/i);
+  assert.throws(() => buildTemplate("daily-digest", { ...values, chart: { ...chart, unit: "x".repeat(41) } }), /unit/i);
+  assert.throws(() => buildTemplate("daily-digest", { ...values, chart: { ...chart, values: Array.from({ length: 8 }, (_, i) => ({ label: String(i), value: 0 })) } }), /7/i);
+  const ad = { src: "https://blockwise.sale/email-preview/email-assets/sample-seller-appraisal.jpg", alt: "Sample ad", label: "Sample" };
+  assert.throws(() => buildTemplate("daily-digest", { ...values, ad_previews: [ad, ad, ad] }), /2/i);
+  assert.throws(() => buildTemplate("daily-digest", { ...values, ad_previews: [{ ...ad, src: "http://blockwise.sale/ad.jpg" }] }), /HTTPS/i);
+  assert.throws(() => buildTemplate("daily-digest", { ...values, ad_previews: [{ ...ad, detail: "x".repeat(161) }] }), /detail/i);
+  assert.throws(() => buildTemplate("daily-digest", { ...values, ad_previews: [{ ...ad, width: 0 }] }), /dimension/i);
+  assert.throws(() => buildTemplate("daily-digest", { ...values, ad_previews: [{ ...ad, width: 2401 }] }), /dimension/i);
+  assert.throws(() => buildTemplate("daily-digest", { ...values, ad_previews: [{ ...ad, src: "https://preview.blockwise.example/ad.jpg" }] }), /URL/i);
+});
+
+
+test("visual fixtures reconcile, survive plaintext, and never appear as fallback data", () => {
+  for (const [id, total] of [["daily-digest", 4], ["weekly-performance", 18]]) {
+    const values = exampleVariables(id);
+    assert.equal(values.chart.values.reduce((sum, item) => sum + item.value, 0), total);
+    assert.equal(Number(values.report_lead_count), total);
+    const output = renderExample(id);
+    assert.ok(output.text.includes(values.chart.title));
+    assert.ok(output.text.includes(values.chart.unit));
+    for (const item of values.chart.values) assert.ok(output.text.includes(`${item.label}: ${item.value}`));
+    for (const ad of values.ad_previews) {
+      assert.ok(output.text.includes(ad.label));
+      assert.ok(output.text.includes(ad.alt));
+      if (ad.detail) assert.ok(output.text.includes(ad.detail));
+    }
+    const without = productionValues(id); delete without.chart; delete without.ad_previews;
+    const plainReport = buildTemplate(id, without);
+    assert.doesNotMatch(plainReport.html, /<img\b|class="chart-table"/);
+    for (const section of without.activity_items) assert.ok(plainReport.html.includes(section.heading));
+  }
+  const week = exampleVariables("weekly-performance");
+  assert.deepEqual(week.chart.values.map(item => item.label), ["Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Mon"]);
+  assert.ok(renderExample("weekly-performance").html.includes(week.lead_comparison));
+  const lead = renderExample("new-lead");
+  assert.ok(lead.html.indexOf('class="action') < lead.html.indexOf('<img '));
+});
+
+test("visual text is escaped and validated, including controls and placeholders", () => {
+  const values = productionValues("daily-digest");
+  const base = values.chart;
+  for (const invalid of ["\u0000", "{{missing}}", ""]) {
+    for (const key of ["title", "unit"]) assert.throws(() => buildTemplate("daily-digest", { ...values, chart: { ...base, [key]: invalid } }));
+    assert.throws(() => buildTemplate("daily-digest", { ...values, chart: { ...base, values: [{ label: invalid, value: 1 }] } }));
+  }
+  const output = buildTemplate("daily-digest", { ...values, chart: { ...base, title: "<em>Lead & count</em>" } });
+  assert.ok(output.html.includes("&lt;em&gt;Lead &amp; count&lt;/em&gt;"));
+  assert.doesNotMatch(output.html, /<em>Lead/);
+  const ad = values.ad_previews[0];
+  const custom = buildTemplate("daily-digest", { ...values, ad_previews: [{ ...ad, width: 1200, height: 600 }] });
+  assert.match(custom.html, /width="220" height="110"/);
+  assert.throws(() => buildTemplate("daily-digest", { ...values, ad_previews: [{ ...ad, width: 640, height: undefined }] }), /dimension/i);
+  assert.throws(() => buildTemplate("new-lead", { ...productionValues("new-lead"), chart: base }), /chart/i);
+  assert.throws(() => buildTemplate("welcome", { ...productionValues("welcome"), ad_previews: [ad] }), /visual/i);
 });

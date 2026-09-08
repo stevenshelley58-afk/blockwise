@@ -1,6 +1,6 @@
 import data from "./catalog-data.json" with { type: "json" };
 import { renderEmail, type EmailColorMode } from "./renderer.ts";
-import type { EmailMessage, EmailSection } from "./types.ts";
+import type { EmailMessage, EmailSection, EmailChart, EmailAdPreview } from "./types.ts";
 
 export type Delivery = "transactional" | "optional-service" | "marketing";
 export type TemplateDefinition = {
@@ -8,7 +8,7 @@ export type TemplateDefinition = {
   notificationPreference?: { key: string; reason: string; unsubscribeLabel: string };
   message: Omit<EmailMessage, "sections"> & { sections?: readonly (EmailSection | { repeat: string })[] };
 };
-export type TemplateValues = Record<string, string | readonly EmailSection[]>;
+export type TemplateValues = Record<string, string | readonly EmailSection[] | EmailChart | readonly EmailAdPreview[] | undefined> & { chart?: EmailChart; ad_previews?: readonly EmailAdPreview[] };
 export const NOTIFICATION_TEMPLATE_IDS = ["daily-digest", "weekly-performance", "new-lead"] as const;
 export const EMAIL_LIBRARY_VERSION = data.version;
 export const EMAIL_TEMPLATES = data.templates as readonly TemplateDefinition[];
@@ -44,6 +44,33 @@ function validateUrl(value: string, key: string, production: boolean) {
   const host = url.hostname.toLowerCase();
   if (production && (/(^|\.)(example\.(com|net|org)|localhost)$/.test(host) || /\.(example|invalid|test|localhost)$/.test(host))) {
     throw new Error(`Replace the sample URL for ${key}`);
+  }
+}
+
+function validateChart(value: unknown): asserts value is EmailChart {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid chart");
+  const chart = value as Record<string, unknown>;
+  if (chart.kind !== "bars") throw new Error("Invalid chart kind");
+  validateText(chart.title, "chart title", 100);
+  validateText(chart.unit, "chart unit", 40);
+  if (!Array.isArray(chart.values) || chart.values.length < 1 || chart.values.length > 7) throw new Error("Chart values must contain 1 to 7 items");
+  for (const point of chart.values) {
+    if (!point || typeof point !== "object" || Array.isArray(point)) throw new Error("Invalid chart value");
+    const item = point as Record<string, unknown>;
+    validateText(item.label, "chart label", 32);
+    if (typeof item.value !== "number" || !Number.isSafeInteger(item.value) || !Number.isFinite(item.value) || item.value < 0 || item.value > 1000000) throw new Error("Invalid chart value");
+  }
+}
+function validateAdPreviews(value: unknown, production: boolean): asserts value is readonly EmailAdPreview[] {
+  if (!Array.isArray(value) || value.length > 2) throw new Error("At most 2 ad previews are supported");
+  for (const item of value) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) throw new Error("Invalid ad preview");
+    const preview = item as Record<string, unknown>;
+    validateText(preview.src, "ad preview URL", 500); validateUrl(preview.src, "ad preview URL", production);
+    validateText(preview.alt, "ad preview alt", 240); validateText(preview.label, "ad preview label", 120);
+    if (preview.detail !== undefined) validateText(preview.detail, "ad preview detail", 160);
+    for (const key of ["width", "height"]) { const dimension = preview[key]; if (dimension !== undefined && (typeof dimension !== "number" || !Number.isSafeInteger(dimension) || dimension < 1 || dimension > 2400)) throw new Error("Invalid ad preview dimensions"); }
+    if ((preview.width === undefined) !== (preview.height === undefined)) throw new Error("Ad preview dimensions must include width and height");
   }
 }
 
@@ -96,6 +123,15 @@ export function buildTemplate(id: string, values: TemplateValues, options: { mod
     ? structuredClone(values[section.repeat] as readonly EmailSection[])
     : [walk(section) as EmailSection]);
   if (/[\r\n]/.test(message.subject) || message.subject.length > 200) throw new Error("Invalid email subject");
+  const raw = values as Record<string, unknown>;
+  const chart = raw.chart;
+  const adPreviews = raw.ad_previews;
+  if ((chart !== undefined || adPreviews !== undefined) && !NOTIFICATION_TEMPLATE_IDS.includes(id as typeof NOTIFICATION_TEMPLATE_IDS[number])) throw new Error("Visuals are supported only on notification templates");
+  if (chart !== undefined && id === "new-lead") throw new Error("Charts are not supported on new-lead notifications");
+  if (chart !== undefined) validateChart(chart);
+  if (adPreviews !== undefined) validateAdPreviews(adPreviews, production);
+  if (chart !== undefined || adPreviews !== undefined) message.visual = { ...(chart !== undefined ? { chart } : {}), ...(adPreviews !== undefined ? { adPreviews } : {}) };
+  else delete message.visual;
   message.footer = {
     reason: template.notificationPreference ? interpolate(template.notificationPreference.reason) : template.delivery === "transactional" ? "This is a service email about your Blockwise account."
       : template.delivery === "optional-service" ? "You enabled this Blockwise report. You can change your email preferences below."

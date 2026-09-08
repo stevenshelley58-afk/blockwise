@@ -1,7 +1,7 @@
 # Blockwise email library — Quiet card
 
-Version 1.1.0. Quiet card approved by Steven on 7 September 2026.
-Daily, weekly and new-lead designs expanded on 8 September 2026.
+Version 1.2.0. Quiet card approved by Steven on 7 September 2026.
+Daily, weekly and new-lead emails rebuilt with performance charts and ad previews on 8 September 2026.
 
 44 reusable templates in the existing Blockwise design system. This is a template
 library, not an email sender or newsletter schedule. All supplied example names,
@@ -10,9 +10,9 @@ events, figures, dates and links are fictional. Do not send the examples.
 ## Open and reuse
 
 - Browse: https://blockwise.sale/email-preview/email-library
-- Stored in Frank: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.1/blockwise-email-library.zip?download=1
-- Frank README: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.1/README.md
-- Persistent VPS location: `/srv/frank/data/window/uploads/library/blockwise-email/2026-09-08-v1.1/`.
+- Stored in Frank: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.2/blockwise-email-library.zip?download=1
+- Frank README: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.2/README.md
+- Persistent VPS location: `/srv/frank/data/window/uploads/library/blockwise-email/2026-09-08-v1.2/`.
 
 Frank's existing file-download route serves this versioned library. No new Frank
 app screen, database, agent runtime or live-mail integration was created. The ZIP
@@ -29,6 +29,7 @@ revision and SHA-256 hashes of library files. Keep previous versions when updati
 - `templates/<id>.json`: content definition, event guidance and required fields.
 - `examples/<id>.values.json`: a starting shape, NOT production-ready values.
 - `examples/<id>.html` and `.txt`: adaptive sample render and plain-text companion.
+- `assets/`: optimized illustrative ad previews and provenance, included for re-hosting.
 - `inventory.json`: searchable list with categories and required variables.
 - `render.mjs`: local rendering command. It cannot send email.
 
@@ -50,13 +51,15 @@ provider when integration is separately requested; do not add another platform.
 
 Browse the focused set at https://blockwise.sale/email-preview/email-notifications.
 
-- Daily summary: new-lead count, ad spend, cost per lead, latest enquiries and one
-  action to open the daily report. The period and timezone are explicit.
-- Weekly report: the same metric definitions for a seven-day window, comparison
-  with the preceding period, campaign breakdown and one report action. This is
-  separate from the editorial weekly newsletter.
-- New-lead alert: lead name, enquiry type, location, source, receipt time and one
-  View lead action. Contact details stay in the authenticated application.
+- Daily summary: a labelled activity chart, ad creative context, spend and cost
+  per lead, recent enquiries and one daily-report action. The window and timezone
+  are explicit. The chart values reconcile with the reported lead total.
+- Weekly report: a labelled seven-day lead chart, preceding-period context, ad
+  previews alongside campaign results and one report action. It is separate from
+  the editorial weekly newsletter. Illustrated sample data is not live performance.
+- New-lead alert: the related ad creative, lead name, enquiry type, location,
+  source, receipt time and one View lead action. Contact details stay in the
+  authenticated application; a lead alert does not need a decorative chart.
 
 All three are optional notifications with separate preference metadata and scoped
 unsubscribe wording. A person may select any combination. Disabling daily reports
@@ -85,9 +88,26 @@ node render.mjs daily-digest --example=quiet ./review
 node render.mjs weekly-performance --example=delayed ./review
 ```
 
-The shared card now has an optional lead-count/metric block and compact activity
-rows. All required dynamic content remains plain text and is escaped. Never
-interpolate raw HTML or connect the public preview to real customer lead records.
+### Optional visual inputs
+
+The daily and weekly reports accept `chart: { kind: "bars", title, unit,
+values: [{ label, value }] }`. Supply one to seven explicit integer counts; do
+not derive a made-up distribution from a total. Every label is part of the
+plain-text companion. The reporting adapter, not the renderer, owns attribution,
+window consistency and reconciliation with the summary.
+
+The three notification templates accept `ad_previews`, zero to two objects with
+`src`, `alt`, `label`, optional `detail`, and optional paired `width`/`height`.
+Use an absolute HTTPS image URL and the real dimensions. The example art is
+640 by 1138 pixels. These fields are optional additions, not required tokens:
+existing integrations without visuals still render a text-only report. The
+new-lead alert intentionally does not use a performance chart.
+
+The shared renderer supports bounded structured charts and ad previews, alongside
+compact metrics and activity rows. All dynamic copy remains escaped plain text.
+Never interpolate raw HTML or connect the public preview to real customer records.
+Use actual campaign creative URLs and verified report data when integrating. The
+illustrative assets do not establish a real link to the fictional sample results.
 
 ## What is included
 
@@ -131,14 +151,20 @@ rounded cards. Dark colours are neutral counterparts, not a new accent palette.
 
 The email uses HTML text and presentation tables, inline essentials, a hidden
 preheader, a fluid single-column layout capped at 600px, and a matching plain-text
-version. There are no images, remote font downloads, scripts, tracking pixels or
-new dependencies. The logo is a small HTML table with a text wordmark. Primary
+version. Reports use labelled table-based charts that need no image request, and
+small, explicitly sized JPEG ad previews with descriptive alternative text and
+HTML context. No remote fonts, scripts, tracking pixels or new dependencies are
+required. The logo remains a small HTML table with a text wordmark. Primary
 actions use a 44px minimum and border-based spacing; narrow detail rows stack.
 System fonts deliberately replace downloaded brand fonts for speed and reliability.
 
 The builder enforces a 32,000-byte UTF-8 HTML ceiling; sample-size checks are
 stricter at 25,000 bytes. `inventory.json` contains measured sizes. This is a
-payload measure, not a guarantee of SMTP or provider delivery latency. Provider
+HTML payload measure, not a guarantee of SMTP or provider delivery latency.
+Image bytes are additional and listed in the asset manifest. Ad images are
+optional visual context, never the sole carrier of results, actions or consent.
+The archive includes the images for re-hosting; production should use stable,
+approved HTTPS creative URLs, not depend on a temporary review deployment. Provider
 headers, tracking rewrites and surrounding markup can add bytes; check final mail.
 
 ## Light and dark mode: no recipient detection needed

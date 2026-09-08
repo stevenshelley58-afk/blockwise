@@ -13,7 +13,15 @@ export function exampleVariables(id: string, state: ExampleState = "standard"): 
   if (!exampleStates(id).includes(state)) throw new Error(`Unknown example state for ${id}: ${state}`);
   const scoped = notifications[id];
   const data = { ...examples, ...scoped?.standard, ...scoped?.[state] } as TemplateValues;
-  return structuredClone(Object.fromEntries(requiredVariables(id).map(key => [key, data[key]])));
+  const base = Object.fromEntries(requiredVariables(id).map(key => [key, data[key]])) as TemplateValues;
+  if (state === "standard") {
+    if (data.chart !== undefined) base.chart = structuredClone(data.chart) as TemplateValues["chart"];
+    if (data.ad_previews !== undefined) base.ad_previews = structuredClone(data.ad_previews) as TemplateValues["ad_previews"];
+  } else {
+    base.chart = undefined;
+    base.ad_previews = undefined;
+  }
+  return structuredClone(base);
 }
 export function renderExample(id: string, colorMode: EmailColorMode = "system", state: ExampleState = "standard") {
   return buildTemplate(id, exampleVariables(id, state), { mode: "preview", colorMode });
