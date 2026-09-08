@@ -20,7 +20,6 @@ import {
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
-import { AdPreview } from "@/components/homepage-concept/ad-preview";
 import { ResultsReporting } from "@/components/homepage-concept/results-reporting";
 import { WorkflowShowcase } from "@/components/homepage-concept/workflow-showcase";
 import { AD_EXAMPLES, FAQ_GROUPS, withBasePath } from "@/lib/homepage-concept/content";
@@ -355,19 +354,8 @@ function MetaAdShowcase() {
 }
 
 export function HomepageConcept() {
-  const [selectedExample, setSelectedExample] = useState(0);
-  const activeExample = AD_EXAMPLES[selectedExample];
-  const exampleDetails = useRef<HTMLDetailsElement>(null);
-
-  useEffect(() => {
-    const phone = window.matchMedia("(max-width: 600px)");
-    const syncDisclosure = () => {
-      if (exampleDetails.current) exampleDetails.current.open = !phone.matches;
-    };
-    syncDisclosure();
-    phone.addEventListener("change", syncDisclosure);
-    return () => phone.removeEventListener("change", syncDisclosure);
-  }, []);
+  const [exampleFilter, setExampleFilter] = useState("all");
+  const visibleExamples = AD_EXAMPLES.filter((example) => exampleFilter === "all" || example.id === exampleFilter);
 
   return (
     <div className="hc-root">
@@ -409,40 +397,33 @@ export function HomepageConcept() {
 
         <ResultsReporting />
 
-        <section className="hc-examples" id="examples">
+        <section className="hc-examples" id="examples" aria-labelledby="template-gallery-heading">
           <div className="hc-shell">
-            <div className="hc-section-copy hc-section-copy--wide">
-              <h2>Your brand. Your ads.</h2>
-              <p>Choose an objective, then adapt the creative and message to your agency.</p>
+            <div className="hc-gallery-heading">
+              <h2 id="template-gallery-heading">Find your next ad.</h2>
+              <a className="hc-button hc-button--dark" href="#trial">Start free trial <ArrowRight aria-hidden="true" size={18} /></a>
             </div>
-            <div className="hc-example-tabs" role="group" aria-label="Choose an ad example">
-              {AD_EXAMPLES.map((example, index) => (
-                <button
-                  key={example.id}
-                  type="button"
-                  id={`example-tab-${example.id}`}
-                  aria-pressed={selectedExample === index}
-                  onClick={() => setSelectedExample(index)}
-                >
+            <div className="hc-example-tabs" role="group" aria-label="Filter ad templates">
+              {[{ id: "all", label: "All templates" }, ...AD_EXAMPLES].map((example) => (
+                <button key={example.id} type="button" aria-pressed={exampleFilter === example.id}
+                  aria-controls="template-gallery" onClick={() => setExampleFilter(example.id)}>
                   {example.label}
                 </button>
               ))}
             </div>
-            <div
-              className="hc-example-stage"
-              id="example-panel"
-            >
-              <details ref={exampleDetails} className="hc-example-copy hc-example-details" open>
-                <summary>About this ad <ChevronRight aria-hidden="true" size={18} /></summary>
-                <h3>{activeExample.title}</h3>
-                <p>{activeExample.body}</p>
-                <dl>
-                  <div><dt>Objective</dt><dd>Lead generation</dd></div>
-                  <div><dt>Format</dt><dd>Facebook &amp; Instagram feed</dd></div>
-                  <div><dt>Approval</dt><dd>Required before launch</dd></div>
-                </dl>
-              </details>
-              <AdPreview image={activeExample.image} postCopy={activeExample.postCopy} linkTitle={activeExample.linkTitle} />
+            <p className="hc-sr-only" role="status">{visibleExamples.length} {visibleExamples.length === 1 ? "template" : "templates"} shown</p>
+            <div className="hc-template-gallery" id="template-gallery">
+              {visibleExamples.map((example) => (
+                <article className="hc-template-card" key={example.id}>
+                  <a className="hc-template-art" href="#trial" aria-label={`Start a free trial with the ${example.label.toLowerCase()} template`}>
+                    <img src={withBasePath(example.image)} alt={`${example.label} real estate ad template`} width="1080" height="1350" loading="lazy" />
+                  </a>
+                  <div className="hc-template-footer">
+                    <h3>{example.label}</h3>
+                    <a href="#trial" aria-label={`Use the ${example.label.toLowerCase()} template`}>Use this template <ArrowRight aria-hidden="true" size={17} /></a>
+                  </div>
+                </article>
+              ))}
             </div>
           </div>
         </section>
