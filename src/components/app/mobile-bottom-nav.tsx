@@ -27,29 +27,28 @@ const legacyMobileLabels: Record<string, string> = {
   "/model-control": "Model",
 };
 
-function customerItems(homeHref: string): { primaryItems: MobileNavItem[]; overflowItems: MobileNavItem[] } {
+function customerItems(): { primaryItems: MobileNavItem[]; overflowItems: MobileNavItem[] } {
   const allItems = navByVariant.self_serve;
-  const homeItemHref = homeHref === "/results" ? "/results?view=home" : homeHref;
   const byHref = (href: string) => allItems.find((item) => item.href === href);
-  const home = byHref("/self-serve");
-  const studio = byHref("/ad-studio");
-  const results = byHref("/results");
-  const leads = byHref("/leads");
-  const primaryItems = [home, studio, results, leads]
-    .filter((item): item is NavItem => Boolean(item))
-    .map((item) => ({
-      ...item,
-      href: item.href === "/self-serve" ? homeItemHref : item.href,
-    }));
+  const primaryItems = [byHref("/self-serve"), byHref("/ad-studio"), byHref("/results"), byHref("/leads")]
+    .filter((item): item is NavItem => Boolean(item));
   const primaryHrefs = new Set(primaryItems.map((item) => item.href));
-  const overflowItems = allItems.filter(
-    (item) => item.href !== "/self-serve" && !primaryHrefs.has(item.href),
-  );
-  return { primaryItems, overflowItems };
+  return { primaryItems, overflowItems: allItems.filter((item) => !primaryHrefs.has(item.href)) };
 }
 
-function itemsForVariant(variant: SidebarVariant, homeHref: string) {
-  if (variant === "self_serve" || variant === "monitor") return customerItems(homeHref);
+function monitorItems(): { primaryItems: MobileNavItem[]; overflowItems: MobileNavItem[] } {
+  const allItems = navByVariant.monitor;
+  const primaryHrefs = ["/results", "/leads", "/settings"];
+  const primaryItems = primaryHrefs
+    .map((href) => allItems.find((item) => item.href === href))
+    .filter((item): item is NavItem => Boolean(item));
+  const primarySet = new Set(primaryItems.map((item) => item.href));
+  return { primaryItems, overflowItems: allItems.filter((item) => !primarySet.has(item.href)) };
+}
+
+function itemsForVariant(variant: SidebarVariant) {
+  if (variant === "self_serve") return customerItems();
+  if (variant === "monitor") return monitorItems();
   const allItems = navByVariant[variant];
   const primaryHrefs = legacyPrimaryHrefs[variant] ?? [];
   const primaryItems = primaryHrefs
@@ -76,12 +75,13 @@ export function MobileBottomNav({ variant, homeHref = "/self-serve", account }: 
   const moreButton = useRef<HTMLButtonElement>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const { primaryItems, overflowItems } = useMemo(
-    () => itemsForVariant(variant, homeHref),
-    [homeHref, variant],
+    () => itemsForVariant(variant),
+    [variant],
   );
   const copy = niche.copy.shell;
   const activeItems = navByVariant[variant];
-  const moreActive = moreOpen || (!pathname.startsWith("/ad-studio/") && overflowItems.some((item) => itemIsActive(pathname, item, homeHref, activeItems)));
+  const moreCurrent = !pathname.startsWith("/ad-studio/") && overflowItems.some((item) => itemIsActive(pathname, item, homeHref, activeItems));
+  const moreActive = moreOpen || moreCurrent;
 
   async function signOut() {
     if (pathname.startsWith("/ad-studio/ads/") && !window.confirm("Leave this editor and sign out?")) return;
@@ -110,7 +110,7 @@ export function MobileBottomNav({ variant, homeHref = "/self-serve", account }: 
             </Link>
           );
         })}
-        <button ref={moreButton} className={moreActive ? "mobile-bottom-nav-item active" : "mobile-bottom-nav-item"} type="button" onClick={() => setMoreOpen(true)} aria-expanded={moreOpen} aria-controls="mobile-more-sheet" aria-current={moreActive ? "page" : undefined} aria-pressed={moreActive}>
+        <button ref={moreButton} className={moreActive ? "mobile-bottom-nav-item active" : "mobile-bottom-nav-item"} type="button" onClick={() => setMoreOpen(true)} aria-expanded={moreOpen} aria-controls="mobile-more-sheet" aria-current={moreCurrent ? "page" : undefined} aria-pressed={moreActive}>
           <MoreHorizontal aria-hidden size={22} />
           <span>{copy.more}</span>
         </button>

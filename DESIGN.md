@@ -193,10 +193,12 @@ parallel visual language or the removal of useful product capability.
 - **Make mobile feel like an app.** Use the existing bottom navigation, safe
   areas, sheets, reachable actions, stable previews, and clear Back behaviour.
   Do not stack a desktop page into a phone.
-- **Keep customer navigation permanent.** Every authenticated customer route,
-  including Ad Studio templates, editors, and review surfaces, keeps the five
+- **Keep customer navigation permanent.** Self-serve customer routes,
+  including Ad Studio templates, editors, and review surfaces, keep the five
   mobile destinations Home, Ads, Results, Leads, and More. Ads owns the full
   Ad Studio subtree. More contains remaining tools and account actions.
+  Restricted monitor workspaces retain their permitted reporting navigation.
+  Never expose unavailable tools or invent destinations to fill the menu.
 - **Keep mobile layers deliberate.** Fixed navigation and visible consent
   reserve layout space. Sheets sit above navigation; consent yields while a
   modal is open and remains available afterwards. Never cover controls or the

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { blockwise } from "../src/config/niche/blockwise.ts";
+import { canAccessSurface } from "../src/lib/auth/access-control.ts";
 
 const mobileNav = readFileSync("src/components/app/mobile-bottom-nav.tsx", "utf8");
 const studioShell = readFileSync("src/components/adstudio/studio-shell.tsx", "utf8");
@@ -18,8 +19,19 @@ test("customer mobile navigation keeps the five permanent destinations", () => {
     ["/results", "Results"],
     ["/leads", "Leads"],
   ]);
-  assert.match(mobileNav, /const primaryItems = \[home, studio, results, leads\]/);
+  assert.match(mobileNav, /const primaryItems = \[byHref\("\/self-serve"\), byHref\("\/ad-studio"\), byHref\("\/results"\), byHref\("\/leads"\)\]/);
   assert.match(mobileNav, /<span>\{copy\.more\}<\/span>/);
+});
+
+test("monitor mobile navigation remains restricted to monitor metadata", () => {
+  const monitorSelector = mobileNav.slice(mobileNav.indexOf("function monitorItems"), mobileNav.indexOf("function itemsForVariant"));
+  assert.match(mobileNav, /if \(variant === "monitor"\) return monitorItems\(\)/);
+  assert.match(monitorSelector, /const allItems = navByVariant.monitor/);
+  assert.match(monitorSelector, /const primaryHrefs = \["\/results", "\/leads", "\/settings"\]/);
+  assert.doesNotMatch(monitorSelector, /ad-studio|Brand Pack|self_serve/);
+  assert.doesNotMatch(mobileNav, /results\?view=home|homeItemHref/);
+  assert.equal(canAccessSurface({ role: "owner", workspaceMode: "monitor" }, "self_serve"), false);
+  assert.equal(canAccessSurface({ role: "owner", workspaceMode: "monitor" }, "adstudio"), false);
 });
 
 test("Ad Studio shares the global mobile frame on every route, including the editor", () => {
@@ -31,7 +43,7 @@ test("Ad Studio shares the global mobile frame on every route, including the edi
 
 test("More owns overflow state and protects editor sign-out", () => {
   assert.match(mobileNav, /const moreActive = moreOpen/);
-  assert.match(mobileNav, /aria-current=\{moreActive \? "page"/);
+  assert.match(mobileNav, /aria-current=\{moreCurrent \? "page"/);
   assert.match(mobileNav, /aria-pressed=\{moreActive\}/);
   assert.match(mobileNav, /pathname\.startsWith\("\/ad-studio\/ads\/"\) && !window\.confirm/);
   assert.match(mobileNav, /<Sheet open=\{moreOpen\}/);
