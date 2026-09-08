@@ -72,3 +72,21 @@ preview and email tests; adds approved sample assets and documentation; extends
 the existing export package. It deletes no production source files. Frank stores
 an immutable new library version, preserving earlier ones. Settings, provider
 configuration, queues and schedules remain unchanged.
+
+
+## Approved library shell extension (8 September 2026)
+
+Steven approved the revised standalone lead alert and requested this treatment
+across all 44 catalogue templates. The shared Quiet card now has an ink masthead
+inside the card, a white six-cell mark and lowercase wordmark, and a contextual
+message label. Its inset neutral footer retains message-specific reason,
+preferences, unsubscribe, support and business identity. Primary actions are
+content-width capsules with fully rounded ends and at least 44px clickable
+height. Steven supplied shape-only references: their gradients, icons, colours
+and shadows are not adopted. This supersedes the initial 8px email-button proposal. Charts, creatives, copy, token behavior and delivery
+boundaries remain unchanged. The separate early design explorations are not
+additional approved catalogue designs.
+
+Version 1.3.0 supersedes the 1.2.0 library package without overwriting it.
+This paragraph records design intent; verification and deployment evidence live
+in the dated library-shell release record.

@@ -1,6 +1,6 @@
 # Blockwise email library — Quiet card
 
-Version 1.2.0. Quiet card approved by Steven on 7 September 2026.
+Version 1.3.0. Quiet card with the dark branded header, inset footer and compact actions approved by Steven on 8 September 2026.
 Daily, weekly and new-lead emails rebuilt with performance charts and ad previews on 8 September 2026.
 
 44 reusable templates in the existing Blockwise design system. This is a template
@@ -10,9 +10,9 @@ events, figures, dates and links are fictional. Do not send the examples.
 ## Open and reuse
 
 - Browse: https://blockwise.sale/email-preview/email-library
-- Stored in Frank: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.2/blockwise-email-library.zip?download=1
-- Frank README: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.2/README.md
-- Persistent VPS location: `/srv/frank/data/window/uploads/library/blockwise-email/2026-09-08-v1.2/`.
+- Stored in Frank: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.3/blockwise-email-library.zip?download=1
+- Frank README: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.3/README.md
+- Persistent VPS location: `/srv/frank/data/window/uploads/library/blockwise-email/2026-09-08-v1.3/`.
 
 Frank's existing file-download route serves this versioned library. No new Frank
 app screen, database, agent runtime or live-mail integration was created. The ZIP
@@ -155,7 +155,7 @@ version. Reports use labelled table-based charts that need no image request, and
 small, explicitly sized JPEG ad previews with descriptive alternative text and
 HTML context. No remote fonts, scripts, tracking pixels or new dependencies are
 required. The logo remains a small HTML table with a text wordmark. Primary
-actions use a 44px minimum and border-based spacing; narrow detail rows stack.
+actions use a 44px minimum, content-width sizing and fully rounded capsule ends; narrow detail rows stack. The approved dark masthead and inset neutral footer are shared across all 44 catalogue emails. Existing unsubscribe, preferences, support and service-only footer semantics are preserved.
 System fonts deliberately replace downloaded brand fonts for speed and reliability.
 
 The builder enforces a 32,000-byte UTF-8 HTML ceiling; sample-size checks are

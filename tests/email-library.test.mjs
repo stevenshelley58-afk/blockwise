@@ -194,3 +194,22 @@ test("visual text is escaped and validated, including controls and placeholders"
   assert.throws(() => buildTemplate("new-lead", { ...productionValues("new-lead"), chart: base }), /chart/i);
   assert.throws(() => buildTemplate("welcome", { ...productionValues("welcome"), ad_previews: [ad] }), /visual/i);
 });
+
+
+test("approved masthead, inset footer and compact capsule cover the complete catalogue", () => {
+  for (const template of EMAIL_TEMPLATES) for (const mode of ["system", "light", "dark"]) {
+    const { html, text } = renderExample(template.id, mode);
+    assert.equal((html.match(/class="email-header body-cell"/g) ?? []).length, 1, template.id);
+    assert.equal((html.match(/class="muted email-footer body-cell"/g) ?? []).length, 1, template.id);
+    assert.ok(html.indexOf('class="email-header body-cell"') < html.indexOf("<h1"), template.id);
+    assert.ok(html.indexOf('class="muted email-footer body-cell"') > html.indexOf("<h1"), template.id);
+    assert.ok(html.includes('.header-mark{background:#ffffff!important}'), template.id);
+    for (const action of html.matchAll(/<a[^>]+class="action [^"]*"[^>]+>/g)) {
+      assert.match(action[0], /display:inline-block/);
+      assert.match(action[0], /min-height:44px/);
+      assert.match(action[0], /border-radius:999px/);
+      assert.doesNotMatch(action[0], /display:block/);
+    }
+    assert.ok(text.length > 0);
+  }
+});
