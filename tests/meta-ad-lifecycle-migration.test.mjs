@@ -173,8 +173,14 @@ test("coverage_complete derives only from page_info, never from result-list size
   assert.match(supervisor, /coverageComplete: !partialEvidence && \(confirmedAbsence \|\| paginationExhausted\),/);
 });
 
-test("supervisor uses the shared deterministic parser", () => {
-  assert.match(supervisor, /import \{ classifyMetaAdLibraryPayload \} from "\.\/meta-ad-library-parser\.mjs";/);
+test("supervisor uses shared strict parsing with native pagination evidence", () => {
+  const pagination = readFileSync("hermes/tools/research-runtime/bin/meta-ad-library-pagination.mjs", "utf8");
+  assert.match(supervisor, /import \{ buildMetaPaginationScenario, parseMetaPaginatedCapture \} from "\.\/meta-ad-library-pagination\.mjs";/);
+  assert.match(supervisor, /parseMetaPaginatedCapture\(html, input\.metaPageId,/);
+  assert.match(supervisor, /json_response: "true"/);
+  assert.match(supervisor, /js_scenario: JSON\.stringify\(buildMetaPaginationScenario\(\)\)/);
+  assert.match(pagination, /import \{ classifyMetaAdLibraryPayload \} from "\.\/meta-ad-library-parser\.mjs";/);
+  assert.match(pagination, /classifyMetaAdLibraryPayload\(pageHtml\(c\)/);
 });
 
 test("per-job ScrapingBee credit caps are propagated to every reservation and request", () => {

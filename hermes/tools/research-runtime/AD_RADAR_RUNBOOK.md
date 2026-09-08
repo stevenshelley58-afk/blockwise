@@ -1,9 +1,9 @@
 # Ad Radar collector and scheduler runbook
 
-## Current status and scope
+## Historical runtime observations (8 September 2026)
 
-As observed on 2026-09-08, the runtime is ACTIVE at exact SHA
-c088699e7356e68244f58d3ef233455ce1ff7692 and the product is LIVE at exact
+Before the free-first release, the runtime was observed active at exact SHA
+c088699e7356e68244f58d3ef233455ce1ff7692 and the product was observed live at exact
 SHA 674b512139961927191f3659a64737a2e0db1cdd. Product health is verified
 after two pagination canary and two public normal TLS passes. The deployed
 one-queue worker has witnessed all five bounded lanes: directory fanout 1
@@ -144,7 +144,7 @@ ceiling that can silently truncate provider pagination; a provider stop,
 credit guard, timeout, or other bounded stop is recorded as partial with
 coverage unknown.
 
-The parallel lanes are deployed and active at the immutable runtime SHA
+The earlier parallel-lane deployment used immutable runtime SHA
 c088699e7356e68244f58d3ef233455ce1ff7692. The systemd worker uses a five-minute
 stop timeout. The lane observations above are operational evidence, not a
 claim of complete WA directory coverage or failure-free pagination.
@@ -154,6 +154,93 @@ preloader ID whose viewAllPageID matches the requested page, and it still
 requires a complete bbox, final stream result, and strict exhausted zero
 connection. Conflicting or missing mappings remain partial. This avoids both
 false zeroes and wasteful retries of already-complete responses.
+
+## Free-first discovery and concurrent collection
+
+Use one canonical directory entity lane, not a second discovery system.
+Read saved Facebook references and saved agent/agency website evidence first,
+including historical owner metadata. Fetch publicly accessible agency websites
+and team/profile pages once through the shared URL cache. Extract structured
+social assignments and explicitly attributed profile links. An agency footer
+is not an individual agent's Facebook page.
+
+Website HTTP errors are unresolved evidence, not proof of no Facebook page.
+Only remaining gaps use the paid Google light search. Exact official Facebook
+links are resolved to a numeric Page identity before ad collection; name-only
+search matches cannot establish ownership. Automatic unresolved-slug pauses
+may be recovered after exact identity proof, but intentional scan disabling
+and owner assignments are preserved.
+
+Collector, media and deterministic classification lanes continue independently
+while directory discovery runs. There is no minimum page-count threshold:
+a newly verified eligible page can enter first-fill scheduling immediately.
+VPS discovery/classification code does not call an LLM. Coding subagents are
+separate from the production collection process.
+
+The source changes below require a new immutable deployment and live canary.
+Refer to the latest dated deployment evidence, not historical counts, for
+the serving revision and current fill status.
+
+## Native ad pagination
+
+The collector uses the same single accounted ScrapingBee capture and stores
+the complete raw response before ingestion. A bounded browser scenario lets
+Meta issue its own pagination requests. The recorder keeps only safe query
+fields and response evidence, not session tokens or complete request bodies.
+The parser requires an exact page, country, active-status and cursor chain,
+ending in an observed exhausted response. A scroll timeout, missing response
+or unrelated zero-result response remains partial. Saved ads are retained.
+
+The bounded scroll duration is not an ad-count completion ceiling. Every
+validated ad returned by the capture is ingested, and pages not exhausted
+remain unfinished. Media downloads and classification use their existing
+independent lanes. No second scraper process or queue is introduced.
+
+## Facebook search coverage and format repair
+
+The v2 directory pass retains an outcome for every WA agent and agency in
+research.v_ad_radar_facebook_discovery_coverage. This view is service-side
+only. It reads the canonical queue receipts, not another queue or copied
+coverage table. A directory job finishing is not proof of a Facebook match.
+
+The outcomes are:
+- not_checked: no current-version completed receipt.
+- resolved: a known numeric Facebook identity is linked. This is not proof
+  that the agent is currently advertising.
+- page_found: a saved page reference or search candidate exists, but identity
+  resolution or verification remains unfinished.
+- searched_not_found: the recorded bounded searches completed without a
+  matching page or an outstanding possible official website.
+- unresolved: a blocked, incomplete, malformed or unavailable lookup remains.
+
+Never label searched_not_found as proof that no Facebook page exists.
+Private, renamed, unindexed and shared agency pages can remain undiscovered.
+Report the checked date, source URLs and search queries alongside that outcome.
+Credit exhaustion and HTTP errors are not negative Facebook evidence.
+
+Reuse existing advertiser_pages.page_url references, including scan-disabled
+unresolved rows, before making paid search requests. Preserve intentional scan
+settings and ownership. Repair corrupted handles from intact original URLs
+using 202609080004_research_facebook_format_repair.sql; the original values
+remain in the row's repair receipt. Reconcile an existing row rather than
+creating a second row merely because its numeric ID was discovered later.
+
+The same discovery lane can use ScrapingBee's structured Google Search API.
+A light request costs 10 subscription credits, shares the existing provider
+budget and balance accounting, and stores its response in the capture journal
+before database ingestion. Replaying that saved response must not pay again.
+Use at most two distinct queries per entity in a sweep, stopping when a
+candidate is found. There are no LLM calls in this search path, no credit
+purchases and no automatic top-ups. A subscription may run out before all
+directory identities are searched; unfinished work stays explicit.
+
+The v2 root, entity and checkpoint identities include the coverage version.
+Thus the first v2 pass is not suppressed by legacy v1 completed jobs.
+Subsequent weekly sweeps remain idempotent. The page collector keeps its
+existing daily active/customer and progressive quiet-page cadence.
+
+Deployment and actual sweep completion require fresh live evidence. Source
+presence, a queued sweep or an offline test is not proof of completion.
 
 ## Capture journal and charge safety
 
@@ -169,7 +256,7 @@ state. An unknown charge or a request with no response must not trigger a
 blind repay or automatic second paid request; reconcile the provider/run state
 first. Do not create a paid request merely to prove queue health.
 
-## Request and database budget
+## Historical request and database budget snapshot
 
 The provider request limit is 25 credits per request. The current ledger
 records 436 successes using 10,900 credits, 13 unparseable responses using
@@ -208,7 +295,7 @@ active_ads value and test that missing, negative, or non-integer active_ads
 does not advance completion. Historical item_count/ads_seen rows may be
 reported separately but must not pass the new truth gate.
 
-Build and validate only from a merged immutable full Git SHA. Production
+Build and validate only from an integrated, committed immutable full Git SHA. Production
 activation is deliberately a two-step operation:
 
 1. From the clean checkout, run

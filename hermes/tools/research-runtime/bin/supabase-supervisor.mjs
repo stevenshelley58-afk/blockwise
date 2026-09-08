@@ -22,7 +22,7 @@ import {
 import { CONTENT_RUN_JOB_TYPE, handleHermesContentRun } from "./content-engine.mjs";
 import { runAdRadarAccuracyAudit } from "./ad-radar-accuracy-audit.mjs";
 import { resolveAdRadarRuntime } from "./ad-radar-runtime-gate.mjs";
-import { classifyMetaAdLibraryPayload } from "./meta-ad-library-parser.mjs";
+import { buildMetaPaginationScenario, parseMetaPaginatedCapture } from "./meta-ad-library-pagination.mjs";
 import {
   assertBudgetWithinConfiguredCap,
   executeScrapingBeePaidAttempt,
@@ -32,6 +32,8 @@ import { publishCustomerReadModels } from "./customer-read-model-publisher.mjs";
 import { selectDueAdRadarPages, chunkIds } from "./ad-radar-scheduling.mjs";
 import { saveCaptureJournal, loadCaptureJournal, reconcileSavedCaptureSettlement, ensureFetchRun } from "./ad-radar-capture-journal.mjs";
 import { syncCustomerAdRadarInterests } from "./customer-freshness-sync.mjs";
+import { createFacebookSearchEvidence } from "./facebook-discovery-search.mjs";
+import { createFacebookPageIdentityEvidence } from "./facebook-page-identity.mjs";
 import {
   DIRECTORY_DISCOVERY_JOB_TYPE,
   enqueueAdRadarDirectoryDiscovery,
@@ -145,10 +147,8 @@ const adRadarInterestSyncIntervalMs = positiveInt("HERMES_AD_RADAR_INTEREST_SYNC
 // complete runs via research.mark_missing_ads_inactive. Disable only for
 // forensic audits.
 const adPageRefreshLifecycleEnabled = env.HERMES_AD_PAGE_LIFECYCLE_RECONCILIATION !== "false";
-// Location ad search (Path 2) has been removed. The census → page-resolver →
-// ad-collector pipeline (Path 1) is the sole discovery mechanism.
-// Provider for the suburb/keyword discovery search. "hermes_browser" (default) enumerates
-// via the Meta Ad Library capture CLI driven through the Steel browser.
+// The narrow Ad Radar worker uses entity discovery → exact Page identity →
+// page collection. Postcodes select scope and freshness; they are not discovery roots.
 const classificationBackfillBatchSize = positiveInt("HERMES_CLASSIFICATION_BACKFILL_BATCH_SIZE", mode === "build" ? 200 : 80);
 const classificationBackfillWeakBatchSize = positiveInt(
   "HERMES_CLASSIFICATION_WEAK_BACKFILL_BATCH_SIZE",
@@ -2873,6 +2873,36 @@ async function assertScrapingBeeBudgetConfiguration() {
   assertBudgetWithinConfiguredCap(budgets?.[0]?.max_credits, scrapingBeeMonthlyCreditCap);
 }
 
+let facebookSearchAdapter = null;
+async function searchFacebookEvidence(input) {
+  facebookSearchAdapter ||= createFacebookSearchEvidence({
+    rest,
+    rpc,
+    apiKey: scrapingBeeApiKey,
+    enabled: scrapingBeeEnabled,
+    balanceEvidence: scrapingBeeBalanceEvidence,
+    recordAttempt: recordAdFetchAttempt,
+    patchAttempt: patchAdFetchAttempt,
+    sourceDocument,
+    rawEvidenceDir,
+    now,
+  });
+  return facebookSearchAdapter(input);
+}
+
+let facebookPageIdentityAdapter = null;
+async function resolveFacebookPageEvidence(input) {
+  facebookPageIdentityAdapter ||= createFacebookPageIdentityEvidence({
+    rest, rpc, apiKey: scrapingBeeApiKey, enabled: scrapingBeeEnabled,
+    balanceEvidence: scrapingBeeBalanceEvidence,
+    recordAttempt: recordAdFetchAttempt, patchAttempt: patchAdFetchAttempt,
+    sourceDocument, rawEvidenceDir, now,
+    captureMode: env.HERMES_FACEBOOK_IDENTITY_CAPTURE_MODE || "classic",
+    creditCap: Number(env.HERMES_FACEBOOK_IDENTITY_CREDIT_CAP || "1"),
+  });
+  return facebookPageIdentityAdapter(input);
+}
+
 async function recordAdFetchAttempt(attempt) {
   const created = await rest("research", "ad_fetch_attempts", {
     method: "POST",
@@ -2997,7 +3027,7 @@ async function runScrapingBeePageCapture(input) {
               { ...evidenceMetadata, provider_telemetry: telemetry, http_status: response.status, spb_initial_status_code: receipt.initialStatus }, 0),
           };
         }
-        const classified = classifyMetaAdLibraryPayload(html, { requestedPageId: input.metaPageId });
+        const classified = parseMetaPaginatedCapture(html, input.metaPageId, { country: input.country || "AU", activeStatus: input.activeStatus || "active" });
         if (["challenge", "login_wall", "unparseable"].includes(classified.outcome)) {
           const outcome = classified.outcome === "unparseable" ? "unparseable" : "blocked";
           const message = `scrapingbee_${classified.outcome}`;
@@ -3013,7 +3043,7 @@ async function runScrapingBeePageCapture(input) {
         const parsed = normaliseHostedMetaItems({
           body: classified.ads.map((ad) => ad.node || { ad_archive_id: ad.id, page_id: input.metaPageId }),
           pageId: input.metaPageId,
-          limit: input.resultsLimit,
+          limit: Math.max(Number(input.resultsLimit) || 250, classified.ads.length),
         });
         const paginationExhausted = classified.pageInfo.hasNextPage === false;
         const confirmedAbsence = classified.outcome === "confirmed_absence";
@@ -3041,6 +3071,7 @@ async function runScrapingBeePageCapture(input) {
               confirmed_absence: confirmedAbsence,
               challenge_detected: false,
               connection_count: classified.connectionCount,
+              pagination_records: classified.paginationRecords || 0,
               page_info: classified.pageInfo,
               parser_outcome: classified.outcome,
               partial_evidence: partialEvidence,
@@ -3078,6 +3109,8 @@ async function runScrapingBeePageCapture(input) {
     mode: "auto",
     max_cost: String(runCreditCap),
     wait: String(scrapingBeeWaitMs),
+    json_response: "true",
+    js_scenario: JSON.stringify(buildMetaPaginationScenario()),
   });
 
   try {
@@ -3100,7 +3133,7 @@ async function runScrapingBeePageCapture(input) {
         provider_credit_attempt_id: attemptId,
         tier: "auto_mode",
         request_url_host: "app.scrapingbee.com",
-        request_params: { mode: "auto", max_cost: runCreditCap, wait_ms: scrapingBeeWaitMs, target_host: new URL(url).host },
+        request_params: { mode: "auto", max_cost: runCreditCap, wait_ms: scrapingBeeWaitMs, json_response: true, pagination: "native_cursor_v1", target_host: new URL(url).host },
         outcome: "error",
         error: "reserved_before_provider_request",
         started_at: new Date(requestStartedAt).toISOString(),
@@ -5180,7 +5213,7 @@ async function handleJob(job) {
     return handleAdRadarPageDiscovery(job, { rest, fetchImpl: fetch, now, rawEvidenceDir });
   }
   if (job.job_type === "blockwise-ad-directory-discovery-entity") {
-    return handleAdRadarEntityDiscovery(job, { rest, fetchImpl: fetch, now, rawEvidenceDir });
+    return handleAdRadarEntityDiscovery(job, { rest, fetchImpl: fetch, now, rawEvidenceDir, searchEvidence: searchFacebookEvidence, resolvePageEvidence: resolveFacebookPageEvidence });
   }
   if (job.job_type === "blockwise-agent-census") return handleAgentCensus(job);
   if (job.job_type === "blockwise-page-resolver") {
