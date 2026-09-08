@@ -13,8 +13,9 @@
  *   - Outcomes: success | confirmed_absence | partial | challenge | login_wall
  *     | unparseable. Challenge and login walls are ALWAYS failures, never
  *     zero-ad results.
- *   - confirmed_absence requires structured evidence: count === 0, edges ===
- *     [], and page_info.has_next_page === false.
+ *   - confirmed_absence requires an exact requested page correlation plus
+ *     count === 0, edges === [], page_info.has_next_page === false, and an
+ *     empty end_cursor.
  *   - Pagination evidence is surfaced to the caller; callers must never infer
  *     exhaustion from a result count.
  */
@@ -174,6 +175,40 @@ function extractBalancedObject(text, startIndex) {
   return null;
 }
 
+function enclosingDataPageId(source, markerIndex) {
+  // Meta's streamed result stores ad_library_main and page as siblings in the
+  // same data object. Looking only inside ad_library_main misses that exact
+  // page correlation and would make a genuine empty response partial. Walk
+  // candidate data objects backwards and accept only one that encloses the
+  // connection marker and parses to the requested response shape.
+  const pattern = /\\?"data\\?"\s*:\s*\{/giu;
+  let enclosing = null;
+  for (const match of source.matchAll(pattern)) {
+    if (match.index >= markerIndex) break;
+    const objectStart = source.indexOf("{", match.index + match[0].length - 1);
+    if (objectStart < 0) continue;
+    const raw = extractBalancedObject(source, objectStart);
+    if (!raw || markerIndex > objectStart + raw.length) continue;
+    enclosing = raw;
+  }
+  if (!enclosing) return null;
+  try {
+    const parsed = JSON.parse(enclosing);
+    return numericPageId(parsed?.page?.id);
+  } catch {
+    return null;
+  }
+}
+
+function isStrictZeroConnection(connection) {
+  const info = connection?.page_info;
+  return connection?.count === 0
+    && Array.isArray(connection?.edges)
+    && connection.edges.length === 0
+    && info?.has_next_page === false
+    && info?.end_cursor === "";
+}
+
 function walkAdIds(node, out) {
   if (!node || typeof node !== "object") return;
   if (Array.isArray(node)) {
@@ -239,11 +274,13 @@ function extractConnections(html) {
       try {
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === "object") {
-          const key = JSON.stringify(parsed);
+          const mainPageId = enclosingDataPageId(source, match.index);
+          const key = JSON.stringify([parsed, mainPageId]);
           if (!seen.has(key)) {
             seen.add(key);
             connections.push({
               connection: parsed,
+              mainPageId,
               pageIds: new Set([
                 ...pageIdsIn(parsed),
                 ...nearbyPageIds(source, match.index, braceIndex + raw.length),
@@ -364,7 +401,8 @@ export function classifyMetaAdLibraryPayload(
   // can contain prefetches for unrelated pages. Select one correlated
   // connection only; no correlation is partial evidence, never success/zero.
   const correlated = requested
-    ? connections.filter(({ pageIds }) => pageIds.has(requested))
+    ? connections.filter(({ pageIds, mainPageId }) =>
+      pageIds.has(requested) || mainPageId === requested)
     : connections;
   if (correlated.length === 0) {
     warnings.push("requested_page_connection_not_found");
@@ -377,13 +415,14 @@ export function classifyMetaAdLibraryPayload(
       warnings,
     };
   }
-  const selected = correlated
-    .map(({ connection }) => connection)
+  const selectedEntry = correlated
+    .slice()
     .sort(
       (a, b) =>
-        (Array.isArray(b.edges) ? b.edges.length : -1) -
-        (Array.isArray(a.edges) ? a.edges.length : -1),
+        (Array.isArray(b.connection.edges) ? b.connection.edges.length : -1) -
+        (Array.isArray(a.connection.edges) ? a.connection.edges.length : -1),
     )[0];
+  const selected = selectedEntry.connection;
   const bestEdges = Array.isArray(selected.edges) ? selected.edges : null;
   const maxCount = typeof selected.count === "number" ? selected.count : null;
   const info =
@@ -428,8 +467,10 @@ export function classifyMetaAdLibraryPayload(
   }
 
   // No ads in edges. Absence needs complete structured evidence.
-  const emptyEdges = bestEdges !== null && bestEdges.length === 0;
-  if (maxCount === 0 && emptyEdges && pageInfo.hasNextPage === false) {
+  if (
+    selectedEntry.mainPageId === requested
+    && isStrictZeroConnection(selected)
+  ) {
     return {
       outcome: "confirmed_absence",
       ads: [],

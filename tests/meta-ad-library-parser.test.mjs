@@ -33,11 +33,60 @@ test("reordered connection fields still classify as success", () => {
   assert.equal(result.pageInfo.hasNextPage, false);
 });
 
-test("confirmed absence requires count=0, empty edges, and no next page", () => {
-  const result = classifyMetaAdLibraryPayload(fixture("zero-confirmed.json"));
+const strictZeroPayload = ({
+  pageId = "100042841013992",
+  count = 0,
+  edges = [],
+  hasNextPage = false,
+  endCursor = "",
+  includePage = true,
+} = {}) => JSON.stringify({
+  data: {
+    ad_library_main: {
+      search_results_connection: {
+        count,
+        edges,
+        page_info: { has_next_page: hasNextPage, end_cursor: endCursor },
+      },
+    },
+    ...(includePage ? { page: { name: "Fixture Page", id: pageId } } : {}),
+  },
+});
+
+test("confirmed absence requires strict page correlation and exhausted empty connection", () => {
+  const result = classifyMetaAdLibraryPayload(strictZeroPayload(), {
+    requestedPageId: "100042841013992",
+  });
   assert.equal(result.outcome, "confirmed_absence");
   assert.equal(result.connectionCount, 0);
-  assert.equal(result.pageInfo.hasNextPage, false);
+  assert.deepEqual(result.pageInfo, { hasNextPage: false, endCursor: "" });
+});
+
+test("zero connection with a mismatched or missing exact page stays partial", () => {
+  for (const html of [
+    strictZeroPayload({ pageId: "999999999999999" }),
+    strictZeroPayload({ includePage: false }),
+  ]) {
+    const result = classifyMetaAdLibraryPayload(html, {
+      requestedPageId: "100042841013992",
+    });
+    assert.equal(result.outcome, "partial");
+    assert.deepEqual(result.adIds, []);
+    assert.ok(result.warnings.includes("requested_page_connection_not_found"));
+  }
+});
+
+test("zero connection with a cursor or next page stays partial", () => {
+  for (const html of [
+    strictZeroPayload({ endCursor: "opaque-cursor" }),
+    strictZeroPayload({ hasNextPage: true }),
+  ]) {
+    const result = classifyMetaAdLibraryPayload(html, {
+      requestedPageId: "100042841013992",
+    });
+    assert.equal(result.outcome, "partial");
+    assert.equal(result.connectionCount, 0);
+  }
 });
 
 test("pagination evidence is surfaced, not inferred", () => {
