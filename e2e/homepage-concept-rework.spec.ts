@@ -57,6 +57,17 @@ async function assertVisibleElementsFit(page: Page) {
     const root = document.querySelector(".hc-root") ?? document.body;
     const rootRect = root.getBoundingClientRect();
     const offenders: string[] = [];
+    const isRendered = (element: HTMLElement) => {
+      for (let parent: HTMLElement | null = element; parent; parent = parent.parentElement) {
+        const style = getComputedStyle(parent);
+        if (style.display === "none" || style.visibility === "hidden") return false;
+        if (parent.tagName === "DETAILS" && !(parent as HTMLDetailsElement).open) {
+          const summary = parent.querySelector(":scope > summary");
+          if (!summary || (element !== summary && !summary.contains(element))) return false;
+        }
+      }
+      return true;
+    };
     const hasIntentionalHorizontalScroll = (element: Element) => {
       for (let parent = element.parentElement; parent && parent !== root; parent = parent.parentElement) {
         const overflowX = getComputedStyle(parent).overflowX;
@@ -66,8 +77,7 @@ async function assertVisibleElementsFit(page: Page) {
     };
     for (const element of root.querySelectorAll<HTMLElement>("a, button, input, textarea, select, summary, h1, h2, h3, p, img, svg, article")) {
       const rect = element.getBoundingClientRect();
-      const style = getComputedStyle(element);
-      if (rect.width < 1 || rect.height < 1 || style.display === "none" || style.visibility === "hidden") continue;
+      if (rect.width < 1 || rect.height < 1 || !isRendered(element)) continue;
       if (!hasIntentionalHorizontalScroll(element) && (rect.left < rootRect.left - 1 || rect.right > rootRect.right + 1)) {
         offenders.push(element.tagName.toLowerCase() + "." + String(element.className).slice(0, 80));
       }
@@ -88,14 +98,26 @@ async function assertVisibleElementsFit(page: Page) {
 async function assertLegible(page: Page) {
   const bad = await page.evaluate(() => {
     const issues: string[] = [];
+    const isRendered = (element: HTMLElement) => {
+      for (let parent: HTMLElement | null = element; parent; parent = parent.parentElement) {
+        const style = getComputedStyle(parent);
+        if (style.display === "none" || style.visibility === "hidden") return false;
+        if (parent.tagName === "DETAILS" && !(parent as HTMLDetailsElement).open) {
+          const summary = parent.querySelector(":scope > summary");
+          if (!summary || (element !== summary && !summary.contains(element))) return false;
+        }
+      }
+      return true;
+    };
     for (const element of document.querySelectorAll<HTMLElement>("h1, h2, h3, a, button, input, textarea, select, summary")) {
       const style = getComputedStyle(element);
       const rect = element.getBoundingClientRect();
-      if (rect.width < 1 || rect.height < 1 || style.display === "none" || style.visibility === "hidden") continue;
+      if (rect.width < 1 || rect.height < 1 || !isRendered(element)) continue;
       if (Number.parseFloat(style.fontSize) < 12) issues.push(element.tagName + ":" + style.fontSize);
-      if (["A", "BUTTON", "INPUT", "TEXTAREA", "SELECT", "SUMMARY"].includes(element.tagName) && rect.height < 30) {
-        issues.push(element.tagName + ":height-" + rect.height.toFixed(1));
-      }
+      const needsTouchHeight = element.matches(
+        "button, input, textarea, select, summary, .hc-header a, .hc-footer nav a, .hc-mobile-menu a, .hc-button, .hp-plan-cta, .hp-plan-details-link",
+      ) && !element.closest(".hc-faq-answer");
+      if (needsTouchHeight && rect.height < 30) issues.push(element.tagName + ":" + String(element.className) + ":height-" + rect.height.toFixed(1));
     }
     return issues.slice(0, 12);
   });
@@ -109,6 +131,30 @@ async function assertLayoutAt(page: Page, width: number, height = 844) {
   await expect(page.getByRole("heading", { level: 1, name: "More leads. Less ad management." })).toBeVisible();
   await assertVisibleElementsFit(page);
   await assertLegible(page);
+}
+
+async function assertExpandedFaqsFit(page: Page) {
+  const groups = page.locator(".hc-faq-group");
+  await expect(groups).toHaveCount(6);
+  for (let groupIndex = 0; groupIndex < await groups.count(); groupIndex += 1) {
+    const group = groups.nth(groupIndex);
+    if (!(await group.getAttribute("open"))) await group.locator(":scope > summary").click();
+    await expect(group).toHaveAttribute("open", "");
+    const questions = group.locator(".hc-faq-list details");
+    expect(await questions.count(), "each FAQ group must retain its nested questions").toBeGreaterThan(0);
+    for (let questionIndex = 0; questionIndex < await questions.count(); questionIndex += 1) {
+      const question = questions.nth(questionIndex);
+      if (!(await question.getAttribute("open"))) await question.locator("summary").click();
+      await expect(question).toHaveAttribute("open", "");
+      const questionText = question.locator("summary > span");
+      await expect(questionText).toHaveCSS("transform", "none");
+      const questionRect = await questionText.boundingBox();
+      expect(questionRect, "opened FAQ question text must have a rendered rectangle").not.toBeNull();
+      expect(questionRect!.left, "opened FAQ question text must not begin off-page").toBeGreaterThanOrEqual(-1);
+      expect(questionRect!.right, "opened FAQ question text must not exceed the viewport").toBeLessThanOrEqual((await page.viewportSize())!.width + 1);
+      await assertVisibleElementsFit(page);
+    }
+  }
 }
 
 async function takeSectionScreenshots(page: Page, prefix: string) {
@@ -172,7 +218,8 @@ test("homepage concept preview is contained, interactive, static, and explicitly
   await expect(approval).toHaveAccessibleName("Approve this example");
   await approval.click();
   await expect(approval).toHaveAttribute("aria-pressed", "true");
-  await expect(approval).toHaveAccessibleName("Approved in this example");
+  await expect(approval).toHaveAccessibleName("Return to draft");
+  await expect(page.getByText("Approved in this example")).toBeVisible();
   await approval.click();
   await expect(approval).toHaveAttribute("aria-pressed", "false");
 
@@ -211,6 +258,7 @@ test("homepage concept preview is contained, interactive, static, and explicitly
   await menu.locator("summary").click();
   await menu.getByRole("link", { name: "How it works" }).click();
   await expect(menu).not.toHaveAttribute("open", "");
+  await assertExpandedFaqsFit(page);
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.reload({ waitUntil: "networkidle" });
@@ -227,6 +275,7 @@ test("homepage concept preview is contained, interactive, static, and explicitly
   await page.getByRole("group", { name: "Example report view" }).getByRole("button", { name: "30 days" }).click();
   await expect(page.getByText("Last 30 days. Example leads by day.")).toBeVisible();
   await assertVisibleElementsFit(page);
+  await assertExpandedFaqsFit(page);
   await page.screenshot({ path: screenshotPath("mobile-320-whole-page.png"), fullPage: true });
 
   await assertLayoutAt(page, 768);

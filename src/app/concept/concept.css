@@ -30,13 +30,7 @@
   box-sizing: border-box;
 }
 
-.hc-root h1,
-.hc-root h2,
-.hc-root h3,
-.hc-root p,
-.hc-root ul,
-.hc-root dl,
-.hc-root figure {
+.hc-root :where(h1, h2, h3, p, ul, dl, figure) {
   margin: 0;
 }
 
@@ -128,6 +122,7 @@
 .hc-header-cta {
   min-width: 132px;
   justify-content: center;
+  padding-inline: 18px;
   border: 1px solid rgba(255,255,255,.5);
   border-radius: 999px;
   color: #fff;
@@ -238,10 +233,6 @@
 .hc-faq-group > summary::-webkit-details-marker,
 .hc-faq-list summary::-webkit-details-marker { display: none; }
 .hc-faq-group > summary h3 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -.025em; }
-.hc-faq-group > summary > span,
-.hc-faq-list summary > span { flex: 0 0 auto; font-size: 23px; font-weight: 400; transition: transform 180ms ease; }
-.hc-faq-group[open] > summary > span,
-.hc-faq-list details[open] > summary > span { transform: rotate(45deg); }
 .hc-faq-group > summary:focus-visible,
 .hc-faq-list summary:focus-visible { outline: 2px solid var(--hc-blue); outline-offset: 4px; border-radius: 2px; }
 .hc-faq-list { margin: 0 0 18px 20px; border-top: 1px solid var(--hc-line); }
@@ -398,7 +389,7 @@
 .hc-faq-group > summary, .hc-faq-list summary { padding-inline: 4px; }
 .hc-faq-group > summary > svg, .hc-faq-list summary > svg { flex: 0 0 auto; transition: transform 180ms cubic-bezier(.22,1,.36,1); }
 .hc-faq-group[open] > summary > svg, .hc-faq-list details[open] > summary > svg { transform: rotate(180deg); }
-.hc-faq-list summary > span { min-width: 0; }
+.hc-faq-list summary > span { flex: 1 1 auto; min-width: 0; font-size: inherit; font-weight: inherit; transform: none; }
 .hc-faq-answer { max-width: 680px; padding: 0 46px 24px 0; }
 .hc-faq-answer p { padding: 0; }
 .hc-faq-links { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
