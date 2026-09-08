@@ -56,6 +56,18 @@ test.describe("simple customer app acceptance", () => {
     });
   }
 
+  test("working screens keep controls available at double-size zoom", async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    for (const route of ["/ad-studio", "/settings", "/results"]) {
+      await page.goto(route);
+      await page.evaluate(() => { document.body.style.zoom = "2"; });
+      await expect(page.getByRole("main")).toBeVisible();
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+      expect(overflow, route + " at double-size zoom").toBe(false);
+      await page.screenshot({ path: testInfo.outputPath(route.replace(/[^a-z0-9]/gi, "-") + "-zoom-200.png"), fullPage: true });
+    }
+  });
+
   for (const width of [390, 1440]) {
     test(`settings reveal one category and preserve navigation at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });

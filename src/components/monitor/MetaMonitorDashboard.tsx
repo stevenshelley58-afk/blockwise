@@ -120,6 +120,7 @@ export function MetaMonitorDashboard({
     nextCustomRange: { since: string; until: string } = customRange,
     options: { manual?: boolean; cachedEtag?: string | null } = {},
   ) => {
+    if (showExample) return;
     const requestId = refreshRequestRef.current + 1;
     refreshRequestRef.current = requestId;
     refreshControllerRef.current?.abort();
@@ -184,10 +185,15 @@ export function MetaMonitorDashboard({
       setError(refreshError instanceof Error ? refreshError.message : "Refresh failed.");
       setIsRefreshing(false);
     }
-  }, [customRange, etag, rangeKey, surfaceFor, userId, workspaceId]);
+  }, [customRange, etag, rangeKey, showExample, surfaceFor, userId, workspaceId]);
 
   useEffect(() => {
     let cancelled = false;
+    if (showExample) {
+      return () => {
+        cancelled = true;
+      };
+    }
     const surface = surfaceFor(initialPayload.range.key, {
       since: initialPayload.range.since,
       until: initialPayload.range.until,
@@ -217,14 +223,15 @@ export function MetaMonitorDashboard({
     return () => {
       cancelled = true;
     };
-  }, [initialEtag, initialGeneratedAt, initialPayload, surfaceFor, userId, workspaceId]);
+  }, [initialEtag, initialGeneratedAt, initialPayload, showExample, surfaceFor, userId, workspaceId]);
 
   const handleInvalidation = useCallback(() => {
-    void refresh(rangeKey, customRange, { cachedEtag: etag });
-  }, [customRange, etag, rangeKey, refresh]);
+    if (!showExample) void refresh(rangeKey, customRange, { cachedEtag: etag });
+  }, [customRange, etag, rangeKey, refresh, showExample]);
   useReportingInvalidation({ workspaceId, onInvalidate: handleInvalidation });
 
   async function handleRangeChange(nextRange: MonitorRange) {
+    if (showExample) return;
     setRangeKey(nextRange);
     const surface = surfaceFor(nextRange, customRange);
     const cached = await readLocalReadModel<MetaMonitorPayload>({ userId, workspaceId, surface }).catch(
@@ -239,6 +246,7 @@ export function MetaMonitorDashboard({
   }
 
   function handleCustomRangeChange(nextCustomRange: { since: string; until: string }) {
+    if (showExample) return;
     setRangeKey("custom");
     setCustomRange(nextCustomRange);
 

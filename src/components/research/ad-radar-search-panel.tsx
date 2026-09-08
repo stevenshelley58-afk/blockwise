@@ -218,7 +218,7 @@ export function AdRadarSearchPanel({
         <AdRadarLocationForm
           buttonLabel={loading ? "Searching..." : "Search"}
           initialNote={initialNote}
-          initialValue={initialQuery}
+          initialValue={query}
           inputLabel="Search Ad Radar"
           isSubmitting={loading}
           onSearch={onSearch}

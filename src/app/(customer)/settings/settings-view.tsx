@@ -45,8 +45,11 @@ export function SettingsView(props: SettingsViewProps) {
   }, [items.length]);
   useEffect(() => {
     if (!selected) return;
-    const panel = document.querySelector('[data-settings-section="' + selected + '"]') as HTMLElement | null;
-    panel?.focus({ preventScroll: true });
+    const frame = window.requestAnimationFrame(() => {
+      const panel = document.querySelector('[data-settings-section="' + selected + '"]:not(.hidden)') as HTMLElement | null;
+      panel?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [selected]);
   const openSection = (id: string) => { window.location.hash = id; setSelected(id); };
   const closeSection = () => { const url = new URL(window.location.href);

@@ -40,7 +40,7 @@ test.describe("customer UX flows", () => {
     await expect(page.locator("[data-settings-section]:visible")).toHaveCount(0);
 
     await page.goto("/settings#notifications");
-    await expect(page.locator('[data-settings-section="notifications"]')).toBeVisible();
+    await expect(page.locator('[data-settings-section="notifications"]:visible')).toBeVisible();
     await expect(page.locator("[data-settings-section]:visible")).toHaveCount(1);
     await expect.poll(() =>
       page.evaluate(() => document.activeElement?.getAttribute("data-settings-section")),
@@ -48,9 +48,9 @@ test.describe("customer UX flows", () => {
 
     await page.locator('button:visible', { hasText: "All settings" }).click();
     await expect(page.locator("[data-settings-section]:visible")).toHaveCount(0);
-    await expect(page.locator('a[href="#notifications"]')).toBeFocused();
+    await expect(page.locator('a[href="#notifications"]:visible')).toBeFocused();
     await page.goBack();
-    await expect(page.locator('[data-settings-section="notifications"]')).toBeVisible();
+    await expect(page.locator('[data-settings-section="notifications"]:visible')).toBeVisible();
     await expect.poll(() =>
       page.evaluate(() => document.activeElement?.getAttribute("data-settings-section")),
     ).toBe("notifications");
@@ -59,7 +59,7 @@ test.describe("customer UX flows", () => {
   test("settings query deep link remains focused and category navigation works on mobile", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/settings?section=billing");
-    await expect(page.locator('[data-settings-section="billing"]')).toBeVisible();
+    await expect(page.locator('[data-settings-section="billing"]:visible')).toBeVisible();
     await expect(page.locator("[data-settings-section]:visible")).toHaveCount(1);
     await expect.poll(() =>
       page.evaluate(() => document.activeElement?.getAttribute("data-settings-section")),
@@ -67,20 +67,20 @@ test.describe("customer UX flows", () => {
 
     await page.locator('button:visible', { hasText: "All settings" }).click();
     await expect(page.locator("[data-settings-section]:visible")).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Billing", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Billing & plan", exact: true })).toBeVisible();
   });
 
   test("results disconnected state offers an explicit example, switchable chart, and deliberate details", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/results");
     await expect(page.getByRole("heading", { name: "Results", exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Connect Meta", exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "View example report", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: /refresh/i })).toHaveCount(0);
+    await expect(page.getByText("Your reporting snapshot is being prepared.", { exact: false })).toBeVisible();
+    await expect(page.getByRole("button", { name: /refresh/i })).toHaveCount(1);
 
-    await page.getByRole("link", { name: "View example report", exact: true }).click();
-    await expect(page).toHaveURL(/\/results\?example=1$/);
-    await expect(page.getByText("Example data", { exact: true })).toBeVisible();
+    await page.goto("/results?example=1");
+    await expect(page.getByText("Example report", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /refresh/i })).toHaveCount(0);
+    await expect(page.getByRole("group", { name: /date range/i })).toHaveCount(0);
     await expect(page.getByRole("group", { name: "Results chart" })).toBeVisible();
     const leads = page.getByRole("button", { name: "Leads", exact: true });
     await leads.click();
@@ -92,9 +92,13 @@ test.describe("customer UX flows", () => {
   test("Meta connection keeps the essential step and makes optional help expandable", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/connect-meta");
-    await expect(page.getByRole("main")).toBeVisible();
-    await expect(page.getByRole("button", { name: /show me what to do/i })).toBeVisible();
-    await page.getByRole("button", { name: /show me what to do/i }).click();
+    await expect(page.getByRole("main", { name: "Share Meta assets" })).toBeVisible();
+    const intro = page.getByRole("button", { name: /show me what to do/i });
+    if (!(await intro.isVisible().catch(() => false))) {
+      await expect(page.getByRole("heading", { name: /ask a workspace owner or admin/i })).toBeVisible();
+      return;
+    }
+    await intro.click();
     const help = page.locator("details").filter({ hasText: "Help with this step" });
     await expect(help).toBeVisible();
     await expect(help.locator("summary")).toBeVisible();

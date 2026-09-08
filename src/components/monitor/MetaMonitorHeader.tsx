@@ -48,6 +48,7 @@ export function MetaMonitorHeader(props: {
 }) {
   const copy = niche.copy.performance;
   const isCustom = props.rangeKey === "custom";
+  const hasLiveControls = props.isConnected && !props.isSample;
 
   return (
     <header className="flex flex-col gap-4">
@@ -67,7 +68,7 @@ export function MetaMonitorHeader(props: {
           <p className="mt-1 text-[13px] text-muted-foreground">{copy.subtitle}</p>
         </div>
 
-        {props.isConnected || props.isSample ? <button
+        {hasLiveControls ? <button
           className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-(--line-heavy) bg-card px-3.5 text-[12.5px] font-bold text-foreground transition-[background,box-shadow] duration-150 hover:bg-(--surface-subtle) hover:shadow-card disabled:cursor-default disabled:opacity-60"
           type="button"
           onClick={props.onRefresh}
@@ -79,7 +80,7 @@ export function MetaMonitorHeader(props: {
         </button> : null}
       </div>
 
-      {props.isConnected || props.isSample ? (
+      {hasLiveControls ? (
       <div className="flex flex-wrap items-center gap-2">
         <div
           className="flex flex-wrap items-center gap-1.5"
@@ -149,7 +150,7 @@ export function MetaMonitorHeader(props: {
       ) : (
         <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-(--faint)">
           <span className="size-[7px] rounded-full bg-(--faint)" aria-hidden />
-          Not connected
+          {props.isSample ? "Example data" : "Not connected"}
         </span>
       )}
     </header>

@@ -30,7 +30,7 @@ export default async function ConnectMetaPage() {
   const canManage = canManageProviderConnections(access);
 
   return (
-    <main
+    <section
       aria-label="Share Meta assets"
       className="mx-auto w-full max-w-[1080px] px-4 pt-4 pb-24 [@media(min-width:768px)_and_(max-height:920px)]:pb-6 md:px-6 md:pt-5 md:pb-10 [@media(min-width:768px)_and_(max-height:920px)]:md:pb-4"
     >
@@ -50,6 +50,6 @@ export default async function ConnectMetaPage() {
         canManage={canManage}
         businessId={getMetaPartnerBusinessId()}
       />
-    </main>
+    </section>
   );
 }

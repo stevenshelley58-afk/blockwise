@@ -11,6 +11,7 @@ test("Ad Radar search keeps query and filters in browser history state", () => {
   assert.match(source, /history\.pushState\(state/);
   assert.match(source, /history\.replaceState\(state/);
   assert.match(source, /addEventListener\("popstate", restoreFromUrl\)/);
+  assert.match(source, /initialValue=\{query\}/);
 });
 
 test("Saved inspiration never renders an empty collection beside a load error", () => {
@@ -44,4 +45,13 @@ test("Empty libraries do not expose zero-count filter controls", () => {
   const media = read("src/components/adstudio/media-library.tsx");
   assert.ok(ads.includes("ads.length > 0 ? <>"));
   assert.ok(media.includes("allAssets.length > 0 ? <>"));
+});
+
+
+test("Library image previews degrade to bounded accessible fallbacks", () => {
+  const safeImage = read("src/components/ui/safe-image.tsx");
+  assert.match(safeImage, /onError=\{\(\) => setFailed\(true\)\}/);
+  assert.match(safeImage, /Preview unavailable/);
+  assert.match(safeImage, /aria-label=\{accessibleLabel\}/);
+  assert.match(safeImage, /compactFallback/);
 });

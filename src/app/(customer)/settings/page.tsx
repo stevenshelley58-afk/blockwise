@@ -169,7 +169,7 @@ export default async function SettingsPage() {
   );
 
   return (
-    <main className="mx-auto w-full max-w-[880px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16" aria-label="Settings">
+    <section className="mx-auto w-full max-w-[880px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16" aria-label="Settings">
       <header className="mb-5">
         <h1 className="font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">{niche.copy.settings.title}</h1>
       </header>
@@ -252,6 +252,6 @@ export default async function SettingsPage() {
         metaConnectHref={`/connect-meta?workspaceId=${wsQuery}`}
         googleConnectHref={`/api/integrations/google/connect?workspaceId=${wsQuery}`}
       />
-    </main>
+    </section>
   );
 }

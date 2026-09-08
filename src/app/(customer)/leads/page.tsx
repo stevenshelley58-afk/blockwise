@@ -71,7 +71,7 @@ export default async function LeadsPage() {
   }));
 
   return (
-    <main className="mx-auto w-full max-w-[1120px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16" aria-label={copy.title}>
+    <section className="mx-auto w-full max-w-[1120px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16" aria-label={copy.title}>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">{copy.title}</h1>
@@ -104,7 +104,7 @@ export default async function LeadsPage() {
           </div>
         </>
       )}
-    </main>
+    </section>
   );
 }
 

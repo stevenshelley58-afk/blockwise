@@ -466,8 +466,8 @@ export function PublishFlow({
   }
 
   return (
-    <div className="flex h-full flex-col bg-(--canvas)">
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+    <div className="flex h-full min-h-0 flex-col bg-(--canvas)">
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
         <nav aria-label="Publish progress" className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-3">
           <p className="mb-2 text-xs font-semibold text-muted-foreground">Step {activeStage} of 4 · Next required step: {currentStage}</p>
           <ol className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
@@ -505,14 +505,10 @@ export function PublishFlow({
           <h3 className="mb-2 text-sm font-semibold">Saved creative</h3>
           {initialState ? (
              <div className="space-y-3 text-xs text-muted-foreground">
-               <div className="flex flex-wrap items-center justify-between gap-2"><p>
-                 Exact saved revision <span className="font-semibold text-foreground">{initialState.revision.revisionNumber}</span>
-                 {initialState.revision.createdAt ? ` · saved ${formatSavedAt(initialState.revision.createdAt)}` : ""}
-                 {` · Feed ${shortHash(initialState.revision.feedPngHash)} · Story ${shortHash(initialState.revision.storyPngHash)}`}
-               </p><DownloadFormats feedUrl={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} storyUrl={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} /></div>
-               <div className="grid gap-4 sm:grid-cols-2">
-                 <div><p className="mb-2">Feed</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} alt="Saved Feed ad" className="w-full rounded-(--r-card) border border-border" /><a className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4" href={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} download="blockwise-feed.png">Download Feed PNG</a></div>
-                 <div><p className="mb-2">Story</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} alt="Saved Story ad" className="w-full rounded-(--r-card) border border-border" /><a className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4" href={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} download="blockwise-story.png">Download Story PNG</a></div>
+               <div className="flex flex-wrap items-start justify-between gap-2"><details className="min-w-0 rounded-(--r-ctl) border border-border bg-muted/20 px-3 py-2"><summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Saved version {initialState.revision.revisionNumber}</summary><p className="max-w-[68ch] pb-2 text-xs text-muted-foreground">{initialState.revision.createdAt ? `Saved ${formatSavedAt(initialState.revision.createdAt)} · ` : ""}Feed hash {shortHash(initialState.revision.feedPngHash)} · Story hash {shortHash(initialState.revision.storyPngHash)}</p></details><DownloadFormats feedUrl={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} storyUrl={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} /></div>
+               <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                 <div><p className="mb-2">Feed</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} alt="Saved Feed ad" className="max-h-[30dvh] w-full rounded-(--r-card) border border-border object-contain" /><a className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4" href={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} download="blockwise-feed.png">Download Feed PNG</a></div>
+                 <div><p className="mb-2">Story</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} alt="Saved Story ad" className="max-h-[30dvh] w-full rounded-(--r-card) border border-border object-contain" /><a className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4" href={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} download="blockwise-story.png">Download Story PNG</a></div>
                </div>
             </div>
           ) : (

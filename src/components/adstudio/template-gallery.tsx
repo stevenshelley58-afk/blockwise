@@ -16,8 +16,8 @@ export function TemplateGallery({ templates, query, lead, hasAvailableTemplates,
   if (!hasAvailableTemplates) {
     return (
       <section aria-labelledby="template-review-heading" className="rounded-(--r-panel) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 px-6 py-12 text-center sm:py-16">
-        <h2 id="template-review-heading" className="font-display text-[20px] font-extrabold tracking-[-.02em]">Templates are in final review</h2>
-        <p className="mx-auto mt-2 max-w-[48ch] text-sm leading-6 text-muted-foreground">New ads start only from a reviewed Feed and Story design. While the next template is being checked, you can finish your Brand Pack or return to Ad Studio.</p>
+        <h2 id="template-review-heading" className="font-display text-[20px] font-extrabold tracking-[-.02em]">No reviewed templates available</h2>
+        <p className="mx-auto mt-2 max-w-[48ch] text-sm leading-6 text-muted-foreground">New ads start only from a reviewed Feed and Story design. Finish your Brand Pack or return to Ad Studio while reviewed templates are unavailable.</p>
         <div className="mt-5 flex flex-wrap justify-center gap-2">
           <Link href="/ad-studio/brand" className="inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-4 text-[12.5px] font-bold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Review Brand Pack</Link>
           <Link href="/ad-studio" className="inline-flex min-h-11 items-center justify-center rounded-full border border-border bg-card px-4 text-[12.5px] font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Return to Ad Studio</Link>

@@ -125,7 +125,7 @@ test.describe("customer navigation canary", () => {
     await useEssentialOnlyConsent(page);
     await page.goto(`/self-serve?workspaceId=${encodeURIComponent(workspaceId!)}`);
     await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByRole("link", { name: "Ad Radar" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Ad Radar", exact: true })).toBeVisible();
     await page.keyboard.press("Control+K");
     await expect(page.getByRole("dialog")).toBeVisible();
     await expect(page.getByRole("dialog")).toContainText("Go to");
@@ -142,7 +142,8 @@ test.describe("customer navigation canary", () => {
     await page.goto("/results?workspaceId=" + encodeURIComponent(workspaceId!));
     await expect(page.getByText(/recent sync/i)).toHaveCount(0);
     await expect(page).toHaveURL(/\/results/);
-    await expect(page.getByRole("main").getByRole("link", { name: /Connect Meta/ }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Results", exact: true })).toBeVisible();
+    await expect(page.getByText("Your reporting snapshot is being prepared. Existing results will stay visible during future refreshes.", { exact: true })).toBeVisible();
     await expect(page.getByText("Example data", { exact: true })).toHaveCount(0);
     await expect(page.getByText(/^Last known /)).toHaveCount(0);
     await settle(page);
@@ -156,7 +157,7 @@ test.describe("customer navigation canary", () => {
     await page.screenshot({ path: testInfo.outputPath("customer-leads-desktop.png"), fullPage: true });
     await page.goto(`/ad-studio/brand?workspaceId=${encodeURIComponent(workspaceId!)}`);
     await expect(page.locator('[aria-current="page"]:visible')).toHaveCount(1);
-    await expect(page.getByText("Your saved website logo needs to be copied into Blockwise.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Approve Brand Pack", exact: true })).toBeVisible();
     await expect(page.locator('img[src*="realtyplushq.com.au"]')).toHaveCount(0);
     await page.goto(`/settings?workspaceId=${encodeURIComponent(workspaceId!)}`);
     await expect(page.locator('[aria-current="page"]:visible')).toHaveCount(1);
@@ -167,7 +168,7 @@ test.describe("customer navigation canary", () => {
 
   test("preserves the public hero wording exactly", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator(".hw-ws__title > span")).toHaveText(["Your competitors", "are advertising.", "Are you?"]);
+    await expect(page.locator(".hw-ws__title > span")).toHaveText(["Your competition", "is running ads.", "Are you?"]);
   });
 
   for (const width of [320, 390]) {
@@ -195,7 +196,8 @@ test.describe("customer navigation canary", () => {
       await page.goto("/results?workspaceId=" + encodeURIComponent(workspaceId!));
       await expect(page.getByText(/recent sync/i)).toHaveCount(0);
       await expect(page).toHaveURL(/\/results/);
-      await expect(page.getByRole("main").getByRole("link", { name: /Connect Meta/ }).first()).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Results", exact: true })).toBeVisible();
+    await expect(page.getByText("Your reporting snapshot is being prepared. Existing results will stay visible during future refreshes.", { exact: true })).toBeVisible();
       await expect(page.getByRole("main").getByText("Example data", { exact: true })).toHaveCount(0);
       await expect(page.getByText(/^Last known /)).toHaveCount(0);
       await settle(page);

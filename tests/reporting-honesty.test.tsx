@@ -96,7 +96,7 @@ function header(lastSyncedAt: string | null, isSample: boolean, isConnected: boo
 
 test("Results labels samples plainly and never invents a recent timestamp", () => {
   const sample = header(null, true, true);
-  assert.match(sample, /Example data/);
+  assert.match(sample, /Example report/);
   assert.doesNotMatch(sample, /Last known|just now/);
 
   const unknown = header(null, false, true);

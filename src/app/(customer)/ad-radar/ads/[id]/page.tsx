@@ -27,7 +27,7 @@ export default async function ResearchAdDetailPage({ params }: { params: Promise
 
   if (error || !ad) {
     return (
-      <main className="mx-auto grid w-full max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
+      <section className="mx-auto grid w-full max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
         <header>
           <h1 className="mt-1 font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">Ad not found</h1>
           <p className="mt-1 text-[13px] text-muted-foreground">
@@ -39,12 +39,12 @@ export default async function ResearchAdDetailPage({ params }: { params: Promise
             Back to Ad Radar
           </Link>
         </div>
-      </main>
+      </section>
     );
   }
 
   return (
-    <main className="mx-auto grid w-full max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
+    <section className="mx-auto grid w-full max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
       <header>
         <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
           Competitor intelligence
@@ -163,7 +163,7 @@ export default async function ResearchAdDetailPage({ params }: { params: Promise
           </Table>
         </div>
       </section>
-    </main>
+    </section>
   );
 }
 

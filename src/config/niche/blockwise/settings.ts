@@ -4,12 +4,12 @@ export const settings: SettingsCopy = {
   title: "Settings",
   sections: {
     account: "Account",
-    connections: "Ad & API connections",
+    connections: "Ad accounts",
     password: "Password",
     billing: "Billing & plan",
     workspace: "Workspace",
     team: "Team members",
     notifications: "Notifications",
-    danger: "Danger zone",
+    danger: "Delete workspace",
   },
 };

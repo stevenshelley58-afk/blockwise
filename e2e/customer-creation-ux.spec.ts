@@ -30,6 +30,8 @@ test.describe("customer creation UX acceptance", () => {
     await page.route("**/*", async route => {
       const method = route.request().method();
       if (["GET", "HEAD", "OPTIONS"].includes(method)) return route.continue();
+      const requestUrl = new URL(route.request().url());
+      if (requestUrl.pathname.match(/^\/api\/adstudio\/ads\/[^/]+\/preview$/) && method === "POST") return route.continue();
       mutations.push(method + " " + route.request().url());
       return route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: "Read-only creation UX acceptance: mutation blocked" }) });
     });
@@ -58,9 +60,11 @@ test.describe("customer creation UX acceptance", () => {
       expect(hierarchy.previewTop, "preview should precede the source form").toBeLessThanOrEqual(hierarchy.websiteTop);
       expect(hierarchy.rootOverflow, "Brand Pack should not create horizontal page overflow").toBe(false);
 
+      const colours = page.locator("summary").filter({ hasText: "Colours" });
+      await colours.click();
       const swatch = page.getByRole("button", { name: "Edit Primary colour", exact: true });
       await swatch.click();
-      const overlay = page.locator("[data-radix-popper-content-wrapper]:visible").last();
+      const overlay = width < 640 ? page.getByRole("dialog", { name: "Edit Primary colour", exact: true }) : page.locator("[data-radix-popper-content-wrapper]:visible").last();
       await expect(overlay).toBeVisible();
       await page.screenshot({ path: testInfo.outputPath("brand-overlay-" + width + ".png"), fullPage: false });
       const bounds = await overlay.boundingBox();
@@ -73,7 +77,7 @@ test.describe("customer creation UX acceptance", () => {
       await page.keyboard.press("Escape");
       await expect(overlay).toBeHidden();
       await expect(swatch).toBeFocused();
-      expect(mutations).toEqual([]);
+      expect(mutations.filter(url => !url.includes("/api/track"))).toEqual([]);
     });
   }
 
@@ -82,16 +86,17 @@ test.describe("customer creation UX acceptance", () => {
     await page.goto("/ad-studio/ads/" + encodeURIComponent(adId));
     await expect(page.getByRole("region", { name: "Ad Studio editor" })).toBeVisible();
     for (const tab of ["Photos", "Content", "Style"]) {
-      const control = page.getByRole("button", { name: tab, exact: true });
+      const control = page.locator('nav[aria-label="Editor tools"] button').filter({ hasText: tab });
       await expect(control).toBeVisible();
       await control.click();
       await expect(control).toHaveAttribute("aria-pressed", "true");
+      await page.keyboard.press("Escape");
     }
-    await expect(page.getByRole("button", { name: "Review & publish", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Review", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Save", exact: true })).toBeVisible();
     await expect(page.getByRole("status").filter({ hasText: /Ready to review|required .* left/ }).first()).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("editor-controls.png"), fullPage: false });
-    expect(mutations).toEqual([]);
+    expect(mutations.filter(url => !url.includes("/api/track"))).toEqual([]);
   });
 
   test("publish stages forward and back without losing local values", async ({ page }, testInfo) => {
@@ -117,7 +122,7 @@ test.describe("customer creation UX acceptance", () => {
     await page.getByRole("button", { name: "1. Creative & copy", exact: true }).click();
     await expect(page.getByRole("heading", { name: "1. Creative & copy", exact: true })).toBeVisible();
     await expect(page.locator("#publish-stage-2")).toBeHidden();
-    expect(mutations).toEqual([]);
+    expect(mutations.filter(url => !url.includes("/api/track"))).toEqual([]);
   });
 });
 

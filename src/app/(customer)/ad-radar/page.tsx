@@ -51,7 +51,7 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
         : null;
 
   return (
-    <main className="mx-auto grid w-full max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
+    <section className="mx-auto grid w-full max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
       <header>
         <h1 className="font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">
           {niche.copy.adRadar.title}
@@ -68,7 +68,7 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
         autoSearchLabel={autoSearch?.label ?? null}
         autoSearchSource={autoSearchSource}
       />
-    </main>
+    </section>
   );
 }
 

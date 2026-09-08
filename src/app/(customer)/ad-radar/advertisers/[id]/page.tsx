@@ -23,7 +23,7 @@ export default async function AdvertiserProfilePage({ params }: { params: Promis
   const classifications = unique(ads.map((ad) => ad.creative.adType).filter((value): value is string => Boolean(value)));
 
   return (
-    <main className="mx-auto grid w-full max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
+    <section className="mx-auto grid w-full max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
       <header>
         <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">Advertiser profile</p>
         <h1 className="mt-1 font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">
@@ -83,7 +83,7 @@ export default async function AdvertiserProfilePage({ params }: { params: Promis
           ) : null}
         </div>
       </section>
-    </main>
+    </section>
   );
 }
 

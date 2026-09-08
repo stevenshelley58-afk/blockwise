@@ -31,6 +31,9 @@ test("colour picker stays open for in-picker clicks and supports Escape dismissa
   assert.match(source, /PopoverContent/);
   assert.match(source, /onOpenChange=/);
   assert.match(source, /collisionPadding=\{16\}/);
+  assert.match(source, /useSmallViewport/);
+  assert.match(source, /SheetContent/);
+  assert.match(source, /SheetTrigger/);
   assert.match(source, /aria-expanded=\{open\}/);
 });
 
