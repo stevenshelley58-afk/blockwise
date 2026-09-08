@@ -11,7 +11,7 @@ import {
   parseAdDbSearchParams,
   searchAdDbAds,
 } from "../src/lib/research/ad-db-client.ts";
-import { mergeCards } from "../src/components/research/ad-radar-search-panel.tsx";
+import { mergeCards } from "../src/lib/research/ad-radar-pagination.ts";
 import type { AdDbRow } from "../src/lib/research/ad-db.ts";
 import type { CustomerMetaAdLibraryCard } from "../src/lib/research/customer-meta-card.ts";
 

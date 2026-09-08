@@ -38,8 +38,8 @@ test("Ad Radar distinguishes request failures from empty results and offers retr
   assert.doesNotMatch(panel, /<span[^>]*>Status<\/span>|<span[^>]*>Ad type<\/span>|<span[^>]*>Format<\/span>|Hook contains/);
   assert.deepEqual(
     [...panel.matchAll(/params\.set\(\"([^\"]+)\"/g)].map((match) => match[1]),
-    ["agency", "agent"],
-    "visible search filters must only emit canonical Hermes parameters",
+    ["agency", "agent", "cursor"],
+    "search filters and pagination must only emit canonical Hermes parameters",
   );
   assert.doesNotMatch(panel, /sort=|initialSort|onChangeSort|Longest running/);
 });

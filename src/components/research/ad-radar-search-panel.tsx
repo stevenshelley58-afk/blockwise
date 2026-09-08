@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { AdRadarLocationForm } from "@/components/research/ad-radar-location-form";
 import { AdRadarResultsGrid } from "@/components/research/ad-radar-results-grid";
+import { mergeCards } from "@/lib/research/ad-radar-pagination";
 import { niche } from "@/config/niche";
 import type { CustomerMetaAdLibraryCard } from "@/lib/research/customer-meta-card";
 
@@ -375,16 +376,6 @@ function StatTile({ label, value, note }: { label: string; value: string; note: 
   );
 }
 
-export function mergeCards(previous: CustomerMetaAdLibraryCard[], incoming: CustomerMetaAdLibraryCard[]): CustomerMetaAdLibraryCard[] {
-  const seen = new Set(previous.map((card) => card.id));
-  const appended: CustomerMetaAdLibraryCard[] = [];
-  for (const card of incoming) {
-    if (seen.has(card.id)) continue;
-    seen.add(card.id);
-    appended.push(card);
-  }
-  return [...previous, ...appended];
-}
 
 function mergeOptions(prev: string[], incoming: Array<string | null>): string[] {
   const next = new Set(prev);
