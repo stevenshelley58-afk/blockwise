@@ -235,12 +235,55 @@ const directoryHosts = new Set([
   "soho.com.au",
   "allhomes.com.au",
 ]);
+const blockedAgencyWebsiteHosts = new Set([
+  ...directoryHosts,
+  "facebook.com",
+  "fb.com",
+  "instagram.com",
+  "linkedin.com",
+  "twitter.com",
+  "x.com",
+  "youtube.com",
+  "tiktok.com",
+  "itunes.apple.com",
+  "apps.apple.com",
+  "google.com",
+]);
 const identityName = (value) =>
   s(value)
     .toLowerCase()
     .replace(/&/gu, " and ")
     .replace(/[^a-z0-9]+/gu, " ")
     .trim();
+function isBlockedAgencyWebsiteUrl(value) {
+  try {
+    const host = new URL(value).hostname.replace(/^www\./u, "").toLowerCase();
+    return [...blockedAgencyWebsiteHosts].some(
+      (domain) => host === domain || host.endsWith("." + domain),
+    );
+  } catch {
+    return true;
+  }
+}
+function coherentAgencyIdentity(name, body) {
+  const expected = identityName(name);
+  if (!expected) return false;
+  const owners = facebookOwnersFromHtml(body);
+  if (
+    owners.some(
+      (owner) =>
+        owner.kind === "agency" && identityName(owner.name) === expected,
+    )
+  )
+    return true;
+  const visible = identityName(
+    s(body)
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/giu, " ")
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style>/giu, " ")
+      .replace(/<[^>]+>/gu, " "),
+  );
+  return visible.includes(expected);
+}
 export function facebookOwnersFromHtml(html) {
   const owners = [];
   const visit = (value, depth = 0) => {
@@ -295,7 +338,11 @@ export function linksForWebsiteEvidence(item, website, evidence) {
       ? metadata.official_facebook_links || []
       : [];
   const fallback =
-    item.kind === "agency" && !directory && urls.length === 0
+    item.kind === "agency" &&
+    !directory &&
+    urls.length === 0 &&
+    metadata.agency_identity_confirmed === true &&
+    identityName(metadata.agency_identity_name) === identityName(item.name)
       ? metadata.official_facebook_links || []
       : [];
   return extractExactFacebookLinks(
@@ -331,6 +378,9 @@ function entity(row, kind) {
     name: s(row?.full_name || row?.name),
     state: normalizeState(row?.state),
     postcode: s(row?.primary_postcode || row?.postcode) || null,
+    primarySuburb: s(row?.primary_suburb || row?.primarySuburb) || null,
+    agencyPrimarySuburb:
+      s(row?.agency_primary_suburb || row?.agencyPrimarySuburb) || null,
     websiteUrl: s(row?.website_url || row?.websiteUrl) || null,
     agencyWebsiteUrl:
       s(row?.agency_website_url || row?.agencyWebsiteUrl) || null,
@@ -359,6 +409,8 @@ export function explicitLinksForEntity(row, sourceDocuments = []) {
       s(meta.entity_kind || meta.subject_kind).toLowerCase() !== kind
     )
       continue;
+    const evidenceUrl = safePublicHttpsUrl(doc.source_url || meta.website_url);
+    if (evidenceUrl && isBlockedAgencyWebsiteUrl(evidenceUrl)) continue;
     const embedded =
       meta.official_facebook_links ||
       meta.official_links ||
@@ -1298,9 +1350,58 @@ function namedProfileEvidence(baseUrl, body, excludedFacebookLinks = []) {
   ].filter((url) => !excluded.has(facebookLinkKey(url)));
   return { profileNames: names, namedLinks: links.length === 1 ? links : [] };
 }
-function linksFromAgencyDocuments(item, docs) {
-  const sharedAgencyLinks = new Set(
-    docs
+function agencySharedFacebookLinks(agency, docs, existingPages = []) {
+  if (!agency?.id) return [];
+  const counts = new Map(),
+    shared = new Map();
+  for (const row of Array.isArray(existingPages) ? existingPages : []) {
+    const link = existingPageLink({ kind: "agency", id: agency.id }, row);
+    if (link?.url && link?.pageId) {
+      shared.set(facebookLinkKey(link.url), link.url);
+      const numeric = facebookPageReference(link.pageId).url;
+      if (numeric) shared.set(facebookLinkKey(numeric), numeric);
+    }
+  }
+  for (const doc of Array.isArray(docs) ? docs : []) {
+    const meta = sourceMeta(doc);
+    if (s(meta.agency_id || meta.agencyId) !== s(agency.id)) continue;
+    const role = s(meta.crawl_role).toLowerCase();
+    if (!["agency_homepage", "agency_profile"].includes(role)) continue;
+    const links = new Map();
+    for (const link of [
+      ...(Array.isArray(meta.agency_homepage_facebook_links)
+        ? meta.agency_homepage_facebook_links
+        : []),
+      ...(Array.isArray(meta.official_facebook_links)
+        ? meta.official_facebook_links
+        : []),
+      ...(Array.isArray(meta.named_profile_facebook_links)
+        ? meta.named_profile_facebook_links
+        : []),
+    ]) {
+      const linkKey = facebookLinkKey(link);
+      if (linkKey) links.set(linkKey, link);
+    }
+    for (const [linkKey, link] of links) {
+      const row = counts.get(linkKey) || { documents: new Set(), value: link };
+      row.documents.add(s(doc.id) || hash(s(doc.source_url) + stable(meta)));
+      counts.set(linkKey, row);
+    }
+  }
+  for (const [linkKey, row] of counts)
+    if (row.documents.size >= 2) shared.set(linkKey, row.value);
+  return [...shared.values()];
+}
+function linksFromAgencyDocuments(
+  item,
+  docs,
+  additionalSharedAgencyLinks = [],
+) {
+  const sharedAgencyLinks = new Set([
+    ...(Array.isArray(additionalSharedAgencyLinks)
+      ? additionalSharedAgencyLinks
+      : []),
+    ...docs
       .flatMap((doc) => {
         const meta = sourceMeta(doc);
         return [
@@ -1315,10 +1416,16 @@ function linksFromAgencyDocuments(item, docs) {
       })
       .map(facebookLinkKey)
       .filter(Boolean),
-  );
+  ]);
   const owned = (link) =>
     item.kind !== "agent" || !sharedAgencyLinks.has(facebookLinkKey(link.url));
   return docs.flatMap((doc) => {
+    if (
+      ["facebook_discovery_google_search", "facebook_page_identity"].includes(
+        s(doc.source).toLowerCase(),
+      )
+    )
+      return [];
     const url = s((doc && doc.source_url) || sourceMeta(doc).website_url);
     if (!url) return [];
     const meta = sourceMeta(doc);
@@ -1359,6 +1466,12 @@ function linksFromAgencyDocuments(item, docs) {
 function linksFromEntityDocuments(item, docs) {
   return docs.flatMap((doc) => {
     const meta = sourceMeta(doc);
+    if (
+      ["facebook_discovery_google_search", "facebook_page_identity"].includes(
+        s(doc.source).toLowerCase(),
+      )
+    )
+      return [];
     const url = s((doc && doc.source_url) || meta.website_url);
     if (
       !url ||
@@ -1419,7 +1532,11 @@ async function fetchAgencyWebsiteEvidence({
   const seedDocs = allSaved.filter((doc) => {
     const meta = sourceMeta(doc),
       source = s(doc.source).toLowerCase();
-    if (source === AGENCY_SOURCE) return meta.crawl_role === "agency_homepage";
+    if (source === AGENCY_SOURCE)
+      return (
+        meta.crawl_role === "agency_homepage" &&
+        !isBlockedAgencyWebsiteUrl(doc.source_url || meta.website_url)
+      );
     if (!seedSources.has(source)) return false;
     // Legacy source names are useful seeds only when they explicitly
     // describe the agency. An agent-owned website/profile must never become
@@ -1437,18 +1554,28 @@ async function fetchAgencyWebsiteEvidence({
         .map((doc) =>
           safePublicHttpsUrl(doc.source_url || sourceMeta(doc).website_url),
         )
-        .filter(Boolean),
+        .filter((url) => !isBlockedAgencyWebsiteUrl(url)),
     ),
   ];
-  const isDirectoryWebsite = (url) => {
-    const host = new URL(url).hostname.replace(/^www\./u, "").toLowerCase();
-    return [...directoryHosts].some((domain) => host === domain);
-  };
+  // A directory/social/app-store URL must never become an agency homepage.
   // A directory URL on the current roster row must not hide a saved
   // agency-owned external site from the free first pass.
   const website =
-    savedUrls.find((url) => !isDirectoryWebsite(url)) || requested;
-  if (!website) return { docs: allSaved, errors: [], fetched: false };
+    savedUrls.find((url) => !isBlockedAgencyWebsiteUrl(url)) ||
+    (requested && !isBlockedAgencyWebsiteUrl(requested) ? requested : null);
+  if (!website)
+    return {
+      docs: allSaved.filter((doc) => {
+        const url = safePublicHttpsUrl(
+          doc.source_url || sourceMeta(doc).website_url,
+        );
+        return !url || !isBlockedAgencyWebsiteUrl(url);
+      }),
+      errors: [],
+      fetched: false,
+      cached: false,
+      rejected_unusable_source: true,
+    };
   const saved = allSaved.filter((doc) => {
     const meta = sourceMeta(doc);
     const url = safePublicHttpsUrl(doc.source_url || meta.website_url);
@@ -1476,7 +1603,7 @@ async function fetchAgencyWebsiteEvidence({
   });
   if (fresh.length)
     return { docs: fresh, errors: [], fetched: false, cached: true };
-  if (isDirectoryWebsite(website))
+  if (isBlockedAgencyWebsiteUrl(website))
     return {
       docs: saved,
       errors: [],
@@ -1502,6 +1629,8 @@ async function fetchAgencyWebsiteEvidence({
       const profileUrls = profileLinksFromBody(website, body);
       const metadata = {
         coverage_version: DIRECTORY_COVERAGE_VERSION,
+        agency_identity_confirmed: coherentAgencyIdentity(agency.name, body),
+        agency_identity_name: identityName(agency.name),
         agency_id: agency.id,
         agency_name: agency.name,
         entity_kind: "agency",
@@ -1749,15 +1878,31 @@ async function readExistingOwnedPages(rest, item) {
   return rows;
 }
 async function enrichEntityContext(rest, item) {
-  if (item.kind !== "agent" || !item.agencyId || item.agencyName) return item;
+  const agencyId = item.kind === "agency" ? item.id : item.agencyId;
+  if (!agencyId) return item;
+  const needsAgencyContext =
+    item.kind === "agency"
+      ? !item.primarySuburb
+      : !item.agencyName || !item.agencyPrimarySuburb;
+  if (!needsAgencyContext) return item;
   try {
     const rows = await rest(
       "research",
-      `agencies?select=id,name&id=eq.${enc(item.agencyId)}&limit=1`,
+      "agencies?select=id,name,primary_suburb,primary_postcode&id=eq." +
+        enc(agencyId) +
+        "&limit=1",
     );
-    if (Array.isArray(rows) && rows[0]?.name) item.agencyName = s(rows[0].name);
+    const agency = Array.isArray(rows) ? rows[0] : null;
+    if (!agency) return item;
+    if (item.kind === "agency") {
+      item.primarySuburb ||= s(agency.primary_suburb) || null;
+      item.postcode ||= s(agency.primary_postcode) || null;
+    } else {
+      item.agencyName ||= s(agency.name) || null;
+      item.agencyPrimarySuburb ||= s(agency.primary_suburb) || null;
+    }
   } catch {
-    /* Agency context is optional; its absence does not prove a missing Facebook page. */
+    /* Missing agency context is not public ownership proof. */
   }
   return item;
 }
@@ -1873,6 +2018,269 @@ function normalizeSearchResponse(response, query, checkedAtValue) {
     actualAttempted:
       response.actualAttempted !== false && response.actual_attempted !== false,
   };
+}
+function searchDocumentMatchesItem(item, doc) {
+  const meta = sourceMeta(doc);
+  const kind = s(
+    meta.entity_kind ||
+      meta.entityKind ||
+      meta.subject_kind ||
+      meta.subjectKind,
+  ).toLowerCase();
+  const id = s(
+    meta.entity_id || meta.entityId || meta.subject_id || meta.subjectId,
+  );
+  if (kind === item.kind && id === item.id) return true;
+  return item.kind === "agent" && s(meta.agent_id || meta.agentId) === item.id;
+}
+
+function metadataFacebookLinks(meta) {
+  return [
+    ...(Array.isArray(meta.official_facebook_links)
+      ? meta.official_facebook_links
+      : []),
+    ...(Array.isArray(meta.named_profile_facebook_links)
+      ? meta.named_profile_facebook_links
+      : []),
+    ...(Array.isArray(meta.agency_homepage_facebook_links)
+      ? meta.agency_homepage_facebook_links
+      : []),
+  ].map((value) =>
+    value && typeof value === "object" ? value.url || value.href : value,
+  );
+}
+function independentSearchOwnerProof(item, candidate, docs) {
+  const reference = facebookPageReference(candidate.url);
+  const candidateId = s(candidate.pageId || reference.pageId);
+  if (!reference.url || !FB_ID.test(candidateId)) return null;
+  const candidateKeys = new Set(
+    [reference.url, facebookPageReference(candidateId).url]
+      .map(facebookLinkKey)
+      .filter(Boolean),
+  );
+  for (const doc of Array.isArray(docs) ? docs : []) {
+    if (s(doc.source).toLowerCase() === "facebook_discovery_google_search")
+      continue;
+    if (!searchDocumentMatchesItem(item, doc)) continue;
+    const meta = sourceMeta(doc);
+    const links = metadataFacebookLinks(meta);
+    const backlink = links.some((url) =>
+      candidateKeys.has(facebookLinkKey(url)),
+    );
+    const owners = Array.isArray(meta.facebook_owners)
+      ? meta.facebook_owners
+      : [];
+    const owner = owners.find(
+      (row) =>
+        row &&
+        ((item.kind === "agent" && row.kind === "agent") ||
+          (item.kind === "agency" && row.kind === "agency")) &&
+        identityName(row.name) === identityName(item.name) &&
+        (Array.isArray(row.urls) ? row.urls : []).some((url) =>
+          candidateKeys.has(facebookLinkKey(url)),
+        ),
+    );
+    const publicName = identityName(
+      meta.facebook_page_name || meta.facebookPageName || meta.page_name || "",
+    );
+    const context = identityName(
+      meta.agency_name || meta.agencyName || meta.location || meta.state || "",
+    );
+    const contextOk =
+      context.includes("western australia") ||
+      context === "wa" ||
+      (item.agencyName && context.includes(identityName(item.agencyName)));
+    const publicMatch =
+      s(meta.page_id || meta.pageId || meta.facebook_page_id) === candidateId &&
+      publicName === identityName(item.name) &&
+      contextOk;
+    if (!backlink && !owner && !publicMatch) continue;
+    if (item.kind === "agent") {
+      const assignedAgent = s(meta.agent_id || meta.agentId);
+      if (assignedAgent !== item.id && !owner) continue;
+      if (!owner && !assignedAgent) continue;
+    } else if (
+      s(meta.agency_id || meta.agencyId) !== item.id &&
+      !owner &&
+      meta.agency_identity_confirmed !== true
+    )
+      continue;
+    return { doc, pageId: candidateId };
+  }
+  return null;
+}
+function publicFacebookMarkers(body) {
+  const values = [
+    ...textFromProfileMarkers(body),
+    ...[
+      ...s(body).matchAll(
+        /<meta\b[^>]*(?:property|name)\s*=\s*["']og:title["'][^>]*content\s*=\s*["']([^"']+)["'][^>]*>/giu,
+      ),
+      ...s(body).matchAll(
+        /<meta\b[^>]*content\s*=\s*["']([^"']+)["'][^>]*(?:property|name)\s*=\s*["']og:title["'][^>]*>/giu,
+      ),
+    ].map((match) => match[1]),
+  ]
+    .map(identityName)
+    .filter(Boolean);
+  return [...new Set(values)];
+}
+function publicFacebookCandidateProof(item, body) {
+  const expected = identityName(item.name);
+  if (!expected) return false;
+  const markers = publicFacebookMarkers(body);
+  const titleMatch = markers.some(
+    (name) => name === expected || name.startsWith(expected + " "),
+  );
+  if (!titleMatch) return false;
+  const knownHosts = [item.websiteUrl, item.agencyWebsiteUrl]
+    .map(safePublicHttpsUrl)
+    .filter(Boolean)
+    .map((url) => new URL(url).hostname.replace(/^www\./u, "").toLowerCase())
+    .filter(
+      (host) =>
+        ![...directoryHosts].some(
+          (domain) => host === domain || host.endsWith("." + domain),
+        ),
+    );
+  const officialDomain = [...s(body).matchAll(/https?:\/\/[^\s"'<>]+/giu)].some(
+    (match) => {
+      try {
+        const hostname = new URL(match[0]).hostname
+          .toLowerCase()
+          .replace(/^www\./u, "");
+        return knownHosts.includes(hostname);
+      } catch {
+        return false;
+      }
+    },
+  );
+  if (officialDomain) return true;
+  const suburb = identityName(
+    item.kind === "agency" ? item.primarySuburb : item.agencyPrimarySuburb,
+  );
+  if (!suburb) return false;
+  const waMarkers = markers.filter((marker) => /\bwa\b/iu.test(marker));
+  if (
+    waMarkers.length !== 1 ||
+    !(
+      waMarkers[0] === expected ||
+      waMarkers[0].startsWith(expected + " ")
+    )
+  )
+    return false;
+  if (
+    !new RegExp("\\b" + suburb.replace(/ /gu, "\\s+") + "\\s+wa\\b", "iu").test(
+      waMarkers[0],
+    )
+  )
+    return false;
+  if (item.kind === "agency") return true;
+  const agency = identityName(item.agencyName);
+  return agency.length >= 5 && waMarkers[0].includes(agency);
+}
+async function verifySearchFacebookCandidates(
+  item,
+  candidates,
+  docs,
+  fetchImpl,
+  rest,
+  rawEvidenceDir,
+  now,
+) {
+  const links = [],
+    rejected = [];
+  for (const candidate of (Array.isArray(candidates) ? candidates : []).slice(
+    0,
+    3,
+  )) {
+    const reference = facebookPageReference(candidate.url);
+    if (!reference.url) continue;
+    try {
+      const body = await boundedFetch(fetchImpl, reference.url, { retries: 0 });
+      const identity = parseFacebookPageIdentity(body, reference.url);
+      if (!identity?.pageId || identity.permalinkMatch !== true) {
+        rejected.push({
+          url: candidate.url,
+          reason: "search_candidate_identity_unproven",
+        });
+        continue;
+      }
+      const proof = independentSearchOwnerProof(
+        item,
+        { url: reference.url, pageId: identity.pageId },
+        docs,
+      );
+      const publicProof = publicFacebookCandidateProof(item, body);
+      if (!proof && !publicProof) {
+        rejected.push({
+          url: candidate.url,
+          reason: "search_candidate_ownership_unproven",
+        });
+        continue;
+      }
+      const resolvedUrl = facebookPageReference(identity.pageId).url;
+      const metadata = {
+        coverage_version: DIRECTORY_COVERAGE_VERSION,
+        entity_kind: item.kind,
+        entity_id: item.id,
+        subject_kind: item.kind,
+        subject_id: item.id,
+        agency_id: item.kind === "agency" ? item.id : item.agencyId || null,
+        agent_id: item.kind === "agent" ? item.id : null,
+        page_id: identity.pageId,
+        page_url: reference.url,
+        facebook_page_identity: identity.evidenceKind,
+        owner_proof: proof
+          ? "verified_official_backlink"
+          : "public_local_or_domain",
+        owner_proof_source_document_id: proof?.doc?.id || null,
+        fetched_at: checkedAt(now),
+      };
+      const sourceId = await persistSourceDocument(
+        rest,
+        "facebook_page_identity",
+        reference.url,
+        body,
+        metadata,
+      );
+      if (s(rawEvidenceDir))
+        await writeAtomicJson(
+          join(
+            rawEvidenceDir,
+            "directory-sources",
+            hash(reference.url) + ".json",
+          ),
+          {
+            url: reference.url,
+            body,
+            source_document_id: sourceId,
+            fetched_at: metadata.fetched_at,
+            owner_proof: metadata.owner_proof,
+          },
+        );
+      links.push({
+        url: resolvedUrl,
+        pageId: identity.pageId,
+        entityKind: item.kind,
+        entityId: item.id,
+        ownerKind: item.kind,
+        isOfficial: true,
+        explicitAssignment: true,
+        sourceType: proof
+          ? "verified_official_backlink"
+          : "facebook_public_identity",
+        sourceDocumentId: sourceId,
+      });
+    } catch (error) {
+      rejected.push({
+        url: candidate.url,
+        reason: "search_candidate_facebook_fetch_failed",
+        error: error?.message || String(error),
+      });
+    }
+  }
+  return { links: extractExactFacebookLinks(links), rejected };
 }
 async function runFacebookSearches(searchEvidence, item, job, now) {
   const receipts = [],
@@ -2040,6 +2448,12 @@ async function inspectOfficialSiteResults({
         agency_id: item.kind === "agency" ? item.id : item.agencyId || null,
         agent_id: item.kind === "agent" ? item.id : null,
         website_url: website,
+        agency_identity_confirmed:
+          item.kind === "agency" && marker && localContext && agencyContext,
+        agency_identity_name:
+          item.kind === "agency" && marker && localContext && agencyContext
+            ? identityName(item.name)
+            : null,
         facebook_owners: owners,
         official_facebook_links:
           item.kind === "agency" && !sameAs.length && marker
@@ -2199,10 +2613,12 @@ export async function handleAdRadarEntityDiscovery(
       full_name: payload.name,
       state: payload.state,
       primary_postcode: payload.primary_postcode,
+      primary_suburb: payload.primary_suburb,
       website_url: payload.website_url,
       agency_website_url: payload.agency_website_url,
       agency_id: payload.agency_id,
       agency_name: payload.agency_name,
+      agency_primary_suburb: payload.agency_primary_suburb,
     },
     kind,
   );
@@ -2222,14 +2638,30 @@ export async function handleAdRadarEntityDiscovery(
   const errors = [];
   const agency =
     item.kind === "agency"
-      ? { id: item.id, name: item.name, websiteUrl: item.websiteUrl }
+      ? {
+          id: item.id,
+          name: item.name,
+          websiteUrl: item.websiteUrl,
+          primarySuburb: item.primarySuburb,
+        }
       : item.agencyId
         ? {
             id: item.agencyId,
             name: item.agencyName || item.agencyId,
             websiteUrl: item.agencyWebsiteUrl,
+            primarySuburb: item.agencyPrimarySuburb,
           }
         : null;
+  const agencyExistingPages = agency
+    ? agency.id === item.id && item.kind === "agency"
+      ? existingPages
+      : await readExistingOwnedPages(rest, { kind: "agency", id: agency.id })
+    : [];
+  const knownAgencyFacebookLinks = agencySharedFacebookLinks(
+    agency,
+    savedDocs,
+    agencyExistingPages,
+  );
   const preexistingLinks = extractExactFacebookLinks(
     explicitLinksForEntity(item, savedDocs),
   );
@@ -2320,7 +2752,13 @@ export async function handleAdRadarEntityDiscovery(
           fetched_at: profileMetadata.fetched_at,
         };
         agencyDocs.push(profileDoc);
-        links.push(...linksFromAgencyDocuments(item, [profileDoc]));
+        links.push(
+          ...linksFromAgencyDocuments(
+            item,
+            [profileDoc],
+            knownAgencyFacebookLinks,
+          ),
+        );
       } catch (error) {
         errors.push({
           url: indexedUrl,
@@ -2332,7 +2770,7 @@ export async function handleAdRadarEntityDiscovery(
   }
   links = extractExactFacebookLinks([
     ...links,
-    ...linksFromAgencyDocuments(item, agencyDocs),
+    ...linksFromAgencyDocuments(item, agencyDocs, knownAgencyFacebookLinks),
   ]);
   for (const existing of extractExactFacebookLinks(existingLinks)) {
     const saved = existingLinks.find(
@@ -2351,6 +2789,7 @@ export async function handleAdRadarEntityDiscovery(
   if (
     !links.length &&
     website &&
+    !isBlockedAgencyWebsiteUrl(website) &&
     website !== safePublicHttpsUrl(agency && agency.websiteUrl)
   ) {
     try {
@@ -2403,7 +2842,7 @@ export async function handleAdRadarEntityDiscovery(
       });
     }
   }
-  let search = links.length
+  const search = links.length
     ? {
         receipts: [],
         searchCandidates: [],
@@ -2412,6 +2851,19 @@ export async function handleAdRadarEntityDiscovery(
         reason: "known_page_reference_found",
       }
     : await runFacebookSearches(searchEvidence, item, job, now);
+  if (!links.length && search.searchCandidates.length) {
+    const verified = await verifySearchFacebookCandidates(
+      item,
+      search.searchCandidates,
+      [...savedDocs, ...agencyDocs],
+      fetchImpl,
+      rest,
+      rawEvidenceDir,
+      now,
+    );
+    links.push(...verified.links);
+    errors.push(...verified.rejected);
+  }
   if (!links.length && search.officialSiteCandidates.length) {
     const inspected = await inspectOfficialSiteResults({
       rest,

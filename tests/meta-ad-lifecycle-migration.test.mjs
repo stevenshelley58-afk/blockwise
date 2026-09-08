@@ -179,6 +179,7 @@ test("supervisor uses shared strict parsing with native pagination evidence", ()
   assert.match(supervisor, /parseMetaPaginatedCapture\(html, input\.metaPageId,/);
   assert.match(supervisor, /json_response: "true"/);
   assert.match(supervisor, /js_scenario: JSON\.stringify\(buildMetaPaginationScenario\(\)\)/);
+  assert.match(supervisor, /capture_strategy: classified\.captureStrategy/);
   assert.match(pagination, /import \{ classifyMetaAdLibraryPayload \} from "\.\/meta-ad-library-parser\.mjs";/);
   assert.match(pagination, /classifyMetaAdLibraryPayload\(pageHtml\(c\)/);
 });
@@ -229,10 +230,26 @@ test("Auto Mode initial blocking status does not discard a validated final respo
   assert.match(supervisor, /\["challenge", "login_wall", "unparseable"\]\.includes\(classified\.outcome\)/);
 });
 
+test("JSON wrapping is always enabled; native scrolling is a one-time follow-up", () => {
+  const captureStart = supervisor.indexOf("const priorPartial");
+  const paramsStart = supervisor.indexOf("const params = new URLSearchParams", captureStart);
+  const params = supervisor.slice(
+    paramsStart,
+    supervisor.indexOf("  try {", paramsStart),
+  );
+  assert.match(params, /max_cost: String\(runCreditCap\)/);
+  assert.match(params, /wait: String\(scrapingBeeWaitMs\)/);
+  assert.match(params, /json_response: "true",\s*\.\.\.\(nativePagination \?/);
+  assert.match(params, /nativePagination \? \{[\s\S]*?js_scenario: JSON\.stringify\(buildMetaPaginationScenario\(\)\)/);
+  assert.equal((params.match(/js_scenario: JSON\.stringify/g) || []).length, 1);
+  assert.match(supervisor, /request_params: \{[^}]*json_response: true, pagination: nativePagination \? "native_cursor" : "initial_page"/);
+  assert.doesNotMatch(supervisor, /capture_strategy: html\.trimStart\(\)/);
+});
+
 test("native pagination is selective and its partial results cannot recursively queue paid continuations", () => {
   assert.match(supervisor, /const nativePagination = priorPartial\.length > 0/);
   assert.match(supervisor, /source_provider=eq\.scrapingbee_meta_ad_library&status=eq\.success&coverage_complete=eq\.false/);
-  assert.match(supervisor, /outcome\.metadata\?\.capture_strategy === "initial_html"/);
+  assert.match(supervisor, /outcome\.metadata\?\.capture_strategy === "initial_page"/);
   assert.match(supervisor, /outcome\.metadata\?\.page_info\?\.hasNextPage === true/);
   assert.match(supervisor, /pagination_parent_run_id: adFetchRunId/);
   assert.match(supervisor, /ad-radar:collector:\$\{payload\.advertiserPageId\}:pagination:\$\{adFetchRunId\}/);

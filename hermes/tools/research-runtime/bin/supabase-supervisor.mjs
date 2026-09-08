@@ -3074,7 +3074,7 @@ async function runScrapingBeePageCapture(input) {
               challenge_detected: false,
               connection_count: classified.connectionCount,
               pagination_records: classified.paginationRecords || 0,
-              capture_strategy: html.trimStart().startsWith("{") && html.includes('"js_scenario_report"') ? "native_cursor" : "initial_html",
+              capture_strategy: classified.captureStrategy,
               page_info: classified.pageInfo,
               parser_outcome: classified.outcome,
               partial_evidence: partialEvidence,
@@ -3106,8 +3106,9 @@ async function runScrapingBeePageCapture(input) {
     handled.result.costUsd = telemetry.provider_cost_usd;
     return handled.result;
   }
-  // Small and zero-ad pages keep the cheaper/faster HTML capture. Only a
-  // saved, positive, explicitly non-exhausted result needs native scrolling.
+  // Every capture uses ScrapingBee JSON wrapping so native XHR evidence is
+  // available when needed. Only a saved, positive, explicitly non-exhausted
+  // result adds the bounded native scrolling scenario.
   const priorPartial = env.HERMES_AD_RADAR_NATIVE_PAGINATION === "true" && input.advertiserPageId
     ? await rest("research", "ad_fetch_runs?select=id&advertiser_page_id=eq." + encode(input.advertiserPageId)
       + "&source_provider=eq.scrapingbee_meta_ad_library&status=eq.success&coverage_complete=eq.false"
@@ -3119,8 +3120,8 @@ async function runScrapingBeePageCapture(input) {
     mode: "auto",
     max_cost: String(runCreditCap),
     wait: String(scrapingBeeWaitMs),
+    json_response: "true",
     ...(nativePagination ? {
-      json_response: "true",
       js_scenario: JSON.stringify(buildMetaPaginationScenario()),
     } : {}),
   });
@@ -3145,7 +3146,7 @@ async function runScrapingBeePageCapture(input) {
         provider_credit_attempt_id: attemptId,
         tier: "auto_mode",
         request_url_host: "app.scrapingbee.com",
-        request_params: { mode: "auto", max_cost: runCreditCap, wait_ms: scrapingBeeWaitMs, json_response: nativePagination, pagination: nativePagination ? "native_cursor_v2_canary" : "initial_html", target_host: new URL(url).host },
+        request_params: { mode: "auto", max_cost: runCreditCap, wait_ms: scrapingBeeWaitMs, json_response: true, pagination: nativePagination ? "native_cursor" : "initial_page", target_host: new URL(url).host },
         outcome: "error",
         error: "reserved_before_provider_request",
         started_at: new Date(requestStartedAt).toISOString(),
@@ -4556,7 +4557,7 @@ async function handleAdCollector(job) {
     stop_reason: outcome.stopReason || (coverageComplete ? "page_exhausted" : "results_limit_reached"),
   });
   if (env.HERMES_AD_RADAR_NATIVE_PAGINATION === "true" && !coverageComplete && activeCount > 0
-    && outcome.metadata?.capture_strategy === "initial_html" && outcome.metadata?.page_info?.hasNextPage === true) {
+    && outcome.metadata?.capture_strategy === "initial_page" && outcome.metadata?.page_info?.hasNextPage === true) {
     // One different capture strategy, in the same canonical queue. A partial
     // native capture cannot recursively create another immediate paid job.
     await enqueueFollowUp({

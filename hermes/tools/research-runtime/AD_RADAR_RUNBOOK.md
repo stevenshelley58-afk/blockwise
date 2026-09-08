@@ -1,12 +1,13 @@
 # Ad Radar collector and scheduler runbook
 
-## Current free-first runtime: 8 September 2026, 12:46 UTC
+## Observed free-first runtime snapshot: 8 September 2026, 12:46 UTC
 
-The single research worker is active at immutable runtime
+The single research worker was observed active at immutable runtime
 7e41b02d53f3f1c2967d01c4c74737e496c53fa9. The customer application was not
 deployed by this change. Discovery and collection each have eight concurrent
 slots, with four media slots, one classifier and one directory fanout slot.
-The bounded production pass handled all 13 selected jobs without failure.
+The bounded production pass handled all 13 selected jobs without failure; that
+pass and its counts are dated observations, not a new source activation claim.
 
 927 saved-reference entity jobs were prioritised in the canonical v2 sweep.
 Olivia Porteous's original page row was resolved from free Facebook HTML and
@@ -20,26 +21,54 @@ handles; research migrations 202609080004 through 202609080006 are applied.
 At 12:47 UTC, 429 WA-linked numeric pages were eligible and 401 had completed
 initial fills. These are changing known-page totals, not complete WA coverage.
 The v2 view then had 89 completed entity receipts out of 15,256 entities.
-The directory fanout and all independent collection stages continue.
+Those figures are a dated historical snapshot. The current LIVE state remains
+the previously observed serving runtime 7e41b02d53f3f1c2967d01c4c74737e496c53fa9 at
+12:46 UTC. Discovery is held temporarily by operator_discovery_repair for
+13,826 jobs under the restoration receipt
+/srv/blockwise/e2e-runs/ad-radar-20260908/facebook-discovery-repair/evidence/discovery-yield-hold-rows.json.
+Collector, media and deterministic-classifier lanes remain active. This hold is
+temporary pending verified source restoration. Do not claim a newer
+source-active runtime or restored discovery completion.
 
-Native scrolling remains disabled in the serving release pending its own
-successful exact-page canary. Plain HTML collection is the proven default;
-larger pages remain explicitly partial, never falsely complete. Failed native
-canaries did not trigger a subscription-wide rollout. Evidence and gate logs
-are in /srv/blockwise/e2e-runs/ad-radar-20260908/facebook-discovery-repair.
+The pending, not yet activated capture source uses provider JSON/XHR wrapping for
+every collector request at the same 25-credit cap and 5-second wait. Only a
+known positive page with explicit non-exhausted evidence adds the bounded
+native scenario: 16 synchronous scrolls, 1,500 ms between scrolls, and a
+3,000 ms settle. The strict native initial RootQuery fallback can use XHR evidence on any
+JSON capture; cursor-chain validation applies when pagination is needed. There is no custom network
+interceptor and at most one non-recursive native continuation. Unsupported,
+failed or incomplete evidence remains partial and never becomes zero or
+complete. Evidence and gate logs are in
+/srv/blockwise/e2e-runs/ad-radar-20260908/facebook-discovery-repair.
+
+## Historical canaries: 8 September 2026
+
+These are saved-evidence canaries and are not current LIVE source activation:
+
+- WhiteHouse saved replay recovered a complete 46-ad capture, no new provider charges, and an unchanged credit-ledger fingerprint.
+  That page initial fill was repaired through the canonical scheduling
+  RPC.
+- Perth's saved native response proved a complete 32-ad result chain offline;
+  it has not yet been ingested by the LIVE runtime.
+- Elders' native canary collected 60 of 82 ads and remained partial after the
+  earlier eight-scroll scenario. This is the measured basis for the pending
+  16-scroll, 1,500 ms delay and 3,000 ms settle settings.
+- A false AppStore Fremantle owner assignment was quarantined and repaired
+  with an audit receipt. The source fix remains pending.
 
 ## Historical runtime observations (8 September 2026)
 
 Before the free-first release, the runtime was observed active at exact SHA
 c088699e7356e68244f58d3ef233455ce1ff7692 and the product was observed live at exact
-SHA 674b512139961927191f3659a64737a2e0db1cdd. Product health is verified
+SHA 674b512139961927191f3659a64737a2e0db1cdd. Product health was verified
 after two pagination canary and two public normal TLS passes. The deployed
-one-queue worker has witnessed all five bounded lanes: directory fanout 1
-(306 jobs; the sweep is complete for 15,256/15,256 entities), discovery entity
-4 (about 2,871 completed by 05:53 UTC), collector 4, media 4, and deterministic
-classifier 1 (90+ deterministic saved-evidence decisions). The directory
-sweep is complete, while paid known-page fill remains RUNNING and NOT
-COMPLETE. The active service has NRestarts=0 and a five-minute stop timeout.
+one-queue worker had witnessed all five bounded lanes: directory fanout 1
+(306 jobs; the directory fanout was complete for 15,256/15,256 entities),
+discovery entity 4 (about 2,871 completed by 05:53 UTC), collector 4, media 4,
+and deterministic classifier 1 (90+ deterministic saved-evidence decisions).
+The directory fanout was complete in that historical observation, while paid
+known-page fill remained RUNNING and NOT COMPLETE. The service then had
+NRestarts=0 and a five-minute stop timeout.
 This document records the observed evidence and the release procedure; it is
 not a claim of complete WA Facebook identity coverage.
 
@@ -52,21 +81,21 @@ the customer product migration list.
 The historical launch snapshot covered 389 eligible numeric Facebook
 pages, not the whole WA directory; 370 of those pages then lacked a latest
 comparable baseline. These are historical known-page baseline counts, not
-current completion counts or a claim of complete WA agent coverage. The
-current worker snapshot has 392 eligible WA-linked numeric pages, 389
+contemporaneous completion counts or a claim of complete WA agent coverage. The
+historical worker snapshot had 392 eligible WA-linked numeric pages, 389
 completed initial fills, and 3 remaining high-volume pages with genuine
-pagination_unresolved evidence. Active observed ads are 621. The Relay
+pagination_unresolved evidence. Active observed ads were 621. The Relay
 preloader-correlation fix recovered 63 saved complete zero-result captures
 without a new provider request; the provider-credit ledger was byte-for-byte
-unchanged across that replay. Scheduled collection now requests active ads
+unchanged across that replay. Scheduled collection in that historical release requested active ads
 rather than inactive history, reducing false pagination pressure. The
-directory sweep itself is complete, but this remains known-page coverage, not
-a claim that every WA agent has a resolved Facebook identity. A fresh
-DEMIRS audit recorded 11,832 licenses, with 205 agents and 35 agencies
-appended from safe evidence; the current WA directory reports 12,349 agents
-and 2,907 agencies. Its 181 identity ambiguities remain explicit, and a
-repeat audit found zero missing records. These counts do not turn the
-known-page fill into full directory coverage. Existing and future customer
+directory fanout in that historical pass was complete, but this remained
+known-page coverage, not a claim that every WA agent had a resolved Facebook
+identity. A fresh DEMIRS audit recorded 11,832 licenses, with 205 agents and
+35 agencies appended from safe evidence; a historical WA directory report
+had 12,349 agents and 2,907 agencies. Its 181 identity ambiguities remained
+explicit, and a repeat audit found zero missing records. These counts did not
+turn the known-page fill into full directory coverage. Existing and future customer
 interests are synced from the product signup/profile source every five minutes. The research table contains only a
 pseudonymous customer_key and target/linkage fields; it does not contain
 customer PII, tokens, or account credentials.
@@ -145,7 +174,7 @@ media 4, and deterministic classifier 1. Collector concurrency may be raised
 to 8 only after bounded acceptance evidence. The scheduler polls every 10
 seconds while idle and drains busy queues independently; slow paid captures
 must not stall directory, discovery, media, classification, or scheduling.
-All five lanes were witnessed on the active runtime SHA above. Each lane
+All five lanes were witnessed on that historical runtime SHA. Each lane
 claims only its marked job type and canonical dedupe prefix. Legacy
 census/resolver/classifier rows are not consumed by the narrow worker.
 
@@ -155,17 +184,17 @@ name-only or slug-only guesses, and existing page ownership is preserved.
 A directory HTTP 403 remains unresolved and never becomes a zero-ad or
 Facebook-page result. Structured Person.sameAs evidence is accepted when it
 proves a stable page identity; directory footer text alone never proves
-agency ownership. The live directory lookup index is 0f02800. Signed-up customer own/local pages and postcode-known pages remain daily;
+agency ownership. The historical directory lookup index used was 0f02800. Signed-up customer own/local pages and postcode-known pages remain daily;
 other active pages follow normal cadence, and quiet pages use 3, 7, 14, and
 30-day backoff. Customer-interest targets are eligible again after 24 hours.
 Disabled pages are never restarted by scheduler recovery. Media capture is a
 separate archive child job and rule-based classification is a separate display
 refresh; classification makes no LLM call. Provider/raw responses and
 verified media archives are distinct evidence. The data-preserving shared
-archive migration is live at e5f074fc587dfca2cb89658cb9dea79275e28473:
+archive migration was live at e5f074fc587dfca2cb89658cb9dea79275e28473:
 12 shared physical archive files and 52 provenance references were verified
 by exact SHA/byte checks with zero downloads during verification. This shared
-object migration is complete; media and display classification remain
+object migration was complete in that historical observation; media and display classification remain
 independent lanes. Media failure
 remains retryable and cannot report a fully successful media job. There is no fixed item-count
 ceiling that can silently truncate provider pagination; a provider stop,
@@ -205,28 +234,31 @@ a newly verified eligible page can enter first-fill scheduling immediately.
 VPS discovery/classification code does not call an LLM. Coding subagents are
 separate from the production collection process.
 
-The free-first changes are deployed above; further capture-strategy changes require their own immutable deployment and live canary.
+The free-first changes were deployed in the historical release above; further capture-strategy changes require their own immutable deployment and live canary.
 Refer to the latest dated deployment evidence, not historical counts, for
 the serving revision and current fill status.
 
 ## Native ad pagination
 
-The capture uses the provider's documented [JSON/XHR response](https://www.scrapingbee.com/documentation/#json_response),
-not a second scraper. Pages with a saved positive, explicitly non-exhausted
-scan may use bounded native scrolling when enabled. Other pages keep plain
-HTML collection. A partial initial HTML result may queue one native follow-up;
-a partial native result cannot recursively pay for more immediate requests.
+The pending capture-repair source, not yet activated in LIVE, uses the provider's documented [JSON/XHR response](https://www.scrapingbee.com/documentation/#json_response)
+with the same 25-credit cap and 5-second wait; this is not a second scraper.
+An ordinary page requests the JSON-wrapped initial page without the native
+scenario. Only a saved positive, explicitly non-exhausted page may add the
+bounded native scenario when the feature flag is enabled. A partial
+initial-page result may queue one native follow-up; a partial native result
+cannot recursively pay for more immediate requests.
 
 
 The optional native path uses a separately accounted capture and stores
 the complete raw response before ingestion. A bounded browser scenario lets
 Meta issue its own pagination requests. ScrapingBee's built-in JSON response supplies the native XHR evidence; no
-custom fetch/XHR interception is installed. The parser extracts only the
-required observed request variables from that protected raw capture, never
-provider cookies, headers or session fields into operational output. The
-parser requires an exact page, country, active-status and cursor chain,
-ending in an observed exhausted response. A scroll timeout, missing response
-or unrelated zero-result response remains partial. Saved ads are retained.
+custom fetch/XHR interception is installed. When the initial HTML has no
+strict connection, the native RootQuery response may serve as initial
+paginated evidence only when its exact page, country, active-status, final
+stream and pageInfo are proven. The parser then requires an exact cursor chain
+ending in an observed exhausted response. A scroll timeout, missing response,
+out-of-order cursor or unrelated zero-result response remains partial. Saved
+ads are retained, and only one non-recursive native continuation is allowed.
 
 The bounded scroll duration is not an ad-count completion ceiling. Every
 validated ad returned by the capture is ingested, and pages not exhausted
@@ -295,7 +327,7 @@ first. Do not create a paid request merely to prove queue health.
 
 ## Historical request and database budget snapshot
 
-The provider request limit is 25 credits per request. The current ledger
+The provider request limit was 25 credits per request. The ledger snapshot
 records 436 successes using 10,900 credits, 13 unparseable responses using
 325, one error using 25, and 13 blocked requests using zero credits. Budget
 spent is 11,550, reserved is zero, and provider balance remaining is 63,675.
@@ -325,7 +357,7 @@ failed and partial runs do not set initial_fill_completed_at, complete zero-ad
 runs advance through the 3/7/14/30 cadence, active pages remain daily, and a
 customer postcode produces postcode targets without changing service areas.
 Verify the historical 389-page known scope and the historical 370 pages
-without a latest comparable baseline; current observed scope is 392 eligible
+without a latest comparable baseline; historical observed scope was 392 eligible
 WA-linked pages with 389 completed initial fills and 3 genuine high-volume
 pagination exceptions, not full WA directory identity coverage. For new scheduler truth, test a successful run with a non-negative
 active_ads value and test that missing, negative, or non-integer active_ads
@@ -356,7 +388,7 @@ never roll back to a moving checkout or introduce a second queue.
 
 The classifier stage uses the canonical deterministic helper classifyCreativeFromSavedEvidence(creative) for saved-ad first-fill and backfill work. It reads persisted creative evidence only and makes no paid provider request, media download, network call, or LLM call. It runs in its own lane (concurrency 1) apart from media/archive refresh. Strong existing classifications must be preserved by the supervisor; replacement is for stale creative hash or classifier version, or unclassified/other status. Weak evidence remains industry=unknown, ad_type=other, and primary_intent=other.
 
-The deterministic classifier is active in the deployed runtime SHA above;
+The deterministic classifier was active in the deployed runtime SHA above;
 its observed decisions are saved-evidence-only and do not make a completeness
 claim for provider pagination. Full repository checks recorded 1,184 tests,
 1,181 passes, 3 skips, and zero failures; NUL, typecheck, and build checks

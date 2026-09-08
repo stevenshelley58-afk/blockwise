@@ -97,6 +97,57 @@ function record({
 function capture(xhr, extra = {}) {
   return { body: html(), xhr, ...extra };
 }
+function shellCapture(xhr = []) {
+  return { body: "<html><body>Meta shell</body></html>", xhr };
+}
+function rootResponse({
+  ids = [PAGE + "_1"],
+  hasNextPage = true,
+  endCursor = CURSOR_1,
+  count = ids.length,
+  errors,
+} = {}) {
+  return (
+    JSON.stringify(
+      response({
+        ids,
+        hasNextPage,
+        endCursor,
+        count,
+        final: false,
+        errors,
+      }),
+    ) +
+    "\n" +
+    JSON.stringify({ extensions: { is_final: true } })
+  );
+}
+function rootRecord({
+  pageId = PAGE,
+  country = "AU",
+  activeStatus = "active",
+  status = 200,
+  body,
+  variables,
+} = {}) {
+  return record({
+    status,
+    operation: "AdLibraryFoundationRootQuery",
+    variables: variables ?? {
+      viewAllPageID: pageId,
+      pageIDs: [],
+      activeStatus,
+      countries: [country],
+    },
+    body:
+      body ??
+      rootResponse({
+        ids: [PAGE + "_1"],
+        hasNextPage: true,
+        endCursor: CURSOR_1,
+      }),
+  });
+}
 
 test("scenario uses bounded synchronous scrolling without fragile interception", () => {
   const scenario = buildMetaPaginationScenario();
@@ -106,7 +157,13 @@ test("scenario uses bounded synchronous scrolling without fragile interception",
       typeof instruction.evaluate === "string" &&
       instruction.evaluate.includes("scrollHeight"),
   );
-  assert.equal(scrolls.length, 8);
+  assert.equal(scrolls.length, 16);
+  const waits = scenario.instructions
+    .filter((instruction) => Number.isFinite(instruction.wait))
+    .map((instruction) => instruction.wait);
+  assert.deepEqual(waits, [...Array(16).fill(1500), 3000]);
+  assert.equal(16 * 1500 + 3000 + 5000, 32000);
+  assert.ok(16 * 1500 + 3000 + 5000 < 40000);
   assert.match(scrolls[0].evaluate, /scrollTop/);
   assert.match(scrolls[0].evaluate, /window\.scrollTo/);
   assert.doesNotMatch(scrolls[0].evaluate, /Promise|async/);
@@ -117,6 +174,149 @@ test("scenario uses bounded synchronous scrolling without fragile interception",
   for (const instruction of scenario.instructions)
     if (instruction.evaluate)
       assert.doesNotThrow(() => new vm.Script(instruction.evaluate));
+});
+
+test("invalid timing options fall back to the coherent bounded defaults", () => {
+  const scenario = buildMetaPaginationScenario({
+    maxScrolls: 0,
+    delayMs: Number.NaN,
+    settleMs: -1,
+  });
+  const waits = scenario.instructions
+    .filter((instruction) => Number.isFinite(instruction.wait))
+    .map((instruction) => instruction.wait);
+  assert.deepEqual(waits, [...Array(16).fill(1500), 3000]);
+  assert.equal(
+    scenario.instructions.filter((instruction) => instruction.evaluate).length,
+    16,
+  );
+});
+
+test("native RootQuery recovers a shell capture then closes its cursor chain", () => {
+  const rootIds = Array.from(
+    { length: 30 },
+    (_, index) => PAGE + "_" + (index + 1),
+  );
+  const result = parseMetaPaginatedCapture(
+    shellCapture([
+      rootRecord({
+        body: rootResponse({
+          ids: rootIds,
+          hasNextPage: true,
+          endCursor: CURSOR_1,
+          count: 32,
+        }),
+      }),
+      record({
+        after: CURSOR_1,
+        body: response({
+          ids: [PAGE + "_31", PAGE + "_32"],
+          hasNextPage: false,
+          endCursor: "",
+          count: 32,
+        }),
+      }),
+    ]),
+    PAGE,
+  );
+  assert.equal(result.outcome, "success");
+  assert.equal(result.coverageComplete, true);
+  assert.equal(result.paginationExhausted, true);
+  assert.equal(result.paginationRecords, 1);
+  assert.equal(result.connectionCount, 32);
+  assert.equal(result.adIds.length, 32);
+});
+
+test("native RootQuery proves a strict zero only with final zero-count evidence", () => {
+  const result = parseMetaPaginatedCapture(
+    shellCapture([
+      rootRecord({
+        body: rootResponse({
+          ids: [],
+          hasNextPage: false,
+          endCursor: "",
+          count: 0,
+        }),
+      }),
+    ]),
+    PAGE,
+  );
+  assert.equal(result.outcome, "confirmed_absence");
+  assert.equal(result.coverageComplete, true);
+  assert.equal(result.paginationExhausted, true);
+  assert.deepEqual(result.adIds, []);
+  assert.equal(result.captureStrategy, "initial_page");
+});
+
+test("failed native RootQuery recovery preserves an unparseable shell outcome", () => {
+  const zeroWithoutEdges = JSON.stringify({
+    data: {
+      ad_library_main: {
+        search_results_connection: {
+          count: 0,
+          page_info: { has_next_page: false, end_cursor: "" },
+        },
+      },
+    },
+    extensions: { is_final: true },
+  });
+  for (const [root, warning] of [
+    [
+      rootRecord({ pageId: "999999999999999" }),
+      "native_initial_request_mismatch",
+    ],
+    [rootRecord({ country: "NZ" }), "native_initial_request_mismatch"],
+    [rootRecord({ status: 403 }), "native_initial_http_failure"],
+    [
+      rootRecord({
+        variables: {
+          viewAllPageID: PAGE,
+          pageIDs: [],
+          pageId: "999999999999999",
+          activeStatus: "active",
+          countries: ["AU"],
+        },
+      }),
+      "native_initial_request_mismatch",
+    ],
+    [rootRecord({ body: zeroWithoutEdges }), "native_initial_edges_unproven"],
+    [
+      rootRecord({
+        body: rootResponse({
+          ids: [],
+          hasNextPage: false,
+          endCursor: "",
+          count: 0.5,
+        }),
+      }),
+      "native_initial_page_info_unproven",
+    ],
+    [
+      rootRecord({
+        body: rootResponse({
+          ids: [PAGE + "_1"],
+          hasNextPage: true,
+          endCursor: CURSOR_1,
+          errors: [{ message: "fixture" }],
+        }),
+      }),
+      "native_initial_response_errors",
+    ],
+    [
+      rootRecord({ body: { truncated: true } }),
+      "response_truncated_or_malformed",
+    ],
+  ]) {
+    const result = parseMetaPaginatedCapture(shellCapture([root]), PAGE);
+    assert.equal(result.outcome, "unparseable");
+    assert.equal(result.coverageComplete, false);
+    assert.equal(result.paginationExhausted, false);
+    assert.deepEqual(result.adIds, []);
+    assert.ok(result.warnings.includes(warning));
+  }
+  const missing = parseMetaPaginatedCapture(shellCapture(), PAGE);
+  assert.equal(missing.outcome, "unparseable");
+  assert.ok(missing.warnings.includes("native_initial_missing"));
 });
 
 test("30 initial ads plus two ordered native pages produce complete coverage", () => {
@@ -185,6 +385,7 @@ test("failed JS scenario retains initial evidence as partial", () => {
   assert.equal(result.outcome, "partial");
   assert.ok(result.warnings.includes("js_scenario_failed"));
   assert.equal(result.adIds.length, 1);
+  assert.equal(result.captureStrategy, "native_cursor");
 });
 test("strict zero baseline remains confirmed absence and complete", () => {
   const body = JSON.stringify({
@@ -519,7 +720,7 @@ test("every evaluator compiles and synchronous scroll reaches the real container
       assert.equal(result?.then, undefined);
     }
   }
-  assert.equal(calls.length, 8);
+  assert.equal(calls.length, 16);
   assert.equal(elements[0].scrollTop, 24000);
   assert.equal(elements[1].scrollTop, 8000);
   assert.ok(calls.every(([x, y]) => x === 0 && y >= 24000));

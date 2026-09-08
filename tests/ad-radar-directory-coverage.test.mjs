@@ -332,7 +332,7 @@ test("entity discovery registers an exact official agency page for collection", 
       fetchImpl: async () => ({
         ok: true,
         text: async () =>
-          '<a href="https://facebook.com/pages/acme/123456">Facebook</a>',
+          '<h1>Acme</h1><a href="https://facebook.com/pages/acme/123456">Facebook</a>',
       }),
     },
   );
@@ -618,6 +618,10 @@ function discoveryRest({
     writes,
     rest: async (_schema, path, options = {}) => {
       if (path.startsWith("source_documents?")) return sourceDocs;
+      if (path === "source_documents") {
+        writes.push({ path, body: JSON.parse(options.body) });
+        return [{ id: "source-" + writes.length }];
+      }
       if (path.startsWith("advertiser_pages?id=")) {
         writes.push({ path, body: JSON.parse(options.body) });
         return [
@@ -1219,6 +1223,8 @@ test("saved external agency site wins over a directory URL without fetching the 
     fetched_at: "2026-08-01T00:00:00.000Z",
     metadata: {
       agency_id: "agency-saved",
+      agency_identity_confirmed: true,
+      agency_identity_name: "saved agency",
       website_url: "https://agency.example/",
     },
   };
@@ -1244,7 +1250,7 @@ test("saved external agency site wins over a directory URL without fetching the 
           status: 200,
           headers: { get: () => null },
           text: async () =>
-            '<a href="https://facebook.com/pages/saved/123456">Facebook</a>',
+            '<h1>Saved Agency</h1><a href="https://facebook.com/pages/saved/123456">Facebook</a>',
         };
       },
       now: () => "2026-09-08T00:00:00.000Z",
@@ -1601,4 +1607,322 @@ test("cached pre-repair named-profile metadata cannot reuse a shared agency foot
   assert.deepEqual(r.result.evidence.links, []);
   assert.equal(writes.length, 0);
   assert.equal(r.result.search_outcome, "searched_not_found");
+});
+
+test("numeric Facebook search candidate resolves only with an independent agent backlink", async () => {
+  const sourceDocs = [
+    {
+      id: "agent-backlink",
+      source: "facebook_page_identity",
+      source_url: "https://jane.example/team/jane-smith",
+      metadata: {
+        agent_id: "agent-search-positive",
+        agency_id: "agency-search-positive",
+        profile_names: ["Jane Smith"],
+        facebook_owners: [
+          {
+            kind: "agent",
+            name: "Jane Smith",
+            urls: ["https://www.facebook.com/pages/jane-smith/123456"],
+          },
+        ],
+      },
+    },
+  ];
+  const fixture = discoveryRest({ sourceDocs });
+  let searches = 0;
+  const result = await handleAdRadarEntityDiscovery(
+    {
+      id: "search-positive-job",
+      payload: {
+        entity_kind: "agent",
+        entity_id: "agent-search-positive",
+        name: "Jane Smith",
+        state: "WA",
+        agency_id: "agency-search-positive",
+        agency_name: "Positive Agency",
+      },
+    },
+    {
+      rest: fixture.rest,
+      rawEvidenceDir: "/tmp/ad-radar-search-positive",
+      fetchImpl: async () => ({
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        text: async () => "<title>Jane Smith | Facebook</title>",
+      }),
+      searchEvidence: async () => {
+        searches += 1;
+        return {
+          complete: true,
+          sourceDocumentId: "search-positive",
+          sourceUrl: "https://google.example/search",
+          results: [
+            {
+              url: "https://www.facebook.com/pages/jane-smith/123456",
+              title: "Jane Smith",
+              description: "Jane Smith Positive Agency WA",
+            },
+          ],
+        };
+      },
+    },
+  );
+  assert.equal(searches, 1);
+  assert.equal(result.result.search_outcome, "resolved");
+  assert.equal(result.result.evidence.links[0].pageId, "123456");
+  assert.equal(
+    result.result.evidence.links[0].sourceType,
+    "verified_official_backlink",
+  );
+});
+
+test("numeric same-name Facebook search candidate is rejected without target ownership proof", async () => {
+  const sourceDocs = [
+    {
+      id: "shared-agency-profile",
+      source: "ad_radar_agency_website",
+      source_url: "https://agency.example/team/other-jane",
+      metadata: {
+        agency_id: "agency-shared",
+        crawl_role: "agency_profile",
+      },
+    },
+  ];
+  const fixture = discoveryRest({ sourceDocs });
+  let searches = 0;
+  const result = await handleAdRadarEntityDiscovery(
+    {
+      id: "search-negative-job",
+      payload: {
+        entity_kind: "agent",
+        entity_id: "agent-search-negative",
+        name: "Jane Smith",
+        state: "WA",
+        agency_id: "agency-shared",
+        agency_name: "Shared Agency",
+      },
+    },
+    {
+      rest: fixture.rest,
+      rawEvidenceDir: "/tmp/ad-radar-search-negative",
+      fetchImpl: async () => ({
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        text: async () => "<title>Jane Smith | Facebook</title>",
+      }),
+      searchEvidence: async () => {
+        searches += 1;
+        return {
+          complete: true,
+          sourceDocumentId: "search-negative",
+          sourceUrl: "https://google.example/search",
+          results: [
+            {
+              url: "https://www.facebook.com/pages/jane-smith/123456",
+              title: "Jane Smith",
+              description: "Jane Smith Shared Agency WA",
+            },
+          ],
+        };
+      },
+    },
+  );
+  assert.equal(searches, 1);
+  assert.equal(result.result.search_outcome, "page_found");
+  assert.deepEqual(result.result.evidence.links, []);
+  assert.match(result.result.errors[0].reason, /ownership_unproven/u);
+  assert.equal(fixture.writes.length, 0);
+});
+
+test("cached app-store and social agency sources are not usable homepage evidence", async () => {
+  const sourceDocs = [
+    {
+      id: "bad-appstore-home",
+      source: "ad_radar_agency_website",
+      source_url: "https://itunes.apple.com/au/app/id1417769562",
+      fetched_at: "2026-09-08T00:00:00.000Z",
+      metadata: {
+        agency_id: "agency-appstore",
+        entity_kind: "agency",
+        entity_id: "agency-appstore",
+        subject_kind: "agency",
+        subject_id: "agency-appstore",
+        crawl_role: "agency_homepage",
+        official_facebook_links: ["https://www.facebook.com/appstore/"],
+        facebook_owners: [
+          {
+            kind: "agency",
+            name: "App Store",
+            urls: ["https://www.facebook.com/appstore/"],
+          },
+        ],
+      },
+    },
+  ];
+  const fixture = discoveryRest({ sourceDocs });
+  let fetched = 0;
+  const result = await handleAdRadarEntityDiscovery(
+    {
+      id: "appstore-job",
+      payload: {
+        entity_kind: "agency",
+        entity_id: "agency-appstore",
+        name: "Fremantle Co",
+        state: "WA",
+        website_url: "https://reiwa.com.au/real-estate-agency/fremantle-co/",
+      },
+    },
+    {
+      rest: fixture.rest,
+      rawEvidenceDir: "/tmp/ad-radar-appstore",
+      fetchImpl: async () => {
+        fetched += 1;
+        throw new Error("blocked source must not fetch");
+      },
+      searchEvidence: async () => ({
+        complete: true,
+        sourceDocumentId: "appstore-search",
+        sourceUrl: "https://google.example/search",
+        results: [],
+      }),
+    },
+  );
+  assert.equal(fetched, 0);
+  assert.equal(result.result.evidence.links.length, 0);
+  assert.notEqual(result.result.search_outcome, "resolved");
+});
+
+test("Google adapter replay verifies a candidate with free Facebook public proof", async () => {
+  const fixture = discoveryRest();
+  let searches = 0,
+    facebookFetches = 0;
+  const result = await handleAdRadarEntityDiscovery(
+    {
+      id: "replay-job",
+      payload: {
+        entity_kind: "agent",
+        entity_id: "agent-replay",
+        name: "Jane Smith",
+        state: "WA",
+        agency_id: "agency-replay",
+        agency_name: "Replay Agency",
+        agency_primary_suburb: "Perth",
+      },
+    },
+    {
+      rest: fixture.rest,
+      rawEvidenceDir: "/tmp/ad-radar-search-replay",
+      fetchImpl: async () => {
+        facebookFetches += 1;
+        return {
+          ok: true,
+          status: 200,
+          headers: { get: () => null },
+          text: async () =>
+            "<title>Jane Smith | Replay Agency Perth WA</title>",
+        };
+      },
+      searchEvidence: async () => {
+        searches += 1;
+        return {
+          complete: true,
+          actualAttempted: false,
+          sourceDocumentId: "adapter-replay",
+          sourceUrl: "https://google.example/replay",
+          results: [
+            {
+              url: "https://www.facebook.com/pages/jane-smith/123456",
+              title: "Jane Smith",
+              description: "untrusted lead text",
+            },
+          ],
+        };
+      },
+    },
+  );
+  assert.equal(searches, 1);
+  assert.equal(facebookFetches, 1);
+  assert.equal(result.result.search_outcome, "resolved");
+  assert.match(result.result.evidence.links[0].sourceDocumentId, /^source-/u);
+  assert.equal(
+    fixture.writes.find((row) => row.path === "source_documents").body.metadata
+      .owner_proof,
+    "public_local_or_domain",
+  );
+  assert.equal(
+    result.result.evidence.searchReceipts[0].reason,
+    "search_completed",
+  );
+});
+
+test("authoritative suburb permits only one matching public WA title marker", async () => {
+  const run = async (markers, websiteUrl = null) => {
+    const fixture = discoveryRest();
+    return handleAdRadarEntityDiscovery(
+      {
+        id: "inside-realty-marker",
+        payload: {
+          entity_kind: "agency",
+          entity_id: "inside-realty",
+          name: "Inside Realty",
+          state: "WA",
+          primary_suburb: "Applecross",
+          website_url: websiteUrl,
+        },
+      },
+      {
+        rest: fixture.rest,
+        rawEvidenceDir: "/tmp/ad-radar-inside-realty",
+        fetchImpl: async (url) => ({
+          ok: true,
+          status: 200,
+          headers: { get: () => null },
+          text: async () =>
+            String(url).includes("agency.example")
+              ? "<title>Official agency site</title>"
+              : markers +
+                '{"__typename":"Page","id":"100063518318943","url":"https://www.facebook.com/insiderealtyapplecross"}',
+        }),
+        searchEvidence: async () => ({
+          complete: true,
+          actualAttempted: false,
+          sourceDocumentId: "adapter-inside-realty",
+          sourceUrl: "https://google.example/inside",
+          results: [
+            {
+              url: "https://www.facebook.com/100063518318943",
+              title: "Inside Realty",
+              description: "untrusted search lead",
+            },
+          ],
+        }),
+      },
+    );
+  };
+  const positive = await run(
+    '<title>Inside Realty | Applecross WA</title><meta property="og:title" content="Inside Realty | Applecross WA">',
+  );
+  assert.equal(positive.result.search_outcome, "resolved");
+  assert.equal(positive.result.evidence.links[0].pageId, "100063518318943");
+
+  for (const markers of [
+    "<title>Inside Realty | Cottesloe WA</title>",
+    "<title>Inside Realty WA</title>",
+    '<title>Inside Realty | Applecross WA</title><meta property="og:title" content="Inside Realty | Cottesloe WA">',
+    '<title>Inside Realty</title><meta property="og:title" content="Other Realty | Applecross WA">',
+  ]) {
+    const rejected = await run(markers);
+    assert.equal(rejected.result.search_outcome, "page_found");
+    assert.deepEqual(rejected.result.evidence.links, []);
+  }
+
+  const lookalikeHost = await run(
+    "<title>Inside Realty</title>https://agency.example.evil.com",
+    "https://agency.example",
+  );
+  assert.equal(lookalikeHost.result.search_outcome, "page_found");
+  assert.deepEqual(lookalikeHost.result.evidence.links, []);
 });
