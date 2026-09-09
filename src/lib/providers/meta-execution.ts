@@ -828,6 +828,33 @@ export function validateMetaPublishPlanReadiness(
       blockers.push(`Meta Graph v26 no longer supports placement(s): ${unsupported.join(", ")}.`);
     }
   }
+  if (plan.creatives.some((creative) => !hasImmutableCreativeContent(creative))) {
+    blockers.push("Each selected finished ad asset must have a SHA-256 content hash before compliance and Meta publish.");
+  }
+  for (const creative of plan.creatives) {
+    const hasFeed = creative.revisionBindings.some((binding) => binding.placement === "feed");
+    const requiresStory = plan.adSets.some((adSet) => {
+      const platforms = Array.isArray(adSet.targeting.publisher_platforms) ? adSet.targeting.publisher_platforms : [];
+      const positions = Array.isArray(adSet.targeting.instagram_positions) ? adSet.targeting.instagram_positions : [];
+      return platforms.includes("instagram") && (positions.length === 0 || positions.includes("story"));
+    });
+    if (!hasFeed) blockers.push("Each selected variant needs a finished 4:5 feed clone before publishing.");
+    if (requiresStory && !creative.revisionBindings.some((binding) => binding.placement === "story")) {
+      blockers.push("Instagram Story placement requires a finished 9:16 story clone for every selected variant.");
+    }
+  }
+
+  for (const form of plan.leadForms) blockers.push(...validateMetaInstantFormSpec(form));
+  if (plan.creatives.some((creative) => !META_LEAD_CTA_TYPES.has(creative.cta))) {
+    blockers.push("Meta lead ads require a supported call to action.");
+  }
+
+  for (const adSet of plan.adSets) {
+    const unsupported = unsupportedMetaPlacementPositions(adSet.targeting);
+    if (unsupported.length) {
+      blockers.push(`Meta Graph v26 no longer supports placement(s): ${unsupported.join(", ")}.`);
+    }
+  }
 
   return {
     ready: blockers.length === 0,
@@ -1466,7 +1493,9 @@ async function publishWithMarketingApi(
           },
           input.pageAccessToken ?? input.accessToken,
         );
-        reconciledObjects.leadFormIds[leadForm.localId] = requireMetaId(response, "lead form");
+        const formId = requireMetaId(response, "lead form");
+        await verifyMetaLeadForm(input, requestLog, responseLog, formId, leadForm, input.pageAccessToken ?? input.accessToken);
+        reconciledObjects.leadFormIds[leadForm.localId] = formId;
       }
       // A deterministic name proves identity, not content. Always verify the
       // exact Instant Form fields before recording either a recovered, newly
@@ -3881,6 +3910,18 @@ function emptyReconciledObjects(): MetaReconciledObjects {
     adIds: {},
     ownedAdIds: {},
     provenance: { adSets: {}, ads: {} },
+  };
+}
+
+function normalizeMetaLeadFormPlan(form: MetaPublishLeadFormPlan): MetaPublishLeadFormPlan {
+  return {
+    ...form,
+    intro: form.intro ?? form.headline,
+    contactFields: form.contactFields?.length ? form.contactFields : ["FIRST_NAME", "LAST_NAME", "EMAIL", "PHONE"],
+    customQuestions: form.customQuestions ?? form.questions ?? [],
+    questions: form.questions ?? form.customQuestions ?? [],
+    thankYouButtonType: form.thankYouButtonType ?? "VIEW_WEBSITE",
+    thankYouButtonText: form.thankYouButtonText ?? "Visit website",
   };
 }
 
