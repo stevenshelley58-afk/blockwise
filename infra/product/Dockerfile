@@ -1,12 +1,14 @@
 # Reproducible standalone Next image for the self-hosted product stack.
-FROM node:22-slim AS deps
+# Pin the multi-architecture base by digest so the release image and its
+# vulnerability/SBOM evidence cannot drift while a workflow is running.
+FROM node:22-trixie-slim@sha256:a05717adfe7289e2a0fa36a694dc430a510adab6467c7036e51551198935abef AS deps
 WORKDIR /app
 COPY packages/ad-template-contract/package.json packages/ad-template-contract/package.json
 COPY packages/ad-template-renderer/package.json packages/ad-template-renderer/package.json
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci --ignore-scripts
 
-FROM node:22-slim AS builder
+FROM node:22-trixie-slim@sha256:a05717adfe7289e2a0fa36a694dc430a510adab6467c7036e51551198935abef AS builder
 WORKDIR /app
 ARG GIT_SHA
 RUN printf '%s' "$GIT_SHA" | grep -Eq '^[a-f0-9]{40}$'
@@ -48,10 +50,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Next's standalone server must listen on the container interface, not only
 # loopback, so the Compose healthcheck and Caddy can reach it.
 ENV HOSTNAME=0.0.0.0
-RUN groupadd --system --gid 1001 nodejs && useradd --system --uid 1001 nextjs
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-USER nextjs
+COPY --from=builder --chown=65532:65532 /app/public ./public
+COPY --from=builder --chown=65532:65532 /app/.next/standalone ./
+COPY --from=builder --chown=65532:65532 /app/.next/static ./.next/static
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["server.js"]

@@ -14,12 +14,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: 22
+          node-version: 22.23.2
           cache: npm
 
       - name: Install media validation tools
@@ -35,7 +35,7 @@ jobs:
         env:
           BLOCKWISE_PRODUCT_DOMAIN: blockwise.sale
           TRUSTED_PROXY_RANGES: 172.30.0.2/32
-        run: docker run --rm -e BLOCKWISE_PRODUCT_DOMAIN -e TRUSTED_PROXY_RANGES -v "${{ github.workspace }}/infra/product/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2.11.3-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+        run: docker run --rm -e BLOCKWISE_PRODUCT_DOMAIN -e TRUSTED_PROXY_RANGES -v "${{ github.workspace }}/infra/product/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2.11.3-alpine@sha256:3739ea4f0c877259a693d932693cf8f3408e9a9497c004f031b0e830e93e1546 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - name: Run hard-reset verification
         run: npm run verify:hard-reset
 
@@ -61,10 +61,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v2
+        uses: supabase/setup-cli@3c2f5e2ae34c34e428e8e206e2c4d21fa2d20fbf # v2.1.1
         with:
           version: 2.108.0
           github-token: ${{ github.token }}

@@ -29,6 +29,6 @@ test("the external task runner is absent and background work uses the VPS queue"
 test("GitHub replays migrations and runs pgTAP", () => {
   const workflow = readFileSync(".github/workflows/hard-reset-verification.yml", "utf8");
   assert.match(workflow, /database-contracts:/);
-  assert.match(workflow, /uses:\s*supabase\/setup-cli@v2/);
+  assert.match(workflow, /uses:\s*supabase\/setup-cli@3c2f5e2ae34c34e428e8e206e2c4d21fa2d20fbf/);
   assert.match(workflow, /run:\s*npm run test:db/);
 });
