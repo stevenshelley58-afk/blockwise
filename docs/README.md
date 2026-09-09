@@ -52,6 +52,7 @@ guides. Third-party licence text is retained unchanged.
 
 - [8 September documentation audit](releases/2026-09-08-docs-alignment.md)
 - [8 September customer UX swarm lane 3 (draft evidence)](releases/2026-09-08-customer-ux-swarm.md)
+- [8 September mobile customer release](releases/2026-09-08-mobile-customer-shell.md)
 - [7 September postcode outreach release](releases/2026-09-07-postcode-outreach.md)
 - [7 September guides editorial redesign](releases/2026-09-07-guides-editorial.md)
 - [6 September template-editor release](releases/2026-09-06-template-editor.md)

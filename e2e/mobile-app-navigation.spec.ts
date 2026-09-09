@@ -93,8 +93,8 @@ test.describe("customer mobile navigation regression", () => {
 
   test("opens More as a focusable sheet and closes with Escape", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 }); await consent(page); await blockWrites(page);
-    await page.goto(`/self-serve`); const more = page.getByRole("button", { name: "More" }); await more.click();
-    const sheet = page.getByRole("dialog"); await expect(sheet).toBeVisible(); await expect(more).toHaveClass(/active/); await expect(page.getByRole("navigation", { name: "Primary mobile navigation" }).locator('[aria-current="page"]')).toHaveCount(1); await expect(sheet.getByText("Settings", { exact: true })).toBeVisible();
+    await page.goto(`/self-serve`); const more = page.getByRole("button", { name: "More", includeHidden: true }); await more.click();
+    const sheet = page.getByRole("dialog"); await expect(sheet).toBeVisible(); await expect(more).toHaveClass(/active/); await expect(page.getByRole("navigation", { name: "Primary mobile navigation", includeHidden: true }).locator('[aria-current="page"]')).toHaveCount(1); await expect(sheet.getByText("Settings", { exact: true })).toBeVisible();
     await expect(sheet).toContainText("Contact support"); await page.keyboard.press("Escape");
     await expect(sheet).toBeHidden(); await expect(more).toBeFocused();
   });
@@ -147,6 +147,6 @@ test.describe("customer mobile navigation regression", () => {
   test("keeps the desktop shell available", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 }); await consent(page); await blockWrites(page);
     await page.goto(`/ad-studio`); await expect(page.getByRole("heading", { name: "Ads", exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Templates", exact: true })).toBeVisible();
+    await expect(page.getByLabel("Studio destinations").getByRole("link", { name: "Templates", exact: true })).toBeVisible();
   });
 });
