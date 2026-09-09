@@ -347,8 +347,9 @@ function buildProofPublishState(): PublishLoadResult {
       colourMode: "template",
       metaPrimaryText: "Proof run primary text (disposable).",
       metaHeadline: "Proof run headline",
-      metaDescription: "Disposable Step 0 proof creative.",
+      metaDescription: "Disposable Step 0 proof.",
       metaCta: "LEARN_MORE",
+      destinationUrl: "https://example.com/proof-destination",
     },
     revision: {
       id: "proof_revision_1",
