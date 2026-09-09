@@ -1,7 +1,7 @@
 // Stage A: cheaply narrow the ~1905-family / ~7527-face corpus down to a
 // shortlist of candidate faces worth actually rendering and pixel-comparing
 // in Stage B (rendering every face would mean thousands of canvas draws per
-// region across 71 templates). Pure metric comparison against
+// region across the released template set). Pure metric comparison against
 // fonts.google.com's per-face thickness/slant/width — no font files are
 // downloaded at this stage.
 //

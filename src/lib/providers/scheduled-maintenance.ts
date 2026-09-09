@@ -60,7 +60,7 @@ export async function queueScheduledMetaLeadSyncs(service: ServiceSupabase) {
       let query = service
         .from("meta_publish_plans")
         .select("id,workspace_id,reconciled_objects_json")
-        .in("status", ["approved", "publishing", "paused_live"])
+        .in("status", ["queued", "publishing", "paused_ready", "activating", "live"])
         .order("id", { ascending: true })
         .limit(limit);
       if (afterId) query = query.gt("id", afterId);

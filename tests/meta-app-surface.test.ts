@@ -49,7 +49,7 @@ test("Meta Graph fallback version is shared with disconnect", () => {
   const disconnectRoute = readFileSync("src/app/api/integrations/meta/disconnect/route.ts", "utf8");
 
   assert.match(version, /DEFAULT_META_GRAPH_VERSION/);
-  assert.match(version, /"v23\.0"/);
+  assert.match(version, /"v26\.0"/);
   assert.match(disconnectRoute, /DEFAULT_META_GRAPH_VERSION/);
   assert.doesNotMatch(disconnectRoute, /"v19\.0"/);
 });

@@ -1,0 +1,754 @@
+import { randomUUID } from "node:crypto";
+
+import { NextResponse, type NextRequest } from "next/server";
+
+import { requireAdStudioRequest } from "@/lib/adstudio/http";
+import { runMetaPublishComplianceReview } from "@/lib/adstudio/compliance";
+import type { AdStudioCreativeLibrarySelection } from "@/lib/adstudio/creative-library";
+import { loadAdStudioCampaignPack } from "@/lib/adstudio/persistence";
+import {
+  parseAdStudioPublishLeadFormPatch,
+  resolveAuthorizedAdStudioPublishPack,
+} from "@/lib/adstudio/publish-pack";
+import { findLeadFormViolations, findPackCopyLimitViolations } from "@/lib/adstudio/readiness";
+import type { AdStudioCampaignPack } from "@/lib/adstudio";
+import type { ApprovalStatus, ProviderConnectionStatus } from "@/lib/publishing/readiness";
+import {
+  buildAdStudioPublishRequests,
+  resolveAdStudioPublishReadiness,
+} from "@/lib/providers/publishing-adapters";
+import {
+  bindMetaPublishPlanComplianceReport,
+  buildMetaPublishPlan,
+  hasExplicitMetaPublishAudience,
+  loadMetaPublishPlanComplianceStatus,
+  loadMetaPublishPlanByIdempotencyKey,
+  persistMetaPublishPlan,
+  prepareImmutableMetaPublishCampaignPack,
+  resolveMetaConnectionSetup,
+  validateMetaConnectionSetup,
+  validateMetaPublishPlanReadiness,
+  type MetaConnectionSetup,
+  type MetaExecutionAdapter,
+  type MetaPublishControls,
+  type MetaPublishPlan,
+} from "@/lib/providers/meta-execution";
+import {
+  hasActiveMetaPublishPlanExecution,
+  queueMetaPublishPlanExecution,
+} from "@/lib/providers/meta-publish-queue";
+import {
+  listProviderConnections,
+  loadStoredProviderTokens,
+  type ProviderConnectionMetadata,
+} from "@/lib/providers/provider-connections";
+import { checkMetaConnectionHealth } from "@/lib/providers/meta-assets";
+import {
+  fetchEligibleMetaCampaigns,
+  metaExistingCampaignReuseIssue,
+} from "@/lib/providers/meta-campaigns";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import type { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type RouteContext = {
+  params: Promise<{ id: string }> | { id: string };
+};
+
+type PublishBody = {
+  leadForm?: unknown;
+  dryRun?: boolean;
+  adapter?: MetaExecutionAdapter;
+  controls?: MetaPublishControls;
+  /** A/B publish (A6): plan only these variants — one ad set, one tagged ad per variant. Absent = full pack (unchanged). */
+  variantIds?: string[];
+  librarySelections?: AdStudioCreativeLibrarySelection[];
+  existingMetaCampaignId?: string;
+};
+
+type ApprovalRecord = {
+  id: string | null;
+  status: ApprovalStatus;
+};
+
+type MetaPlanPersistenceResult = {
+  plan: MetaPublishPlan;
+  approval: ApprovalRecord;
+  complianceStatus: AdStudioCampaignPack["compliance"]["status"];
+  reusedActivePlan: boolean;
+};
+
+const CLIENT_META_SETUP_FIELDS = [
+  "metaSetup",
+  "setupPatch",
+  "metaAdAccountId",
+  "pageId",
+  "instagramActorId",
+  "pixelId",
+] as const;
+
+function providerWritesEnabled() {
+  return process.env.BLOCKWISE_ENABLE_PROVIDER_WRITES === "true";
+}
+
+/**
+ * Resolves the Meta connection's real publishable status from live token health
+ * and setup completeness, ignoring the denormalised `status` column. That column
+ * is written by several paths (OAuth callback, Settings GET/PATCH, a scheduled
+ * health task) with inconsistent criteria, and the scheduled task has been
+ * failing to run — so a healthy, fully-configured connection can sit at
+ * "needs_attention" and block every publish. The source of truth is the token
+ * itself plus the setup, so check those and persist the result so the dashboard
+ * and subsequent reads stop trusting the stale flag.
+ */
+async function reconcileMetaConnectionStatus(
+  serviceSupabase: ReturnType<typeof createSupabaseServiceClient>,
+  connection: ProviderConnectionMetadata,
+  persistStatus: boolean,
+): Promise<ProviderConnectionStatus> {
+  try {
+    const tokens = await loadStoredProviderTokens(serviceSupabase, connection.id);
+    const health = await checkMetaConnectionHealth({
+      accessToken: tokens.accessToken ?? "",
+      tokenExpiresAt: connection.tokenExpiresAt,
+    });
+    const tokenUsable = health.status === "healthy" || health.status === "expiring_soon";
+    const setupClean = validateMetaConnectionSetup(
+      resolveMetaConnectionSetup(connection.metadata, connection.externalAccountId),
+    ).length === 0;
+    const reconciled: ProviderConnectionStatus = tokenUsable && setupClean ? "connected" : "needs_attention";
+
+    if (persistStatus && reconciled !== connection.status) {
+      await serviceSupabase
+        .from("provider_connections")
+        .update({
+          status: reconciled,
+          health_status: health.status,
+          health_checked_at: health.checkedAt,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", connection.id)
+        .eq("workspace_id", connection.workspaceId)
+        .eq("provider", "meta");
+    }
+
+    return reconciled;
+  } catch {
+    // A transient health-check failure must not block publish harder than the
+    // stored status already would — fall back to it.
+    return publishableConnectionStatus(connection.status);
+  }
+}
+
+/**
+ * Filters the campaign pack's compliance issues to only those relevant to Meta,
+ * then re-evaluates the status. The compliance report is global — Google Search
+ * structural issues (missing headlines, images, etc.) must not block a Meta-only
+ * publish. Only Meta-relevant blocking issues should gate the Meta publish.
+ */
+function metaScopedComplianceStatus(
+  compliance: AdStudioCampaignPack["compliance"],
+): AdStudioCampaignPack["compliance"]["status"] {
+  const metaIssues = compliance.issues.filter((issue) => !issue.code.startsWith("google_"));
+  if (metaIssues.some((issue) => issue.severity === "blocking")) {
+    return "blocked";
+  }
+  return metaIssues.length > 0 ? "needs_review" : "approved";
+}
+
+export async function POST(request: NextRequest, context: RouteContext) {
+  const { id } = await Promise.resolve(context.params);
+  const access = await requireAdStudioRequest(request);
+
+  if (!access.ok) {
+    return access.response;
+  }
+
+  const body = (await request.json().catch(() => null)) as PublishBody | null;
+
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json({ error: "Publish request is required." }, { status: 400 });
+  }
+  const suppliedSetupField = CLIENT_META_SETUP_FIELDS.find((field) => Object.prototype.hasOwnProperty.call(body, field));
+  if (suppliedSetupField) {
+    return NextResponse.json(
+      { error: "Meta account and Page setup must come from the connected workspace account." },
+      { status: 400 },
+    );
+  }
+  const leadFormPatch = parseAdStudioPublishLeadFormPatch(body.leadForm);
+  if (!leadFormPatch.ok) {
+    return NextResponse.json({ error: leadFormPatch.error }, { status: 400 });
+  }
+  const existingMetaCampaignId = body.existingMetaCampaignId?.trim() || null;
+  if (existingMetaCampaignId && !hasExplicitMetaPublishAudience(body.controls)) {
+    return NextResponse.json(
+      { error: "Choose the audience for the new ad set before using an existing Meta campaign." },
+      { status: 422 },
+    );
+  }
+  const librarySelections = normalizeLibrarySelections(body.librarySelections);
+  if (librarySelections instanceof NextResponse) return librarySelections;
+  const authorizedPack = await resolveAuthorizedAdStudioPublishPack({
+    workspaceId: access.access.workspaceId,
+    campaignId: id,
+    leadFormPatch: leadFormPatch.value,
+    librarySelections,
+    loadCampaign: (workspaceId, campaignId) => loadAdStudioCampaignPack(
+      access.supabase,
+      workspaceId,
+      campaignId,
+    ),
+  });
+  if (!authorizedPack.ok) {
+    return NextResponse.json({ error: authorizedPack.error }, { status: authorizedPack.status });
+  }
+  const pack = authorizedPack.pack;
+
+  // Over-limit copy gets rejected or truncated by Meta — block, don't warn.
+  const copyViolations = findPackCopyLimitViolations(pack);
+  if (copyViolations.length > 0) {
+    return NextResponse.json(
+      { error: `Fix the ad copy before publishing: ${copyViolations.join(" ")}` },
+      { status: 422 },
+    );
+  }
+
+  const leadFormViolations = findLeadFormViolations(pack);
+  if (leadFormViolations.length > 0) {
+    return NextResponse.json(
+      { error: `Fix the lead form before publishing: ${leadFormViolations.join(" ")}` },
+      { status: 422 },
+    );
+  }
+
+  const serviceSupabase = createSupabaseServiceClient();
+
+  if (existingMetaCampaignId) {
+    const { data: workspaceBilling, error: workspaceBillingError } = await serviceSupabase
+      .from("workspaces")
+      .select("billing_access_state,billing_offer_key,billing_offer_version,stripe_subscription_status")
+      .eq("id", access.access.workspaceId)
+      .single();
+    if (workspaceBillingError || !workspaceBilling) {
+      return NextResponse.json(
+        { error: "Campaign eligibility could not be verified. Try again in a moment." },
+        { status: 503 },
+      );
+    }
+    const reuseIssue = metaExistingCampaignReuseIssue({
+      billingAccessState: workspaceBilling.billing_access_state,
+      billingOfferKey: workspaceBilling.billing_offer_key,
+      billingOfferVersion: workspaceBilling.billing_offer_version,
+      stripeSubscriptionStatus: workspaceBilling.stripe_subscription_status,
+    });
+    if (reuseIssue) {
+      return NextResponse.json({ error: reuseIssue }, { status: 422 });
+    }
+  }
+
+  const [existingApproval, connections] = await Promise.all([
+    loadApprovalStatus(access.supabase, access.access.workspaceId, [pack.campaign.campaignId, id]),
+    listProviderConnections(access.supabase, access.access.workspaceId),
+  ]);
+  const firstCopyPack = pack.copyPacks[0];
+  const metaConnection =
+    connections.find((connection) => connection.provider === "meta" && (connection.status === "connected" || connection.status === "needs_attention"))
+    ?? connections.find((connection) => connection.provider === "meta");
+  const googleConnection = connections.find((connection) => connection.provider === "google");
+  let existingMetaCampaignBudgetMode: "campaign" | "adset" | undefined;
+
+  if (existingMetaCampaignId) {
+    if (!metaConnection?.externalAccountId) {
+      return NextResponse.json({ error: "Connect Meta before choosing an existing campaign." }, { status: 422 });
+    }
+
+    const tokens = await loadStoredProviderTokens(serviceSupabase, metaConnection.id);
+    if (!tokens.accessToken) {
+      return NextResponse.json({ error: "Reconnect Meta before choosing an existing campaign." }, { status: 422 });
+    }
+
+    const eligibleCampaigns = await fetchEligibleMetaCampaigns({
+      accessToken: tokens.accessToken,
+      accountId: metaConnection.externalAccountId,
+    }).catch(() => []);
+    const selectedExistingCampaign = eligibleCampaigns.find((campaign) => campaign.id === existingMetaCampaignId);
+    if (!selectedExistingCampaign) {
+      return NextResponse.json({ error: "Choose an active or paused housing lead campaign from the connected Meta account." }, { status: 422 });
+    }
+    existingMetaCampaignBudgetMode = selectedExistingCampaign.budgetMode;
+  }
+  // Reconcile the Meta connection from live health/setup rather than the stale
+  // stored status (see reconcileMetaConnectionStatus).
+  const metaConnectionStatus = metaConnection
+    ? await reconcileMetaConnectionStatus(serviceSupabase, metaConnection, !body.dryRun)
+    : ("not_connected" as ProviderConnectionStatus);
+  const providerStatuses = {
+    ...(firstCopyPack?.meta ? { meta: metaConnectionStatus } : {}),
+    ...(firstCopyPack?.googleSearch ? { google: publishableConnectionStatus(googleConnection?.status) } : {}),
+  };
+  const publishRequests = buildAdStudioPublishRequests({
+    exportPackageId: id,
+    workspaceId: access.access.workspaceId,
+    metaAccountId: metaConnection?.externalAccountId,
+    googleCustomerId: googleConnection?.externalAccountId,
+    metaPayload: firstCopyPack?.meta,
+    googlePayload: firstCopyPack?.googleSearch,
+    validateOnly: true,
+  });
+  const writesEnabled = providerWritesEnabled();
+  const metaPublishPlanResult = metaConnection
+    ? await createMetaPlan({
+        serviceSupabase,
+        userId: access.access.userId,
+        workspaceId: access.access.workspaceId,
+        campaignPack: pack,
+        connection: metaConnection,
+        approval: existingApproval,
+        adapter: body.adapter ?? "marketing_api",
+        controls: body.controls,
+        requestApproval: !body.dryRun,
+        persist: !body.dryRun,
+        variantIds: librarySelections.length > 0
+          ? pack.variants.map((variant) => variant.variantId)
+          : body.variantIds,
+        existingMetaCampaignId,
+        existingMetaCampaignBudgetMode,
+      })
+    : null;
+  let metaPublishPlan = metaPublishPlanResult?.plan ?? null;
+  const scopedComplianceStatus = metaPublishPlan
+    ? body.dryRun
+      ? metaPublishPlanResult!.complianceStatus
+      : await loadMetaPublishPlanComplianceStatus(serviceSupabase, metaPublishPlan)
+    : metaScopedComplianceStatus(pack.compliance);
+  const providerPayloadReadiness = resolveAdStudioPublishReadiness({
+    providerStatuses,
+    approvalStatus: metaPublishPlanResult?.approval.status ?? existingApproval.status,
+    complianceStatus: scopedComplianceStatus,
+    hasDraftPayload: Boolean(firstCopyPack?.meta || firstCopyPack?.googleSearch),
+  });
+  const metaReadiness = metaPublishPlan
+    ? validateMetaPublishPlanReadiness(metaPublishPlan, {
+        approvalStatus: metaPublishPlanResult?.approval.status ?? "draft",
+        providerConnectionStatus: metaConnectionStatus,
+        complianceStatus: scopedComplianceStatus,
+      })
+    : { ready: false, blockers: firstCopyPack?.meta ? ["Meta account is not connected."] : [] };
+  const adapterBlockers = metaPublishPlan?.adapter && metaPublishPlan.adapter !== "marketing_api"
+    ? [`${metaPublishPlan.adapter} is read-only for diagnostics and cannot publish yet.`]
+    : [];
+  let blockers = uniqueStrings([...metaReadiness.blockers, ...adapterBlockers]);
+  let publishReady = blockers.length === 0;
+  let queueJobId: string | null = null;
+  const activePublishJob = metaPublishPlan && (
+    metaPublishPlan.status === "queued" || metaPublishPlan.status === "publishing"
+  )
+    ? await hasActiveMetaPublishPlanExecution({
+        serviceSupabase,
+        workspaceId: metaPublishPlan.workspaceId,
+        planId: metaPublishPlan.planId,
+      })
+    : false;
+
+  // Narrow the bind-to-queue window and fail closed if a concurrent publish
+  // rebound this campaign report to a different immutable subject.
+  if (publishReady && !body.dryRun && metaPublishPlan) {
+    const queueComplianceStatus = await loadMetaPublishPlanComplianceStatus(serviceSupabase, metaPublishPlan);
+    if (queueComplianceStatus === "blocked") {
+      blockers = uniqueStrings([...blockers, "Compliance must pass for this exact ad and lead form before publishing."]);
+      publishReady = false;
+    }
+  }
+
+  if (
+    publishReady &&
+    !body.dryRun &&
+    writesEnabled &&
+    metaPublishPlan?.adapter === "marketing_api" &&
+    metaPublishPlan.status !== "paused_ready" &&
+    metaPublishPlan.status !== "live" &&
+    (!metaPublishPlanResult?.reusedActivePlan || !activePublishJob)
+  ) {
+    const queuedPlan: MetaPublishPlan = metaPublishPlan.status === "publishing"
+      ? metaPublishPlan
+      : {
+          ...metaPublishPlan,
+          status: "queued",
+          lastError: null,
+          updatedAt: new Date().toISOString(),
+        };
+    if (queuedPlan.status === "queued") {
+      await persistMetaPublishPlan(serviceSupabase, queuedPlan, access.access.userId);
+    }
+
+    try {
+      const run = await queueMetaPublishPlanExecution(queuedPlan);
+      queueJobId = run.id ?? null;
+      metaPublishPlan = queuedPlan;
+    } catch (error) {
+      // A never-started plan is safe to fail and rebuild. A publishing plan may
+      // already own provider objects, so keep it reconcilable instead of
+      // claiming that no provider mutation occurred.
+      const queueFailedPlan: MetaPublishPlan = {
+        ...queuedPlan,
+        status: queuedPlan.status === "publishing" ? "reconciliation_required" : "failed",
+        lastError: error instanceof Error ? error.message : "Publish could not be queued.",
+        updatedAt: new Date().toISOString(),
+      };
+      await persistMetaPublishPlan(serviceSupabase, queueFailedPlan, access.access.userId);
+
+      return NextResponse.json(
+        { error: "Your ad could not be submitted to Meta. Try again in a moment." },
+        { status: 502 },
+      );
+    }
+  }
+
+  return NextResponse.json({
+    exportPackageId: id,
+    publishReady,
+    blockers,
+    providerWritesEnabled: writesEnabled,
+    activePublishJob,
+    publishRequests,
+    providerPayloadReadiness,
+    metaPublishPlan: metaPublishPlan
+      ? {
+          id: metaPublishPlan.planId,
+          status: metaPublishPlan.status,
+          adapter: metaPublishPlan.adapter,
+          approvalRequestId: metaPublishPlan.approvalRequestId,
+          idempotencyKey: metaPublishPlan.idempotencyKey,
+          setup: metaPublishPlan.setup,
+          plannedObjects: {
+            adSets: metaPublishPlan.adSets.length,
+            leadForms: metaPublishPlan.leadForms.length,
+            creatives: metaPublishPlan.creatives.length,
+            ads: metaPublishPlan.ads.length,
+          },
+          // Additive: which Ad Studio variants the planned ads map to (A6).
+          variantIds: metaPublishPlan.ads
+            .map((ad) => ad.variantTag?.variantId)
+            .filter((variantId): variantId is string => Boolean(variantId)),
+        }
+      : null,
+    queueJobId,
+  });
+}
+
+function normalizeLibrarySelections(
+  value: PublishBody["librarySelections"],
+): AdStudioCreativeLibrarySelection[] | NextResponse {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    return NextResponse.json({ error: "Selected ads are invalid." }, { status: 400 });
+  }
+
+  const normalized = value.flatMap((selection) => {
+    const campaignId = selection?.campaignId?.trim();
+    const variantId = selection?.variantId?.trim();
+    return campaignId && variantId ? [{ campaignId, variantId }] : [];
+  });
+  if (normalized.length !== value.length) {
+    return NextResponse.json({ error: "Selected ads are invalid." }, { status: 400 });
+  }
+  if (normalized.length > 6) {
+    return NextResponse.json({ error: "Select up to six ads for one campaign." }, { status: 422 });
+  }
+
+  const unique = new Set(normalized.map((selection) => `${selection.campaignId}:${selection.variantId}`));
+  if (unique.size !== normalized.length) {
+    return NextResponse.json({ error: "Choose each saved ad only once." }, { status: 422 });
+  }
+
+  return normalized;
+}
+
+async function createMetaPlan(input: {
+  serviceSupabase: ReturnType<typeof createSupabaseServiceClient>;
+  userId: string;
+  workspaceId: string;
+  campaignPack: AdStudioCampaignPack;
+  connection: ProviderConnectionMetadata;
+  approval: ApprovalRecord;
+  adapter: MetaExecutionAdapter;
+  controls?: MetaPublishControls;
+  requestApproval: boolean;
+  persist: boolean;
+  variantIds?: string[];
+  existingMetaCampaignId?: string | null;
+  existingMetaCampaignBudgetMode?: "campaign" | "adset";
+}): Promise<MetaPlanPersistenceResult> {
+  // Spend targets are server-owned: account, Page, actor, pixel and lead
+  // destination are derived only from this workspace-scoped connection.
+  const setup = resolveMetaConnectionSetup(input.connection.metadata, input.connection.externalAccountId);
+  let approval = input.approval;
+
+  const immutableCampaignPack = await prepareImmutableMetaPublishCampaignPack(
+    input.serviceSupabase,
+    input.workspaceId,
+    input.campaignPack,
+    input.variantIds,
+  );
+  const buildPlan = (approvalRequestId: string | null) => buildMetaPublishPlan({
+    workspaceId: input.workspaceId,
+    campaignPack: immutableCampaignPack,
+    connectionId: input.connection.id,
+    setup,
+    controls: input.controls,
+    adapter: input.adapter,
+    approvalRequestId,
+    variantIds: input.variantIds,
+    existingMetaCampaignId: input.existingMetaCampaignId,
+    existingMetaCampaignBudgetMode: input.existingMetaCampaignBudgetMode,
+  });
+  const uncheckedPlan = buildPlan(approval.id);
+  const compliance = runMetaPublishComplianceReview(uncheckedPlan);
+  immutableCampaignPack.compliance = {
+    ...immutableCampaignPack.compliance,
+    status: compliance.status,
+    issues: compliance.issues,
+    checkedAt: compliance.checkedAt,
+  };
+  let plan = buildPlan(approval.id);
+  if (plan.complianceSubjectHash !== uncheckedPlan.complianceSubjectHash) {
+    throw new Error("Compliance changed the immutable Meta publish subject.");
+  }
+
+  let validatingPlan: MetaPublishPlan = {
+    ...plan,
+    approvalRequestId: approval.id,
+    status: "validating",
+    updatedAt: new Date().toISOString(),
+  };
+  // Dry-run is read-only: immutable revision preparation and readiness checks
+  // may read current state, but no approval, plan, provider, or queue mutation
+  // occurs. A real publish takes the idempotent persistence path below.
+  if (!input.persist) {
+    return { plan: validatingPlan, approval, complianceStatus: compliance.status, reusedActivePlan: false };
+  }
+
+  await bindMetaPublishPlanComplianceReport(input.serviceSupabase, validatingPlan, compliance);
+
+  // A blocked exact review may write its evidence report, but it must not
+  // create/approve an approval request or persist an executable plan.
+  if (compliance.status === "blocked") {
+    return { plan: validatingPlan, approval, complianceStatus: compliance.status, reusedActivePlan: false };
+  }
+
+  // The review step was removed from the UI, so clean exact submissions are
+  // approved immediately, after compliance has been durably bound.
+  if (input.requestApproval && approval.id && approval.status !== "approved") {
+    const approvalId = approval.id;
+    const { error } = await input.serviceSupabase
+      .from("approval_requests")
+      .update({ status: "approved", approved_by: input.userId, resolved_at: new Date().toISOString() })
+      .eq("id", approvalId)
+      .eq("workspace_id", input.workspaceId);
+
+    if (error) throw new Error(error.message);
+    approval = { id: approvalId, status: "approved" };
+    await recordAutoApprovalAudit(input, approvalId);
+  }
+
+  if (input.requestApproval && !approval.id) {
+    const createdApproval = await createMetaPublishApproval(input.serviceSupabase, {
+      workspaceId: input.workspaceId,
+      userId: input.userId,
+      campaignName: input.campaignPack.campaign.name,
+      adapter: input.adapter,
+    });
+    approval = createdApproval;
+    if (createdApproval.id) await recordAutoApprovalAudit(input, createdApproval.id);
+  }
+
+  plan = buildPlan(approval.id);
+  if (plan.complianceSubjectHash !== uncheckedPlan.complianceSubjectHash) {
+    throw new Error("Approval changed the immutable Meta publish subject.");
+  }
+  validatingPlan = {
+    ...plan,
+    status: "validating",
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (approval.id) {
+    const { error } = await input.serviceSupabase
+      .from("approval_requests")
+      .update({ target_id: plan.planId })
+      .eq("id", approval.id)
+      .eq("workspace_id", input.workspaceId);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  // The POST handler moves this validation record to queued only after all
+  // readiness checks pass and the durable job enqueue succeeds.
+  let persistedPlan = validatingPlan;
+  const existingPlan = await loadMetaPublishPlanByIdempotencyKey(input.serviceSupabase, {
+    workspaceId: input.workspaceId,
+    idempotencyKey: persistedPlan.idempotencyKey,
+  });
+
+  // Reuse completed/provider-ambiguous plans, and reuse a queued plan only
+  // while its queue row is genuinely active. This prevents a second click from
+  // overwriting an in-flight plan to draft, while still repairing an approved
+  // plan whose enqueue failed or whose queue row became terminal.
+  const existingQueuedJobActive = existingPlan?.status === "queued"
+    ? await hasActiveMetaPublishPlanExecution({
+        serviceSupabase: input.serviceSupabase,
+        workspaceId: input.workspaceId,
+        planId: existingPlan.planId,
+      })
+    : false;
+  if (
+    existingPlan &&
+    (
+      existingPlan.status === "publishing" ||
+      existingPlan.status === "paused_ready" ||
+      existingPlan.status === "live" ||
+      existingPlan.status === "reconciliation_required" ||
+      existingQueuedJobActive
+    )
+  ) {
+    return { plan: existingPlan, approval, complianceStatus: compliance.status, reusedActivePlan: true };
+  }
+
+  if (existingPlan) {
+    persistedPlan = {
+      ...persistedPlan,
+      requestLog: existingPlan.requestLog,
+      responseLog: existingPlan.responseLog,
+      reconciledObjects: existingPlan.reconciledObjects,
+      lastError: existingPlan.lastError,
+      createdAt: existingPlan.createdAt,
+    };
+  }
+
+  await persistMetaPublishPlan(input.serviceSupabase, persistedPlan, input.userId);
+
+  return { plan: persistedPlan, approval, complianceStatus: compliance.status, reusedActivePlan: false };
+}
+
+async function recordAutoApprovalAudit(
+  input: { serviceSupabase: ReturnType<typeof createSupabaseServiceClient>; workspaceId: string; userId: string; campaignPack: AdStudioCampaignPack; adapter: MetaExecutionAdapter },
+  approvalRequestId: string,
+) {
+  await input.serviceSupabase.from("audit_logs").insert({
+    workspace_id: input.workspaceId,
+    actor_profile_id: input.userId,
+    action: "meta_publish_approval_auto_approved",
+    target_type: "approval_request",
+    target_id: approvalRequestId,
+    metadata: {
+      campaignName: input.campaignPack.campaign.name,
+      adapter: input.adapter,
+    },
+  });
+}
+
+async function createMetaPublishApproval(
+  serviceSupabase: ReturnType<typeof createSupabaseServiceClient>,
+  input: {
+    workspaceId: string;
+    userId: string;
+    campaignName: string;
+    adapter: MetaExecutionAdapter;
+  },
+): Promise<ApprovalRecord> {
+  const { data, error } = await serviceSupabase
+    .from("approval_requests")
+    .insert({
+      workspace_id: input.workspaceId,
+      target_type: "meta_publish_plan",
+      // Placeholder until the plan id exists (it depends on the approval id);
+      // the caller updates target_id to the real plan id straight after.
+      target_id: randomUUID(),
+      status: "approved",
+      requested_by: input.userId,
+      approved_by: input.userId,
+      resolved_at: new Date().toISOString(),
+      risk_summary: `Publish paused Meta lead campaign pack "${input.campaignName}" through ${input.adapter}.`,
+    })
+    .select("id,status")
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message ?? "Unable to create Meta publish approval request.");
+  }
+
+  return {
+    id: data.id as string,
+    status: normalizeApprovalStatus(data.status),
+  };
+}
+
+function publishableConnectionStatus(status: ProviderConnectionMetadata["status"] | undefined): ProviderConnectionStatus {
+  if (status === "connected" || status === "needs_attention") {
+    return status;
+  }
+
+  return "not_connected";
+}
+
+async function loadApprovalStatus(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  workspaceId: string,
+  targetIds: string[],
+): Promise<ApprovalRecord> {
+  const uniqueTargetIds = uniqueStrings(targetIds);
+  const { data: latestPlan } = await supabase
+    .from("meta_publish_plans")
+    .select("id,approval_request_id")
+    .eq("workspace_id", workspaceId)
+    .in("adstudio_campaign_id", uniqueTargetIds)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const possibleApprovalIds = typeof latestPlan?.approval_request_id === "string" ? [latestPlan.approval_request_id] : [];
+  const possibleTargetIds = uniqueStrings([...uniqueTargetIds, ...(typeof latestPlan?.id === "string" ? [latestPlan.id] : [])]);
+
+  if (possibleApprovalIds.length > 0) {
+    const { data } = await supabase
+      .from("approval_requests")
+      .select("id,status")
+      .eq("workspace_id", workspaceId)
+      .in("id", possibleApprovalIds)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (data?.id) {
+      return { id: data.id as string, status: normalizeApprovalStatus(data.status) };
+    }
+  }
+
+  const { data } = await supabase
+    .from("approval_requests")
+    .select("id,status")
+    .eq("workspace_id", workspaceId)
+    .in("target_id", possibleTargetIds)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return {
+    id: typeof data?.id === "string" ? data.id : null,
+    status: normalizeApprovalStatus(data?.status),
+  };
+}
+
+function normalizeApprovalStatus(value: unknown): ApprovalStatus {
+  return value === "approved" || value === "rejected" || value === "cancelled" || value === "requested"
+    ? value
+    : "draft";
+}
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return Array.from(new Set(values.filter((value): value is string => Boolean(value))));
+}

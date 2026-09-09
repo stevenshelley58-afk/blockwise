@@ -83,6 +83,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
     });
 
   if (mutationError) {
+    if (body.action === "activate" && mutationError.code === "23505") {
+      const { data: existing } = await serviceSupabase.from("meta_publish_plan_mutations")
+        .select("id,status,approval_request_id").eq("workspace_id", mutation.workspaceId).eq("id", mutation.mutationId).maybeSingle();
+      if (existing) return NextResponse.json({ mutation: existing, reused: true, queueJobId: null });
+    }
     return NextResponse.json({ error: mutationError.message }, { status: 500 });
   }
 
@@ -92,8 +97,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
       workspace_id: mutation.workspaceId,
       target_type: mutation.approval.targetType,
       target_id: mutation.approval.targetId,
-      status: mutation.approval.status,
+      status: body.action === "activate" ? "approved" : mutation.approval.status,
       requested_by: access.userId,
+      ...(body.action === "activate" ? { approved_by: access.userId, resolved_at: new Date().toISOString() } : {}),
       risk_summary: mutation.approval.riskSummary,
     })
     .select("id,status,risk_summary")
@@ -112,12 +118,33 @@ export async function POST(request: NextRequest, context: RouteContext) {
     .eq("workspace_id", mutation.workspaceId)
     .eq("id", mutation.mutationId);
 
+  let queueJobId: string | null = null;
+  if (body.action === "activate") {
+    const { error: approveError } = await serviceSupabase.from("meta_publish_plan_mutations")
+      .update({ status: "approved", last_error: null, updated_at: new Date().toISOString() })
+      .eq("workspace_id", mutation.workspaceId).eq("id", mutation.mutationId);
+    if (approveError) return NextResponse.json({ error: approveError.message }, { status: 500 });
+    try {
+      const queued = await queueMetaMutationExecution({ workspaceId: mutation.workspaceId, mutationId: mutation.mutationId });
+      queueJobId = queued.id ?? null;
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : "Activation was not queued." }, { status: 502 });
+    }
+    await serviceSupabase.from("audit_logs").insert({
+      workspace_id: access.workspaceId, actor_profile_id: access.userId,
+      action: "meta_activation_spend_confirmed", target_type: "meta_publish_plan", target_id: plan.planId,
+      metadata: { dailyBudgetMinorUnits: activationExpectedBudget, currency: plan.setup.currency, planToken: plan.complianceSubjectHash, mutationId: mutation.mutationId, queueJobId },
+    });
+    await updateMetaPublishPlanExecution(serviceSupabase, { ...plan, status: "activating", lastError: null, updatedAt: new Date().toISOString() });
+  }
+
   return NextResponse.json({
     mutation: {
       ...mutation,
       approvalRequestId: approval.id,
     },
     approval,
+    queueJobId,
   });
 }
 

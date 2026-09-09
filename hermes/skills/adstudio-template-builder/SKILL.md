@@ -1,0 +1,113 @@
+# adstudio-template-builder
+
+## Purpose
+
+Mandatory process for creating, changing, or reviewing an AdStudio template.
+AdStudio has one template contract and one full-ad generation request.
+
+## Product law
+
+1. A template starts in Frank from one real private source ad or one Ad Radar
+   creative. Frank records its `sourceAd.file` or `sourceAd.creativeId`, SHA-256
+   `contentHash`, and AI ad-radar `classification`; Blockwise receives only the
+   source-free release metadata.
+2. Vision extracts the customer input contract from the source: each distinct
+   image the customer must provide and each visible text value they can replace.
+   It does not extract a rendering recipe.
+3. The gallery never displays the private source ad. Create a safe sample by
+   sending the source, generic replacement images, and safe copy through
+   `buildCloneImageRequest`. Record the generated sample hash; it must differ
+   from the source hash.
+4. Customer generation uses the same `buildCloneImageRequest`, with the approved
+   public sample as reference image 1, followed by the customer's declared image
+   inputs and exact text.
+5. Generation returns one finished image and must pass clone QA. Editing starts
+   only after that. A text or image edit uses the latest finished ad as reference
+   image 1, changes one target, preserves the rest, runs QA, and appends history.
+
+There is no alternate version, layer-based creation path, shared layout recipe,
+or second full-ad generator.
+
+## Template manifest
+
+Each JSON file under `src/lib/adstudio/template-gallery/` contains:
+
+- identity and campaign metadata: `id`, `name`, `goal`, `offerId`, `format`,
+  `dimensions`, `audienceIntent`, `category`, `tags`, `meta`
+- `sample`: `imageSrc`, matching `thumbnailSrc`, `alt`, SHA-256 `contentHash`,
+  and `generatedBy: "reference_clone"`
+- `inputs.images[]`: stable `key`, user label, `required`, optional aspect, and a
+  plain description used in the reference-image legend
+- `inputs.text[]`: stable `key`, user label, `required`, `maxLength`, and safe
+  sample text
+- `sourceAd`: opaque SHA-256 source hash plus `provenance: "frank_factory"`;
+  private source paths, filenames, and creative IDs remain in Frank
+- `classification`: `ad_type`, `primary_intent`, and
+  `property_or_agent_focus`
+
+Input lists are source-specific. A no-headline ad, collage, headshot ad, or ad
+with several text values is valid. Do not invent fields the source does not use.
+
+## Build workflow
+
+1. Frank is the only source-to-public-sample factory. In Frank, select one real
+   source that adds useful classification diversity, extract only its customer
+   inputs, generate through Blockwise's service-only clone endpoint, and record
+   the required human native-source/sample approval. Blockwise contains no
+   alternate source analysis or public-sample generator.
+2. Import the approved, source-free release into quarantine:
+
+   `npm run adstudio:import-factory-release -- <release-id>`
+
+   This writes only `manifest.json`, `sample.png`, and
+   `factory-evidence.json` under
+   `artifacts/adstudio-template-imports/<release-id>/`. It never changes the
+   customer gallery.
+3. Inspect the sample at full size, then add offline typography measurements
+   and deterministic image hitboxes to a prepared manifest in that same import
+   workspace. Do not add a layout recipe or change the attested base manifest.
+4. Export and render an independent customer fixture from the imported public
+   sample, using different assets and copy:
+
+   `npm run adstudio:customer-fixture -- export --template <prepared-manifest> --sample <import-dir>/sample.png --packet <import-dir>/customer.packet.json --output <import-dir>/customer.png --asset <key>=<path> --copy <key>=<value>`
+
+   `npm run adstudio:customer-fixture -- render --template <prepared-manifest> --packet <import-dir>/customer.packet.json`
+5. Prepare an independent full-size visual review packet with
+   `scripts/adstudio/template-quality.mjs prepare-review`, obtain the bound
+   image-model review JSON, then run the single promotion command:
+
+   `npm run adstudio:promote-factory-template -- --import-dir <import-dir> --template <prepared-manifest> --customer-packet <packet> --customer-candidate <customer.png> --customer-review <review.json>`
+
+   Promotion records the independent QA, builds schema-v2 evidence and the
+   quality lock, writes the static manifest/sample/evidence/index, and runs the
+   hard-reset verifier. Any failed check rolls back all gallery writes.
+6. Run `npm run typecheck` and `npm run test`, then review and commit the exact
+   PR-ready static changes. Never copy private source bytes into Blockwise.
+
+## Definition of done
+
+- `node scripts/verify/adstudio-templates.mjs` passes.
+- `npm run verify:hard-reset`, `npm run typecheck`, and `npm run test` pass.
+- Frank's source attestation and the public sample hash are present, verified,
+  and different; no private source bytes or paths exist in Blockwise.
+- The sample was generated by `buildCloneImageRequest` and visually inspected.
+- The dialog asks for every declared required input and no undeclared input.
+- A customer request is sample + customer images + exact customer text.
+- No template can open for editing before a clone exists.
+- The finished clone uses the compact post-clone editor and immutable revision
+  history, with every edit anchored to the latest finished image.
+- The gallery remains diverse by ad-radar classification at portfolio scale.
+
+## Files
+
+- Frank release importer: `scripts/adstudio/import-factory-release.mjs`
+- Independent customer fixture: `scripts/adstudio/customer-template-fixture.mjs`
+- Explicit promotion gate: `scripts/adstudio/promote-factory-template.mjs`
+- One full-ad request and targeted edits: `src/lib/adstudio/reference-clone.ts`
+- Template contract: `src/lib/adstudio/templates.ts`
+- Gallery: `src/lib/adstudio/template-gallery/`
+- Customer generation: `src/lib/adstudio/generate-template-campaign.ts`
+- Compact post-clone editor: `src/components/adstudio/ad-studio-customer-flow.tsx`
+- Gate: `scripts/verify/adstudio-templates.mjs`
+
+Finish with `hermes/skills/blockwise-agent-cleanup/SKILL.md`.

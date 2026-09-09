@@ -30,6 +30,7 @@
     "seed:test-users": "node scripts/seed-test-users.mjs"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.3",
     "@sentry/core": "^10.69.0",
     "@sentry/nextjs": "^10.69.0",
     "@supabase/ssr": "^0.6.1",

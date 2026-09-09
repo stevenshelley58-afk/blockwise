@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
 
 import type { AdStudioCampaignPack } from "../adstudio/index.ts";
+import { normalizeLeadFormQuestions } from "../adstudio/default-lead-forms.ts";
 import { deterministicUuid } from "../adstudio/id.ts";
+import type { AdStudioComplianceReport } from "../adstudio/types.ts";
 import { evaluatePublishReadiness, type ApprovalStatus, type ProviderConnectionStatus } from "../publishing/readiness.ts";
 import type { ComplianceStatus } from "../compliance/real-estate-policy.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
@@ -15,7 +17,25 @@ const META_HOUSING_MIN_RADIUS_KM = 25;
 const META_LOWEST_COST_BID_STRATEGY = "LOWEST_COST_WITHOUT_CAP";
 
 export type MetaExecutionAdapter = "marketing_api" | "ads_cli" | "ads_mcp";
-export type MetaPublishPlanStatus = "draft" | "approved" | "publishing" | "paused_live" | "failed";
+/**
+ * A plan is deliberately not "live" when Meta objects merely exist. Creation
+ * ends at paused_ready; activation is an explicit, independently-audited
+ * mutation. reconciliation_required means a network/provider response was
+ * ambiguous, so retrying creates is unsafe until the IDs are reconciled.
+ */
+export type MetaPublishPlanStatus =
+  | "draft"
+  | "validating"
+  | "queued"
+  | "publishing"
+  | "paused_ready"
+  | "activating"
+  | "live"
+  | "failed"
+  | "reconciliation_required"
+  /** Read compatibility only; the database migration rewrites these values. */
+  | "approved"
+  | "paused_live";
 
 export type MetaLeadDestination = {
   type: "webhook" | "crm" | "manual";
@@ -162,21 +182,82 @@ export type MetaCreativeAssetPlan = {
   bytesBase64?: string;
   url?: string;
   storagePath?: string;
+  /** SHA-256 of the exact finished bytes. Required before compliance/publish. */
+  contentSha256?: string;
+  /** Meta's uploaded image hash is transport metadata, not compliance proof. */
   imageHash?: string;
   videoId?: string;
 };
 
-export type MetaPublishLeadFormPlan = {
-  localId: string;
-  name: string;
+export type MetaInstantFormContactField = "FIRST_NAME" | "LAST_NAME" | "EMAIL" | "PHONE";
+export type MetaInstantFormSpec = {
   headline: string;
-  questions: string[];
+  intro: string;
+  contactFields: MetaInstantFormContactField[];
+  /** Maximum five, enforced before provider writes. */
+  customQuestions: string[];
   privacyPolicyUrl: string;
   thankYouTitle: string;
   thankYouBody: string;
+  thankYouButtonType: "VIEW_WEBSITE";
+  thankYouButtonText: string;
   thankYouWebsiteUrl: string;
   fulfilment?: MetaOfferFulfilment;
 };
+
+/** Portable package copy; customer URLs are supplied only at publish time. */
+export type MetaLeadFormDefaults = Omit<MetaInstantFormSpec, "privacyPolicyUrl" | "thankYouWebsiteUrl">;
+
+export type MetaLeadFormCustomerSetup = {
+  privacyPolicyUrl: string;
+  formCompletionUrl: string;
+};
+
+export type MetaPublishLeadFormPlan = MetaInstantFormSpec & {
+  localId: string;
+  name: string;
+  /** Back-compat alias only; new package consumers use customQuestions. */
+  questions: string[];
+};
+
+export type MetaPublishDefaults = {
+  cta: "LEARN_MORE" | "SIGN_UP" | "GET_QUOTE" | "APPLY_NOW" | "DOWNLOAD" | "SUBSCRIBE";
+  placements: { feed: true; story: true };
+  creativeFeatures: Partial<Record<MetaCreativeFeatureKey, "OPT_IN" | "OPT_OUT">>;
+};
+
+const META_LEAD_CTA_TYPES = new Set(["LEARN_MORE", "SIGN_UP", "GET_QUOTE", "APPLY_NOW", "DOWNLOAD", "SUBSCRIBE"]);
+const SENSITIVE_LEAD_QUESTION_PATTERN = /\b(race|ethnic|religion|disabilit|health|medical|income|credit|debt|bankrupt|citizen|immigration|marital|pregnan|sexual|politic)/i;
+
+export function validateMetaInstantFormSpec(form: MetaInstantFormSpec): string[] {
+  const blockers: string[] = [];
+  if (!form.headline.trim() || !form.intro.trim()) blockers.push("Meta Instant Form headline and introduction are required.");
+  if (!form.contactFields.length) blockers.push("Meta Instant Form needs at least one contact field.");
+  if (form.customQuestions.length > 5) blockers.push("Meta Instant Forms allow at most five custom questions.");
+  if (form.customQuestions.some((question) => !question.trim())) blockers.push("Meta custom questions must have stable non-empty labels.");
+  if (form.customQuestions.some((question) => SENSITIVE_LEAD_QUESTION_PATTERN.test(question))) {
+    blockers.push("Meta housing lead forms cannot ask prohibited sensitive questions.");
+  }
+  if (!isHttpsUrl(form.privacyPolicyUrl) || !isHttpsUrl(form.thankYouWebsiteUrl)) {
+    blockers.push("Meta Instant Form privacy and completion URLs must be valid HTTPS URLs.");
+  }
+  return blockers;
+}
+
+/** The sole package-to-customer boundary for Meta Instant Forms. */
+export function buildMetaInstantFormSpec(
+  defaults: MetaLeadFormDefaults,
+  customer: MetaLeadFormCustomerSetup,
+): MetaInstantFormSpec {
+  return { ...defaults, privacyPolicyUrl: customer.privacyPolicyUrl, thankYouWebsiteUrl: customer.formCompletionUrl };
+}
+
+export function validateMetaLeadFormConfiguration(
+  defaults: MetaLeadFormDefaults,
+  customer: MetaLeadFormCustomerSetup,
+): string[] {
+  return validateMetaInstantFormSpec(buildMetaInstantFormSpec(defaults, customer));
+}
 
 export type MetaPublishCreativePlan = {
   localId: string;
@@ -189,9 +270,47 @@ export type MetaPublishCreativePlan = {
   cta: string;
   leadFormLocalId: string;
   adStudioCreativeId: string | null;
+  /** Active immutable finished-clone revision at plan creation. */
+  adStudioCreativeRevisionId?: string | null;
   format: string | null;
   asset?: MetaCreativeAssetPlan | null;
+  /** Renderer adapter: 4:5 feed plus optional 9:16 story final image. */
+  formatAssets?: { feed: MetaCreativeAssetPlan | null; story: MetaCreativeAssetPlan | null } | null;
+  /** Exact immutable finished-clone revisions that supplied the Meta bytes. */
+  revisionBindings: MetaCreativeRevisionBinding[];
 };
+
+export type MetaCreativeRevisionBinding = {
+  placement: "feed" | "story";
+  creativeId: string;
+  revisionId: string;
+  format: AdStudioCampaignPack["creatives"][number]["format"];
+  asset: MetaCreativeAssetPlan;
+};
+
+export const META_CREATIVE_FEATURE_KEYS = [
+  "adapt_to_placement",
+  "image_touchups",
+  "image_templates",
+  "inline_comment",
+  "enhance_cta",
+  "text_optimizations",
+  "image_animation",
+  "image_background_gen",
+  "video_auto_crop",
+  "translate_voiceover",
+  "text_translation",
+  "media_type_automation",
+  "product_extensions",
+] as const;
+
+export type MetaCreativeFeatureKey = (typeof META_CREATIVE_FEATURE_KEYS)[number];
+
+export function buildDefaultMetaCreativeFeatures(): Record<MetaCreativeFeatureKey, "OPT_OUT"> {
+  return Object.fromEntries(
+    META_CREATIVE_FEATURE_KEYS.map((key) => [key, "OPT_OUT"]),
+  ) as Record<MetaCreativeFeatureKey, "OPT_OUT">;
+}
 
 export type MetaAdVariantTag = {
   variantId: string;
@@ -245,6 +364,37 @@ export type MetaReconciledObjects = {
     adSets?: Record<string, MetaReconciledObjectStatus>;
     ads?: Record<string, MetaReconciledObjectStatus>;
   };
+  /**
+   * A source-free Graph read-back captured immediately before paused_ready.
+   * It binds the Meta image hashes and Instant Form ids to the immutable
+   * revision hashes in this plan; it deliberately contains no bytes, storage
+   * paths, URLs, or provider tokens.
+   */
+  pausedReadbackEvidence?: MetaPausedReadbackEvidence;
+};
+
+export type MetaPausedCreativeAssetEvidence = {
+  placement: "feed" | "story";
+  creativeId: string;
+  revisionId: string;
+  contentSha256: string;
+  providerImageHash: string;
+};
+
+export type MetaPausedCreativeEvidence = {
+  providerCreativeId: string;
+  leadFormProviderId: string;
+  feed: MetaPausedCreativeAssetEvidence;
+  story: MetaPausedCreativeAssetEvidence;
+};
+
+export type MetaPausedReadbackEvidence = {
+  verifiedAt: string;
+  complianceSubjectHash: string;
+  campaign: MetaReconciledObjectStatus;
+  adSets: Record<string, MetaReconciledObjectStatus>;
+  ads: Record<string, MetaReconciledObjectStatus>;
+  creatives: Record<string, MetaPausedCreativeEvidence>;
 };
 
 export type MetaProviderLogEntry = {
@@ -278,6 +428,8 @@ export type MetaPublishPlan = {
   adapter: MetaExecutionAdapter;
   status: MetaPublishPlanStatus;
   idempotencyKey: string;
+  /** Immutable cutover identity. Unmarked plans are legacy and cannot activate. */
+  publishContractVersion: "finished_clone_v1" | null;
   setup: MetaConnectionSetup;
   controls: MetaPublishControls;
   campaign: MetaPublishCampaignPlan;
@@ -286,6 +438,14 @@ export type MetaPublishPlan = {
   creatives: MetaPublishCreativePlan[];
   ads: MetaPublishAdPlan[];
   tracking: MetaPublishTrackingPlan;
+  complianceReportId: string | null;
+  /** SHA-256 of the immutable selected assets and generic copy/form content. */
+  complianceSubjectHash: string;
+  complianceCheckedAt: string | null;
+  /** Every supported Advantage+ feature is OPT_OUT unless a released template opts in. */
+  creativeFeatures: Partial<Record<MetaCreativeFeatureKey, "OPT_IN" | "OPT_OUT">>;
+  /** Only true after the provider probe has passed for the package/version. */
+  assetFeedEnabled: boolean;
   requestLog: MetaProviderLogEntry[];
   responseLog: MetaProviderLogEntry[];
   reconciledObjects: MetaReconciledObjects;
@@ -354,6 +514,79 @@ function hashMetaExecutionSpec(value: unknown): string {
     .update(JSON.stringify(canonicalizeMetaExecutionValue(value)))
     .digest("hex")
     .slice(0, 32);
+}
+
+/**
+ * Compliance binds to exactly what Meta will render: the selected finished
+ * asset identifiers/hashes plus ad copy and generic form defaults. Customer
+ * privacy and destination URLs are intentionally excluded from package data.
+ */
+export function buildMetaComplianceSubjectHash(input: Pick<MetaPublishPlan, "campaign" | "leadForms" | "creatives" | "ads" | "tracking">): string {
+  return createHash("sha256")
+    .update(JSON.stringify(canonicalizeMetaExecutionValue({
+      campaign: input.campaign,
+      creatives: input.creatives.map((creative) => ({
+        localId: creative.localId,
+        adStudioCreativeId: creative.adStudioCreativeId,
+        adStudioCreativeRevisionId: creative.adStudioCreativeRevisionId ?? null,
+        format: creative.format,
+        asset: immutableCreativeAsset(creative.asset),
+        formatAssets: creative.formatAssets ? {
+          feed: immutableCreativeAsset(creative.formatAssets.feed),
+          story: immutableCreativeAsset(creative.formatAssets.story),
+        } : null,
+        revisionBindings: creative.revisionBindings.map((binding) => ({
+          placement: binding.placement,
+          creativeId: binding.creativeId,
+          revisionId: binding.revisionId,
+          format: binding.format,
+          asset: immutableCreativeAsset(binding.asset),
+        })),
+        headline: creative.headline,
+        primaryText: creative.primaryText,
+        description: creative.description,
+        cta: creative.cta,
+      })),
+      leadForms: input.leadForms.map(({ privacyPolicyUrl: _privacy, thankYouWebsiteUrl: _completion, name: _name, ...authoredContent }) => authoredContent),
+      ads: input.ads,
+      tracking: input.tracking,
+    })))
+    .digest("hex");
+}
+
+export async function bindMetaPublishPlanComplianceReport(
+  service: SupabaseServiceClient,
+  plan: Pick<MetaPublishPlan, "workspaceId" | "adStudioCampaignId" | "complianceReportId" | "complianceSubjectHash">,
+  review: Pick<AdStudioComplianceReport, "status" | "issues" | "checkedAt">,
+): Promise<void> {
+  if (!plan.complianceReportId || !/^[a-f0-9]{64}$/i.test(plan.complianceSubjectHash)) {
+    throw new Error("Exact Meta publish compliance could not be bound to this plan.");
+  }
+
+  const { data, error } = await (service as any).rpc("adstudio_bind_publish_compliance", {
+    p_workspace_id: plan.workspaceId,
+    p_campaign_id: plan.adStudioCampaignId,
+    p_report_id: plan.complianceReportId,
+    p_subject_hash: plan.complianceSubjectHash,
+    p_status: review.status,
+    p_issues_json: review.issues,
+    p_checked_at: review.checkedAt,
+  });
+  const bound = Array.isArray(data) ? data[0] : data;
+  if (
+    error || !bound || bound.report_id !== plan.complianceReportId ||
+    bound.campaign_id !== plan.adStudioCampaignId || bound.workspace_id !== plan.workspaceId ||
+    bound.subject_hash !== plan.complianceSubjectHash || bound.status !== review.status ||
+    JSON.stringify(bound.issues_json) !== JSON.stringify(review.issues) ||
+    new Date(bound.checked_at).getTime() !== new Date(review.checkedAt).getTime()
+  ) {
+    throw new Error(error?.message ?? "Exact Meta publish compliance could not be bound to this plan.");
+  }
+}
+
+function immutableCreativeAsset(asset: MetaCreativeAssetPlan | null | undefined) {
+  if (!asset) return null;
+  return { contentSha256: asset.contentSha256 };
 }
 
 function canonicalizeMetaExecutionValue(value: unknown): unknown {
@@ -425,7 +658,7 @@ export function buildMetaPublishPlan(input: {
       : "campaign",
   };
   const adSets = buildAdSetPlans(campaignPack, controls);
-  const leadForms = buildLeadFormPlans(campaignPack, setup, controls.destinationUrl);
+  const leadForms = buildLeadFormPlans(campaignPack, setup, controls.formCompletionUrl);
   const creatives = buildCreativePlans(campaignPack, setup);
   const ads = buildAdPlans(campaignPack, adSets);
   const tracking: MetaPublishTrackingPlan = {
@@ -434,6 +667,7 @@ export function buildMetaPublishPlan(input: {
     utmCampaign: slug(campaignPack.campaign.name),
     utmContentPrefix: slug(campaignPack.campaign.market.suburb),
   };
+  const complianceSubjectHash = buildMetaComplianceSubjectHash({ campaign, leadForms, creatives, ads, tracking });
   const executionFingerprint = hashMetaExecutionSpec({
     providerConnectionId: input.connectionId,
     setup,
@@ -444,6 +678,10 @@ export function buildMetaPublishPlan(input: {
     creatives,
     ads,
     tracking,
+    complianceReportId: campaignPack.compliance.reportId ?? null,
+    complianceSubjectHash,
+    creativeFeatures,
+    assetFeedEnabled,
   });
   const idempotencyKey = buildMetaPlanIdempotencyKey({
     workspaceId: input.workspaceId,
@@ -467,6 +705,7 @@ export function buildMetaPublishPlan(input: {
     adapter,
     status: "draft",
     idempotencyKey,
+    publishContractVersion: "finished_clone_v1",
     setup,
     controls,
     campaign,
@@ -475,6 +714,11 @@ export function buildMetaPublishPlan(input: {
     creatives,
     ads,
     tracking,
+    complianceReportId: campaignPack.compliance.reportId ?? null,
+    complianceSubjectHash,
+    complianceCheckedAt: campaignPack.compliance.checkedAt ?? null,
+    creativeFeatures,
+    assetFeedEnabled,
     requestLog: [],
     responseLog: [],
     reconciledObjects: {
@@ -540,15 +784,289 @@ export function validateMetaPublishPlanReadiness(
   if (input.approvalStatus === "approved" && !plan.approvalRequestId) {
     blockers.push("Meta publish plan is not linked to an approval request.");
   }
+  if (plan.publishContractVersion !== "finished_clone_v1") {
+    blockers.push("This Meta publish plan predates the finished clone contract and cannot be activated.");
+  }
+  if (!plan.assetFeedEnabled) {
+    blockers.push("Each selected creative needs an exact 4:5 Feed and 9:16 Story asset feed before Meta publish.");
+  }
 
   if (plan.adapter === "marketing_api" && plan.creatives.some((creative) => !hasUsableCreativeImage(creative))) {
     blockers.push("The finished ad image could not be found for one or more creatives.");
+  }
+  if (plan.creatives.some((creative) => !hasImmutableCreativeContent(creative))) {
+    blockers.push("Each selected finished ad asset must have a SHA-256 content hash before compliance and Meta publish.");
+  }
+  for (const creative of plan.creatives) {
+    const hasFeed = creative.revisionBindings.some((binding) => binding.placement === "feed");
+    const requiresStory = plan.adSets.some((adSet) => {
+      const platforms = Array.isArray(adSet.targeting.publisher_platforms) ? adSet.targeting.publisher_platforms : [];
+      const positions = Array.isArray(adSet.targeting.instagram_positions) ? adSet.targeting.instagram_positions : [];
+      return platforms.includes("instagram") && (positions.length === 0 || positions.includes("story"));
+    });
+    if (!hasFeed) blockers.push("Each selected variant needs a finished 4:5 feed clone before publishing.");
+    if (requiresStory && !creative.revisionBindings.some((binding) => binding.placement === "story")) {
+      blockers.push("Instagram Story placement requires a finished 9:16 story clone for every selected variant.");
+    }
+  }
+
+  for (const form of plan.leadForms) blockers.push(...validateMetaInstantFormSpec(form));
+  if (plan.creatives.some((creative) => !META_LEAD_CTA_TYPES.has(creative.cta))) {
+    blockers.push("Meta lead ads require a supported call to action.");
+  }
+
+  for (const adSet of plan.adSets) {
+    const unsupported = unsupportedMetaPlacementPositions(adSet.targeting);
+    if (unsupported.length) {
+      blockers.push(`Meta Graph v26 no longer supports placement(s): ${unsupported.join(", ")}.`);
+    }
   }
 
   return {
     ready: blockers.length === 0,
     blockers,
   };
+}
+
+/**
+ * Activation is deliberately targetless at the API boundary. These IDs are
+ * derived from the authenticated plan after its workspace-scoped DB read; a
+ * browser must never nominate a Meta object, even one it already knows.
+ */
+export function deriveExactMetaActivationPayload(plan: MetaPublishPlan): {
+  campaignId: string;
+  adSetIds: string[];
+  adIds: string[];
+  adSetBudgets?: Array<{ adSetId: string; dailyBudgetMinorUnits: number }>;
+} {
+  const campaignId = requiredReconciledId(plan.reconciledObjects.campaignId, "campaign");
+  const adSetIds = exactReconciledIds(plan.adSets.map((adSet) => adSet.localId), plan.reconciledObjects.adSetIds, "ad set");
+  const adIds = exactReconciledIds(plan.ads.map((ad) => ad.localId), plan.reconciledObjects.adIds, "ad");
+  const allIds = [campaignId, ...adSetIds, ...adIds];
+  if (new Set(allIds).size !== allIds.length) {
+    throw new Error("Meta publish plan has duplicate reconciled object IDs; activation is blocked.");
+  }
+
+  return {
+    campaignId,
+    adSetIds,
+    adIds,
+    ...(plan.campaign.budgetMode === "adset" ? {
+      adSetBudgets: plan.adSets.map((adSet, index) => ({
+        adSetId: adSetIds[index]!,
+        dailyBudgetMinorUnits: adSet.dailyBudgetMinorUnits,
+      })),
+    } : {}),
+  };
+}
+
+/** Reject all caller-supplied provider targets, including matching IDs. */
+export function activationPayloadSuppliesProviderTargets(payload: Record<string, unknown> | null | undefined): boolean {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+  return ["campaignId", "adSetIds", "adIds", "adSetBudgets"].some((key) => Object.prototype.hasOwnProperty.call(payload, key));
+}
+
+function requiredReconciledId(value: string | undefined, label: string): string {
+  const id = value?.trim();
+  if (!id) throw new Error(`Meta publish plan has no reconciled ${label} ID; activation is blocked.`);
+  return id;
+}
+
+function exactReconciledIds(expectedLocalIds: string[], actual: Record<string, string>, label: string): string[] {
+  const expected = new Set(expectedLocalIds);
+  const actualKeys = Object.keys(actual);
+  if (actualKeys.length !== expected.size || actualKeys.some((localId) => !expected.has(localId))) {
+    throw new Error(`Meta publish plan has an incomplete or extra reconciled ${label}; activation is blocked.`);
+  }
+  return expectedLocalIds.map((localId) => requiredReconciledId(actual[localId], label));
+}
+
+/**
+ * Evidence is current only when it proves this exact immutable plan and the
+ * complete current reconciliation set. A stale, partial, or source-bearing
+ * record cannot authorize spend.
+ */
+export function pausedReadbackEvidenceBlocker(plan: MetaPublishPlan): string | null {
+  const evidence = plan.reconciledObjects.pausedReadbackEvidence;
+  if (!evidence) return "Meta PAUSED provider read-back evidence is missing.";
+  if (evidence.complianceSubjectHash !== plan.complianceSubjectHash) {
+    return "Meta PAUSED provider read-back evidence is stale for this immutable plan.";
+  }
+  try {
+    const targets = deriveExactMetaActivationPayload(plan);
+    if (!samePausedStatus(evidence.campaign, "campaign") || evidence.campaign.id !== targets.campaignId) {
+      return "Meta PAUSED campaign evidence is incomplete or no longer exact.";
+    }
+    if (!sameExactStatusEvidence(plan.adSets.map((item) => item.localId), plan.reconciledObjects.adSetIds, evidence.adSets, "adset")) {
+      return "Meta PAUSED ad set evidence is incomplete or no longer exact.";
+    }
+    if (!sameExactStatusEvidence(plan.ads.map((item) => item.localId), plan.reconciledObjects.adIds, evidence.ads, "ad")) {
+      return "Meta PAUSED ad evidence is incomplete or no longer exact.";
+    }
+    for (const creative of plan.creatives) {
+      const observed = evidence.creatives[creative.localId];
+      const providerCreativeId = plan.reconciledObjects.creativeIds[creative.localId];
+      const leadFormProviderId = plan.reconciledObjects.leadFormIds[creative.leadFormLocalId];
+      if (!observed || observed.providerCreativeId !== providerCreativeId || observed.leadFormProviderId !== leadFormProviderId) {
+        return "Meta creative provider read-back evidence is incomplete or no longer exact.";
+      }
+      if (!sameCreativeBindingEvidence(creative, observed.feed, "feed") || !sameCreativeBindingEvidence(creative, observed.story, "story")) {
+        return "Meta creative asset-feed evidence no longer matches the immutable finished clones.";
+      }
+    }
+  } catch (error) {
+    return error instanceof Error ? error.message : "Meta PAUSED provider read-back evidence is invalid.";
+  }
+  return null;
+}
+
+function sameExactStatusEvidence(
+  localIds: string[],
+  reconciled: Record<string, string>,
+  evidence: Record<string, MetaReconciledObjectStatus>,
+  kind: "adset" | "ad",
+): boolean {
+  const keys = Object.keys(evidence);
+  return keys.length === localIds.length && localIds.every((localId) =>
+    evidence[localId]?.id === reconciled[localId] && samePausedStatus(evidence[localId]!, kind));
+}
+
+function samePausedStatus(status: MetaReconciledObjectStatus, kind: "campaign" | "adset" | "ad"): boolean {
+  const effective = normalizedProviderStatus(status.effectiveStatus);
+  const allowedEffective = kind === "campaign"
+    ? ["PAUSED"]
+    : kind === "adset"
+      ? ["PAUSED", "CAMPAIGN_PAUSED"]
+      : ["PAUSED", "ADSET_PAUSED", "CAMPAIGN_PAUSED"];
+  return normalizedProviderStatus(status.configuredStatus) === "PAUSED" && Boolean(effective && allowedEffective.includes(effective));
+}
+
+function normalizedProviderStatus(value: unknown): string | null {
+  const status = optionalString(value);
+  return status ? status.toUpperCase() : null;
+}
+
+function sameCreativeBindingEvidence(
+  creative: MetaPublishCreativePlan,
+  evidence: MetaPausedCreativeAssetEvidence,
+  placement: "feed" | "story",
+): boolean {
+  const binding = creative.revisionBindings.find((item) => item.placement === placement);
+  return Boolean(
+    binding && binding.format === (placement === "feed" ? "4:5" : "9:16") &&
+    evidence.placement === placement && evidence.creativeId === binding.creativeId &&
+    evidence.revisionId === binding.revisionId && evidence.contentSha256 === binding.asset.contentSha256 &&
+    /^[a-zA-Z0-9_-]+$/.test(evidence.providerImageHash),
+  );
+}
+
+/**
+ * Fail closed unless the report explicitly binds the immutable subject hash
+ * calculated for this exact selected publish plan. Timestamps are not proof.
+ */
+export async function loadMetaPublishPlanComplianceStatus(
+  service: SupabaseServiceClient,
+  plan: Pick<MetaPublishPlan, "workspaceId" | "adStudioCampaignId" | "complianceReportId" | "complianceSubjectHash">,
+): Promise<ComplianceStatus> {
+  if (!plan.complianceReportId) return "blocked";
+  // Generated database types lag this forward-only migration until it is
+  // applied, while the service query remains scoped and fail-closed.
+  const reports = service.from("adstudio_compliance_reports") as any;
+  const { data, error } = await reports
+    .select("id,campaign_id,status,subject_hash")
+    .eq("workspace_id", plan.workspaceId)
+    .eq("id", plan.complianceReportId)
+    .eq("campaign_id", plan.adStudioCampaignId)
+    .maybeSingle();
+  if (error || !data || data.id !== plan.complianceReportId || data.campaign_id !== plan.adStudioCampaignId) return "blocked";
+  if (data.subject_hash !== plan.complianceSubjectHash) return "blocked";
+  return data.status === "approved" || data.status === "needs_review" || data.status === "blocked" ? data.status : "blocked";
+}
+
+/**
+ * Last server-owned gate before a queued plan may touch Meta. It verifies the
+ * exact report binding, approval, connection, and current immutable revisions,
+ * but intentionally does not require PAUSED provider evidence that can only
+ * exist after creation.
+ */
+export async function evaluateMetaPublishPlanPreProviderReadiness(service: SupabaseServiceClient, plan: MetaPublishPlan) {
+  const bindings = plan.creatives.flatMap((creative) => creative.revisionBindings ?? []);
+  const creativeIds = [...new Set(bindings.map((binding) => binding.creativeId))];
+  const [{ data: connection }, { data: approval }, complianceStatus, creatives, revisions] = await Promise.all([
+    service.from("provider_connections").select("status").eq("workspace_id", plan.workspaceId).eq("id", plan.providerConnectionId).maybeSingle(),
+    plan.approvalRequestId ? service.from("approval_requests").select("status").eq("workspace_id", plan.workspaceId).eq("id", plan.approvalRequestId).maybeSingle() : Promise.resolve({ data: null }),
+    loadMetaPublishPlanComplianceStatus(service, plan),
+    creativeIds.length ? service.from("adstudio_creatives").select("id,active_revision_id").eq("workspace_id", plan.workspaceId).in("id", creativeIds) : Promise.resolve({ data: [] }),
+    creativeIds.length ? service.from("adstudio_creative_revisions").select("id,creative_id,canvas_json").eq("workspace_id", plan.workspaceId).in("creative_id", creativeIds) : Promise.resolve({ data: [] }),
+  ]);
+  const readiness = validateMetaPublishPlanReadiness(plan, {
+    providerConnectionStatus: connection?.status === "connected" || connection?.status === "needs_attention" ? connection.status : "not_connected",
+    approvalStatus: approval?.status === "approved" || approval?.status === "requested" || approval?.status === "rejected" || approval?.status === "cancelled" ? approval.status : "draft",
+    complianceStatus,
+  });
+  const activeByCreative = new Map((creatives.data ?? []).map((creative) => [String(creative.id), creative.active_revision_id ? String(creative.active_revision_id) : null]));
+  const revisionById = new Map((revisions.data ?? []).map((revision) => [String(revision.id), revision]));
+  const bindingChecks = await Promise.all(bindings.map(async (binding) => {
+    if (activeByCreative.get(binding.creativeId) !== binding.revisionId) return true;
+    const revision = revisionById.get(binding.revisionId);
+    if (!revision || String(revision.creative_id) !== binding.creativeId) return true;
+    const asset = await resolveImmutableRevisionAsset(service, plan.workspaceId, binding.creativeId, revision.canvas_json);
+    return !sameImmutableCreativeAsset(asset, binding.asset);
+  }));
+  if (bindings.length === 0 || bindingChecks.some(Boolean)) {
+    readiness.blockers.push("A finished clone changed after compliance. Re-run compliance before publishing.");
+  }
+  return readiness;
+}
+
+/** Current campaign + active clone revision gate shared by UI and activation. */
+export async function evaluateCurrentMetaPublishPlanReadiness(service: SupabaseServiceClient, plan: MetaPublishPlan) {
+  const readiness = await evaluateMetaPublishPlanPreProviderReadiness(service, plan);
+  const pausedEvidenceBlocker = pausedReadbackEvidenceBlocker(plan);
+  if (pausedEvidenceBlocker) readiness.blockers.push(pausedEvidenceBlocker);
+  return readiness;
+}
+
+/**
+ * Server-only plan input preparation. It replaces mutable pack canvases with
+ * their currently active immutable revisions, rejects foreign/URL assets, and
+ * attaches the SHA-256 of the actual stored bytes before compliance is hashed.
+ */
+export async function prepareImmutableMetaPublishCampaignPack(
+  service: SupabaseServiceClient,
+  workspaceId: string,
+  campaignPack: AdStudioCampaignPack,
+  variantIds?: string[],
+): Promise<AdStudioCampaignPack> {
+  const selectedVariantIds = variantIds?.length ? new Set(variantIds) : null;
+  const selectedCreatives = selectedVariantIds
+    ? campaignPack.creatives.filter((creative) => selectedVariantIds.has(creative.variantId))
+    : campaignPack.creatives;
+  const creativeIds = [...new Set(selectedCreatives.map((creative) => creative.creativeId))];
+  if (!creativeIds.length) throw new Error("A Meta publish needs at least one finished clone creative.");
+  const [{ data: creatives, error: creativesError }, { data: revisions, error: revisionsError }] = await Promise.all([
+    service.from("adstudio_creatives").select("id,active_revision_id").eq("workspace_id", workspaceId).in("id", creativeIds),
+    service.from("adstudio_creative_revisions").select("id,creative_id,canvas_json").eq("workspace_id", workspaceId).in("creative_id", creativeIds),
+  ]);
+  if (creativesError || revisionsError) throw new Error(creativesError?.message ?? revisionsError?.message ?? "Unable to load finished clone revisions.");
+  const activeByCreative = new Map((creatives ?? []).map((creative) => [String(creative.id), String(creative.active_revision_id ?? "")]));
+  const revisionsByKey = new Map((revisions ?? []).map((revision) => [`${revision.creative_id}:${revision.id}`, revision]));
+
+  const preparedById = new Map(await Promise.all(selectedCreatives.map(async (creative) => {
+    const revisionId = activeByCreative.get(creative.creativeId);
+    const revision = revisionId ? revisionsByKey.get(`${creative.creativeId}:${revisionId}`) : null;
+    if (!revision || !revisionId) throw new Error(`Finished clone ${creative.creativeId} has no active immutable revision.`);
+    const canvas = structuredClone(revision.canvas_json) as AdStudioCampaignPack["creatives"][number]["canvas"];
+    const asset = await resolveImmutableRevisionAsset(service, workspaceId, creative.creativeId, canvas);
+    if (!asset?.contentSha256) throw new Error(`Finished clone ${creative.creativeId} has no verifiable image bytes.`);
+    const objects = canvas.objects as Array<Record<string, unknown>>;
+    const imageObject = objects.find((object) => object.objectId === "template_clone_image")
+      ?? objects.find((object) => object.role === "primary_image");
+    if (!imageObject) throw new Error(`Finished clone ${creative.creativeId} has no clone image region.`);
+    imageObject.contentSha256 = asset.contentSha256;
+    return [creative.creativeId, { ...creative, activeRevisionId: revisionId, canvas }] as const;
+  })));
+  return { ...campaignPack, creatives: campaignPack.creatives.map((creative) => preparedById.get(creative.creativeId) ?? creative) };
 }
 
 export function createMetaExecutionAdapter(adapter: MetaExecutionAdapter): MetaExecutionAdapterImplementation {
@@ -766,8 +1284,8 @@ async function publishWithMarketingApi(
   plan: MetaPublishPlan,
   input: MetaPublishExecutionInput,
 ): Promise<MetaPublishExecutionResult> {
-  if (plan.status !== "approved" && plan.status !== "publishing") {
-    throw new Error("Meta publish plan must be approved before execution.");
+  if (plan.status !== "queued" && plan.status !== "approved" && plan.status !== "publishing") {
+    throw new Error("Meta publish plan must be queued before execution.");
   }
 
   const requestLog = [...plan.requestLog];
@@ -787,6 +1305,7 @@ async function publishWithMarketingApi(
       ads: { ...(plan.reconciledObjects.provenance?.ads ?? {}) },
     },
   };
+  const expectedCreativeAssets: Record<string, { feedImageHash: string; storyImageHash: string }> = {};
 
   synchronizeMetaCreationEvidence(plan, requestLog, responseLog, reconciledObjects);
 
@@ -881,17 +1400,28 @@ async function publishWithMarketingApi(
     }
 
     for (const leadForm of plan.leadForms) {
-      if (reconciledObjects.leadFormIds[leadForm.localId]) continue;
-
       const providerName = buildMetaProviderObjectName(plan, leadForm.localId, leadForm.name);
-      const existingId = input.reconcileMissingObjects
-        ? await findMetaObjectByName(
+      let formId: string | undefined = reconciledObjects.leadFormIds[leadForm.localId];
+      if (!formId) {
+        formId = input.reconcileMissingObjects
+          ? await findMetaObjectByName(
+              input,
+              requestLog,
+              responseLog,
+              `lead_form.${leadForm.localId}.reconcile_missing`,
+              `/${plan.setup.pageId}/leadgen_forms`,
+              providerName,
+              input.pageAccessToken ?? input.accessToken,
+            ) ?? undefined
+          : undefined;
+        if (!formId) {
+          const response = await postMetaObject(
             input,
             requestLog,
             responseLog,
-            `lead_form.${leadForm.localId}.reconcile_missing`,
+            `lead_form.${leadForm.localId}`,
             `/${plan.setup.pageId}/leadgen_forms`,
-            providerName,
+            buildMetaInstantFormPayload(providerName, leadForm),
             input.pageAccessToken ?? input.accessToken,
           )
         : null;
@@ -931,6 +1461,11 @@ async function publishWithMarketingApi(
         );
         reconciledObjects.leadFormIds[leadForm.localId] = requireMetaId(response, "lead form");
       }
+      // A deterministic name proves identity, not content. Always verify the
+      // exact Instant Form fields before recording either a recovered, newly
+      // created, or previously checkpointed provider ID as publish-ready.
+      await verifyMetaLeadForm(input, requestLog, responseLog, formId, providerName, leadForm, input.pageAccessToken ?? input.accessToken);
+      reconciledObjects.leadFormIds[leadForm.localId] = formId;
       await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
     }
 
@@ -990,7 +1525,18 @@ async function publishWithMarketingApi(
     }
 
     for (const creative of plan.creatives) {
-      if (reconciledObjects.creativeIds[creative.localId]) continue;
+      if (reconciledObjects.creativeIds[creative.localId]) {
+        const prior = plan.reconciledObjects.pausedReadbackEvidence?.creatives[creative.localId];
+        if (prior?.providerCreativeId === reconciledObjects.creativeIds[creative.localId]) {
+          expectedCreativeAssets[creative.localId] = {
+            feedImageHash: prior.feed.providerImageHash,
+            storyImageHash: prior.story.providerImageHash,
+          };
+        } else if (reconciledObjects.creativeAssetHashes?.[creative.localId]) {
+          expectedCreativeAssets[creative.localId] = reconciledObjects.creativeAssetHashes[creative.localId]!;
+        }
+        continue;
+      }
 
       const providerName = buildMetaProviderObjectName(
         plan,
@@ -1012,6 +1558,9 @@ async function publishWithMarketingApi(
         reconciledObjects.creativeIds[creative.localId] = existingId;
       } else {
         const imageHash = await resolveCreativeImageHash(plan, creative, input, requestLog, responseLog);
+        const storyImageHash = plan.assetFeedEnabled
+          ? await resolveStoryCreativeImageHash(plan, creative, input, requestLog, responseLog)
+          : null;
         const leadFormId = reconciledObjects.leadFormIds[creative.leadFormLocalId];
         const utmLink = buildUtmLink(destinationUrl, plan.tracking, creative.localId);
         const response = await postMetaObject(input, requestLog, responseLog, `creative.${creative.localId}`, `/${plan.setup.metaAdAccountId}/adcreatives`, {
@@ -1033,6 +1582,11 @@ async function publishWithMarketingApi(
           },
         });
         reconciledObjects.creativeIds[creative.localId] = requireMetaId(response, "creative");
+        if (!imageHash || !storyImageHash) {
+          throw new MetaReconciliationRequiredError("Meta creative upload did not return both immutable Feed and Story image hashes.");
+        }
+        expectedCreativeAssets[creative.localId] = { feedImageHash: imageHash, storyImageHash };
+        reconciledObjects.creativeAssetHashes![creative.localId] = expectedCreativeAssets[creative.localId]!;
       }
       await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
     }
@@ -1079,10 +1633,21 @@ async function publishWithMarketingApi(
       await checkpointMetaPublishProgress(input, requestLog, responseLog, reconciledObjects);
     }
 
-    reconciledObjects.objectStatuses = await reconcileMetaObjects(input, requestLog, responseLog, reconciledObjects);
+    const objectStatuses = await reconcileMetaObjects(input, requestLog, responseLog, reconciledObjects);
+    assertAllProviderObjectsPaused(objectStatuses, plan, reconciledObjects);
+    reconciledObjects.objectStatuses = objectStatuses;
+    reconciledObjects.pausedReadbackEvidence = await verifyPausedMetaReadbackEvidence(
+      plan,
+      input,
+      requestLog,
+      responseLog,
+      reconciledObjects,
+      objectStatuses,
+      expectedCreativeAssets,
+    );
 
     return {
-      status: "paused_live",
+      status: "paused_ready",
       requestLog,
       responseLog,
       reconciledObjects,
@@ -1091,7 +1656,7 @@ async function publishWithMarketingApi(
     };
   } catch (error) {
     return {
-      status: "failed",
+      status: error instanceof MetaReconciliationRequiredError ? "reconciliation_required" : "failed",
       requestLog,
       responseLog,
       reconciledObjects,
@@ -1627,6 +2192,252 @@ async function resolveCreativeImageHash(
   return fromMap ?? (typeof response.hash === "string" ? response.hash : null);
 }
 
+async function resolveStoryCreativeImageHash(
+  plan: MetaPublishPlan,
+  creative: MetaPublishCreativePlan,
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+): Promise<string | null> {
+  const story = creative.formatAssets?.story;
+  if (!story) return null;
+  if (story.imageHash) return story.imageHash;
+  if (story.type !== "image" || story.source !== "inline" || !story.bytesBase64) return null;
+
+  const response = await postMetaObject(
+    input,
+    requestLog,
+    responseLog,
+    `asset.${creative.localId}.story`,
+    `/${plan.setup.metaAdAccountId}/adimages`,
+    { bytes: story.bytesBase64 },
+  );
+  const imageMap = response.images as Record<string, { hash?: string }> | undefined;
+  return imageMap?.[story.filename ?? ""]?.hash
+    ?? Object.values(imageMap ?? {})[0]?.hash
+    ?? (typeof response.hash === "string" ? response.hash : null);
+}
+
+export function buildMetaAssetFeedSpec(feedHash: string, storyHash: string): Record<string, unknown> {
+  return {
+    images: [
+      { hash: feedHash, adlabels: [{ name: "feed_image" }] },
+      { hash: storyHash, adlabels: [{ name: "story_image" }] },
+    ],
+    ad_formats: ["SINGLE_IMAGE"],
+    optimization_type: "PLACEMENT",
+    asset_customization_rules: [
+      {
+        customization_spec: {
+          publisher_platforms: ["facebook", "instagram"],
+          facebook_positions: ["feed", "marketplace", "video_feeds", "search"],
+          instagram_positions: ["stream", "profile_feed", "ig_search"],
+        },
+        image_label: { name: "feed_image" },
+        priority: 1,
+      },
+      {
+        customization_spec: {
+          publisher_platforms: ["facebook", "instagram"],
+          facebook_positions: ["story"],
+          instagram_positions: ["story"],
+        },
+        image_label: { name: "story_image" },
+        priority: 2,
+      },
+    ],
+  };
+}
+
+export function buildMetaCreativePayload(input: {
+  name: string;
+  creative: Pick<MetaPublishCreativePlan, "pageId" | "instagramActorId" | "primaryText" | "headline" | "description" | "cta">;
+  link: string;
+  leadFormId: string | undefined;
+  imageHash: string | null;
+  storyImageHash: string | null;
+  useAssetFeed: boolean;
+  creativeFeatures: Partial<Record<MetaCreativeFeatureKey, "OPT_IN" | "OPT_OUT">>;
+}): Record<string, unknown> {
+  const useAssetFeed = input.useAssetFeed && Boolean(input.imageHash && input.storyImageHash);
+  return {
+    name: input.name,
+    object_story_spec: {
+      page_id: input.creative.pageId,
+      ...(input.creative.instagramActorId ? { instagram_user_id: input.creative.instagramActorId } : {}),
+      link_data: {
+        message: input.creative.primaryText,
+        name: input.creative.headline,
+        description: input.creative.description,
+        link: input.link,
+        ...(input.imageHash ? { image_hash: input.imageHash } : {}),
+        call_to_action: {
+          type: input.creative.cta,
+          value: { lead_gen_form_id: input.leadFormId },
+        },
+      },
+    },
+    ...(useAssetFeed ? { asset_feed_spec: buildMetaAssetFeedSpec(input.imageHash!, input.storyImageHash!) } : {}),
+    ...buildDegreesOfFreedomSpec(input.creativeFeatures),
+  };
+}
+
+export function buildMetaInstantFormPayload(name: string, form: MetaPublishLeadFormPlan): Record<string, unknown> {
+  return {
+    name,
+    locale: "en_AU",
+    context_card: { title: form.headline, content: [form.intro], style: "PARAGRAPH_STYLE" },
+    question_page_custom_headline: form.headline,
+    follow_up_action_url: form.thankYouWebsiteUrl,
+    privacy_policy: { url: form.privacyPolicyUrl, link_text: "Privacy Policy" },
+    is_optimized_for_quality: true,
+    questions: [
+      ...form.contactFields.map((type) => ({ type, key: type.toLowerCase() })),
+      ...form.customQuestions.map((question, index) => ({ type: "CUSTOM", key: `custom_${index + 1}`, label: question })),
+    ],
+    thank_you_page: {
+      title: form.thankYouTitle,
+      body: form.thankYouBody,
+      button_text: form.thankYouButtonText,
+      button_type: form.thankYouButtonType,
+      website_url: form.thankYouWebsiteUrl,
+    },
+  };
+}
+
+export function buildMetaAdSetPayload(
+  plan: MetaPublishPlan,
+  adSet: MetaPublishAdSetPlan,
+  name: string,
+  campaignId: string | undefined,
+): Record<string, unknown> {
+  return {
+    name,
+    campaign_id: campaignId,
+    billing_event: adSet.billingEvent,
+    optimization_goal: adSet.optimizationGoal,
+    destination_type: "ON_AD",
+    promoted_object: { page_id: plan.setup.pageId },
+    targeting: adSet.targeting,
+    targeting_automation: { advantage_audience: 1 },
+    status: "PAUSED",
+    ...(plan.campaign.budgetMode === "adset"
+      ? { bid_strategy: META_LOWEST_COST_BID_STRATEGY, daily_budget: String(adSet.dailyBudgetMinorUnits) }
+      : {}),
+    ...(adSet.startTime ? { start_time: adSet.startTime } : {}),
+    ...(adSet.endTime ? { end_time: adSet.endTime } : {}),
+  };
+}
+
+function buildDegreesOfFreedomSpec(
+  configured: Partial<Record<MetaCreativeFeatureKey, "OPT_IN" | "OPT_OUT">>,
+): Record<string, unknown> {
+  return {
+    degrees_of_freedom_spec: {
+      creative_features_spec: Object.fromEntries(
+        META_CREATIVE_FEATURE_KEYS.map((key) => [key, { enroll_status: configured[key] ?? "OPT_OUT" }]),
+      ),
+    },
+  };
+}
+
+async function verifyMetaLeadForm(
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  formId: string,
+  expectedName: string,
+  expected: MetaPublishLeadFormPlan,
+  accessToken: string,
+) {
+  const step = `lead_form.${expected.localId}.verify`;
+  const path = `/${formId}?fields=id,name,locale,is_optimized_for_quality,questions,privacy_policy,thank_you_page,context_card,question_page_custom_headline,follow_up_action_url`;
+  const createdAt = new Date().toISOString();
+  requestLog.push({ step, method: "GET", path, createdAt });
+  const response = await (input.fetchImpl ?? fetch)(
+    `https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${path}`,
+    { method: "GET", headers: { authorization: `Bearer ${accessToken}` }, signal: AbortSignal.timeout(30_000) },
+  );
+  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  responseLog.push({ step, method: "GET", path, response: payload, status: response.status, createdAt: new Date().toISOString() });
+  if (!response.ok) throw new Error(metaProviderErrorMessage(payload, `Meta lead form read-back failed with ${response.status}.`));
+
+  if (!metaLeadFormReadbackMatches(payload, formId, expectedName, expected)) {
+    throw new MetaReconciliationRequiredError("Meta did not read back the requested Instant Form fields exactly; the paused campaign was not created.");
+  }
+}
+
+function canonicalMetaQuestion(value: unknown): string | null {
+  const question = recordValue(value);
+  if (!question || typeof question.type !== "string" || typeof question.key !== "string") return null;
+  const options = question.options == null
+    ? []
+    : Array.isArray(question.options)
+      ? question.options.map((option) => {
+          const entry = recordValue(option);
+          return entry && typeof entry.key === "string" && typeof entry.label === "string"
+            ? { key: entry.key, label: entry.label }
+            : null;
+        })
+      : [null];
+  if (options.some((option) => option === null)) return null;
+  const label = question.type === "CUSTOM"
+    ? (typeof question.label === "string" ? question.label : null)
+    : null;
+  if (question.type === "CUSTOM" && label === null) return null;
+  return JSON.stringify({
+    type: question.type,
+    key: question.key,
+    label,
+    options,
+  });
+}
+
+/** Compare only documented Graph fields, structurally and without substring evidence. */
+export function metaLeadFormReadbackMatches(
+  payload: Record<string, unknown>,
+  formId: string,
+  expectedName: string,
+  expected: MetaPublishLeadFormPlan,
+): boolean {
+  const context = recordValue(payload.context_card);
+  const privacy = recordValue(payload.privacy_policy);
+  const thankYou = recordValue(payload.thank_you_page);
+  if (
+    payload.id !== formId
+    || payload.name !== expectedName
+    || payload.locale !== "en_AU"
+    || payload.is_optimized_for_quality !== true
+    || payload.question_page_custom_headline !== expected.headline
+    || context?.title !== expected.headline
+    || context?.style !== "PARAGRAPH_STYLE"
+    || !Array.isArray(context.content)
+    || context.content.length !== 1
+    || context.content[0] !== expected.intro
+    || privacy?.url !== expected.privacyPolicyUrl
+    || privacy?.link_text !== "Privacy Policy"
+    || payload.follow_up_action_url !== expected.thankYouWebsiteUrl
+    || thankYou?.title !== expected.thankYouTitle
+    || thankYou?.body !== expected.thankYouBody
+    || thankYou?.button_text !== expected.thankYouButtonText
+    || thankYou?.button_type !== expected.thankYouButtonType
+    || thankYou?.website_url !== expected.thankYouWebsiteUrl
+    || !Array.isArray(payload.questions)
+  ) return false;
+
+  const expectedQuestions = [
+    ...expected.contactFields.map((type) => ({ type, key: type.toLowerCase(), label: null, options: [] })),
+    ...expected.customQuestions.map((label, index) => ({ type: "CUSTOM", key: `custom_${index + 1}`, label, options: [] })),
+  ].map((question) => JSON.stringify(question)).sort();
+  const actualQuestions = payload.questions.map(canonicalMetaQuestion);
+  return actualQuestions.every((question): question is string => question !== null)
+    && actualQuestions.length === expectedQuestions.length
+    && new Set(actualQuestions).size === actualQuestions.length
+    && actualQuestions.sort().every((question, index) => question === expectedQuestions[index]);
+}
+
+class MetaReconciliationRequiredError extends Error {}
+
 async function reconcileMetaObjects(
   input: MetaPublishExecutionInput,
   requestLog: MetaProviderLogEntry[],
@@ -1648,6 +2459,207 @@ async function reconcileMetaObjects(
   }
 
   return { campaign, adSets, ads };
+}
+
+function assertAllProviderObjectsPaused(
+  statuses: NonNullable<MetaReconciledObjects["objectStatuses"]>,
+  plan: MetaPublishPlan,
+  reconciledObjects: MetaReconciledObjects,
+) {
+  if (!statuses.campaign || statuses.campaign.id !== reconciledObjects.campaignId || !samePausedStatus(statuses.campaign, "campaign")) {
+    throw new MetaReconciliationRequiredError("Meta did not read back the campaign with configured_status PAUSED and effective_status PAUSED.");
+  }
+  for (const adSet of plan.adSets) {
+    const status = statuses.adSets?.[adSet.localId];
+    if (!status || status.id !== reconciledObjects.adSetIds[adSet.localId] || !samePausedStatus(status, "adset")) {
+      throw new MetaReconciliationRequiredError(`Meta did not read back ad set ${adSet.localId} with configured_status PAUSED and a safe paused effective status.`);
+    }
+  }
+  for (const ad of plan.ads) {
+    const status = statuses.ads?.[ad.localId];
+    if (!status || status.id !== reconciledObjects.adIds[ad.localId] || !samePausedStatus(status, "ad")) {
+      throw new MetaReconciliationRequiredError(`Meta did not read back ad ${ad.localId} with configured_status PAUSED and a safe paused effective status.`);
+    }
+  }
+}
+
+async function verifyPausedMetaReadbackEvidence(
+  plan: MetaPublishPlan,
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  reconciledObjects: MetaReconciledObjects,
+  statuses: NonNullable<MetaReconciledObjects["objectStatuses"]>,
+  expectedCreativeAssets: Record<string, { feedImageHash: string; storyImageHash: string }>,
+): Promise<MetaPausedReadbackEvidence> {
+  const creatives: Record<string, MetaPausedCreativeEvidence> = {};
+  for (const creative of plan.creatives) {
+    const providerCreativeId = requiredReconciledId(reconciledObjects.creativeIds[creative.localId], "creative");
+    const leadFormProviderId = requiredReconciledId(reconciledObjects.leadFormIds[creative.leadFormLocalId], "lead form");
+    const expectedAssets = expectedCreativeAssets[creative.localId];
+    if (!expectedAssets) {
+      throw new MetaReconciliationRequiredError(`Meta creative ${creative.localId} lacks immutable upload evidence; refusing paused readiness.`);
+    }
+    const payload = await getMetaCreativeReadback(input, requestLog, responseLog, creative.localId, providerCreativeId);
+    assertCreativeReadbackMatchesPlan(payload, creative, leadFormProviderId, expectedAssets);
+    const feed = requiredCreativeBinding(creative, "feed");
+    const story = requiredCreativeBinding(creative, "story");
+    creatives[creative.localId] = {
+      providerCreativeId,
+      leadFormProviderId,
+      feed: sourceFreeCreativeAssetEvidence(feed, "feed", expectedAssets.feedImageHash),
+      story: sourceFreeCreativeAssetEvidence(story, "story", expectedAssets.storyImageHash),
+    };
+  }
+
+  return {
+    verifiedAt: new Date().toISOString(),
+    complianceSubjectHash: plan.complianceSubjectHash,
+    campaign: statuses.campaign!,
+    adSets: statuses.adSets ?? {},
+    ads: statuses.ads ?? {},
+    creatives,
+  };
+}
+
+/**
+ * Provider state can change after paused_ready without a Blockwise write.
+ * Re-read it immediately before an ACTIVE mutation and replace the durable
+ * source-free evidence only if every status, creative asset mapping, and form
+ * mapping remains exact for the current immutable plan.
+ */
+export async function refreshCurrentMetaPausedReadbackEvidence(
+  plan: MetaPublishPlan,
+  input: MetaPublishExecutionInput,
+): Promise<Pick<MetaPublishExecutionResult, "requestLog" | "responseLog" | "reconciledObjects">> {
+  const blocker = pausedReadbackEvidenceBlocker(plan);
+  if (blocker) throw new Error(blocker);
+  const requestLog = [...plan.requestLog];
+  const responseLog = [...plan.responseLog];
+  const reconciledObjects: MetaReconciledObjects = {
+    ...plan.reconciledObjects,
+    leadFormIds: { ...plan.reconciledObjects.leadFormIds },
+    adSetIds: { ...plan.reconciledObjects.adSetIds },
+    creativeIds: { ...plan.reconciledObjects.creativeIds },
+    adIds: { ...plan.reconciledObjects.adIds },
+  };
+  const statuses = await reconcileMetaObjects(input, requestLog, responseLog, reconciledObjects);
+  assertAllProviderObjectsPaused(statuses, plan, reconciledObjects);
+  const expectedCreativeAssets = Object.fromEntries(plan.creatives.map((creative) => {
+    const prior = plan.reconciledObjects.pausedReadbackEvidence!.creatives[creative.localId]!;
+    return [creative.localId, {
+      feedImageHash: prior.feed.providerImageHash,
+      storyImageHash: prior.story.providerImageHash,
+    }];
+  }));
+  reconciledObjects.objectStatuses = statuses;
+  reconciledObjects.pausedReadbackEvidence = await verifyPausedMetaReadbackEvidence(
+    plan,
+    input,
+    requestLog,
+    responseLog,
+    reconciledObjects,
+    statuses,
+    expectedCreativeAssets,
+  );
+  return { requestLog, responseLog, reconciledObjects };
+}
+
+function sourceFreeCreativeAssetEvidence(
+  binding: MetaCreativeRevisionBinding,
+  placement: "feed" | "story",
+  providerImageHash: string,
+): MetaPausedCreativeAssetEvidence {
+  if (!binding.asset.contentSha256) {
+    throw new MetaReconciliationRequiredError(`Meta ${placement} creative binding has no immutable content hash.`);
+  }
+  return {
+    placement,
+    creativeId: binding.creativeId,
+    revisionId: binding.revisionId,
+    contentSha256: binding.asset.contentSha256,
+    providerImageHash,
+  };
+}
+
+function requiredCreativeBinding(creative: MetaPublishCreativePlan, placement: "feed" | "story"): MetaCreativeRevisionBinding {
+  const binding = creative.revisionBindings.find((item) => item.placement === placement);
+  if (!binding || binding.format !== (placement === "feed" ? "4:5" : "9:16")) {
+    throw new MetaReconciliationRequiredError(`Meta creative ${creative.localId} lacks its required ${placement === "feed" ? "4:5 Feed" : "9:16 Story"} revision binding.`);
+  }
+  return binding;
+}
+
+async function getMetaCreativeReadback(
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  localId: string,
+  providerCreativeId: string,
+): Promise<Record<string, unknown>> {
+  const step = `creative.${localId}.verify_asset_feed`;
+  const path = `/${providerCreativeId}?fields=id,asset_feed_spec,object_story_spec`;
+  const createdAt = new Date().toISOString();
+  requestLog.push({ step, method: "GET", path, createdAt });
+  const response = await (input.fetchImpl ?? fetch)(
+    `https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${path}`,
+    { method: "GET", headers: { authorization: `Bearer ${input.accessToken}` }, signal: AbortSignal.timeout(30_000) },
+  );
+  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  responseLog.push({ step, method: "GET", path, response: payload, status: response.status, createdAt: new Date().toISOString() });
+  if (!response.ok) throw new MetaReconciliationRequiredError(metaProviderErrorMessage(payload, `Meta creative read-back failed with ${response.status}.`));
+  if (optionalString(payload.id) !== providerCreativeId) {
+    throw new MetaReconciliationRequiredError(`Meta creative read-back returned an unexpected object for ${localId}.`);
+  }
+  return payload;
+}
+
+function assertCreativeReadbackMatchesPlan(
+  payload: Record<string, unknown>,
+  creative: MetaPublishCreativePlan,
+  leadFormProviderId: string,
+  expectedAssets: { feedImageHash: string; storyImageHash: string },
+) {
+  const storySpec = recordValue(payload.object_story_spec);
+  const linkData = recordValue(storySpec?.link_data);
+  const callToAction = recordValue(linkData?.call_to_action);
+  const ctaValue = recordValue(callToAction?.value);
+  if (optionalString(ctaValue?.lead_gen_form_id) !== leadFormProviderId) {
+    throw new MetaReconciliationRequiredError(`Meta creative ${creative.localId} did not read back its exact Instant Form mapping.`);
+  }
+
+  const actual = recordValue(payload.asset_feed_spec);
+  const expected = buildMetaAssetFeedSpec(expectedAssets.feedImageHash, expectedAssets.storyImageHash);
+  if (!actual || !sameJsonValue(actual.ad_formats, expected.ad_formats) || !sameJsonValue(actual.asset_customization_rules, expected.asset_customization_rules)) {
+    throw new MetaReconciliationRequiredError(`Meta creative ${creative.localId} did not read back the exact Feed and Story placement rules.`);
+  }
+  const images = Array.isArray(actual.images) ? actual.images : [];
+  const hasImage = (label: string, hash: string) => images.some((candidate) => {
+    const image = recordValue(candidate);
+    const labels = Array.isArray(image?.adlabels) ? image.adlabels : [];
+    return optionalString(image?.hash) === hash && labels.some((item) => recordValue(item)?.name === label);
+  });
+  if (!hasImage("feed_image", expectedAssets.feedImageHash) || !hasImage("story_image", expectedAssets.storyImageHash)) {
+    throw new MetaReconciliationRequiredError(`Meta creative ${creative.localId} did not read back the exact Feed 4:5 and Story 9:16 image mappings.`);
+  }
+}
+
+function recordValue(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function sameJsonValue(left: unknown, right: unknown): boolean {
+  return JSON.stringify(sortJsonValue(left)) === JSON.stringify(sortJsonValue(right));
+}
+
+function sortJsonValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortJsonValue);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, item]) => [key, sortJsonValue(item)]));
+  }
+  return value;
 }
 
 async function postMetaObject(
@@ -2360,22 +3372,58 @@ function buildTargeting(controls: MetaPublishControls): Record<string, unknown> 
   };
 }
 
-function buildLeadFormPlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup, destinationUrl?: string): MetaPublishLeadFormPlan[] {
-  return pack.copyPacks.slice(0, 6).map((copy, index) => ({
-    localId: `form_${index + 1}`,
-    name: `${pack.campaign.market.suburb} ${copy.meta.leadForm.headline}`,
-    headline: copy.meta.leadForm.headline,
-    questions: copy.meta.leadForm.questions,
-    privacyPolicyUrl: setup.privacyPolicyUrl,
-    thankYouTitle: copy.meta.leadForm.thankYouScreen.title,
-    thankYouBody: copy.meta.leadForm.thankYouScreen.body,
-    thankYouWebsiteUrl: destinationUrl ?? setup.privacyPolicyUrl,
-  }));
+function unsupportedMetaPlacementPositions(targeting: Record<string, unknown>): string[] {
+  const instagramPositions = Array.isArray(targeting.instagram_positions)
+    ? targeting.instagram_positions.filter((value): value is string => typeof value === "string")
+    : [];
+  return instagramPositions.filter((position) => position === "explore" || position === "explore_home");
+}
+
+function buildLeadFormPlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup, completionUrl?: string): MetaPublishLeadFormPlan[] {
+  return pack.copyPacks.slice(0, 6).map((copy, index) => {
+    const leadForm = copy.meta.leadForm;
+    const defaults: MetaLeadFormDefaults = {
+      headline: leadForm?.headline ?? "",
+      intro: copy.meta.primaryText[0] ?? leadForm?.headline ?? "",
+      contactFields: ["FIRST_NAME", "LAST_NAME", "EMAIL", "PHONE"],
+      customQuestions: normalizeLeadFormQuestions(leadForm?.questions ?? []),
+      thankYouTitle: leadForm?.thankYouScreen?.title ?? "",
+      thankYouBody: leadForm?.thankYouScreen?.body ?? "",
+      thankYouButtonType: "VIEW_WEBSITE",
+      thankYouButtonText: "Visit website",
+    };
+    return {
+      localId: `form_${index + 1}`,
+      name: `${pack.campaign.market.suburb} ${defaults.headline}`,
+      ...buildMetaInstantFormSpec(defaults, {
+        privacyPolicyUrl: setup.privacyPolicyUrl,
+        formCompletionUrl: completionUrl ?? setup.privacyPolicyUrl,
+      }),
+      questions: defaults.customQuestions,
+    };
+  });
 }
 
 function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup): MetaPublishCreativePlan[] {
   return pack.copyPacks.slice(0, 6).map((copy, index) => {
-    const creative = pack.creatives.find((item) => item.variantId === copy.variantId) ?? pack.creatives[index] ?? null;
+    const variantCreatives = pack.creatives.filter((item) => item.variantId === copy.variantId);
+    const feedCreative = variantCreatives.find((item) => item.format === "4:5")
+      ?? variantCreatives.find((item) => item.format !== "9:16")
+      ?? null;
+    const storyCreative = variantCreatives.find((item) => item.format === "9:16") ?? null;
+    const creative = feedCreative ?? storyCreative ?? pack.creatives[index] ?? null;
+    const feedAsset = feedCreative ? buildCreativeImageAsset(feedCreative) : null;
+    const storyAsset = storyCreative ? buildCreativeImageAsset(storyCreative) : null;
+    const revisionBindings = [
+      feedCreative && feedAsset && feedCreative.activeRevisionId ? {
+        placement: "feed" as const, creativeId: feedCreative.creativeId, revisionId: feedCreative.activeRevisionId,
+        format: feedCreative.format, asset: feedAsset,
+      } : null,
+      storyCreative && storyAsset && storyCreative.activeRevisionId ? {
+        placement: "story" as const, creativeId: storyCreative.creativeId, revisionId: storyCreative.activeRevisionId,
+        format: storyCreative.format, asset: storyAsset,
+      } : null,
+    ].filter((binding): binding is NonNullable<typeof binding> => Boolean(binding));
 
     return {
       localId: `creative_${index + 1}`,
@@ -2387,9 +3435,12 @@ function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSet
       description: copy.meta.descriptions[0] ?? pack.campaign.audienceIntent,
       cta: copy.meta.cta,
       leadFormLocalId: `form_${index + 1}`,
-      adStudioCreativeId: creative?.creativeId ?? null,
+      adStudioCreativeId: feedCreative?.creativeId ?? creative?.creativeId ?? null,
+      adStudioCreativeRevisionId: feedCreative?.activeRevisionId ?? creative?.activeRevisionId ?? null,
       format: creative?.format ?? null,
-      asset: creative ? buildCreativeImageAsset(creative) : null,
+      asset: feedAsset,
+      formatAssets: { feed: feedAsset, story: storyAsset },
+      revisionBindings,
     };
   });
 }
@@ -2413,8 +3464,9 @@ function buildCreativeImageAsset(creative: AdStudioCampaignPack["creatives"][num
       type: "image",
       source: "inline",
       mimeType: dataUrlMatch[1],
-      filename: `${creative.creativeId}.${dataUrlMatch[1] === "image/jpeg" ? "jpg" : "png"}`,
+      filename: `${creativeId}.${dataUrlMatch[1] === "image/jpeg" ? "jpg" : "png"}`,
       bytesBase64: dataUrlMatch[2],
+      contentSha256: createHash("sha256").update(Buffer.from(dataUrlMatch[2], "base64")).digest("hex"),
     };
   }
 
@@ -2430,9 +3482,48 @@ function buildCreativeImageAsset(creative: AdStudioCampaignPack["creatives"][num
     type: "image",
     source: "storage",
     mimeType: "image/png",
-    filename: `${creative.creativeId}.png`,
+    filename: `${creativeId}.png`,
     storagePath,
+    ...(typeof imageObject?.contentSha256 === "string" && /^[a-f0-9]{64}$/i.test(imageObject.contentSha256)
+      ? { contentSha256: imageObject.contentSha256.toLowerCase() }
+      : {}),
   };
+}
+
+async function resolveImmutableRevisionAsset(
+  service: SupabaseServiceClient,
+  workspaceId: string,
+  creativeId: string,
+  canvas: unknown,
+): Promise<MetaCreativeAssetPlan | null> {
+  const asset = buildCreativeImageAssetFromCanvas(creativeId, canvas);
+  if (!asset) return null;
+  if (asset.source === "inline") return asset.contentSha256 ? asset : null;
+  if (asset.source !== "storage" || !asset.storagePath || !isWorkspaceArtifactPath(workspaceId, asset.storagePath)) return null;
+  const { data, error } = await service.storage.from("workspace-artifacts").download(asset.storagePath);
+  if (error || !data) return null;
+  const bytes = Buffer.from(await data.arrayBuffer());
+  if (!bytes.length) return null;
+  const mimeType = data.type && data.type.startsWith("image/") ? data.type : asset.mimeType;
+  if (!mimeType?.startsWith("image/")) return null;
+  return {
+    ...asset,
+    mimeType,
+    contentSha256: createHash("sha256").update(bytes).digest("hex"),
+  };
+}
+
+function isWorkspaceArtifactPath(workspaceId: string, storagePath: string): boolean {
+  return storagePath.startsWith(`${workspaceId}/`) && !storagePath.includes("..") && !storagePath.startsWith("/");
+}
+
+function sameImmutableCreativeAsset(current: MetaCreativeAssetPlan | null, expected: MetaCreativeAssetPlan): boolean {
+  if (!current) return false;
+  return current.source === expected.source
+    && current.storagePath === expected.storagePath
+    && current.url === expected.url
+    && current.contentSha256 === expected.contentSha256
+    && current.mimeType === expected.mimeType;
 }
 
 function hasUsableCreativeImage(creative: MetaPublishCreativePlan): boolean {
@@ -2440,6 +3531,14 @@ function hasUsableCreativeImage(creative: MetaPublishCreativePlan): boolean {
   if (!asset) return false;
 
   return Boolean(asset.imageHash || asset.bytesBase64 || (asset.source === "storage" && asset.storagePath));
+}
+
+function hasImmutableCreativeContent(creative: MetaPublishCreativePlan): boolean {
+  const hasHash = (asset: MetaCreativeAssetPlan | null | undefined) =>
+    Boolean(asset?.contentSha256 && /^[a-f0-9]{64}$/i.test(asset.contentSha256));
+  if (!hasHash(creative.asset)) return false;
+  if (!creative.formatAssets) return true;
+  return hasHash(creative.formatAssets.feed) && (!creative.formatAssets.story || hasHash(creative.formatAssets.story));
 }
 
 function isHttpUrl(value: string): boolean {
@@ -2507,7 +3606,8 @@ function normalizeMetaPublishControls(
     dailyBudgetMinorUnits: controls?.dailyBudgetMinorUnits && controls.dailyBudgetMinorUnits > 0
       ? Math.round(controls.dailyBudgetMinorUnits)
       : 2000,
-    ...(destinationUrl && isHttpUrl(destinationUrl) ? { destinationUrl } : {}),
+    ...(adDestinationUrl && isHttpUrl(adDestinationUrl) ? { adDestinationUrl, destinationUrl: adDestinationUrl } : {}),
+    ...(formCompletionUrl && isHttpUrl(formCompletionUrl) ? { formCompletionUrl } : {}),
     geo: controls?.geo ?? { type: "country", country: pack.campaign.market.country },
     schedule: {
       startTime: controls?.schedule?.startTime ?? null,
@@ -2519,6 +3619,16 @@ function normalizeMetaPublishControls(
       instagramPositions: controls?.placements?.instagramPositions ?? [],
     },
   };
+}
+
+function normalizePersistedMetaPublishStatus(status: string): MetaPublishPlanStatus {
+  // The migration rewrites these values, but mapping here keeps a deployment
+  // safe when application code reaches a replica before the migration.
+  if (status === "approved") return "queued";
+  if (status === "paused_live") return "paused_ready";
+  return ["draft", "validating", "queued", "publishing", "paused_ready", "activating", "live", "failed", "reconciliation_required"].includes(status)
+    ? status as MetaPublishPlanStatus
+    : "reconciliation_required";
 }
 
 function normalizeMetaConnectionSetup(setup: MetaConnectionSetup): MetaConnectionSetup {
@@ -2551,6 +3661,10 @@ function planToJson(plan: MetaPublishPlan) {
     creatives: plan.creatives,
     ads: plan.ads,
     tracking: plan.tracking,
+    publishContractVersion: plan.publishContractVersion,
+    complianceReportId: plan.complianceReportId,
+    complianceSubjectHash: plan.complianceSubjectHash,
+    complianceCheckedAt: plan.complianceCheckedAt,
     controls: plan.controls,
     source: plan.source ?? null,
   };
@@ -2614,6 +3728,10 @@ type MetaPublishPlanRow = {
     creatives?: MetaPublishCreativePlan[];
     ads?: MetaPublishAdPlan[];
     tracking?: MetaPublishTrackingPlan;
+    publishContractVersion?: string | null;
+    complianceReportId?: string | null;
+    complianceSubjectHash?: string;
+    complianceCheckedAt?: string | null;
     controls?: MetaPublishControls;
     source?: MetaPublishPlan["source"];
   };
@@ -2647,8 +3765,9 @@ function rowToPlan(row: MetaPublishPlanRow): MetaPublishPlan {
     approvalRequestId: row.approval_request_id,
     publicationSnapshotId: row.publication_snapshot_id ?? null,
     adapter: row.adapter,
-    status: row.status,
+    status: normalizePersistedMetaPublishStatus(row.status),
     idempotencyKey: row.idempotency_key,
+    publishContractVersion: planJson.publishContractVersion === "finished_clone_v1" ? "finished_clone_v1" : null,
     setup: normalizeMetaConnectionSetup({
       metaAdAccountId: row.meta_ad_account_id,
       pageId: row.page_id,
@@ -2665,7 +3784,7 @@ function rowToPlan(row: MetaPublishPlanRow): MetaPublishPlan {
     // explicit safe defaults rather than emitting undefined Meta parameters.
     campaign: { ...campaignDefaults, ...(planJson.campaign ?? {}) },
     adSets: planJson.adSets ?? [],
-    leadForms: planJson.leadForms ?? [],
+    leadForms: (planJson.leadForms ?? []).map(normalizeMetaLeadFormPlan),
     creatives: planJson.creatives ?? [],
     ads: planJson.ads ?? [],
     tracking: planJson.tracking ?? {
@@ -2674,6 +3793,12 @@ function rowToPlan(row: MetaPublishPlanRow): MetaPublishPlan {
       utmCampaign: "meta-campaign",
       utmContentPrefix: "meta",
     },
+    complianceReportId: planJson.complianceReportId ?? null,
+    // Old plans do not have a compliant immutable binding and must fail closed.
+    complianceSubjectHash: planJson.complianceSubjectHash ?? "",
+    complianceCheckedAt: planJson.complianceCheckedAt ?? null,
+    creativeFeatures: planJson.creativeFeatures ?? buildDefaultMetaCreativeFeatures(),
+    assetFeedEnabled: planJson.assetFeedEnabled === true,
     requestLog: row.request_log_json ?? [],
     responseLog: row.response_log_json ?? [],
     reconciledObjects: row.reconciled_objects_json ?? emptyReconciledObjects(),
@@ -2692,6 +3817,18 @@ function emptyReconciledObjects(): MetaReconciledObjects {
     adIds: {},
     ownedAdIds: {},
     provenance: { adSets: {}, ads: {} },
+  };
+}
+
+function normalizeMetaLeadFormPlan(form: MetaPublishLeadFormPlan): MetaPublishLeadFormPlan {
+  return {
+    ...form,
+    intro: form.intro ?? form.headline,
+    contactFields: form.contactFields?.length ? form.contactFields : ["FIRST_NAME", "LAST_NAME", "EMAIL", "PHONE"],
+    customQuestions: form.customQuestions ?? form.questions ?? [],
+    questions: form.questions ?? form.customQuestions ?? [],
+    thankYouButtonType: form.thankYouButtonType ?? "VIEW_WEBSITE",
+    thankYouButtonText: form.thankYouButtonText ?? "Visit website",
   };
 }
 

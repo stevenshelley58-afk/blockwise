@@ -45,7 +45,7 @@ export function BillingSection({
   const [portalBusy, setPortalBusy] = useState(false);
   const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [message, setMessage] = useState<Msg>(null);
-  const packEstimate = usage.remaining == null ? null : Math.floor(usage.remaining / 2);
+  const packEstimate = usage.remaining;
   const currencyMark = workspace.currency === "USD" ? "US$" : "A$";
   // This workspace exposes an intentionally implausible allowance/date sentinel.
   // Keep it visibly separate from ordinary paid-plan billing.
