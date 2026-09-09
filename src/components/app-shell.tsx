@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
-import { SelfServeShell } from "@/components/self-serve-shell";
+import { StudioRouteShell } from "@/components/adstudio/studio-route-shell";
 import { TrialStatusSkeleton } from "@/components/trial-status-skeleton";
 import { TrialStatusCard } from "@/components/trial-status-pill";
 import { getRequestAuthContext } from "@/lib/auth/request-context";
@@ -82,8 +82,24 @@ export async function AppShell({
   const accountName = profile?.full_name ?? accountEmail ?? "Signed in";
   const roleLabel = primaryMembership?.role ?? "member";
 
+  const metaConnectionResult = workspace?.id
+    ? await supabase
+        .from("provider_connections")
+        .select("status")
+        .eq("workspace_id", workspace.id)
+        .eq("provider", "meta")
+        .maybeSingle()
+    : null;
+  const metaConnectionStatus = metaConnectionResult?.error
+    ? "unknown"
+    : metaConnectionResult?.data?.status === "connected"
+      ? "connected"
+      : metaConnectionResult?.data?.status
+        ? "attention"
+        : "not_connected";
+
   return (
-    <SelfServeShell
+    <StudioRouteShell
       userId={claims.sub}
       workspaceId={workspace?.id ?? ""}
       workspaceName={workspaceName}
@@ -102,8 +118,10 @@ export async function AppShell({
           />
         </Suspense>
       }
+      metaConnectionStatus={metaConnectionStatus}
+      homeHref={homeHref}
     >
       {children}
-    </SelfServeShell>
+    </StudioRouteShell>
   );
 }
