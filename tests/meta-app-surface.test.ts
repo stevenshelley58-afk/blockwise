@@ -64,12 +64,15 @@ test("operator prompt preview surfaces avoid stale Phase 1 test copy", () => {
   assert.doesNotMatch(`${promptPanel}\n${promptPreviewRoute}`, /Phase 1|PR 1|Run test|Test Result/);
 });
 
-test("unified shell carries no legacy workspace variants", () => {
+test("unified shell keeps operator console out of the customer app", () => {
   const appShell = readFileSync("src/components/app-shell.tsx", "utf8");
+  const routeShell = readFileSync("src/components/adstudio/studio-route-shell.tsx", "utf8");
 
-  assert.match(appShell, /<SelfServeShell/);
+  assert.match(appShell, /<StudioRouteShell/);
   assert.doesNotMatch(appShell, /RouteAwareLegacyShell/);
   assert.doesNotMatch(appShell, /Hermes Engine/);
+  assert.doesNotMatch(routeShell, /Hermes Engine/);
   assert.doesNotMatch(appShell, /Operational/);
+  assert.doesNotMatch(routeShell, /Operational/);
   assert.equal(existsSync("src/components/route-aware-legacy-shell.tsx"), false);
 });

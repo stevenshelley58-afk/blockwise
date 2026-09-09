@@ -7,6 +7,7 @@ import { canAccessSurface } from "../src/lib/auth/access-control.ts";
 const mobileNav = readFileSync("src/components/app/mobile-bottom-nav.tsx", "utf8");
 const studioShell = readFileSync("src/components/adstudio/studio-shell.tsx", "utf8");
 const selfServeShell = readFileSync("src/components/self-serve-shell.tsx", "utf8");
+const routeShell = readFileSync("src/components/adstudio/studio-route-shell.tsx", "utf8");
 const globalCss = readFileSync("src/app/globals.css", "utf8");
 const consent = readFileSync("src/components/consent-banner.tsx", "utf8");
 
@@ -45,6 +46,8 @@ test("More owns overflow state and signs out directly to login", () => {
   assert.match(mobileNav, /router\.replace\("\/login"\)/);
   assert.match(mobileNav, /<Sheet open=\{moreOpen\}/);
   assert.match(selfServeShell, /<MobileBottomNav homeHref="\/self-serve"/);
+  assert.match(routeShell, /pathname === "\/ad-studio" \|\| pathname\.startsWith\("\/ad-studio\/"/);
+  assert.match(routeShell, /<StudioShell[\s\S]*workspaceName=\{workspaceName\}/);
 });
 
 test("mobile layer order keeps sheets and consent above the persistent bar", () => {
