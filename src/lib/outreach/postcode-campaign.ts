@@ -373,7 +373,13 @@ function emailFooter(input: OutreachEmailInput): EmailMessage["footer"] {
 export function buildOutreachEmail(input: OutreachEmailInput) {
   const reportUrl = httpsUrlSchema.parse(input.reportUrl);
   const segment = classifyEvidence(input.prospect.advertisingEvidence, input.now ?? new Date()).segment;
-  const examples = selectPeerExamples(input.snapshot, input.prospect).slice(0, 2);
+  let examples = selectPeerExamples(input.snapshot, input.prospect);
+  if ((input.allowedMediaOrigins ?? []).length > 0) {
+    const withMedia = examples.filter((e) => e.mediaUrl && e.mediaRightsConfirmed);
+    const withoutMedia = examples.filter((e) => !e.mediaUrl || !e.mediaRightsConfirmed);
+    examples = [...withMedia, ...withoutMedia];
+  }
+  examples = examples.slice(0, 2);
   if (examples.length < 2) throw new Error("Two sourced local ad examples are required for every email segment.");
   const area = input.snapshot.coverageLabel;
   const postcode = input.snapshot.postcode;
