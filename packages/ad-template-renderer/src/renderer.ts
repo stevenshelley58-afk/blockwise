@@ -31,6 +31,34 @@ export interface RenderInput {
   cropOverrides?: Record<string, Rect>;
   /** Imported font bytes for server-side canary renders; avoids host-font drift. */
   fontValues?: Record<string, Buffer>;
+  /** Emit deterministic per-layer evidence for offline QA. */
+  collectDiagnostics?: boolean;
+}
+
+export interface PixelBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface TextRenderDiagnostic {
+  placement: Placement;
+  layerId: string;
+  inputKey: string;
+  status: "painted" | "empty" | "refused";
+  reason?: "max_characters" | "does_not_fit";
+  geometry: Rect;
+  paintedBounds: PixelBounds | null;
+  withinGeometry: boolean;
+  fontFamily: string;
+  fontSizePx: number;
+  lineCount: number;
+  maxLines: number;
+}
+
+export interface RenderDiagnostics {
+  textLayers: TextRenderDiagnostic[];
 }
 
 export interface RenderOutput {
@@ -38,6 +66,7 @@ export interface RenderOutput {
   width: number;
   height: number;
   png: Buffer;
+  diagnostics?: RenderDiagnostics;
 }
 
 export const TEXT_PREFLIGHT_ERROR_CODE = "AD_TEMPLATE_TEXT_PREFLIGHT_FAILED";
@@ -110,12 +139,12 @@ async function renderPlacementPrepared(input: RenderInput, placement: Placement)
   ctx.imageSmoothingQuality = "high";
 
   for (const layer of layout.layers) {
-    await renderLayer(ctx, layer, input, placement, dims);
+    await renderLayer(ctx, layer, input, placement, dims, diagnostics);
   }
 
   assertFullyOpaque(ctx, dims, placement);
   const png = canvas.toBuffer("image/png");
-  return { placement, width: dims.width, height: dims.height, png };
+  return { placement, width: dims.width, height: dims.height, png, ...(diagnostics ? { diagnostics } : {}) };
 }
 
 export async function renderBoth(input: RenderInput): Promise<[RenderOutput, RenderOutput]> {
@@ -126,12 +155,23 @@ export async function renderBoth(input: RenderInput): Promise<[RenderOutput, Ren
   return [await renderPlacementPrepared(input, "feed"), await renderPlacementPrepared(input, "story")];
 }
 
-async function renderLayer(ctx: SKRSContext2D, layer: LayoutLayer, input: RenderInput, placement: Placement, dims: { width: number; height: number }): Promise<void> {
+async function renderLayer(
+  ctx: SKRSContext2D,
+  layer: LayoutLayer,
+  input: RenderInput,
+  placement: Placement,
+  dims: { width: number; height: number },
+  diagnostics?: RenderDiagnostics,
+): Promise<void> {
   switch (layer.type) {
     case "plate": return renderPlate(ctx, layer, input, dims);
     case "image_slot": return renderImageSlot(ctx, layer, input, dims);
     case "overlay_patch": return renderOverlay(ctx, layer, input, dims);
-    case "text": return renderText(ctx, layer, input, placement, dims);
+    case "text": {
+      const diagnostic = renderText(ctx, layer, input, placement, dims, Boolean(diagnostics));
+      if (diagnostic) diagnostics?.textLayers.push(diagnostic);
+      return;
+    }
     case "logo": return renderLogo(ctx, layer, input, dims);
     case "vector": return renderVector(ctx, layer, input, dims);
     case "icon": return renderIcon(ctx, layer, input, dims);
@@ -357,6 +397,36 @@ function renderText(ctx: SKRSContext2D, layer: TextLayer, input: RenderInput, pl
     lines.forEach((line, index) => drawTrackedText(ctx, line, x, baseline + index * fontSize * layer.lineHeight, trackingPixels, layer.alignment, true));
   }
   ctx.restore();
+  const paintedBounds = diagnosticContext ? alphaBounds(diagnosticContext, dims) : null;
+  return diagnostic("painted", fontSize, lines.length, paintedBounds);
+}
+
+function alphaBounds(ctx: SKRSContext2D, dims: CanvasDimensions): PixelBounds | null {
+  const pixels = ctx.getImageData(0, 0, dims.width, dims.height).data;
+  let minX = dims.width;
+  let minY = dims.height;
+  let maxX = -1;
+  let maxY = -1;
+  for (let y = 0; y < dims.height; y += 1) {
+    for (let x = 0; x < dims.width; x += 1) {
+      if (pixels[(y * dims.width + x) * 4 + 3] === 0) continue;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+  }
+  return maxX < minX || maxY < minY
+    ? null
+    : { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
+}
+
+function boundsWithinGeometry(bounds: PixelBounds, geometry: Rect): boolean {
+  const tolerance = 1;
+  return bounds.x >= geometry.x - tolerance
+    && bounds.y >= geometry.y - tolerance
+    && bounds.x + bounds.width <= geometry.x + geometry.width + tolerance
+    && bounds.y + bounds.height <= geometry.y + geometry.height + tolerance;
 }
 
 function assertTextPreflight(input: RenderInput, placements: readonly Placement[]): void {
