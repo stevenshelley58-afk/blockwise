@@ -11,7 +11,6 @@ import {
   ImageOff,
   MousePointerClick,
   Percent,
-  Megaphone,
   Play,
   UserPlus,
   Wallet,
@@ -281,7 +280,7 @@ export function MetaMonitorDashboard({
         range={displayPayload.range}
         rangeKey={rangeKey}
         customRange={customRange}
-        lastSyncedAt={summary?.lastSyncedAt ?? null}
+        lastSyncedAt={summary?.lastSyncedAt ?? generatedAt}
         isRefreshing={isRefreshing}
         isSample={showExample && payload.source === "sample"}
         isConnected={Boolean(displayPayload.connected)}
@@ -385,7 +384,7 @@ function Dashboard({
         <MetaKpiCard
           icon={UserPlus}
           iconTone="green"
-          label="Enquiries"
+          label="Leads"
           value={summary.leads.toLocaleString("en-AU")}
           compareText={compare}
           trend={previous ? calculateTrend(summary.leads, previous.leads) : null}
@@ -751,8 +750,7 @@ function CampaignManagementTable({
           </TableBody>
         </Table>
       </div>
-      </div>
-    </details>
+    </section>
   );
 }
 

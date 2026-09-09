@@ -1,4 +1,4 @@
-# Blockwise engineering rules
+# Blockwise Engineering Rules
 
 Read /projects/frank/docs/standards/engineering-rules.md first.
 This file adds Blockwise-specific boundaries. The sole current procedure index
@@ -30,12 +30,22 @@ or main promise, and do not imply guaranteed leads or sales.
 - Hermes research/agent runtime and data remain separate from Blockwise.
 
 
-## UI and design
+## Safety rules (always hold)
 
-Preserve the current UI and `DESIGN.md` authority. Customer UI uses the
-existing shadcn/Tailwind token bridge and `src/components/ui/`; operator UI
-keeps its existing CSS shell. Reuse existing navigation metadata and
-components; do not create a parallel design system.
+- No secrets, `.env*` files (except `.env.example`), databases, or build
+  output in version control.
+- Workspace isolation must hold: every workspace-scoped query filters by
+  `workspace_id`, and RLS policies stay enabled on workspace-scoped tables.
+- Schema changes ship as tested migrations. Destructive changes (drops,
+  merges) require a row-count check first; archive non-empty tables to
+  `legacy_archive` instead of hard-dropping.
+- Hermes runs only on the VPS (`docs/runbooks/vps-ssh.md`). Vercel code never
+  executes Apify or research scraping; it only reads research state from
+  Supabase.
+- Provider tokens live in `private.provider_token_vault` and are only touched
+  through service-role code via the `public.provider_token_vault_*` RPCs — the
+  `private` schema is not exposed through PostgREST, so never query it with
+  `.schema("private")`.
 
 ## Single application authority
 

@@ -445,7 +445,7 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
   }));
   const previewImages = { ...defaultImageValues, ...customerImageValues };
   const previewCopy = previewTextValues(pack, state.textValues);
-  const [previewMode, setPreviewMode] = useState<"design" | "meta" | "split">("meta");
+  const [previewMode, setPreviewMode] = useState<"design" | "meta" | "split">("design");
   const [zoom, setZoom] = useState<"fit" | 1 | 1.25 | 0.8>("fit");
   const [placementView, setPlacementView] = useState<Placement | "both">(state.activePlacement);
   const [canonicalDocument, setCanonicalDocument] = useState<{ document: AdDocumentParsed; version: number } | null>(null);
