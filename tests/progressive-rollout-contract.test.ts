@@ -5,26 +5,12 @@ import test from "node:test";
 const env = readFileSync(".env.example", "utf8");
 const runbook = readFileSync("docs/runbooks/progressive-onboarding-rollout.md", "utf8");
 
-const flags = [
-  "BLOCKWISE_PROGRESSIVE_FOUNDATIONS_ENABLED",
-  "BLOCKWISE_PROGRESSIVE_ACTIVATION_ENABLED",
-  "BLOCKWISE_PROGRESSIVE_BILLING_ENABLED",
-  "BLOCKWISE_PROGRESSIVE_PUBLIC_LAUNCH_ENABLED",
-  "BLOCKWISE_PROGRESSIVE_MARKETS",
-  "BLOCKWISE_PROGRESSIVE_EXPOSURE_PERCENT",
-] as const;
-
-test("progressive rollout flags are documented with fail-closed defaults", () => {
-  for (const flag of flags) {
-    assert.match(env, new RegExp(`^${flag}=`, "m"));
-    assert.match(runbook, new RegExp(`\\\`${flag}\\\``));
-  }
-  assert.match(env, /^BLOCKWISE_PROGRESSIVE_FOUNDATIONS_ENABLED=false$/m);
-  assert.match(env, /^BLOCKWISE_PROGRESSIVE_ACTIVATION_ENABLED=false$/m);
-  assert.match(env, /^BLOCKWISE_PROGRESSIVE_BILLING_ENABLED=false$/m);
-  assert.match(env, /^BLOCKWISE_PROGRESSIVE_PUBLIC_LAUNCH_ENABLED=false$/m);
-  assert.match(env, /^BLOCKWISE_PROGRESSIVE_MARKETS=$/m);
-  assert.match(env, /^BLOCKWISE_PROGRESSIVE_EXPOSURE_PERCENT=0$/m);
+// The BLOCKWISE_PROGRESSIVE_* env flags were documentation-only: no code ever
+// read them, so advertising them as gates was misleading (an operator setting
+// them to false believed the funnel was gated when it was fully live). The
+// rollout completed and the flags were removed from .env.example.
+test("dead progressive rollout flags stay deleted from .env.example", () => {
+  assert.doesNotMatch(env, /BLOCKWISE_PROGRESSIVE_/);
 });
 
 test("runbook orders every progressive migration before exposure", () => {

@@ -14,7 +14,7 @@ export type ReadinessItem = {
 };
 
 export const COPY_LIMITS: Record<keyof AdStudioCopyState, number> = {
-  primaryText: 125,
+  primaryText: 500,
   headline: 40,
   description: 90,
   cta: 24,

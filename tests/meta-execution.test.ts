@@ -480,7 +480,7 @@ test("buildMetaPublishPlan targets selected suburbs and can include their surrou
   });
 });
 
-test("buildMetaPublishPlan keeps exact selected suburbs when surrounding areas are disabled", () => {
+test("buildMetaPublishPlan applies the HOUSING minimum radius even for exact selected suburbs", () => {
   const plan = buildMetaPublishPlan({
     workspaceId: "workspace_demo",
     campaignPack: buildPack(),
@@ -495,8 +495,10 @@ test("buildMetaPublishPlan keeps exact selected suburbs when surrounding areas a
     },
   });
 
+  // Meta's HOUSING special ad category requires a minimum radius on city
+  // pins; omitting it rejects the ad set at publish time.
   assert.deepEqual(plan.adSets[0]?.targeting.geo_locations, {
-    cities: [{ key: "101" }],
+    cities: [{ key: "101", radius: 25, distance_unit: "kilometer" }],
     location_types: ["home", "recent"],
   });
 });
@@ -1834,4 +1836,75 @@ test("marketing_api adapter rejects object-state readback without paired Feed an
   assert.equal(result.status, "reconciliation_required");
   assert.equal(methods.includes("GET"), true);
   assert.equal(result.lastError, "Meta creative upload did not return both immutable Feed and Story image hashes.");
+});
+
+test("lead form questions are deduplicated and built-in collisions dropped before hitting Meta", () => {
+  const pack = buildPack();
+  for (const copyPack of pack.copyPacks) {
+    copyPack.meta.leadForm.questions = [
+      "What is your best contact number?",
+      "What is your best contact number?",
+      " what is your best contact number? ",
+      "Email",
+      "Phone number",
+      "",
+      "What suburb is your property in?",
+    ];
+  }
+
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: pack,
+    connectionId: "connection_123",
+    setup,
+    controls,
+  });
+
+  for (const form of plan.leadForms) {
+    // Meta rejects "Duplicate question label" — including collisions with the
+    // built-in FIRST_NAME/LAST_NAME/EMAIL/PHONE fields the publish always adds.
+    assert.deepEqual(form.questions, [
+      "What is your best contact number?",
+      "What suburb is your property in?",
+    ]);
+  }
+});
+
+test("identical lead forms collapse to one and creatives reference the surviving form", () => {
+  const pack = buildPack();
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: pack,
+    connectionId: "connection_123",
+    setup,
+    controls,
+  });
+
+  // The fixture's copy packs share one lead-form spec — a multi-creative
+  // publish must not create N byte-identical leadgen forms on the Page.
+  const formIds = new Set(plan.leadForms.map((form) => form.localId));
+  assert.equal(plan.leadForms.length, formIds.size);
+  if (pack.copyPacks.length > 1) {
+    assert.equal(plan.leadForms.length, 1);
+  }
+  for (const creative of plan.creatives) {
+    assert.ok(formIds.has(creative.leadFormLocalId), `creative ${creative.localId} references a missing lead form`);
+  }
+});
+
+test("feed creatives prefer the 4:5 render over a story render for the same variant", () => {
+  const pack = buildPack();
+  const plan = buildMetaPublishPlan({
+    workspaceId: "workspace_demo",
+    campaignPack: pack,
+    connectionId: "connection_123",
+    setup,
+    controls,
+  });
+
+  for (const creative of plan.creatives) {
+    if (creative.format) {
+      assert.equal(creative.format, "4:5");
+    }
+  }
 });

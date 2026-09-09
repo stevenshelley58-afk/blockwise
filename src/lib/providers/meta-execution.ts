@@ -757,7 +757,15 @@ function filterPackToVariants(pack: AdStudioCampaignPack, variantIds: string[]):
 export function validateMetaConnectionSetup(setup: MetaConnectionSetup): string[] {
   const blockers: string[] = [];
 
-  if (!setup.metaAdAccountId.trim()) blockers.push("Meta ad account is not configured.");
+  const adAccountId = setup.metaAdAccountId.trim();
+  if (!adAccountId) {
+    blockers.push("Meta ad account is not configured.");
+  } else if (!/^(act_)?\d+$/i.test(adAccountId)) {
+    // Legacy connections can carry the "meta_account_pending" sentinel as the
+    // external account id; publishing against it would hit the Graph API with
+    // /act_meta_account_pending/... and fail with a raw provider error.
+    blockers.push("Meta ad account is not configured.");
+  }
   if (!setup.pageId.trim()) blockers.push("Meta Page is not configured.");
   if (!setup.leadDestination.type || !setup.leadDestination.label.trim()) blockers.push("Meta lead destination is not configured.");
   if (setup.leadDestination.type !== "manual" && !setup.leadDestination.config?.endpoint?.trim()) {
@@ -3429,11 +3437,14 @@ function buildUtmLink(baseUrl: string, tracking: MetaPublishTrackingPlan, creati
 function buildTargeting(controls: MetaPublishControls): Record<string, unknown> {
   const geoLocations = controls.geo?.type === "cities" && controls.geo.locations.length > 0
     ? {
+        // HOUSING special-ad-category targeting requires a minimum radius
+        // around city/suburb pins; omitting it gets the ad set rejected, so the
+        // minimum is always applied ("selected suburbs only" simply means the
+        // user picked their own pins rather than a broader recommendation).
         cities: controls.geo.locations.map((location) => ({
           key: location.key,
-          ...(controls.geo?.type === "cities" && controls.geo.includeSurroundingSuburbs
-            ? { radius: META_HOUSING_MIN_RADIUS_KM, distance_unit: "kilometer" }
-            : {}),
+          radius: META_HOUSING_MIN_RADIUS_KM,
+          distance_unit: "kilometer",
         })),
         location_types: ["home", "recent"],
       }
@@ -3494,7 +3505,45 @@ function buildLeadFormPlans(pack: AdStudioCampaignPack, setup: MetaConnectionSet
   });
 }
 
-function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup): MetaPublishCreativePlan[] {
+/**
+ * Maps each copy pack index to the lead form that survived deduplication in
+ * buildLeadFormPlans, so creatives always reference a form that exists.
+ */
+function resolveLeadFormLocalIdForIndex(leadForms: MetaPublishLeadFormPlan[], pack: AdStudioCampaignPack, setup: MetaConnectionSetup, destinationUrl: string | undefined, index: number): string {
+  const copy = pack.copyPacks[index];
+  if (!copy) return leadForms[0]?.localId ?? "form_1";
+
+  const questions = normalizeMetaLeadFormQuestions(copy.meta.leadForm.questions);
+  const signature = JSON.stringify([
+    copy.meta.leadForm.headline,
+    questions,
+    setup.privacyPolicyUrl,
+    copy.meta.leadForm.thankYouScreen.title,
+    copy.meta.leadForm.thankYouScreen.body,
+    destinationUrl ?? setup.privacyPolicyUrl,
+  ]);
+
+  for (const form of leadForms) {
+    const formSignature = JSON.stringify([
+      form.headline,
+      form.questions,
+      form.privacyPolicyUrl,
+      form.thankYouTitle,
+      form.thankYouBody,
+      form.thankYouWebsiteUrl,
+    ]);
+    if (formSignature === signature) return form.localId;
+  }
+
+  return leadForms[0]?.localId ?? "form_1";
+}
+
+function buildCreativePlans(
+  pack: AdStudioCampaignPack,
+  setup: MetaConnectionSetup,
+  leadForms: MetaPublishLeadFormPlan[],
+  destinationUrl?: string,
+): MetaPublishCreativePlan[] {
   return pack.copyPacks.slice(0, 6).map((copy, index) => {
     const variantCreatives = pack.creatives.filter((item) => item.variantId === copy.variantId);
     const feedCreative = variantCreatives.find((item) => item.format === "4:5")
