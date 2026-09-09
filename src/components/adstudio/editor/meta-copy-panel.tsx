@@ -5,12 +5,14 @@ import { META_COPY_CTA_VALUES, META_COPY_CONSTRAINTS } from "../../../lib/adstud
 import { ctaLabelText, truncateForPreview } from "./preview-text";
 import { isMetaCta, toMetaCta } from "../../../lib/adstudio/meta-cta";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { labelForMetaCta, META_CTA_VALUES, toMetaCta } from "@/lib/adstudio/meta-cta";
 
 // ---------------------------------------------------------------------------
 // Meta Copy Panel — primary text, headline, description and CTA for the
-// Meta placements of a pack.
+// selected template's Facebook placements.
 //
 // One shared set of values, matching AdDocument v1's metaPrimaryText /
 // metaHeadline / metaDescription / metaCta fields: Feed and Story both read
@@ -28,7 +30,6 @@ export interface MetaCopyPanelProps {
   destinationUrl?: string;
   onDestinationChange?: (value: string) => void;
 }
-
 /** Meta's standard CTAs (the same set the meta lead-ad pack schema allows). */
 export const META_CTA_OPTIONS = META_COPY_CTA_VALUES;
 
@@ -40,12 +41,15 @@ export function MetaCopyPanel({ className, values, onChange, destinationUrl = ""
 
   return (
     <aside aria-label="Meta copy" className={cn("w-full shrink-0 overflow-y-auto bg-card p-4 xl:w-auto", className)}>
-      <h3 className="mb-3 text-sm font-semibold text-foreground">
-        Meta copy
-      </h3>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-foreground">Meta copy</h3>
+        <Button type="button" variant="outline" size="sm" onClick={onUseTemplateCopy} className="min-h-9 rounded-full px-3 text-xs">
+          Use template copy
+        </Button>
+      </div>
       <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
-        Primary text, headline, description and CTA show with the design in
-        every placement — edit once, all placements update.
+        Primary text, headline and description appear in Facebook Feed. The
+        CTA also appears in Story — edit once and both previews update.
       </p>
 
       <div className="space-y-4">
@@ -56,6 +60,9 @@ export function MetaCopyPanel({ className, values, onChange, destinationUrl = ""
           onChange={onChange}
           maxLength={LIMITS.primaryText}
           textarea
+          active={activeField === "primaryText"}
+          setFocusTarget={node => setFocusTarget("primaryText", node)}
+          onFocus={() => onFieldFocus?.("primaryText")}
         />
         <TextField
           label="Headline"
@@ -63,6 +70,9 @@ export function MetaCopyPanel({ className, values, onChange, destinationUrl = ""
           value={values.headline}
           onChange={onChange}
           maxLength={LIMITS.headline}
+          active={activeField === "headline"}
+          setFocusTarget={node => setFocusTarget("headline", node)}
+          onFocus={() => onFieldFocus?.("headline")}
         />
         <TextField
           label="Description"
@@ -70,9 +80,12 @@ export function MetaCopyPanel({ className, values, onChange, destinationUrl = ""
           value={values.description}
           onChange={onChange}
           maxLength={LIMITS.description}
+          active={activeField === "description"}
+          setFocusTarget={node => setFocusTarget("description", node)}
+          onFocus={() => onFieldFocus?.("description")}
         />
 
-        <div>
+        <div className={cn("-mx-2 rounded-(--r-card) p-2 transition-colors", activeField === "cta" && "bg-primary/5 ring-2 ring-primary/35")}>
           <Label htmlFor="meta-copy-cta" className="mb-1 block text-sm font-medium">
             Call to action
           </Label>
@@ -98,7 +111,9 @@ export function MetaCopyPanel({ className, values, onChange, destinationUrl = ""
         ) : null}
       </div>
 
-      <TruncationPreview values={values} />
+      <p className="mt-5 rounded-(--r-card) border border-border bg-muted/30 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+        The Facebook Feed and Story previews update live as you type.
+      </p>
     </aside>
   );
 }
@@ -114,6 +129,9 @@ function TextField({
   onChange,
   maxLength,
   textarea = false,
+  active = false,
+  setFocusTarget,
+  onFocus,
 }: {
   label: string;
   field: keyof MetaCopy;
@@ -121,30 +139,37 @@ function TextField({
   onChange: (field: keyof MetaCopy, value: string) => void;
   maxLength: number;
   textarea?: boolean;
+  active?: boolean;
+  setFocusTarget: (node: HTMLElement | null) => void;
+  onFocus: () => void;
 }) {
   const shared = "min-h-11 w-full rounded-(--r-card) border border-input bg-muted/30 px-3 text-base shadow-xs outline-none selection:bg-primary selection:text-primary-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
   const inputId = `meta-copy-${field}`;
   return (
-    <div className="block">
+    <div className={cn("-mx-2 rounded-(--r-card) p-2 transition-colors", active && "bg-primary/5 ring-2 ring-primary/35")}>
       <Label htmlFor={inputId} className="mb-1 block text-sm font-medium">{label}</Label>
       {textarea ? (
         <textarea
+          ref={setFocusTarget}
           id={inputId}
           aria-label={label}
           value={value}
           maxLength={maxLength}
           rows={3}
           onChange={e => onChange(field, e.target.value)}
+          onFocus={onFocus}
           className={`${shared} min-h-24 py-2 resize-y`}
         />
       ) : (
         <Input
+          ref={setFocusTarget}
           id={inputId}
           aria-label={label}
           type="text"
           value={value}
           maxLength={maxLength}
           onChange={e => onChange(field, e.target.value)}
+          onFocus={onFocus}
           className={shared}
         />
       )}

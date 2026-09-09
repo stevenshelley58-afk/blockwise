@@ -141,6 +141,16 @@ export async function loadAdStudioLibraryPage(input: {
       const path = storagePathFromSource(input.workspaceId, raw);
       if (path) paths.add(path);
     }
+    for (const template of (templatesResult.data ?? []) as Array<Record<string, unknown>>) {
+      const templateId = String(template.template_id ?? "");
+      const json = template.template_json && typeof template.template_json === "object" && !Array.isArray(template.template_json)
+        ? template.template_json as Record<string, unknown>
+        : {};
+      const metadata = json.metadata && typeof json.metadata === "object" && !Array.isArray(json.metadata)
+        ? json.metadata as Record<string, unknown>
+        : {};
+      if (templateId) templateNameById.set(templateId, typeof metadata.title === "string" && metadata.title.trim() ? metadata.title : templateId);
+    }
   }
   const signed =
     paths.size > 0

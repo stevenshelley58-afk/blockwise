@@ -115,4 +115,11 @@ test("the AdStudio e2e seed provisions render credits and an appearance fixture"
   assert.match(source, /from\("adstudio_brand_kits"\)/);
   assert.match(source, /source_url: "https:\/\/blockwise\.sale"/);
   assert.match(source, /colours_json:/);
+  assert.match(source, /from\("provider_connections"\)\.upsert/);
+  assert.match(source, /e2eDryRunOnly:\s*true/);
+  assert.match(source, /status:\s*"connected"/);
+  assert.match(source, /scopes:\s*\[\]/);
+  assert.doesNotMatch(source, /accessToken|refreshToken|encrypted_access_token|encrypted_refresh_token/);
+  assert.match(source, /Upsert AdStudio e2e token-free Meta connection/);
+  assert.match(source, /ADSTUDIO_E2E_META_CONNECTION_ID/);
 });

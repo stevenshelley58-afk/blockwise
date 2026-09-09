@@ -103,7 +103,11 @@ async function renderPlacementPrepared(input: RenderInput, placement: Placement)
   const dims = DIMENSIONS[placement];
   const canvas = createCanvas(dims.width, dims.height);
   const ctx = canvas.getContext("2d");
-  ctx.imageSmoothingEnabled = false;
+  // Customer images are frequently scaled down from large camera originals.
+  // Skia's high-quality sampler avoids the jagged, pixel-stepped result the
+  // old nearest-neighbour configuration produced in final Meta assets.
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
 
   for (const layer of layout.layers) {
     await renderLayer(ctx, layer, input, placement, dims);
@@ -758,6 +762,7 @@ function renderIcon(ctx: SKRSContext2D, layer: Extract<LayoutLayer, { type: "ico
     ctx.restore();
     throw new Error(`unsupported icon ${normalizeLayerId(layer.layerId)}`);
   }
+  ctx.stroke();
   ctx.restore();
 }
 

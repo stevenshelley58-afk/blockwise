@@ -1,7 +1,14 @@
 import { createHash } from "node:crypto";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AdTemplate } from "../../../packages/ad-template-contract/src/types";
+import { adDocumentSchema } from "../../../packages/ad-template-contract/src/schema.ts";
+import {
+  COLOUR_MODES,
+  COLOUR_ROLES,
+  type AdTemplate,
+  type ColourMode,
+  type ColourRole,
+} from "../../../packages/ad-template-contract/src/types.ts";
 import type { InstantForm } from "../adstudio/instant-form-types";
 import { deterministicUuid } from "./id.ts";
 import {
@@ -50,7 +57,8 @@ export interface PublishLoadResult {
   ad: {
     id: string;
     templateId: string;
-    colourMode: "template" | "brand_pack";
+    colourMode: ColourMode;
+    resolvedColourMap: Record<ColourRole, string>;
     metaPrimaryText: string;
     metaHeadline: string;
     metaDescription: string;
@@ -71,6 +79,54 @@ export interface PublishLoadResult {
   form: InstantForm | null;
   formDraftId: string | null;
   formRevision: number | null;
+}
+
+/** A worker-attested render output. Unattested/pending video refs are never publishable. */
+export type ValidatedVideoPublishAsset = {
+  projectStatus: "succeeded";
+  validationStatus: "validated";
+  storagePath?: string;
+  bytesBase64?: string;
+  videoId?: string;
+  mimeType?: "video/mp4" | "video/webm";
+  posterPath?: string | null;
+  posterUrl?: string;
+  durationMs?: number;
+};
+
+/** Resolve the latest worker-attested video output without exposing raw paths
+ * to the browser. Callers pass the result into plan construction; the publish
+ * worker later converts the workspace-fenced path to a short-lived Meta URL. */
+export async function loadValidatedVideoPublishAsset(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  projectId: string,
+): Promise<ValidatedVideoPublishAsset | null> {
+  const project = await supabase.from("ad_video_projects").select("status")
+    .eq("id", projectId).eq("workspace_id", workspaceId).maybeSingle();
+  if (project.error) throw new PublishError("video_not_found", "Video project could not be loaded.");
+  if (!project.data || project.data.status !== "succeeded") return null;
+  const job = await supabase.from("ad_video_render_jobs")
+    .select("status, output_mp4_asset_id, output_poster_asset_id")
+    .eq("project_id", projectId).eq("workspace_id", workspaceId).eq("status", "succeeded")
+    .order("finished_at", { ascending: false }).limit(1).maybeSingle();
+  const jobData = job.data;
+  if (job.error || !jobData?.output_mp4_asset_id) return null;
+  const ids = [jobData.output_mp4_asset_id, jobData.output_poster_asset_id].filter((id): id is string => typeof id === "string" && id.length > 0);
+  const assets = await supabase.from("ad_video_assets")
+    .select("id, object_path, mime_type, validation_status")
+    .eq("workspace_id", workspaceId).eq("validation_status", "validated").in("id", ids);
+  if (assets.error) throw new PublishError("video_not_found", "Video output could not be loaded.");
+  const mp4 = (assets.data ?? []).find((asset) => asset.id === jobData.output_mp4_asset_id && asset.mime_type === "video/mp4");
+  if (!mp4 || !mp4.object_path.startsWith(`${workspaceId}/`) || mp4.object_path.includes("..")) return null;
+  const poster = (assets.data ?? []).find((asset) => asset.id === jobData.output_poster_asset_id && ["image/jpeg", "image/png"].includes(asset.mime_type) && asset.object_path.startsWith(`${workspaceId}/`) && !asset.object_path.includes(".."));
+  return {
+    projectStatus: "succeeded",
+    validationStatus: "validated",
+    storagePath: mp4.object_path,
+    mimeType: "video/mp4",
+    ...(poster ? { posterPath: poster.object_path } : {}),
+  };
 }
 
 export type PublishRequirements = {
@@ -163,7 +219,7 @@ export async function loadPublishState(
   // 1. Load ad
   const { data: ad, error: adError } = await supabase
     .from("ad_customer_ads")
-    .select("id, template_id, colour_mode, meta_primary_text, meta_headline, meta_description, meta_cta, active_revision_id")
+    .select("id, template_id, colour_mode, resolved_colour_map, meta_primary_text, meta_headline, meta_description, meta_cta, active_revision_id")
     .eq("id", adId)
     .eq("workspace_id", workspaceId)
     .single();
@@ -253,7 +309,7 @@ export async function loadPublishState(
  */
 export function validatePublishState(
   state: PublishLoadResult,
-  options: { controls?: MetaPublishControls; setup?: Partial<MetaConnectionSetup> } = {},
+  options: { controls?: MetaPublishControls; setup?: Partial<MetaConnectionSetup>; videoAsset?: ValidatedVideoPublishAsset | null } = {},
 ): string[] {
   const issues: string[] = [];
   issues.push(...validatePausedPublishControls(options.controls));
@@ -307,8 +363,11 @@ export function validatePublishState(
       issues.push("Instant Form thank-you website action needs a valid HTTPS URL");
     }
   }
-  if (state.ad.colourMode === "brand_pack" && !hasAllColours(state.pack.semanticColours)) {
+  if (state.ad.colourMode === "brand_pack" && !hasAllColours(state.ad.resolvedColourMap)) {
     issues.push("Brand Pack is missing required colour roles");
+  }
+  if (state.ad.colourMode === "manual" && !hasValidManualColours(state.ad.resolvedColourMap)) {
+    issues.push("Custom palette is missing a valid six-digit colour for every required role");
   }
 
   return issues;
@@ -346,6 +405,7 @@ export async function freezePublicationSnapshot(
     metaDescription: state.ad.metaDescription,
     metaCta: state.ad.metaCta,
     colourMode: state.ad.colourMode,
+    resolvedColourMap: state.ad.resolvedColourMap,
     form: state.form,
     formDraftId: state.formDraftId,
     formRevision: state.formRevision,
@@ -370,10 +430,11 @@ export async function freezePublicationSnapshot(
 }
 
 /**
- * The editor stores Meta copy inside the AdDocument (document_json), not on
- * the ad row. loadPublishState reads ad_customer_ads.meta_* columns, so before
- * publishing we promote the frozen revision's copy onto the row. The revision
- * is authoritative: the publish always uses the LAST SAVED document.
+ * The editor stores Meta copy and palette state inside the AdDocument
+ * (document_json), while loadPublishState reads their indexed ad-row mirrors.
+ * Before publishing, promote both from the LAST SAVED revision so a manual
+ * palette cannot be silently reported as the template palette in the frozen
+ * publication receipt.
  */
 export async function backfillPublishMetaCopy(
   supabase: SupabaseClient,
@@ -395,24 +456,30 @@ export async function backfillPublishMetaCopy(
     .eq("id", ad.active_revision_id)
     .maybeSingle();
 
-  const document = revision?.document_json as
-    | { metaPrimaryText?: string; metaHeadline?: string; metaDescription?: string; metaCta?: string }
-    | null
-    | undefined;
+  if (!revision?.document_json) return;
+  const parsed = adDocumentSchema.safeParse(revision.document_json);
+  if (!parsed.success) {
+    throw new PublishError("saved_document_invalid", "The last saved ad document is invalid — save the ad again before publishing.");
+  }
+  const document = parsed.data;
 
-  if (!document) return;
-
-  await supabase
+  const { error: updateError } = await supabase
     .from("ad_customer_ads")
     .update({
-      meta_primary_text: document.metaPrimaryText ?? "",
-      meta_headline: document.metaHeadline ?? "",
-      meta_description: document.metaDescription ?? "",
-      meta_cta: document.metaCta ?? "LEARN_MORE",
+      colour_mode: document.colourMode,
+      resolved_colour_map: document.resolvedColourMap,
+      meta_primary_text: document.metaPrimaryText,
+      meta_headline: document.metaHeadline,
+      meta_description: document.metaDescription,
+      meta_cta: document.metaCta,
       updated_at: new Date().toISOString(),
     })
     .eq("id", adId)
     .eq("workspace_id", workspaceId);
+
+  if (updateError) {
+    throw new PublishError("publish_state_sync_failed", "The saved ad state could not be prepared for publishing.");
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -432,16 +499,20 @@ export interface PausedPublishPlanInput {
   setup: MetaConnectionSetup;
   controls?: MetaPublishControls;
   state: PublishLoadResult;
+  videoAsset?: ValidatedVideoPublishAsset | null;
+  /** Alias used by callers loading a video project alongside the ad state. */
+  video?: ValidatedVideoPublishAsset | null;
 }
 
 export function buildPausedMetaPublishPlan(input: PausedPublishPlanInput): MetaPublishPlan {
   const { state, setup } = input;
+  const videoAsset = input.videoAsset ?? input.video ?? null;
   const label = state.pack.metadata?.title?.trim?.() || state.pack.templateId || "Blockwise ad";
   const controls = normalizePausedControls(input.controls ?? {});
   const now = new Date().toISOString();
   const requirements = readTemplatePublishRequirements(state.pack);
   const mode = input.controls?.destinationMode ?? requirements.destinationMode;
-  const issues = validatePublishState(state, { controls: { ...(input.controls ?? {}), destinationMode: mode }, setup });
+  const issues = validatePublishState(state, { controls: { ...(input.controls ?? {}), destinationMode: mode }, setup, videoAsset });
   if (issues.length > 0) throw new PublishError("publish_dependencies_missing", issues.join("; "));
   const form = state.form;
   if (mode === "instant_form" && !form) throw new PublishError("publish_dependencies_missing", "No pinned Instant Form — generate and save one before publishing");
@@ -514,11 +585,11 @@ export function buildPausedMetaPublishPlan(input: PausedPublishPlanInput): MetaP
       ...(controls.fulfilment ? { fulfilment: controls.fulfilment } : {}),
     }] : [];
 
-  const selectedVariants = [...new Set(input.controls!.variantIds!)];
+  const selectedVariants = [...new Set(controls.variantIds ?? ["feed", "story"])] as Array<"feed" | "story">;
   if (selectedVariants.some((variant) => variant !== "feed" && variant !== "story")) throw new PublishError("invalid_variants", "Select Feed and/or Story variants only.");
   const creatives: MetaPublishCreativePlan[] = selectedVariants.map((variant) => variant === "feed"
-    ? buildPausedCreative(state, setup, label, "feed", state.revision.feedPngPath, "4:5", mode)
-    : buildPausedCreative(state, setup, label, "story", state.revision.storyPngPath, "9:16", mode));
+    ? buildPausedCreative(state, setup, label, "feed", state.revision.feedPngPath, "4:5", mode, videoAsset)
+    : buildPausedCreative(state, setup, label, "story", state.revision.storyPngPath, "9:16", mode, videoAsset));
   const ads: MetaPublishAdPlan[] = adSets.flatMap((adSet, adSetIndex) => selectedVariants.map((variant) => ({
     localId: "ad_" + variant + "_" + (adSetIndex + 1),
     name: label + " " + (variant === "feed" ? "Feed" : "Story") + " ad " + (adSetIndex + 1),
@@ -541,7 +612,8 @@ export function buildPausedMetaPublishPlan(input: PausedPublishPlanInput): MetaP
   return {
     planId,
     workspaceId: input.workspaceId,
-    adStudioCampaignId: input.adId,
+    adStudioCampaignId: null,
+    customerAdId: input.adId,
     adStudioExportId: null,
     legacyCampaignId: null,
     providerConnectionId: input.connectionId,
@@ -591,7 +663,37 @@ function buildPausedCreative(
   pngPath: string,
   format: "4:5" | "9:16",
   destinationMode: "website" | "instant_form",
+  videoAsset?: ValidatedVideoPublishAsset | null,
 ): MetaPublishCreativePlan {
+  if (videoAsset) {
+    if (videoAsset.projectStatus !== "succeeded" || videoAsset.validationStatus !== "validated" || (!videoAsset.storagePath && !videoAsset.videoId && !videoAsset.bytesBase64)) {
+      throw new PublishError("publish_dependencies_missing", "Video rendering and worker validation must succeed before publishing.");
+    }
+    return {
+      localId: `creative_${placement}`,
+      name: `${label} ${placement === "feed" ? "Feed" : "Story"}`,
+      pageId: setup.pageId,
+      instagramActorId: setup.instagramActorId ?? null,
+      headline: state.ad.metaHeadline || label,
+      primaryText: state.ad.metaPrimaryText || label,
+      description: state.ad.metaDescription || "",
+      cta: state.ad.metaCta || "LEARN_MORE",
+      leadFormLocalId: destinationMode === "instant_form" ? "form_primary" : "",
+      adStudioCreativeId: null,
+      format: placement === "feed" ? "4:5" : "9:16",
+      asset: {
+        type: "video",
+        source: videoAsset.videoId ? "meta" : videoAsset.bytesBase64 ? "inline" : "storage",
+        ...(videoAsset.mimeType ? { mimeType: videoAsset.mimeType } : {}),
+        filename: `${placement}.mp4`,
+        ...(videoAsset.storagePath ? { storagePath: videoAsset.storagePath } : {}),
+        ...(videoAsset.bytesBase64 ? { bytesBase64: videoAsset.bytesBase64 } : {}),
+        ...(videoAsset.videoId ? { videoId: videoAsset.videoId } : {}),
+        ...(videoAsset.posterPath ? { posterPath: videoAsset.posterPath } : {}),
+        ...(videoAsset.posterUrl ? { posterUrl: videoAsset.posterUrl } : {}),
+      },
+    };
+  }
   return {
     localId: `creative_${placement}`,
     name: `${label} ${placement === "feed" ? "Feed" : "Story"}`,
@@ -853,16 +955,46 @@ export async function resolvePublishCreativeAssets(
 
     const storagePath = asset.storagePath;
     if (!storagePath.startsWith(`${plan.workspaceId}/`) || storagePath.includes("..")) {
-      throw new PublishError("creative_image_outside_workspace", `The finished ad image for ${creative.name} is outside this workspace.`);
+      throw new PublishError("creative_image_outside_workspace", `The finished ad media for ${creative.name} is outside this workspace.`);
     }
 
-    const { data, error } = await serviceSupabase.storage.from("workspace-artifacts").download(storagePath);
+    // Keep validated videos as short-lived signed URLs. Downloading a 500 MB
+    // MP4 into a Vercel function just to base64-expand and decode it again can
+    // exhaust memory; Meta accepts `file_url` for its video ingest endpoint.
+    if (asset.type === "video") {
+      const videoUrl = await serviceSupabase.storage.from("adstudio-videos").createSignedUrl(storagePath, 3600);
+      if (videoUrl.error || !videoUrl.data?.signedUrl) {
+        throw new PublishError("creative_image_missing", `The finished ad media for ${creative.name} could not be loaded. Regenerate the ad and try again.`);
+      }
+      let posterUrl = asset.posterUrl;
+      if (asset.posterPath && !posterUrl) {
+        if (!asset.posterPath.startsWith(`${plan.workspaceId}/`) || asset.posterPath.includes("..")) {
+          throw new PublishError("creative_image_outside_workspace", `The poster for ${creative.name} is outside this workspace.`);
+        }
+        const poster = await serviceSupabase.storage.from("adstudio-videos").createSignedUrl(asset.posterPath, 3600);
+        if (poster.error || !poster.data?.signedUrl) {
+          throw new PublishError("creative_image_missing", `The poster for ${creative.name} could not be loaded. Regenerate the video and try again.`);
+        }
+        posterUrl = poster.data.signedUrl;
+      }
+      return {
+        ...creative,
+        asset: {
+          ...asset,
+          source: "url" as const,
+          url: videoUrl.data.signedUrl,
+          ...(posterUrl ? { posterUrl } : {}),
+        },
+      };
+    }
+
+    const bucket = "workspace-artifacts";
+    const { data, error } = await serviceSupabase.storage.from(bucket).download(storagePath);
     if (error || !data) {
-      throw new PublishError("creative_image_missing", `The finished ad image for ${creative.name} could not be loaded. Regenerate the ad and try again.`);
+      throw new PublishError("creative_image_missing", `The finished ad media for ${creative.name} could not be loaded. Regenerate the ad and try again.`);
     }
 
     const bytes = Buffer.from(await data.arrayBuffer());
-
     return {
       ...creative,
       asset: {
@@ -885,8 +1017,29 @@ function slug(value: string): string {
 // ---------------------------------------------------------------------------
 
 function hasAllColours(colours: Record<string, string>): boolean {
-  const required = ["background", "primary", "secondary", "accent", "mainText", "inverseText"];
-  return required.every(r => colours[r] && colours[r]!.length > 0);
+  return COLOUR_ROLES.every(role => typeof colours[role] === "string" && colours[role]!.length > 0);
+}
+
+function hasValidManualColours(colours: Record<string, string>): boolean {
+  return COLOUR_ROLES.every(role => /^#[0-9a-fA-F]{6}$/.test(colours[role] ?? ""));
+}
+
+function readColourMode(value: unknown): ColourMode {
+  if (typeof value === "string" && COLOUR_MODES.includes(value as ColourMode)) {
+    return value as ColourMode;
+  }
+  throw new PublishError("invalid_colour_mode", "Saved ad has an unsupported colour mode.");
+}
+
+function readColourMap(value: unknown): Record<ColourRole, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new PublishError("invalid_colour_map", "Saved ad has an invalid colour map.");
+  }
+  const record = value as Record<string, unknown>;
+  if (!COLOUR_ROLES.every(role => typeof record[role] === "string" && record[role]!.length > 0)) {
+    throw new PublishError("invalid_colour_map", "Saved ad is missing required colour roles.");
+  }
+  return Object.fromEntries(COLOUR_ROLES.map(role => [role, record[role] as string])) as Record<ColourRole, string>;
 }
 
 export class PublishError extends Error {
@@ -1078,7 +1231,7 @@ export async function loadLatestPublishPlanForAd(
     .from("meta_publish_plans")
     .select("id")
     .eq("workspace_id", workspaceId)
-    .eq("adstudio_campaign_id", adId)
+    .eq("customer_ad_id", adId)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();

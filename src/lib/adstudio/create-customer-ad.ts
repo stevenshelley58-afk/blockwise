@@ -42,7 +42,7 @@ export async function createCustomerAd(
     .from("ad_customer_ads")
     .insert({
       workspace_id: workspaceId,
-      template_id: pack.templateId,
+      template_id: template.templateId,
       colour_mode: "template",
       resolved_colour_map: pack.semanticColours,
       creation_key: idempotencyKey ?? null,

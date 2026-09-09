@@ -2,18 +2,18 @@ import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
 
 import {
-  cleanSupabaseEnv,
   createSupabaseServerFetch,
   resolveSupabaseServerCredential,
   type SupabaseServerEnv,
 } from "./credentials.ts";
+import { resolveSupabaseServerUrl } from "./server-url.ts";
 
 export function createSupabaseServiceClient(options: {
   env?: SupabaseServerEnv;
   fetchImpl?: typeof fetch;
 } = {}) {
   const env = options.env ?? process.env;
-  const supabaseUrl = cleanSupabaseEnv(env.NEXT_PUBLIC_SUPABASE_URL ?? env.SUPABASE_URL);
+  const supabaseUrl = resolveSupabaseServerUrl(env);
   const credential = resolveSupabaseServerCredential(env);
 
   if (!supabaseUrl || !credential) {

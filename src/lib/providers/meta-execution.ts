@@ -187,6 +187,9 @@ export type MetaCreativeAssetPlan = {
   /** Meta's uploaded image hash is transport metadata, not compliance proof. */
   imageHash?: string;
   videoId?: string;
+  /** Optional poster supplied for a video_data creative. */
+  posterUrl?: string;
+  posterPath?: string;
 };
 
 export type MetaInstantFormContactField = "FIRST_NAME" | "LAST_NAME" | "EMAIL" | "PHONE";
@@ -410,7 +413,8 @@ export type MetaProviderLogEntry = {
 export type MetaPublishPlan = {
   planId: string;
   workspaceId: string;
-  adStudioCampaignId: string;
+  adStudioCampaignId: string | null;
+  customerAdId: string | null;
   adStudioExportId: string | null;
   legacyCampaignId: string | null;
   providerConnectionId: string;
@@ -697,6 +701,7 @@ export function buildMetaPublishPlan(input: {
     planId: deterministicUuid(`meta_publish_plan:${idempotencyKey}`),
     workspaceId: input.workspaceId,
     adStudioCampaignId: campaignPack.campaign.campaignId,
+    customerAdId: null,
     adStudioExportId: input.adStudioExportId ?? null,
     legacyCampaignId: input.legacyCampaignId ?? null,
     providerConnectionId: input.connectionId,
@@ -791,8 +796,10 @@ export function validateMetaPublishPlanReadiness(
     blockers.push("Each selected creative needs an exact 4:5 Feed and 9:16 Story asset feed before Meta publish.");
   }
 
-  if (plan.adapter === "marketing_api" && plan.creatives.some((creative) => !hasUsableCreativeImage(creative))) {
-    blockers.push("The finished ad image could not be found for one or more creatives.");
+  if (plan.adapter === "marketing_api" && plan.creatives.some((creative) => !hasUsableCreativeMedia(creative))) {
+    blockers.push(plan.creatives.some((creative) => creative.asset?.type === "video")
+      ? "The finished ad media could not be found or has not been validated for one or more creatives."
+      : "The finished ad image could not be found for one or more creatives.");
   }
   if (plan.creatives.some((creative) => !hasImmutableCreativeContent(creative))) {
     blockers.push("Each selected finished ad asset must have a SHA-256 content hash before compliance and Meta publish.");
@@ -1563,22 +1570,36 @@ async function publishWithMarketingApi(
           : null;
         const leadFormId = reconciledObjects.leadFormIds[creative.leadFormLocalId];
         const utmLink = buildUtmLink(destinationUrl, plan.tracking, creative.localId);
+        const callToAction = {
+          type: creative.cta,
+          value: leadFormId ? { lead_gen_form_id: leadFormId } : { link: utmLink },
+        };
         const response = await postMetaObject(input, requestLog, responseLog, `creative.${creative.localId}`, `/${plan.setup.metaAdAccountId}/adcreatives`, {
           name: providerName,
           object_story_spec: {
             page_id: creative.pageId,
             ...(creative.instagramActorId ? { instagram_user_id: creative.instagramActorId } : {}),
-            link_data: {
-              message: creative.primaryText,
-              name: creative.headline,
-              description: creative.description,
-              link: utmLink,
-              ...(imageHash ? { image_hash: imageHash } : {}),
-              call_to_action: {
-                type: creative.cta,
-                value: leadFormId ? { lead_gen_form_id: leadFormId } : { link: utmLink },
-              },
-            },
+            ...(creative.asset?.type === "video"
+              ? {
+                  video_data: {
+                    video_id: media.videoId,
+                    message: creative.primaryText,
+                    title: creative.headline,
+                    link_description: creative.description,
+                    call_to_action: callToAction,
+                    ...(creative.asset.posterUrl ? { image_url: creative.asset.posterUrl } : {}),
+                  },
+                }
+              : {
+                  link_data: {
+                    message: creative.primaryText,
+                    name: creative.headline,
+                    description: creative.description,
+                    link: utmLink,
+                    ...(media.imageHash ? { image_hash: media.imageHash } : {}),
+                    call_to_action: callToAction,
+                  },
+                }),
           },
         });
         reconciledObjects.creativeIds[creative.localId] = requireMetaId(response, "creative");
@@ -2694,6 +2715,38 @@ async function postMetaObject(
   return payload;
 }
 
+/** Meta's /advideos source upload is multipart; a JSON base64 field is not a
+ * valid Graph upload and can be accepted by mocks while failing in production. */
+async function postMetaVideoObject(
+  input: MetaPublishExecutionInput,
+  requestLog: MetaProviderLogEntry[],
+  responseLog: MetaProviderLogEntry[],
+  step: string,
+  accountId: string,
+  bytesBase64: string,
+  filename: string,
+  mimeType?: string,
+) {
+  const path = `/${accountId}/advideos`;
+  const createdAt = new Date().toISOString();
+  requestLog.push({ step, method: "POST", path, body: { source: `<redacted ${bytesBase64.length} base64 chars>`, name: filename }, createdAt });
+  const bytes = Buffer.from(bytesBase64, "base64");
+  if (!bytes.length) throw new Error("Validated video bytes are required before Meta upload.");
+  const form = new FormData();
+  form.append("source", new Blob([bytes], { type: mimeType || "video/mp4" }), filename);
+  form.append("name", filename);
+  const response = await (input.fetchImpl ?? fetch)(`https://graph.facebook.com/${input.graphVersion ?? DEFAULT_META_GRAPH_VERSION}${path}`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${input.accessToken}` },
+    body: form,
+    signal: AbortSignal.timeout(30_000),
+  });
+  const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  responseLog.push({ step, method: "POST", path, response: payload, status: response.status, createdAt: new Date().toISOString() });
+  if (!response.ok) throw new Error(metaProviderErrorMessage(payload, `Meta request ${step} failed with ${response.status}.`));
+  return payload;
+}
+
 function metaProviderErrorMessage(payload: Record<string, unknown>, fallback: string) {
   const error = payload.error as {
     message?: string;
@@ -3248,9 +3301,13 @@ async function findMetaObjectByName(
 
 /** Keep persisted request logs small and free of image payloads. */
 function redactMetaRequestBody(body: Record<string, unknown>): Record<string, unknown> {
-  if (typeof body.bytes !== "string") return body;
+  if (typeof body.bytes !== "string" && typeof body.source !== "string") return body;
 
-  return { ...body, bytes: `<redacted ${body.bytes.length} base64 chars>` };
+  return {
+    ...body,
+    ...(typeof body.bytes === "string" ? { bytes: `<redacted ${body.bytes.length} base64 chars>` } : {}),
+    ...(typeof body.source === "string" ? { source: `<redacted ${body.source.length} base64 chars>` } : {}),
+  };
 }
 
 async function getMetaObjectStatus(
@@ -3530,6 +3587,10 @@ function hasUsableCreativeImage(creative: MetaPublishCreativePlan): boolean {
   const asset = creative.asset;
   if (!asset) return false;
 
+  if (asset.type === "video") {
+    return Boolean(asset.videoId || asset.bytesBase64 || (asset.source === "storage" && asset.storagePath) || (asset.source === "url" && asset.url));
+  }
+
   return Boolean(asset.imageHash || asset.bytesBase64 || (asset.source === "storage" && asset.storagePath));
 }
 
@@ -3676,6 +3737,7 @@ function planToRow(plan: MetaPublishPlan, userId: string) {
     workspace_id: plan.workspaceId,
     adstudio_campaign_id: plan.adStudioCampaignId,
     adstudio_export_id: plan.adStudioExportId,
+    customer_ad_id: plan.customerAdId,
     campaign_id: plan.legacyCampaignId,
     provider_connection_id: plan.providerConnectionId,
     approval_request_id: plan.approvalRequestId,
@@ -3704,7 +3766,8 @@ function planToRow(plan: MetaPublishPlan, userId: string) {
 type MetaPublishPlanRow = {
   id: string;
   workspace_id: string;
-  adstudio_campaign_id: string;
+  adstudio_campaign_id: string | null;
+  customer_ad_id: string | null;
   adstudio_export_id: string | null;
   campaign_id: string | null;
   provider_connection_id: string;
@@ -3761,6 +3824,7 @@ function rowToPlan(row: MetaPublishPlanRow): MetaPublishPlan {
     adStudioCampaignId: row.adstudio_campaign_id,
     adStudioExportId: row.adstudio_export_id,
     legacyCampaignId: row.campaign_id,
+    customerAdId: row.customer_ad_id,
     providerConnectionId: row.provider_connection_id,
     approvalRequestId: row.approval_request_id,
     publicationSnapshotId: row.publication_snapshot_id ?? null,

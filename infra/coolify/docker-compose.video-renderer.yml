@@ -1,0 +1,32 @@
+services:
+  adstudio-video-renderer:
+    image: ${ADVIDEO_IMAGE:?ADVIDEO_IMAGE must be an immutable registry digest}
+    profiles: [standalone-video]
+    labels:
+      org.opencontainers.image.revision: ${ADVIDEO_REVISION:?ADVIDEO_REVISION is required}
+      org.opencontainers.image.source: https://github.com/stevenshelley58-afk/blockwise
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 256
+    mem_limit: 2g
+    cpus: 2.0
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL:?SUPABASE_URL is required}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?SUPABASE_SERVICE_ROLE_KEY is required}
+      ADVIDEO_WORKER_NAME: ${ADVIDEO_WORKER_NAME:-adstudio-video-renderer}
+      ADVIDEO_MAX_ATTEMPTS: ${ADVIDEO_MAX_ATTEMPTS:-3}
+      ADVIDEO_POLL_MS: ${ADVIDEO_POLL_MS:-2000}
+      ADVIDEO_OUTPUT_DIR: /tmp/blockwise-video-worker
+      ADVIDEO_FFMPEG_PATH: /usr/bin/ffmpeg
+      ADVIDEO_ALLOWED_ASSET_HOSTS: ${ADVIDEO_ALLOWED_ASSET_HOSTS:-}
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=2g
+    healthcheck:
+      test: ["CMD", "node", "--import", "tsx", "video-worker/index.ts", "--health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s

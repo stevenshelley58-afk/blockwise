@@ -77,7 +77,10 @@ export interface LayeredCanvasProps {
   textValues?: Record<string, string | null | undefined>;
   cropOverrides?: Record<string, Rect | null | undefined>;
   selectedLayerId?: string | null;
+  /** @deprecated Use onTargetSelect so the inspector can focus the matching input. */
   onSelect?: (layerId: string) => void;
+  onTargetSelect?: (target: EditorLayerTarget) => void;
+  /** @deprecated Image selection now focuses its control; cropping is an explicit action there. */
   onCropImage?: (layer: ImageSlotLayer) => void;
   onError?: (message: string) => void;
   canonicalPreview?: CanonicalPreviewState;
@@ -112,13 +115,19 @@ export function LayeredCanvas({
   const targetIdsRef = useRef(new Map<FabricObject, string>());
   const renderVersionRef = useRef(0);
   const onSelectRef = useRef(onSelect);
-  const onCropRef = useRef(onCropImage);
-  const layoutRef = useRef(layout);
+  const onTargetSelectRef = useRef(onTargetSelect);
+  const selectedLayerIdRef = useRef(selectedLayerId);
   const [ready, setReady] = useState(false);
+  const [isRendering, setIsRendering] = useState(true);
+  const [hasRendered, setHasRendered] = useState(false);
 
   onSelectRef.current = onSelect;
-  onCropRef.current = onCropImage;
-  layoutRef.current = layout;
+  onTargetSelectRef.current = onTargetSelect;
+  selectedLayerIdRef.current = selectedLayerId;
+  const selectedLayer = selectedLayerId
+    ? layout.layers.find(layer => layer.layerId === selectedLayerId)
+    : null;
+  const selectedTarget = selectedLayer ? editorTargetForLayer(selectedLayer) : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -136,9 +145,11 @@ export function LayeredCanvas({
         if (!target) return;
         const layerId = targetIdsRef.current.get(target);
         if (!layerId) return;
-        onSelectRef.current?.(layerId);
-        const layer = layoutRef.current.layers.find(item => item.layerId === layerId);
-        if (layer?.type === "image_slot") onCropRef.current?.(layer);
+        const editTarget = layerTargetsRef.current.get(layerId)?.layer;
+        const logicalTarget = editTarget ? editorTargetForLayer(editTarget) : null;
+        if (!logicalTarget) return;
+        if (onTargetSelectRef.current) onTargetSelectRef.current(logicalTarget);
+        else onSelectRef.current?.(layerId);
       });
       setReady(true);
     });
@@ -176,14 +187,13 @@ export function LayeredCanvas({
     const canvas = fabricRef.current;
     if (!ready || !canvas) return;
     const version = ++renderVersionRef.current;
+    setIsRendering(true);
     const render = async () => {
       const fabric = await import("fabric");
       if (renderVersionRef.current !== version || fabricRef.current !== canvas) return;
-      canvas.discardActiveObject();
-      canvas.clear();
-      canvas.backgroundColor = colours.background ?? "#ffffff";
-      layerTargetsRef.current = new Map();
-      targetIdsRef.current = new Map();
+      const nextLayerTargets = new Map<string, LayerTarget>();
+      const nextTargetIds = new Map<FabricObject, string>();
+      const nextObjects: FabricObject[] = [];
 
       for (const layer of layout.layers) {
         if (renderVersionRef.current !== version) return;
@@ -205,9 +215,22 @@ export function LayeredCanvas({
         layerTargetsRef.current.set(layer.layerId, { layer, object });
         targetIdsRef.current.set(object, layer.layerId);
       }
-      const selected = selectedLayerId ? layerTargetsRef.current.get(selectedLayerId)?.object : null;
+      if (renderVersionRef.current !== version || fabricRef.current !== canvas) return;
+
+      canvas.discardActiveObject();
+      canvas.clear();
+      canvas.backgroundColor = colours.background ?? "#ffffff";
+      nextObjects.forEach(object => canvas.add(object));
+      layerTargetsRef.current = nextLayerTargets;
+      targetIdsRef.current = nextTargetIds;
+      const selectedId = selectedLayerIdRef.current;
+      const selected = selectedId ? nextLayerTargets.get(selectedId)?.object : null;
       if (selected?.selectable) canvas.setActiveObject(selected);
-      canvas.requestRenderAll();
+      canvas.renderAll();
+      if (renderVersionRef.current === version && fabricRef.current === canvas) {
+        setHasRendered(true);
+        setIsRendering(false);
+      }
     };
     void render().catch(error => { onError?.(error instanceof Error ? error.message : "The template preview could not be rendered."); });
     return () => {
@@ -434,7 +457,7 @@ async function createLayerObject({
     if (layer.shape === "circle") {
       return new fabric.Circle({ ...fabricCircleGeometry(geometry), fill: colour, opacity: layer.opacity ?? 1, ...interactive });
     }
-    return new fabric.Rect({ ...fabricRectGeometry(geometry), rx: radius, ry: radius, fill: colour, opacity: layer.opacity ?? 1, ...interactive });
+    return new fabric.Rect({ ...fabricRectGeometry(geometry), rx: radius, ry: radius, fill: colour, opacity: layer.opacity ?? 1, ...passive });
   }
 
   if (layer.type === "icon") {
@@ -496,7 +519,7 @@ async function createLayerObject({
     rx: Math.min(16, geometry.width / 4, geometry.height / 4),
     ry: Math.min(16, geometry.width / 4, geometry.height / 4),
     fill: fill("primary"),
-    ...interactive,
+    ...passive,
   });
 }
 

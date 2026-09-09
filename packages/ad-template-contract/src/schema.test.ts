@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { adTemplateSchema } from "./schema.ts";
+import { adDocumentSchema, adTemplateSchema } from "./schema.ts";
 
 const rect = { x: 0, y: 0, width: 1080, height: 1350 };
 const base = {
@@ -78,4 +78,40 @@ test("allows a template to require executable offer fulfilment without embedding
     asset: "seller-guide.pdf",
   };
   assert.equal(adTemplateSchema.safeParse(arbitraryAsset).success, false);
+});
+
+const legacyDocument = {
+  schema: "blockwise.ad-document",
+  templateId: "strict-template",
+  sharedImageValues: {},
+  sharedTextValues: {},
+  feedCropOverrides: {},
+  storyCropOverrides: {},
+  colourMode: "template",
+  resolvedColourMap: { primary: "#111" },
+  metaPrimaryText: "",
+  metaHeadline: "",
+  metaDescription: "",
+  metaCta: "LEARN_MORE",
+  revision: 1,
+};
+
+test("keeps existing two-mode documents backwards compatible", () => {
+  assert.equal(adDocumentSchema.safeParse(legacyDocument).success, true);
+  assert.equal(adDocumentSchema.safeParse({ ...legacyDocument, colourMode: "brand_pack" }).success, true);
+});
+
+test("accepts complete manual palettes and rejects incomplete or malformed manual colours", () => {
+  const manualColours = {
+    background: "#F7F6F2",
+    primary: "#17202A",
+    secondary: "#8C9AA6",
+    accent: "#B48663",
+    mainText: "#11181B",
+    inverseText: "#FFFFFF",
+  };
+  assert.equal(adDocumentSchema.safeParse({ ...legacyDocument, colourMode: "manual", resolvedColourMap: manualColours }).success, true);
+  assert.equal(adDocumentSchema.safeParse({ ...legacyDocument, colourMode: "manual", resolvedColourMap: { ...manualColours, accent: "copper" } }).success, false);
+  const { inverseText: _missing, ...incomplete } = manualColours;
+  assert.equal(adDocumentSchema.safeParse({ ...legacyDocument, colourMode: "manual", resolvedColourMap: incomplete }).success, false);
 });

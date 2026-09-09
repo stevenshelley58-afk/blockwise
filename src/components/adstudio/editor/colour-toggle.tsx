@@ -48,6 +48,7 @@ export interface ColourToggleProps {
   onCustomColourChange?: (role: ColourRole, hex: string) => void;
 }
 
+/** Three explicit palette sources with validated, role-based manual editing. */
 export function ColourToggle({
   mode,
   brandPackAvailable,
@@ -167,4 +168,72 @@ function CustomColourRow({
       />
     </div>
   );
+}
+
+function PaletteStrip({ colours }: { colours: Record<ColourRole, string> }) {
+  return (
+    <div className="flex h-8 overflow-hidden rounded-full border border-border bg-muted" aria-label="Current colour palette">
+      {COLOUR_ROLES.map(role => (
+        <span
+          key={role}
+          className="min-w-0 flex-1"
+          style={{ backgroundColor: colours[role] ?? "var(--muted)" }}
+          title={`${ROLE_LABELS[role].label}: ${colours[role]}`}
+        >
+          <span className="sr-only">{ROLE_LABELS[role].label}: {colours[role]}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+export function normaliseSixDigitHex(value: string): string | null {
+  const trimmed = value.trim();
+  if (SIX_DIGIT_HEX.test(trimmed)) return trimmed.toUpperCase();
+  if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) {
+    return `#${trimmed.slice(1).split("").map(character => character.repeat(2)).join("")}`.toUpperCase();
+  }
+  return null;
+}
+
+export function contrastRatio(foreground: string, background: string): number | null {
+  const foregroundRgb = hexToRgb(foreground);
+  const backgroundRgb = hexToRgb(background);
+  if (!foregroundRgb || !backgroundRgb) return null;
+  const lighter = Math.max(relativeLuminance(foregroundRgb), relativeLuminance(backgroundRgb));
+  const darker = Math.min(relativeLuminance(foregroundRgb), relativeLuminance(backgroundRgb));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+export function colourContrastWarnings(colours: Record<ColourRole, string>): string[] {
+  const pairs: Array<{ foreground: ColourRole; background: ColourRole; label: string }> = [
+    { foreground: "mainText", background: "background", label: "Text on the background" },
+    { foreground: "mainText", background: "secondary", label: "Text on secondary surfaces" },
+    { foreground: "inverseText", background: "primary", label: "Inverse text on primary surfaces" },
+    { foreground: "inverseText", background: "accent", label: "Inverse text on accent elements" },
+  ];
+  return pairs.flatMap(({ foreground, background, label }) => {
+    const ratio = contrastRatio(colours[foreground], colours[background]);
+    return ratio !== null && ratio < 4.5 ? [`${label} is ${ratio.toFixed(1)}:1; aim for at least 4.5:1.`] : [];
+  });
+}
+
+type Rgb = { red: number; green: number; blue: number };
+
+function hexToRgb(value: string): Rgb | null {
+  const normalised = normaliseSixDigitHex(value);
+  if (!normalised) return null;
+  return {
+    red: Number.parseInt(normalised.slice(1, 3), 16),
+    green: Number.parseInt(normalised.slice(3, 5), 16),
+    blue: Number.parseInt(normalised.slice(5, 7), 16),
+  };
+}
+
+function relativeLuminance(rgb: Rgb): number {
+  const linear = [rgb.red, rgb.green, rgb.blue].map(channel => {
+    const value = channel / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
 }

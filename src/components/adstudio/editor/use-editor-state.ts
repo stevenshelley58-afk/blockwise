@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import type { AdTemplate, Layout, LayoutLayer, Placement, Rect, ColourRole } from "../../../../packages/ad-template-contract/src/types";
+import type { AdTemplate, Layout, LayoutLayer, Placement, Rect, ColourMode, ColourRole } from "../../../../packages/ad-template-contract/src/types";
 import type { AdDocumentParsed } from "../../../../packages/ad-template-contract/src/schema";
+import { hydrateSavedEditorTextValues } from "@/lib/adstudio/editor-text-values";
+import { toMetaCta } from "@/lib/adstudio/meta-cta";
 
 // ---------------------------------------------------------------------------
 // Editor state — Phase 6 foundation
@@ -32,6 +34,15 @@ export interface MetaCopy {
   headline: string;
   description: string;
   cta: string;
+}
+
+export function normalizeEditorMetaCopy(copy: Partial<MetaCopy> | null | undefined): MetaCopy {
+  return {
+    primaryText: copy?.primaryText ?? "",
+    headline: copy?.headline ?? "",
+    description: copy?.description ?? "",
+    cta: toMetaCta(copy?.cta ?? "LEARN_MORE"),
+  };
 }
 
 export interface EditorTextInput {
@@ -188,15 +199,19 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
           story: initialDocument.storyCropOverrides[value.inputKey],
         },
       })),
-      textValues: { ...base.textValues, ...initialDocument.sharedTextValues },
+      textValues: hydrateSavedEditorTextValues(
+        editorTextInputs(pack),
+        initialDocument.sharedTextValues,
+        base.textValues,
+      ),
       colourMode: initialDocument.colourMode,
       resolvedColourMap: { ...base.resolvedColourMap, ...initialDocument.resolvedColourMap },
-      metaCopy: {
+      metaCopy: normalizeEditorMetaCopy({
         primaryText: initialDocument.metaPrimaryText,
         headline: initialDocument.metaHeadline,
         description: initialDocument.metaDescription,
         cta: initialDocument.metaCta,
-      },
+      }),
       lastSavedRevision: initialRevision ?? null,
       // Saved values belong to the customer — the template checkbox starts
       // OFF and provenance is empty, so unchecking can never erase them.
@@ -255,6 +270,50 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
         textValues: { ...prev.textValues, ...onImage },
         metaCopy: { ...prev.metaCopy, ...copy },
         templateFilled: { text: [], meta: [] },
+        isDirty: true,
+        editVersion: (prev.editVersion ?? 0) + 1,
+      };
+    });
+  }, [pushUndo]);
+
+  /** Fill every on-image field from the template in one undoable action. */
+  const applyTemplateText = useCallback(() => {
+    setState(prev => {
+      pushUndo(prev);
+      return {
+        ...prev,
+        textValues: Object.fromEntries(editorTextInputs(prev.pack).map(input => [input.key, input.placeholder])),
+        isDirty: true,
+        editVersion: (prev.editVersion ?? 0) + 1,
+      };
+    });
+  }, [pushUndo]);
+
+  /** Reset all Meta placement fields to the selected template's authored copy. */
+  const applyTemplateMetaCopy = useCallback(() => {
+    setState(prev => {
+      pushUndo(prev);
+      const defaults = readEditorDefaults(prev.pack).metaCopy;
+      return {
+        ...prev,
+        metaCopy: normalizeEditorMetaCopy(defaults),
+        isDirty: true,
+        editVersion: (prev.editVersion ?? 0) + 1,
+      };
+    });
+  }, [pushUndo]);
+
+  /** Apply only the AI suggestions the customer selected, as one undoable edit. */
+  const applySelectedCopy = useCallback((onImage: Record<string, string>, copy: Partial<MetaCopy>) => {
+    setState(prev => {
+      const declared = new Set(editorTextInputs(prev.pack).map(input => input.key));
+      const safeOnImage = Object.fromEntries(Object.entries(onImage).filter(([key]) => declared.has(key)));
+      if (Object.keys(safeOnImage).length === 0 && Object.keys(copy).length === 0) return prev;
+      pushUndo(prev);
+      return {
+        ...prev,
+        textValues: { ...prev.textValues, ...safeOnImage },
+        metaCopy: normalizeEditorMetaCopy({ ...prev.metaCopy, ...copy }),
         isDirty: true,
         editVersion: (prev.editVersion ?? 0) + 1,
       };
@@ -343,10 +402,52 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
     lastTextEdit.current = null;
     setState(prev => {
       pushUndo(prev);
+      const selectedColourMap = mode === "template"
+        ? { ...prev.pack.semanticColours }
+        : colourMap
+          ? { ...prev.pack.semanticColours, ...colourMap }
+          : { ...prev.resolvedColourMap };
+      const resolvedColourMap = mode === "manual"
+        ? normaliseManualColourMap(selectedColourMap)
+        : selectedColourMap;
       return {
         ...prev,
         colourMode: mode,
-        resolvedColourMap: colourMap ?? (mode === "template" ? { ...prev.pack.semanticColours } : prev.resolvedColourMap),
+        resolvedColourMap,
+        isDirty: true,
+        editVersion: (prev.editVersion ?? 0) + 1,
+      };
+    });
+  }, [pushUndo]);
+
+  /** Change one semantic role and enter Manual mode as one undoable edit. */
+  const updateColour = useCallback((role: ColourRole, value: string) => {
+    const colour = normalizeManualHexColour(value);
+    if (!colour) return false;
+    setState(prev => {
+      if (prev.colourMode === "manual" && prev.resolvedColourMap[role] === colour) return prev;
+      pushUndo(prev);
+      return {
+        ...prev,
+        colourMode: "manual",
+        resolvedColourMap: { ...prev.resolvedColourMap, [role]: colour },
+        isDirty: true,
+        editVersion: (prev.editVersion ?? 0) + 1,
+      };
+    });
+    return true;
+  }, [pushUndo]);
+
+  /** Reset one manual role to the template's authored value, preserving others. */
+  const resetColour = useCallback((role: ColourRole) => {
+    setState(prev => {
+      const value = normalizeManualHexColour(prev.pack.semanticColours[role]) ?? prev.pack.semanticColours[role];
+      if (prev.colourMode === "manual" && prev.resolvedColourMap[role] === value) return prev;
+      pushUndo(prev);
+      return {
+        ...prev,
+        colourMode: "manual",
+        resolvedColourMap: { ...prev.resolvedColourMap, [role]: value },
         isDirty: true,
         editVersion: (prev.editVersion ?? 0) + 1,
       };
@@ -460,6 +561,9 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
     setActivePlacement,
     selectLayer,
     updateTextValue,
+    applyTemplateText,
+    applyTemplateMetaCopy,
+    applySelectedCopy,
     updateImageValue,
     updateImagePreview,
     updateCrop,
@@ -503,6 +607,21 @@ const BRAND_PACK_ROLE_MAP: Record<keyof BrandPackColours, ColourRole> = {
 };
 
 const HEX_COLOUR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+const MANUAL_HEX_COLOUR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+/** Convert a customer-entered colour to the saved six-digit contract form. */
+export function normalizeManualHexColour(value: string): string | null {
+  const trimmed = value.trim();
+  if (!MANUAL_HEX_COLOUR.test(trimmed)) return null;
+  const digits = trimmed.slice(1);
+  return `#${digits.length === 3 ? digits.split("").map(character => character.repeat(2)).join("") : digits}`.toUpperCase();
+}
+
+function normaliseManualColourMap(colours: Record<ColourRole, string>): Record<ColourRole, string> {
+  return Object.fromEntries(
+    Object.entries(colours).map(([role, value]) => [role, normalizeManualHexColour(value) ?? value]),
+  ) as Record<ColourRole, string>;
+}
 
 /** Map a Brand Pack `colours` block onto template colour roles (partial). */
 export function brandPackColoursToRoleMap(
@@ -531,7 +650,7 @@ export function resolveColourMap(
   brandColourMap?: Partial<Record<ColourRole, string>> | null,
   customColourMap?: Partial<Record<ColourRole, string>> | null,
 ): Record<ColourRole, string> {
-  if (mode === "brand_pack" && brandColourMap) {
+  if ((mode === "brand_pack" || mode === "manual") && brandColourMap) {
     return { ...templateColours, ...brandColourMap };
   }
   if (mode === "custom" && customColourMap) {

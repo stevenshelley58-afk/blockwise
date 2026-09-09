@@ -1,6 +1,10 @@
 export const COLOUR_ROLES = ["background", "primary", "secondary", "accent", "mainText", "inverseText"] as const;
 export type ColourRole = (typeof COLOUR_ROLES)[number];
+export const COLOUR_MODES = ["template", "brand_pack", "manual"] as const;
+export type ColourMode = (typeof COLOUR_MODES)[number];
 export const LAYER_TYPES = ["plate", "image_slot", "overlay_patch", "text", "logo", "vector", "icon"] as const;
+export const ICON_NAMES = ["arrow", "check", "phone", "mail", "globe", "pin"] as const;
+export type IconName = (typeof ICON_NAMES)[number];
 export type LayerType = (typeof LAYER_TYPES)[number];
 export const SUPPORTED_ICON_NAMES = ["arrow", "check", "tick", "phone", "mail", "globe", "location"] as const;
 export type SupportedIconName = (typeof SUPPORTED_ICON_NAMES)[number];

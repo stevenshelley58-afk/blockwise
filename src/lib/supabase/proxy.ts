@@ -1,6 +1,11 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import {
+  resolveSupabaseAuthCookieName,
+  resolveSupabaseServerUrl,
+} from "./server-url.ts";
+
 type CookieToSet = { name: string; value: string; options: CookieOptions };
 
 function clean(value?: string): string {
@@ -9,7 +14,7 @@ function clean(value?: string): string {
 
 export async function refreshSupabaseSession(request: NextRequest) {
   let response = NextResponse.next({ request });
-  const url = clean(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const url = resolveSupabaseServerUrl();
   const key = clean(
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -22,6 +27,7 @@ export async function refreshSupabaseSession(request: NextRequest) {
   if (!hasSupabaseAuthCookie) return { response, authenticated: false };
 
   const supabase = createServerClient(url, key, {
+    cookieOptions: { name: resolveSupabaseAuthCookieName() },
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll(cookiesToSet: CookieToSet[], headersToSet?: Record<string, string>) {

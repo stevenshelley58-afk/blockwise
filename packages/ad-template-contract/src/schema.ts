@@ -243,5 +243,17 @@ export const adDocumentSchema = z.object({
   // default). Omitted entirely on older documents — backward compatible.
   brandBusinessName: z.string().min(1).optional(),
   revision: z.number().int().positive(), lastRenderedAt: z.string().datetime().nullable().optional(),
-}).strict();
+}).strict().superRefine((document, ctx) => {
+  if (document.colourMode !== "manual") return;
+  for (const role of COLOUR_ROLES) {
+    const value = document.resolvedColourMap[role];
+    if (!value) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["resolvedColourMap", role], message: `manual colour map is missing ${role}` });
+      continue;
+    }
+    if (!/^#[0-9a-fA-F]{6}$/.test(value)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["resolvedColourMap", role], message: `manual ${role} must be a six-digit hex colour` });
+    }
+  }
+});
 export type AdDocumentParsed = z.infer<typeof adDocumentSchema>;

@@ -13,7 +13,7 @@ describe("customer Ad Studio workbench contract", () => {
     assert.doesNotMatch(source, /mobilePanel/);
   });
 
-  it("uses the route workbench flow without fixed viewport shells", () => {
+  it("bounds the route workbench to the available viewport without fixed overlays", () => {
     const editorRoute = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/page.tsx", "utf8");
     const stableEditorRoute = readFileSync("src/app/(customer)/ad-studio/ads/[id]/page.tsx", "utf8");
     const publishRoute = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/page.tsx", "utf8");
@@ -103,11 +103,16 @@ describe("customer Ad Studio workbench contract", () => {
     const inputs = readFileSync("src/components/adstudio/editor/inputs-panel.tsx", "utf8");
     const copy = readFileSync("src/components/adstudio/editor/meta-copy-panel.tsx", "utf8");
     const shell = readFileSync("src/components/adstudio/editor/editor-shell.tsx", "utf8");
+    const assistant = readFileSync("src/components/adstudio/editor/ai-copy-assistant.tsx", "utf8");
     const colours = readFileSync("src/components/adstudio/editor/colour-toggle.tsx", "utf8");
 
     assert.match(inputs, /missingRequiredImages/);
     assert.match(inputs, /role="status"/);
     assert.match(inputs, /rounded-\(--r-card\)/);
+    assert.match(inputs, /shouldUseMultilineTextInput\(input, value\)/);
+    assert.match(inputs, /input\.maxLength > 100/);
+    assert.match(inputs, /<textarea/);
+    assert.match(inputs, /whitespace-pre-wrap/);
     assert.match(copy, /id="meta-copy-cta"/);
     assert.match(copy, /border border-input/);
     assert.match(shell, /AI Copy Assist/);
@@ -138,6 +143,154 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(colours, /type="color"/);
     assert.doesNotMatch(colours, /<Switch/);
     assert.doesNotMatch(shell, /Safe deterministic draft|AI draft/);
+  });
+
+  it("wires the live creative into genuine Facebook Feed and Story previews", () => {
+    const shell = readFileSync("src/components/adstudio/editor/editor-shell.tsx", "utf8");
+    const preview = readFileSync("src/components/adstudio/editor/meta-placement-preview.tsx", "utf8");
+    const route = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/page.tsx", "utf8");
+    const feedPreview = preview.slice(preview.indexOf("function MetaFeedPreview"), preview.indexOf("function MetaStoryPreview"));
+    const storyPreview = preview.slice(preview.indexOf("function MetaStoryPreview"), preview.indexOf("function PageAvatar"));
+
+    assert.match(shell, /import \{ MetaPlacementPreview, type MetaPreviewBrand \} from "\.\/meta-placement-preview"/);
+    assert.match(
+      shell,
+      /<MetaPlacementPreview[\s\S]*?placement=\{state\.activePlacement\}[\s\S]*?brand=\{resolvedBrandPreview\}[\s\S]*?copy=\{state\.metaCopy\}[\s\S]*?creative=\{<LayeredCanvas[\s\S]*?\/>\}[\s\S]*?\/>/,
+    );
+    assert.match(preview, /placement === "story"[\s\S]*?<MetaStoryPreview[\s\S]*?:[\s\S]*?<MetaFeedPreview/);
+    assert.match(shell, /Facebook Feed/);
+    assert.match(shell, /Facebook Story/);
+    assert.match(preview, /aria-label="Facebook Feed ad preview"/);
+    assert.match(preview, /copy\.primaryText\.trim\(\)/);
+    assert.match(preview, /copy\.headline\.trim\(\)/);
+    assert.match(preview, /copy\.description\.trim\(\)/);
+    assert.match(preview, /formatCta\(copy\.cta\)/);
+    assert.match(preview, /label="Like"/);
+    assert.match(preview, /label="Comment"/);
+    assert.match(preview, /label="Share"/);
+    assert.match(preview, /aria-label="Facebook Story ad preview"/);
+    assert.doesNotMatch(feedPreview, /\b24\b|3 comments|Heart/);
+    assert.doesNotMatch(storyPreview, /Array\.from|copy\.headline|Send/);
+    assert.equal((feedPreview.match(/\{creative\}/g) ?? []).length, 1, "the Feed shell must render the live layered creative");
+    assert.equal((storyPreview.match(/\{creative\}/g) ?? []).length, 1, "the Story shell must render the live layered creative");
+    assert.match(route, /brandPreview=\{brandKit \? \{/);
+    assert.match(route, /businessName: brandKit\.identity\.businessName/);
+    assert.match(route, /displayDomain: resolveAdvertiserDomain\(\{ brandKit \}\)\.host/);
+    assert.match(route, /logoUrl: brandKit\.logos\.primaryLogoUrl/);
+  });
+
+  it("normalises CTA values before controls, previews, state updates, and saves", () => {
+    const panel = readFileSync("src/components/adstudio/editor/meta-copy-panel.tsx", "utf8");
+    const preview = readFileSync("src/components/adstudio/editor/meta-placement-preview.tsx", "utf8");
+    const state = readFileSync("src/components/adstudio/editor/use-editor-state.ts", "utf8");
+
+    assert.match(panel, /META_CTA_VALUES/);
+    assert.match(panel, /value=\{toMetaCta\(values\.cta\)\}/);
+    assert.match(panel, /\{labelForMetaCta\(cta\)\}/);
+    assert.match(preview, /return labelForMetaCta\(toMetaCta\(value\)\)/);
+    assert.match(state, /metaCopy: normalizeEditorMetaCopy\(defaults\.metaCopy\)/);
+    assert.match(state, /metaCopy: normalizeEditorMetaCopy\(\{[\s\S]*?cta: initialDocument\.metaCta/);
+    assert.match(state, /metaCopy: normalizeEditorMetaCopy\(defaults\)/);
+    assert.match(state, /metaCopy: normalizeEditorMetaCopy\(\{ \.\.\.prev\.metaCopy, \.\.\.copy \}\)/);
+    assert.match(state, /\[field\]: field === "cta" \? toMetaCta\(value\) : value/);
+    assert.match(state, /metaCta: toMetaCta\(state\.metaCopy\.cta\)/);
+  });
+
+  it("keeps 320px editor actions responsive and navigation touch targets at least 44px", () => {
+    const shell = readFileSync("src/components/adstudio/editor/editor-shell.tsx", "utf8");
+    const navigation = readFileSync("src/components/adstudio/studio-navigation.tsx", "utf8");
+
+    assert.match(shell, /grid-cols-\[2\.75rem_2\.75rem_minmax\(0,0\.8fr\)_minmax\(0,1\.25fr\)\]/);
+    assert.match(shell, /aria-label="Review and publish"/);
+    assert.match(shell, /className="sm:hidden">Review/);
+    assert.match(shell, /className="hidden sm:inline">Review & publish/);
+    assert.match(navigation, /min-h-11/);
+    assert.doesNotMatch(navigation, /min-h-10/);
+  });
+
+  it("offers one Content action that fills every template text field together", () => {
+    const inputs = readFileSync("src/components/adstudio/editor/inputs-panel.tsx", "utf8");
+    const shell = readFileSync("src/components/adstudio/editor/editor-shell.tsx", "utf8");
+    const state = readFileSync("src/components/adstudio/editor/use-editor-state.ts", "utf8");
+    const templateAction = state.match(/const applyTemplateText = useCallback\(\(\) => \{[\s\S]*?\n  \}, \[pushUndo\]\);/)?.[0];
+
+    assert.equal((inputs.match(/Use template text/g) ?? []).length, 1);
+    assert.match(inputs, /<Button[\s\S]*?onClick=\{onUseTemplateText\}[\s\S]*?>[\s\S]*?Use template text[\s\S]*?<\/Button>/);
+    assert.match(shell, /onUseTemplateText=\{applyTemplateText\}/);
+    assert.ok(templateAction, "the bulk template-text state action must exist");
+    assert.equal((templateAction.match(/setState\(/g) ?? []).length, 1);
+    assert.equal((templateAction.match(/pushUndo\(/g) ?? []).length, 1);
+    assert.match(templateAction, /textValues: Object\.fromEntries\(editorTextInputs\(prev\.pack\)\.map\(input => \[input\.key, input\.placeholder\]\)\)/);
+    assert.match(templateAction, /isDirty: true/);
+    assert.match(templateAction, /editVersion: \(prev\.editVersion \?\? 0\) \+ 1/);
+  });
+
+  it("applies the selected AI fields in one atomic undoable edit", () => {
+    const shell = readFileSync("src/components/adstudio/editor/editor-shell.tsx", "utf8");
+    const state = readFileSync("src/components/adstudio/editor/use-editor-state.ts", "utf8");
+    const metaCopyBody = state.match(/export interface MetaCopy \{([\s\S]*?)\n\}/)?.[1] ?? "";
+    const metaFields = [...metaCopyBody.matchAll(/^\s+(\w+): string;/gm)].map(match => match[1]);
+    const atomicAction = state.match(/const applySelectedCopy = useCallback\(\(onImage: Record<string, string>, copy: Partial<MetaCopy>\) => \{[\s\S]*?\n  \}, \[pushUndo\]\);/)?.[0];
+
+    assert.deepEqual(metaFields, ["primaryText", "headline", "description", "cta"]);
+    assert.ok(atomicAction, "the selected-copy state action must exist");
+    assert.equal((atomicAction.match(/setState\(/g) ?? []).length, 1, "all fields must share one React state transaction");
+    assert.equal((atomicAction.match(/pushUndo\(/g) ?? []).length, 1, "the complete result must undo as one edit");
+    assert.match(atomicAction, /editorTextInputs\(prev\.pack\)/);
+    assert.match(atomicAction, /textValues: \{ \.\.\.prev\.textValues, \.\.\.safeOnImage \}/);
+    assert.match(atomicAction, /metaCopy: normalizeEditorMetaCopy\(\{ \.\.\.prev\.metaCopy, \.\.\.copy \}\)/);
+    assert.match(atomicAction, /isDirty: true/);
+    assert.match(atomicAction, /editVersion: \(prev\.editVersion \?\? 0\) \+ 1/);
+    assert.match(shell, /setProposal\(next\);/);
+    assert.doesNotMatch(shell, /setProposal\(next\);[\s\S]{0,100}applySelectedCopy/);
+    assert.match(shell, /applySelectedCopy\(payload\.onImage, payload\.copy\)/);
+  });
+
+  it("requires a real AI provider and passes the complete Brand Pack into copy generation", () => {
+    const route = readFileSync("src/app/api/adstudio/ads/[id]/copy-proposal/route.ts", "utf8");
+    const generation = readFileSync("src/lib/adstudio/copy-generation.ts", "utf8");
+
+    assert.match(route, /if \(!hasConfiguredAdStudioTextProvider\(\)\)/);
+    assert.match(route, /AI copy is temporarily unavailable because no text provider is configured\./);
+    assert.match(route, /\{ status: 503 \}/);
+    assert.doesNotMatch(route, /buildDeterministicCopyProposal/);
+    assert.match(generation, /"AZURE_OPENAI_API_KEY"/);
+    assert.match(generation, /"OPENAI_API_KEY"/);
+    assert.match(generation, /"GOOGLE_AI_API_KEY"/);
+    assert.match(generation, /"DEEPSEEK_API_KEY"/);
+    assert.match(generation, /TEXT_PROVIDER_API_KEYS\.some\(\(key\) => Boolean\(env\[key\]\?\.trim\(\)\)\)/);
+    assert.match(route, /try \{[\s\S]*?await loadLatestBrandKit\(access\.supabase, access\.access\.workspaceId\)/);
+    assert.match(route, /\.from\("adstudio_brand_kits"\)[\s\S]*?\.eq\("workspace_id", workspaceId\)[\s\S]*?\.order\("updated_at", \{ ascending: false \}\)/);
+    assert.match(route, /isExampleBrandKitSourceUrl/);
+    assert.match(route, /rowToBrandKit/);
+    assert.match(route, /businessName: brandKit\.identity\.businessName/);
+    assert.match(route, /market: \[brandKit\.identity\.marketRegion, brandKit\.identity\.marketCountry\]/);
+    assert.match(route, /voice: brandKit\.tone\.voice/);
+    assert.match(route, /preferredPhrases: brandKit\.tone\.preferredPhrases/);
+    assert.match(route, /neverSay: brandKit\.tone\.avoid/);
+    assert.match(route, /context: \{[\s\S]*?\.\.\.brandContext/);
+    assert.match(route, /fields,[\s\S]*?brandKit,[\s\S]*?context:/);
+    assert.match(generation, /brandKit\?: Partial<AdStudioBrandKit> \| null/);
+    assert.match(generation, /brandKit: input\.brandKit/);
+    assert.match(generation, /const complete = parseCompleteAdStudioTemplateCopy\(json, input\.fields\)/);
+    assert.match(generation, /copy: \{ \.\.\.complete\.copy, cta: toMetaCta\(complete\.copy\.cta\) \}/);
+    assert.doesNotMatch(generation, /raw \|\| field\.sample/);
+    assert.equal((route.match(/cta: toMetaCta\(result\.copy\.cta\)/g) ?? []).length, 1, "the endpoint must defensively return a supported Meta CTA enum");
+  });
+
+  it("reviews every generated field before Use all or Use selected changes the ad", () => {
+    const shell = readFileSync("src/components/adstudio/editor/editor-shell.tsx", "utf8");
+    const assistant = readFileSync("src/components/adstudio/editor/ai-copy-assistant.tsx", "utf8");
+    const selection = readFileSync("src/components/adstudio/editor/ai-copy-selection.ts", "utf8");
+
+    assert.match(shell, /<AiCopyAssistant[\s\S]*?<MetaCopyPanel/);
+    assert.match(assistant, /Review suggestions/);
+    assert.match(assistant, /Use all/);
+    assert.match(assistant, /Use selected \(\{selectedCount\}\)/);
+    assert.match(assistant, /<Checkbox/);
+    assert.match(selection, /selectedAiCopyPayload/);
+    assert.match(selection, /metaCopySelectionKey/);
+    assert.doesNotMatch(shell, /applyCompleteCopy\(next\.onImage, next\.copy\)/);
   });
 
   it("shows template defaults, recovers stale saves, and keeps publishing choices explicit", () => {

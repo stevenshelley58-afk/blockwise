@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import type { ImageInput, TextInput } from "../../../../packages/ad-template-contract/src/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 // ---------------------------------------------------------------------------
-// Inputs Panel — shared content inputs for a Frank pack. Picked files keep a
+// Inputs Panel — shared content inputs for the selected template. Picked files keep a
 // local preview while uploading directly to private workspace media refs.
 //
 // One field per declared textInput and one file control per imageInput.
@@ -29,6 +29,8 @@ export interface InputsPanelProps {
   /** Template-provided imagery displayed until the customer replaces it. */
   defaultImageValues: Record<string, string>;
   onTextChange: (key: string, value: string) => void;
+  /** Populate every text field with the authored template example. */
+  onUseTemplateText: () => void;
   onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => void;
   /** Opens the crop dialog for the input's slot in the ACTIVE placement. */
   onCropClick: (key: string) => void;
@@ -66,6 +68,7 @@ export function InputsPanel({
   imageValues,
   defaultImageValues,
   onTextChange,
+  onUseTemplateText,
   onImageChange,
   onCropClick,
   templateCopyApplied = false,
@@ -84,6 +87,33 @@ export function InputsPanel({
   const requiredImageInputs = imageInputs.filter(input => input.required !== false);
   const optionalImageInputs = imageInputs.filter(input => input.required === false);
   const missingRequiredImages = requiredImageInputs.filter(input => !imageValues[input.key] && !defaultImageValues[input.key]);
+  const focusTargetsRef = useRef(new Map<string, HTMLElement>());
+  const optionalDetailsRef = useRef<HTMLDetailsElement | null>(null);
+  const completedFocusRequestRef = useRef<string | null>(null);
+  const optionalImageKeys = optionalImageInputs.map(input => input.key).join("\u0000");
+
+  useEffect(() => {
+    if (!focusRequest) return;
+    const requestKey = `${focusRequest.requestId}:${focusRequest.inputKey}`;
+    if (completedFocusRequestRef.current === requestKey) return;
+    completedFocusRequestRef.current = requestKey;
+    if (optionalImageKeys.split("\u0000").includes(focusRequest.inputKey) && optionalDetailsRef.current) {
+      optionalDetailsRef.current.open = true;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      const target = focusTargetsRef.current.get(focusRequest.inputKey);
+      if (!target) return;
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+      target.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusRequest, optionalImageKeys]);
+
+  const setFocusTarget = (key: string, node: HTMLElement | null) => {
+    if (node) focusTargetsRef.current.set(key, node);
+    else focusTargetsRef.current.delete(key);
+  };
 
   return (
     <aside aria-label="Creative" className={cn("w-full shrink-0 overflow-y-auto bg-card p-4 xl:w-auto", className)}>
@@ -146,6 +176,8 @@ export function InputsPanel({
           <div className="mb-5 space-y-4">
             {textInputs.map(input => {
               const value = textValues[input.key] ?? "";
+              const active = activeInputKey === input.key;
+              const multiline = shouldUseMultilineTextInput(input, value);
               return (
                 <div key={input.key} className="block">
                   <Label htmlFor={`creative-${input.key}`} className="mb-1 block text-sm font-medium">{input.label}</Label>
@@ -186,6 +218,9 @@ export function InputsPanel({
                 input={input}
                 defaultUrl={defaultImageValues[input.key] ?? null}
                 dataUrl={imageValues[input.key] ?? null}
+                active={activeInputKey === input.key}
+                setFocusTarget={node => setFocusTarget(input.key, node)}
+                onFieldFocus={() => onFieldFocus?.(input.key)}
                 onImageChange={onImageChange}
                 onCropClick={() => onCropClick(input.key)}
                 libraryAssets={libraryAssets}
@@ -193,7 +228,7 @@ export function InputsPanel({
               />
             ))}
             {optionalImageInputs.length > 0 ? (
-              <details className="rounded-(--r-ctl) border border-border bg-muted/20">
+              <details ref={optionalDetailsRef} className="rounded-(--r-ctl) border border-border bg-muted/20">
                 <summary className="cursor-pointer px-3 py-3 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   Optional brand details
                 </summary>
@@ -204,6 +239,9 @@ export function InputsPanel({
                       input={input}
                       defaultUrl={defaultImageValues[input.key] ?? null}
                       dataUrl={imageValues[input.key] ?? null}
+                      active={activeInputKey === input.key}
+                      setFocusTarget={node => setFocusTarget(input.key, node)}
+                      onFieldFocus={() => onFieldFocus?.(input.key)}
                       onImageChange={onImageChange}
                       onCropClick={() => onCropClick(input.key)}
                       libraryAssets={libraryAssets}
@@ -224,6 +262,11 @@ export function InputsPanel({
   );
 }
 
+/** Long authored fields and generated line-broken lists must stay editable as written. */
+export function shouldUseMultilineTextInput(input: Pick<TextInput, "maxLength" | "placeholder">, value: string): boolean {
+  return input.maxLength > 100 || /[\r\n]/u.test(value) || /[\r\n]/u.test(input.placeholder ?? "");
+}
+
 // ---------------------------------------------------------------------------
 // ImageSlotControl — file picker + session-local preview.
 // ---------------------------------------------------------------------------
@@ -232,6 +275,9 @@ function ImageSlotControl({
   input,
   dataUrl,
   defaultUrl,
+  active,
+  setFocusTarget,
+  onFieldFocus,
   onImageChange,
   onCropClick,
   libraryAssets,
@@ -240,6 +286,9 @@ function ImageSlotControl({
   input: ImageInput;
   dataUrl: string | null;
   defaultUrl: string | null;
+  active: boolean;
+  setFocusTarget: (node: HTMLElement | null) => void;
+  onFieldFocus: () => void;
   onImageChange: (key: string, change: { file: File; previewUrl: string } | null) => void;
   onCropClick: () => void;
   libraryAssets?: Array<{ id?: string; url: string; label: string }>;
@@ -322,6 +371,7 @@ function ImageSlotControl({
           <div className="flex min-w-0 flex-wrap gap-2">
             {!dataUrl && <span className="w-full text-xs text-muted-foreground">Template image</span>}
             <Button
+              ref={setFocusTarget}
               type="button"
               variant="outline"
               onClick={() => fileRef.current?.click()}

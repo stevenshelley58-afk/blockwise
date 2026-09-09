@@ -119,10 +119,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
     // stores copy in document_json; loadPublishState reads the ad columns).
     await backfillPublishMetaCopy(access.supabase, id, access.access.workspaceId);
 
-    // 2. Load the workspace's Meta connection and resolved setup early — the
+    // 2. Load the workspace's Meta connection and resolved setup before planning.
     const serviceSupabase = createSupabaseServiceClient();
+    const writesEnabled = providerWritesEnabled();
     const connection = await loadMetaConnection(serviceSupabase, access.access.workspaceId);
     if (!connection) {
+      return NextResponse.json({ error: "meta_not_connected", message: "Connect Meta before publishing." }, { status: 400 });
+    }
+    if (writesEnabled && connection.metadata_json?.e2eDryRunOnly === true) {
       return NextResponse.json({ error: "meta_not_connected", message: "Connect Meta before publishing." }, { status: 400 });
     }
 

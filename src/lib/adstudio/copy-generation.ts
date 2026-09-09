@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import type { AdStudioBrandKit } from "./types.ts";
+import { toMetaCta } from "./meta-cta.ts";
 
 import {
   createTextProviderForCandidate,
@@ -89,7 +91,7 @@ const IMAGE_GROUNDING_INSTRUCTION =
   "An image of the advertised property is attached. Ground the copy in what is actually visible in it — the property's style, setting, and standout features — and do not invent details that contradict the image.";
 
 const PRIMARY_TEXT_FORMATTING_INSTRUCTION =
-  "Primary text must read like a real Meta lead ad: return one string with actual newline characters, starting with a one-line hook followed by 2-4 short benefit or offer lines. Preserve those newlines in JSON, use no hashtags, and use emoji only when the brand voice explicitly calls for it. Keep the wording compliant with Meta Housing rules.";
+  "Primary text must read like a real Meta lead ad: return one string with actual newline characters, starting with a one-line hook followed by 2-4 short benefit or offer lines. Preserve those newlines in JSON, use no hashtags, and use emoji only when the brand voice explicitly calls for it. Keep every field within its stated character limit and end on a complete word or sentence; never rely on truncation. Keep the wording compliant with Meta Housing rules.";
 
 const COPY_PROMPT_KEYS: PromptKey[] = [
   "adstudio.copy.system",
@@ -163,7 +165,7 @@ export async function generateAdStudioCopy(
       userId: input.userId,
       correlationId,
       taskType: "adstudio.copy",
-      modelProfile: "structured_json",
+      modelProfile: ADSTUDIO_COPY_MODEL_PROFILE,
       mutationId,
       prompt: assembled,
       input: generationLogInput(input),
@@ -196,7 +198,7 @@ export async function generateAdStudioCopy(
       userId: input.userId,
       correlationId,
       taskType: "adstudio.copy",
-      modelProfile: "structured_json",
+      modelProfile: ADSTUDIO_COPY_MODEL_PROFILE,
       mutationId,
       prompt: assembled,
       input: generationLogInput(input),
@@ -231,6 +233,8 @@ export type AdStudioTemplateCopyInput = {
   fields: AdStudioTemplateCopyFieldSpec[];
   sourceImageUrl?: string;
   context?: AdStudioCopyRequestBody["context"];
+  /** Complete approved workspace brand context for voice and compliance. */
+  brandKit?: Partial<AdStudioBrandKit> | null;
   /** Explicit service-runtime credentials; web requests use process.env. */
   providerEnv?: ProviderEnvironment;
   signal?: AbortSignal;
@@ -268,6 +272,7 @@ export async function generateAdStudioTemplateCopy(
     bundle,
     mode: "brief",
     context: input.context ?? {},
+    brandKit: input.brandKit,
     brief: input.description,
   });
   const fieldLines = input.fields
@@ -304,7 +309,7 @@ export async function generateAdStudioTemplateCopy(
       userId: input.userId,
       correlationId,
       taskType: "adstudio.template_copy",
-      modelProfile: "structured_json",
+      modelProfile: ADSTUDIO_COPY_MODEL_PROFILE,
       mutationId,
       prompt: assembled,
       input: { description: input.description, fields: input.fields, context: input.context ?? {} },
@@ -334,7 +339,7 @@ export async function generateAdStudioTemplateCopy(
       userId: input.userId,
       correlationId,
       taskType: "adstudio.template_copy",
-      modelProfile: "structured_json",
+      modelProfile: ADSTUDIO_COPY_MODEL_PROFILE,
       mutationId,
       prompt: assembled,
       input: { description: input.description, fields: input.fields, context: input.context ?? {} },
@@ -465,7 +470,7 @@ async function generateCopyWithProfile(
   providerEnv?: ProviderEnvironment,
   signal?: AbortSignal,
 ): Promise<CopyGenerationResult> {
-  const profile = await resolveRuntimeModelProfile("structured_json");
+  const profile = await resolveRuntimeModelProfile(ADSTUDIO_COPY_MODEL_PROFILE);
   const candidates = modelCandidateAttempts(profile);
   const attempts: CopyGenerationResult["attempts"] = [];
 
@@ -480,7 +485,7 @@ async function generateCopyWithProfile(
         workspaceId: reservation.workspaceId,
         mutationId: reservation.mutationId,
         attemptIndex: index,
-        modelProfile: "structured_json",
+        modelProfile: ADSTUDIO_COPY_MODEL_PROFILE,
         provider,
         execute: () => provider.generate({
           system,

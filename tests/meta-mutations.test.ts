@@ -566,6 +566,7 @@ function ownedPublishPlanForMutation(mutation: MetaPlanMutation): MetaPublishPla
     planId,
     workspaceId: mutation.workspaceId,
     adStudioCampaignId: "adstudio_123",
+    customerAdId: null,
     adStudioExportId: null,
     legacyCampaignId: null,
     providerConnectionId: "connection_123",

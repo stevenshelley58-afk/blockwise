@@ -1,7 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { generateAdStudioTemplateCopy, normalizeAdStudioAiWritingGuidance } from "@/lib/adstudio/copy-generation";
-import { buildDeterministicCopyProposal } from "@/lib/adstudio/copy-proposal";
+import {
+  generateAdStudioTemplateCopy,
+  hasConfiguredAdStudioTextProvider,
+  normalizeAdStudioAiWritingGuidance,
+} from "@/lib/adstudio/copy-generation";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { adTemplateSchema } from "@/lib/adstudio/ingest-artifact";
@@ -10,7 +13,7 @@ import { loadAdStudioBrandDefaults } from "@/lib/adstudio/brand-defaults";
 
 export const runtime = "nodejs";
 
-function overlayFields(pack: Record<string, unknown>, base: Array<{ key: string; label: string; maxLength: number }>) {
+function overlayFields(pack: Record<string, unknown>, base: Array<{ key: string; label: string; maxLength: number; sample?: string }>) {
   const defaults = pack.editorDefaults && typeof pack.editorDefaults === "object" ? pack.editorDefaults as Record<string, unknown> : null;
   const values = Array.isArray(defaults?.overlayTextInputs) ? defaults.overlayTextInputs : [];
   const existing = new Set(base.map(field => field.key));
@@ -18,7 +21,7 @@ function overlayFields(pack: Record<string, unknown>, base: Array<{ key: string;
     if (!value || typeof value !== "object" || typeof (value as Record<string, unknown>).key !== "string") continue;
     const item = value as Record<string, unknown>;
     if (existing.has(item.key as string)) continue;
-    base.push({ key: item.key as string, label: typeof item.label === "string" ? item.label : item.key as string, maxLength: typeof item.maxLength === "number" ? item.maxLength : 120 });
+    base.push({ key: item.key as string, label: typeof item.label === "string" ? item.label : item.key as string, maxLength: typeof item.maxLength === "number" ? item.maxLength : 120, sample: typeof item.placeholder === "string" ? item.placeholder : undefined });
   }
   return base;
 }
@@ -55,9 +58,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     .eq("template_id", ad.template_id)
     .maybeSingle();
   const parsed = adTemplateSchema.safeParse(packRow?.template_json);
-  if (!parsed.success) return NextResponse.json({ error: "Template pack not found" }, { status: 404 });
+  if (!parsed.success) return NextResponse.json({ error: "Template not found" }, { status: 404 });
   const pack = parsed.data as unknown as import("../../../../../../../packages/ad-template-contract/src/types.ts").AdTemplate;
-  const fields = overlayFields(packRow?.template_json && typeof packRow.template_json === "object" ? packRow.template_json as Record<string, unknown> : {}, pack.textInputs.map(field => ({ key: field.key, label: field.label, maxLength: field.maxLength })));
+  const fields = overlayFields(packRow?.template_json && typeof packRow.template_json === "object" ? packRow.template_json as Record<string, unknown> : {}, pack.textInputs.map(field => ({ key: field.key, label: field.label, maxLength: field.maxLength, sample: field.placeholder })));
   const rawPack = packRow?.template_json && typeof packRow.template_json === "object" ? packRow.template_json as Record<string, unknown> : {};
   const metadata = rawPack.metadata && typeof rawPack.metadata === "object" ? rawPack.metadata as Record<string, unknown> : {};
   const guidance = normalizeAdStudioAiWritingGuidance(metadata.aiWritingGuidance);
@@ -67,7 +70,16 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   if (!providerEnabled) {
     return NextResponse.json(buildDeterministicCopyProposal(fields, brief, copy, guidance));
   }
+
   try {
+    const brandKit = await loadLatestBrandKit(access.supabase, access.access.workspaceId);
+    const brandContext = brandKit ? {
+      businessName: brandKit.identity.businessName,
+      market: [brandKit.identity.marketRegion, brandKit.identity.marketCountry].filter(Boolean).join(", "),
+      voice: brandKit.tone.voice,
+      preferredPhrases: brandKit.tone.preferredPhrases,
+      neverSay: brandKit.tone.avoid,
+    } : {};
     const result = await generateAdStudioTemplateCopy({
       workspaceId: access.access.workspaceId,
       userId: access.access.userId,
@@ -75,8 +87,29 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       fields,
       context: { templateName: pack.metadata.title, aiWritingGuidance: guidance, businessName: brand.businessName, voice: brand.voice },
     });
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, copy: { ...result.copy, cta: toMetaCta(result.copy.cta) } });
   } catch (error) {
     return errorResponse(error, 502);
   }
+}
+
+async function loadLatestBrandKit(
+  supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createSupabaseServerClient>>,
+  workspaceId: string,
+): Promise<AdStudioBrandKit | null> {
+  const { data, error } = await supabase
+    .from("adstudio_brand_kits")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .order("updated_at", { ascending: false })
+    .limit(10);
+  if (error) {
+    console.error("Ad Studio copy Brand Pack load failed", {
+      workspaceId,
+      reason: error.message,
+    });
+    throw new Error("Brand Pack could not be loaded.");
+  }
+  const row = (data ?? []).find(candidate => !isExampleBrandKitSourceUrl(String(candidate.source_url ?? "")));
+  return row ? rowToBrandKit(row as Record<string, unknown>) : null;
 }

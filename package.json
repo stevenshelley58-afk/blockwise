@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "dev": "next dev",
-    "build:packages": "npm run --workspace @blockwise/ad-template-contract build && npm run --workspace @blockwise/ad-template-renderer build",
+    "build:packages": "npm run --workspace @blockwise/ad-template-contract build && npm run --workspace @blockwise/ad-template-renderer build && npm run --workspace @blockwise/ad-video-renderer build",
     "prebuild": "npm run build:packages",
     "build": "next build",
     "start": "next start",

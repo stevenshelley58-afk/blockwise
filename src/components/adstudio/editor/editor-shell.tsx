@@ -84,6 +84,9 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     setActivePlacement,
     selectLayer,
     updateTextValue,
+    applyTemplateText,
+    applyTemplateMetaCopy,
+    applySelectedCopy,
     updateImageValue,
     updateImagePreview,
     updateCrop,
@@ -106,6 +109,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
   const [proposalBrief, setProposalBrief] = useState("");
   const [proposal, setProposal] = useState<{ onImage: Record<string, string>; copy: Partial<MetaCopy>; source: string } | null>(null);
   const [proposalBusy, setProposalBusy] = useState(false);
+  const [proposalError, setProposalError] = useState<string | null>(null);
   const [pendingImageUploads, setPendingImageUploads] = useState(0);
   const [saveConflict, setSaveConflict] = useState(false);
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("copy");
@@ -244,6 +248,7 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
 
   const proposeCopy = useCallback(async () => {
     setProposalBusy(true);
+    setProposalError(null);
     try {
       const response = await fetch(`/api/adstudio/ads/${encodeURIComponent(adId)}/copy-proposal?workspaceId=${encodeURIComponent(workspaceId)}`, {
         method: "POST",
@@ -255,11 +260,16 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
       setProposal({ onImage: body.onImage ?? {}, copy: body.copy, source: body.source ?? "AI" });
       setError(null);
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Copy proposal failed.");
+      setProposalError(error instanceof Error ? error.message : "Copy proposal failed.");
     } finally {
       setProposalBusy(false);
     }
-  }, [adId, workspaceId, proposalBrief, state.metaCopy, setError]);
+  }, [adId, workspaceId, proposalBrief, state.metaCopy]);
+
+  const applyProposal = useCallback((payload: SelectedAiCopyPayload) => {
+    applySelectedCopy(payload.onImage, payload.copy);
+    setProposalError(null);
+  }, [applySelectedCopy]);
 
   const useAllProposal = useCallback(() => {
     if (!proposal) return;
@@ -408,9 +418,10 @@ export function EditorShell({ pack, adId, workspaceId, canSave = true, brandColo
     handleBusinessNameChange={updateBusinessName}
     handleLibraryPick={handleLibraryPick}
     handleImageChange={handleImageChange}
-    openCrop={openCrop}
     openCropForInput={openCropForInput}
     updateTextValue={updateTextValue}
+    applyTemplateText={applyTemplateText}
+    applyTemplateMetaCopy={applyTemplateMetaCopy}
     updateMetaCopy={updateMetaCopy}
     updateDestinationUrl={updateDestinationUrl}
     updateCrop={updateCrop}
@@ -436,6 +447,68 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
   cropTarget: { slot: ImageSlotLayer; placement: Placement } | null; setCropTarget: (value: { slot: ImageSlotLayer; placement: Placement } | null) => void; proposalBrief: string; setProposalBrief: (value: string) => void; proposal: { onImage: Record<string, string>; copy: Partial<MetaCopy>; source: string } | null; proposalBusy: boolean; proposeCopy: () => Promise<void>; useAllProposal: () => void;
   name: string; setName: (value: string) => void; persistName: () => Promise<void>;
 }) {
+  const [activeTarget, setActiveTarget] = useState<EditorTarget | null>(null);
+  const [focusRequestId, setFocusRequestId] = useState(0);
+  const [appearanceRole, setAppearanceRole] = useState<ColourRole>("background");
+  const [isDesktopInspector, setIsDesktopInspector] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const desktopMedia = window.matchMedia("(min-width: 1280px)");
+    const syncInspectorViewport = () => setIsDesktopInspector(desktopMedia.matches);
+    syncInspectorViewport();
+    desktopMedia.addEventListener("change", syncInspectorViewport);
+    return () => desktopMedia.removeEventListener("change", syncInspectorViewport);
+  }, []);
+
+  useEffect(() => {
+    if (isDesktopInspector) setMobileInspectorOpen(false);
+  }, [isDesktopInspector, setMobileInspectorOpen]);
+
+  const openInspectorForTarget = useCallback((target: EditorTarget) => {
+    setActiveTarget(target);
+    setFocusRequestId(value => value + 1);
+    if (target.kind === "layer") {
+      selectLayer(target.layerId);
+      if (target.colourRole) setAppearanceRole(target.colourRole);
+      setInspectorTab("content");
+    } else {
+      selectLayer(null);
+      setInspectorTab("copy");
+    }
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 1279px)").matches) {
+      setMobileInspectorOpen(true);
+    }
+  }, [selectLayer, setInspectorTab, setMobileInspectorOpen]);
+
+  const syncContentFocus = useCallback((inputKey: string) => {
+    const layer = activeLayout.layers.find(candidate => {
+      const target = editorTargetForLayer(candidate);
+      return target?.inputKey === inputKey;
+    });
+    const target = layer ? editorTargetForLayer(layer) : null;
+    if (target) {
+      selectLayer(target.layerId);
+      setActiveTarget(target);
+      if (target.colourRole) setAppearanceRole(target.colourRole);
+    }
+  }, [activeLayout, selectLayer]);
+
+  const syncMetaFocus = useCallback((field: MetaEditField) => {
+    setActiveTarget({ kind: "meta", field });
+    selectLayer(null);
+  }, [selectLayer]);
+
+  const changePlacement = useCallback((placement: Placement) => {
+    setActivePlacement(placement);
+    if (activeTarget?.kind !== "layer") return;
+    const nextLayout = placement === "feed" ? pack.feedLayout : pack.storyLayout;
+    const matchingLayer = nextLayout.layers.find(candidate => editorTargetForLayer(candidate)?.inputKey === activeTarget.inputKey);
+    const matchingTarget = matchingLayer ? editorTargetForLayer(matchingLayer) : null;
+    selectLayer(matchingTarget?.layerId ?? null);
+    setActiveTarget(matchingTarget);
+    if (matchingTarget?.colourRole) setAppearanceRole(matchingTarget.colourRole);
+  }, [activeTarget, pack.feedLayout, pack.storyLayout, selectLayer, setActivePlacement]);
+
   const defaultImageValues = Object.fromEntries(pack.imageInputs.flatMap(input => input.defaultAssetKey
     ? [[input.key, templateAssetProxyUrl(templateId, input.defaultAssetKey, adId)!] as const]
     : []));

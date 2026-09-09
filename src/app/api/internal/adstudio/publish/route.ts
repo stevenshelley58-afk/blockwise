@@ -40,9 +40,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "missing_params" }, { status: 400 });
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !supabaseKey) {
+  let supabase;
+  try {
+    supabase = createSupabaseServiceClient();
+  } catch {
     return NextResponse.json({ error: "server_configuration" }, { status: 500 });
   }
 
@@ -97,9 +98,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "missing_params" }, { status: 400 });
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !supabaseKey) {
+  let supabase;
+  try {
+    supabase = createSupabaseServiceClient();
+  } catch {
     return NextResponse.json({ error: "server_configuration" }, { status: 500 });
   }
 

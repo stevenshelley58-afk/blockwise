@@ -3,11 +3,13 @@ import { describe, it } from "node:test";
 
 import {
   PublishError,
+  backfillPublishMetaCopy,
   buildPausedMetaPublishPlan,
   validatePublishState,
   type PausedPublishPlanInput,
   type PublishLoadResult,
 } from "../../src/lib/adstudio/publish-adapter.ts";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   createMetaExecutionAdapter,
   type MetaOfferFulfilment,
@@ -65,6 +67,13 @@ describe("paused Ad Studio Meta publish planning", () => {
     assert.deepEqual(plan.leadForms[0]?.fulfilment, exactOffer);
     assert.equal(plan.controls.destinationUrl, destinationUrl);
     assert.equal(plan.leadForms[0]?.thankYouWebsiteUrl, fulfilmentUrl);
+  });
+
+  it("binds direct publish plans to the customer ad rather than a legacy campaign", () => {
+    const plan = buildPausedMetaPublishPlan(buildInput(validNewAdSetControls()));
+
+    assert.equal(plan.customerAdId, "ad_123");
+    assert.equal(plan.adStudioCampaignId, null);
   });
 
   it("rejects every missing explicit control for either mode that creates a new ad set", () => {
@@ -363,6 +372,7 @@ function publishState(): PublishLoadResult {
       id: "ad_123",
       templateId: "free-guide-template",
       colourMode: "template",
+      resolvedColourMap: manualColours,
       metaPrimaryText: "Download the free seller guide.",
       metaHeadline: "Free seller guide",
       metaDescription: "Practical Perth seller guide",
@@ -412,4 +422,64 @@ function publishState(): PublishLoadResult {
     formDraftId: "form_draft_123",
     formRevision: 2,
   };
+}
+
+const manualColours = {
+  background: "#F7F4EE",
+  primary: "#17352D",
+  secondary: "#A7B8AF",
+  accent: "#D8954E",
+  mainText: "#17201D",
+  inverseText: "#FFFFFF",
+} as const;
+
+function publishBackfillSupabase(
+  documentJson: Record<string, unknown>,
+  updates: Array<Record<string, unknown>>,
+): SupabaseClient {
+  return {
+    from(table: string) {
+      if (table === "ad_customer_ads") {
+        return {
+          select() {
+            return {
+              eq() {
+                return {
+                  eq() {
+                    return {
+                      maybeSingle: async () => ({ data: { active_revision_id: "revision_123" }, error: null }),
+                    };
+                  },
+                };
+              },
+            };
+          },
+          update(value: Record<string, unknown>) {
+            updates.push(value);
+            return {
+              eq() {
+                return {
+                  eq: async () => ({ data: null, error: null }),
+                };
+              },
+            };
+          },
+        };
+      }
+      if (table === "ad_revisions") {
+        return {
+          select() {
+            return {
+              eq() {
+                return {
+                  maybeSingle: async () => ({ data: { document_json: documentJson }, error: null }),
+                };
+              },
+            };
+          },
+        };
+      }
+      throw new Error(`Unexpected table: ${table}`);
+    },
+  } as unknown as SupabaseClient;
 }

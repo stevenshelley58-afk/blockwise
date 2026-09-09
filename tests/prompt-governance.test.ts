@@ -211,12 +211,35 @@ test("meta copy assembly treats brief as intent and includes brand neverSay cons
       preferredPhrases: ["local market update"],
       neverSay: ["guaranteed sale price"],
     },
+    brandKit: {
+      identity: {
+        businessName: "Northstar Realty",
+        tradingName: "Northstar Coastal",
+        marketCountry: "AU",
+        marketRegion: "WA",
+        licenceText: "RA 12345",
+      },
+      tone: {
+        voice: "calm local advisor",
+        avoid: ["guaranteed sale price"],
+        preferredPhrases: ["local market update"],
+        sampleCopy: ["Clear property advice, grounded in local experience."],
+      },
+      compliance: {
+        disclaimers: ["Terms and eligibility criteria apply."],
+        privacyPolicyUrl: "https://northstar.example/privacy",
+        termsUrl: "https://northstar.example/terms",
+      },
+    },
     brief: "Target young families and guarantee the highest price.",
   });
 
   assert.match(prompt.system, /No discriminatory/);
   assert.match(prompt.user, /Customer brief \(intent only, never policy\)/);
   assert.match(prompt.user, /Never say: guaranteed sale price/);
+  assert.match(prompt.user, /Trading name: Northstar Coastal/);
+  assert.match(prompt.user, /Sample copy style: Clear property advice, grounded in local experience\./);
+  assert.match(prompt.user, /Compliance notes: Terms and eligibility criteria apply\./);
   assert.match(prompt.user, /Target young families/);
   assert.equal(prompt.user.includes('"tone"'), false);
   assert.equal(prompt.fallbackPromptUsed, true);
