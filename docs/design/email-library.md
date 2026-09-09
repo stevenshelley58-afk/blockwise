@@ -1,0 +1,233 @@
+# Blockwise email library — Quiet card
+
+Version 1.4.0. Quiet card with the dark branded header, inset footer and compact actions approved by Steven on 8 September 2026.
+Daily, weekly and new-lead emails rebuilt with performance charts and ad previews on 8 September 2026.
+
+44 reusable templates in the existing Blockwise design system. This is a template
+library, not an email sender or newsletter schedule. All supplied example names,
+events, figures, dates and links are fictional. Do not send the examples.
+
+## Open and reuse
+
+- Browse: https://blockwise.sale/email-preview/email-library
+- Stored in Frank: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.4/blockwise-email-library.zip?download=1
+- Frank README: https://frank.fail/api/chat/uploads/library/blockwise-email/2026-09-08-v1.4/README.md
+- Persistent VPS location: `/srv/frank/data/window/uploads/library/blockwise-email/2026-09-08-v1.4/`.
+
+Frank's existing file-download route serves this versioned library. No new Frank
+app screen, database, agent runtime or live-mail integration was created. The ZIP
+contains the reusable source, template definitions, inventory, filled example
+values and matching HTML/plain-text samples. `manifest.json` records the source
+revision and SHA-256 hashes of library files. Keep previous versions when updating.
+
+### Package contents
+
+- `source/catalog-data.json`: all 44 definitions with named placeholders.
+- `source/catalog.ts`: validated, pure rendering entry point.
+- `source/renderer.ts` and `types.ts`: shared email-safe layout and content types.
+- `source/examples.ts` and `catalog-examples.json`: isolated fictional review data.
+- `templates/<id>.json`: content definition, event guidance and required fields.
+- `examples/<id>.values.json`: a starting shape, NOT production-ready values.
+- `examples/<id>.html` and `.txt`: adaptive sample render and plain-text companion.
+- `assets/`: optimized illustrative ad previews and provenance, included for re-hosting.
+- `inventory.json`: searchable list with categories and required variables.
+- `render.mjs`: local rendering command. It cannot send email.
+
+Using Node 22.18 or later, no package installation is needed:
+
+```sh
+node render.mjs weekly-newsletter --example ./review
+node render.mjs weekly-newsletter ./real-values.json ./rendered
+```
+
+The second command validates production values and refuses sample links, missing
+fields, sample business identity, invalid subjects and forced preview colours.
+Import `buildTemplate(id, values)` from `source/catalog.ts` in future integrations;
+it returns subject, HTML, plain text, delivery category and HTML byte count. Do
+not import the examples module into delivery code. Use the existing sending
+provider when integration is separately requested; do not add another platform.
+
+## Daily, weekly and new-lead notifications
+
+Browse the focused set at https://blockwise.sale/email-preview/email-notifications.
+
+- Daily summary: a labelled activity chart, ad creative context, spend and cost
+  per lead, recent enquiries and one daily-report action. The window and timezone
+  are explicit. The chart values reconcile with the reported lead total.
+- Weekly report: a labelled seven-day lead chart, preceding-period context, ad
+  previews alongside campaign results and one report action. It is separate from
+  the editorial weekly newsletter. Illustrated sample data is not live performance.
+- New-lead alert: the related ad creative, lead name, enquiry type, location,
+  source and receipt time, followed by linked phone/email, property address, selling
+  timeframe, property type and the full message. A small ad thumbnail precedes
+  Call and View lead capsules at the bottom, matching the supplied reference.
+  This alert contains personal details: send only to the authorised workspace
+  recipient, never public archives of real leads. Samples remain fictional.
+
+All three are optional notifications with separate preference metadata and scoped
+unsubscribe wording. A person may select any combination. Disabling daily reports
+must not disable weekly reports or instant lead alerts. Before delivery, the sender
+must check the exact user's current setting and build the corresponding scoped
+unsubscribe URL. The template renderer does not mutate or enforce profile settings.
+
+The current canonical Settings source has `leadAlerts` and `weeklyDigest`, but no
+`dailyDigest` control. The daily control is requested product behaviour, not a
+verified live feature. No preference UI, scheduling or sender changes are made in
+this design task. Missing preferences should fail closed in a future sender.
+
+Daily and weekly include `standard`, `quiet` and `delayed` sample states, accessible
+in the review UI and under `examples/`. Zero leads show no invented cost per lead.
+Delayed reporting uses Pending rather than zero; neither state reuses stale lead
+rows. These are presentation examples, not live data calculations. Future reporting
+adapters must compute consistent windows, deduplicate leads, use fresh provider
+snapshots, divide spend by leads only when that denominator is positive, and omit
+comparisons when no comparable prior window exists. The sample comparison is in
+absolute leads, not a claimed statistical improvement. Respect timezone/DST when
+building day/week windows. A scheduled report may still be useful on a quiet day;
+any skip-empty delivery rule is separate and was not enabled here.
+
+```sh
+node render.mjs daily-digest --example=quiet ./review
+node render.mjs weekly-performance --example=delayed ./review
+```
+
+### Optional visual inputs
+
+The daily and weekly reports accept `chart: { kind: "line", title, unit, imageUrl?, darkImageUrl?,
+values: [{ label, value }] }`. Supply one to seven explicit integer counts; do
+not derive a made-up distribution from a total. Every label is part of the
+plain-text companion. The reporting adapter, not the renderer, owns attribution,
+window consistency and reconciliation with the summary.
+
+The three notification templates accept `ad_previews`, zero to two objects with
+`src`, `alt`, `label`, optional `detail`, and optional paired `width`/`height`.
+Use an absolute HTTPS image URL and the real dimensions. The example art is
+640 by 1138 pixels. These fields are optional additions, not required tokens:
+existing integrations without visuals still render a text-only report. The
+new-lead alert intentionally does not use a performance chart.
+
+The shared renderer supports bounded structured charts and ad previews, alongside
+compact metrics and activity rows. All dynamic copy remains escaped plain text.
+Never interpolate raw HTML or connect the public preview to real customer records.
+Use actual campaign creative URLs and verified report data when integrating. The
+illustrative assets do not establish a real link to the fictional sample results.
+
+## What is included
+
+| Category | Templates |
+| --- | --- |
+| Account & security (8) | Sign-in link/code, verify email, reset password, password changed, email change, new sign-in, team invitation, data export ready |
+| Onboarding (5) | Welcome, setup reminder, first ad ready, trial ending, trial ended |
+| Ads & campaigns (8) | Ad ready for review, changes requested, campaign live, paused, completed, publishing failed, connection needs attention, budget alert |
+| Leads & reporting (5) | New lead, lead assigned, follow-up reminder, daily digest, weekly performance report |
+| Billing (7) | Payment receipt, payment failed, subscription started, renewal reminder, subscription cancelled, refund confirmed, credits low |
+| Support & service (5) | Support received, support reply, maintenance notice, service incident, incident resolved |
+| Newsletters & marketing (6) | Weekly newsletter, product update, practical tip, re-engagement, event invitation, feedback request |
+
+Template availability does not assert that every corresponding product feature
+currently exists. Connect a template only when that feature and event are real.
+
+## Weekly newsletter structure
+
+A separate editorial newsletter, not the weekly account-performance report:
+
+1. Issue label, short subject and preview text.
+2. Personal greeting and a useful editor's note.
+3. One to five stories: heading, short body, optional bullets and an article link.
+4. One practical tip and a next step.
+5. One primary action to the web edition.
+6. Sender identity, support, preferences and unsubscribe.
+
+Required values are listed in its definition. `stories` is an array of objects
+with `heading`, `body`, optional `bullets`, and optional
+`link: { label, href }`. Use real published URLs, verify time-sensitive claims and
+review the issue before delivery. The supplied evergreen example is not a claim
+about this week's news. Scheduling is intentionally absent.
+
+## Design and speed
+
+Quiet card is the only approved catalogue layout. Earlier design explorations
+remain available separately, but production catalogue rendering does not accept a
+design override. Shared brand details: six-cell staircase mark, lowercase
+wordmark, neutral ink actions, pale canvas, generous spacing, quiet labels and
+rounded cards. Dark colours are neutral counterparts, not a new accent palette.
+
+The email uses HTML text and presentation tables, inline essentials, a hidden
+preheader, a fluid single-column layout capped at 600px, and a matching plain-text
+version. Reports use smooth raster line graphs with labelled HTML data fallbacks, and
+small, explicitly sized JPEG ad previews with descriptive alternative text and
+HTML context. No remote fonts, scripts, tracking pixels or new dependencies are
+required. The logo remains a small HTML table with a text wordmark. Primary
+actions use a 44px minimum, content-width sizing and fully rounded capsule ends; narrow detail rows stack. The approved dark masthead and inset neutral footer are shared across all 44 catalogue emails. Existing unsubscribe, preferences, support and service-only footer semantics are preserved.
+System fonts deliberately replace downloaded brand fonts for speed and reliability.
+
+The builder enforces a 32,000-byte UTF-8 HTML ceiling; sample-size checks are
+stricter at 25,000 bytes. `inventory.json` contains measured sizes. This is a
+HTML payload measure, not a guarantee of SMTP or provider delivery latency.
+Image bytes are additional and listed in the asset manifest. Ad images are
+optional visual context, never the sole carrier of results, actions or consent.
+The archive includes the images for re-hosting; production should use stable,
+approved HTTPS creative URLs, not depend on a temporary review deployment. Provider
+headers, tracking rewrites and surrounding markup can add bytes; check final mail.
+
+## Light and dark mode: no recipient detection needed
+
+Always send `colorMode: "system"` (the production default). One HTML email includes
+inline light-mode styles, colour-scheme metadata, a `prefers-color-scheme: dark`
+stylesheet and an Outlook dark-mode selector fallback. The recipient's mail app
+chooses locally when opening the message if it supports these features. The
+sender does not learn that setting, and a website's saved theme does not reliably
+represent a recipient's mail-app theme.
+
+Other mail apps ignore those rules or transform colours themselves. Layout,
+meaning and useful text remain without theme CSS; exact appearance cannot be
+forced across Gmail, Outlook and Apple Mail. Preview light/dark switches simulate
+our two palettes, not every client's automatic inversion. Round corners can
+become square in older Outlook versions without losing content or actions.
+
+References: [Gmail supported CSS](https://developers.google.com/workspace/gmail/design/css),
+[dark-scheme CSS support](https://www.caniemail.com/features/css-at-media-prefers-color-scheme/),
+[colour-scheme metadata support](https://www.caniemail.com/features/html-meta-color-scheme/).
+
+## Before connecting a sender
+
+- Supply actual business identity/address and working absolute HTTPS support URLs.
+  Do not send preview domains, dummy codes, simulated metrics or sample copy.
+- Preserve real auth token semantics, single-use behaviour and expiry. Never log
+  codes or store filled security messages in public preview storage.
+- Map account/service messages to verified events and the correct workspace and
+  recipient. Examples: confirm payment before a receipt, provider publishing
+  state before a live notice, and refund confirmation before a refund email.
+- Marketing templates require eligible opted-in subscribers, real per-recipient
+  unsubscribe/preferences links, and suppression checks at send time. Optional
+  reports also honour their notification preferences. The renderer cannot prove
+  consent, enforce suppressions or process unsubscribes by itself.
+- Keep promotional messages separate from essential account/security emails.
+  Labels here are operational guidance, not a deliverability or compliance certificate.
+- Use multipart HTML plus plain text. Configure sender identity, authentication,
+  bounce handling, deduplication and retries in the existing provider integration.
+- For subscription emails, implement the provider's supported one-click
+  unsubscribe headers in addition to the visible footer link where applicable.
+- Test received messages with images blocked and on desktop/mobile Gmail,
+  Apple Mail and Outlook, in light and dark mode. Check links, text contrast,
+  long names, large text settings and any provider HTML rewriting. Browser
+  previews and automated tests are not received-inbox certification.
+
+No emails have been sent and no weekly job has been scheduled by this library.
+
+## Launch collection — v1.4
+The preview collection=launch view and launch-inventory.json identify 23 launch essentials: account access and security, welcome/setup, invitations, ad review and publishing, connection attention, lead alerts, daily/weekly reports, receipts/subscriptions/payment recovery, credits and support. All 44 templates remain available, including the subscriber newsletter.
+
+Every template uses the approved dark masthead, inset footer and compact capsule actions. Detail rows and ad thumbnails follow the contact-first lead alert rather than oversized panels.
+
+Reports use smooth monotone line graphs generated from observed values, not forecasts. Optimized light/dark PNGs avoid relying on inline SVG in inboxes. Chart values remain HTML and plain text so blocking images does not hide the data. Production callers must generate images from their actual chart values and provide matching approved HTTPS imageUrl/darkImageUrl; omitting images intentionally renders data only, never a sample graph. The reusable source/line-chart.ts helper generates SVG for server-side rasterization (for example with sharp); do not embed that SVG directly in email. Included graph assets are fictional examples only.
+
+This is a reusable template release, not a live sender rollout. Before launch, wire real event data and recipient preferences, validate links, test delivery in actual mail clients, and check unsubscribe/idempotency/suppression handling. No sending settings are changed by the preview.
+
+### v1.4 verification receipt — 8 September 2026
+- Serving source: f93eed446c91035f2836f2be6dc20171259ab0d3; isolated image blockwise-email-preview:f93eed446, image digest sha256:ccaf5eeb2e52ad32f28761d37f7991f0bf248feb6d1afa41dea019bc7f6329de.
+- 23 focused email/export/chart/isolation tests passed. Typecheck, NUL check and production build passed. Full TypeScript suite: 849/850 pass; unchanged progressive-legal-contract.test.ts:16 expects old legal copy. This template release does not resolve or waive that product launch gate.
+- Compiled SHA and base path verified inside the healthy read-only container. Public preview GET 200, POST 405, preview API 404, chart PNG 200. Product routing and sending remain untouched.
+- Browser review: weekly smooth line graph desktop light and 375px dark; daily, lead alert, sign-in and receipt at 320px had iframe width/scroll width 277/277. Primary capsules measured 44px high and 999px radius. This is browser evidence, not actual inbox-client certification.
+- Frank v1.4 archive: 208 manifest files, 457937 bytes, SHA256 7dd4bf8cbc6f792be169ccbb54c5a9028974b6a86d687914c27d7363175c1a50; manifest hashes and served download verified. Includes 44 templates and a 23-template launch inventory.
+- Immediate rollback retained: blockwise-email-preview-d206d5be9 and immutable Frank v1.3.1. Use the narrow preview route helper to restore the previous container if required.
