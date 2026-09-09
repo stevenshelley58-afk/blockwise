@@ -36,6 +36,8 @@ export interface ImportRequest {
   /** Base64 Ed25519 signature of pack.manifestSha256 (utf8). */
   signature: string;
   idempotencyKey: string;
+  /** Release evidence retained with the import receipt when a public release is used. */
+  releaseReceipt?: Record<string, unknown>;
 }
 
 export interface ImportReceipt {

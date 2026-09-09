@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { importTemplatePack } from "@/lib/adstudio/import-pack";
+import { importFrankPublicRelease } from "@/lib/adstudio/frank-public-release";
 
 /**
  * POST /api/internal/adstudio/template-packs/import
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   }
 
   const input = body as Record<string, unknown>;
-  if (!input.packUrl || !input.packSha256 || !input.packId || !input.issuedAt || !input.nonce || !input.signature) {
+  if (!input.release || !input.nonce) {
     return NextResponse.json({ error: "missing_required_fields" }, { status: 400 });
   }
 
