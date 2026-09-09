@@ -165,6 +165,7 @@
 .hc-story-scene {
   position: absolute;
   inset: 0;
+  will-change: transform, opacity;
 }
 
 .hc-story-browser {
@@ -247,7 +248,7 @@
   object-fit: cover;
 }
 
-.hc-story-template-card > span:not(.hc-story-cursor) {
+.hc-story-template-card > span {
   display: grid;
   gap: 2px;
   padding: 11px 12px 12px;
@@ -339,83 +340,90 @@
   place-items: center;
 }
 
+/* Story ad reuses the canonical Meta feed frame (hero-ad-showcase.css),
+   scaled down to fit the 458px story viewport. */
 .hc-story-ad {
   width: min(100%, 284px);
-  overflow: hidden;
-  border: 1px solid var(--hc-line);
   border-radius: 13px;
-  background: #fff;
   box-shadow: 0 5px 12px rgba(15,18,25,.06), 0 18px 38px rgba(15,18,25,.12);
 }
 
-.hc-story-ad .hc-ad-account {
-  min-height: 42px;
-  grid-template-columns: 29px 1fr auto;
+.hc-story-ad .hc-meta-feed-head {
+  min-height: 40px;
+  grid-template-columns: 29px minmax(0,1fr) auto;
   gap: 7px;
   padding: 6px 9px;
 }
 
-.hc-story-ad .hc-ad-avatar {
+.hc-story-ad .hc-meta-avatar {
   width: 29px;
   height: 29px;
   font-size: 8px;
 }
 
-.hc-story-ad .hc-ad-account strong { font-size: 10px; }
-.hc-story-ad .hc-ad-account small { font-size: 8px; }
-.hc-story-ad .hc-ad-copy {
-  min-height: 45px;
+.hc-story-ad .hc-meta-feed-head strong { font-size: 10px; }
+.hc-story-ad .hc-meta-feed-head small { font-size: 8px; }
+.hc-story-ad .hc-meta-feed-copy {
+  min-height: 0;
   padding: 1px 10px 8px;
-  font-size: 8.5px;
-  line-height: 1.35;
+  font-size: 9px;
+  line-height: 1.4;
 }
 
-.hc-story-ad .hc-ad-copy.is-editing {
+.hc-story-ad .hc-meta-feed-copy.is-editing {
+  border-radius: 6px;
   background: rgba(42,120,214,.08);
   box-shadow: inset 0 0 0 1px var(--hc-blue);
 }
 
 .hc-story-ad-image {
-  aspect-ratio: 4 / 4.25;
+  position: relative;
+  aspect-ratio: 4 / 3.6;
+  overflow: hidden;
+  border-block: 1px solid #d8dce3;
+  background: var(--hc-soft);
 }
 
+.hc-story-ad-image > img {
+  display: block;
+}
+
+.hc-story-image-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 46%, rgba(5,8,14,.44));
+  pointer-events: none;
+}
+
+/* Creative text sits directly on the image like a real ad creative — no card. */
 .hc-story-creative-overlay {
   position: absolute;
-  left: 14px;
-  bottom: 14px;
-  max-width: calc(100% - 28px);
-  border: 1px solid rgba(255,255,255,.92);
-  border-radius: 7px;
-  padding: 14px 16px;
-  background: rgba(255,255,255,.94);
-  color: var(--hc-ink);
+  right: 12px;
+  bottom: 12px;
+  left: 12px;
+  color: #fff;
   font-family: var(--hc-display);
-  font-size: clamp(24px, 2.45vw, 32px);
-  font-weight: 780;
+  font-size: clamp(20px, 2.2vw, 26px);
+  font-weight: 800;
   line-height: 1.05;
-  letter-spacing: .035em;
-  box-shadow: 0 3px 7px rgba(15,18,25,.08), 0 8px 18px rgba(15,18,25,.12);
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 4px rgba(0,0,0,.6), 0 4px 16px rgba(0,0,0,.45);
 }
 
 .hc-story-creative-overlay.is-editing {
-  border-color: #2a78d6;
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(42,120,214,.24), 0 6px 16px rgba(15,18,25,.16);
+  border-radius: 6px;
+  outline: 1.5px dashed rgba(255,255,255,.8);
+  outline-offset: 4px;
 }
-.hc-story-selection {
-  display: inline;
-  border-radius: 3px;
-  padding: 1px 3px;
-  background: #2a78d6;
-  color: #fff;
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
+
+.hc-story-creative-overlay .hc-story-caret {
+  background: #fff;
 }
 
 .hc-story-replacement {
-  display: block;
-  margin-top: 9px;
-  color: var(--hc-ink);
+  display: inline;
+  color: #fff;
 }
 
 .hc-story-replacement > span {
@@ -423,15 +431,17 @@
   white-space: pre;
 }
 
-.hc-story-ad .hc-ad-link {
-  min-height: 46px;
+.hc-story-ad .hc-meta-link-preview {
+  min-height: 44px;
   gap: 6px;
   padding: 6px 9px;
 }
 
-.hc-story-ad .hc-ad-link small { font-size: 6.5px; }
-.hc-story-ad .hc-ad-link strong { font-size: 8px; }
-.hc-story-ad .hc-ad-link-button { padding: 6px 7px; font-size: 7px; }
+.hc-story-ad .hc-meta-link-preview small { font-size: 6.5px; }
+.hc-story-ad .hc-meta-link-preview strong { font-size: 8.5px; }
+.hc-story-ad .hc-meta-link-preview b { padding: 6px 7px; font-size: 7px; }
+.hc-story-ad .hc-meta-actions { min-height: 30px; margin-inline: 9px; }
+.hc-story-ad .hc-meta-actions > span { gap: 4px; font-size: 8px; }
 
 .hc-story-edit-panel {
   display: grid;
@@ -455,7 +465,6 @@
 }
 
 .hc-story-edit-panel label > strong {
-  min-height: 61px;
   border: 1px solid var(--hc-line);
   border-radius: 8px;
   padding: 9px;
@@ -607,22 +616,26 @@
   .hc-story-template-window { padding: 4px 18px 16px; }
   .hc-story-template-track { gap: 12px; }
   .hc-story-template-card { flex-basis: 168px; }
-  .hc-story-template-card > span:not(.hc-story-cursor) { padding: 9px 10px 10px; }
+  .hc-story-template-card > span { padding: 9px 10px 10px; }
   .hc-story-cursor { right: -6px; bottom: 36px; width: 31px; height: 31px; }
   .hc-story-editor { grid-template-columns: minmax(125px, .9fr) minmax(155px, 1.1fr); gap: 8px; padding: 9px; }
   .hc-story-mini-rail { display: none; }
   .hc-story-ad { width: min(100%, 158px); }
-  .hc-story-ad .hc-ad-account { min-height: 36px; grid-template-columns: 24px 1fr auto; gap: 5px; padding: 5px 6px; }
-  .hc-story-ad .hc-ad-avatar { width: 24px; height: 24px; font-size: 6px; }
-  .hc-story-ad .hc-ad-account strong { font-size: 8px; }
-  .hc-story-ad .hc-ad-account small { font-size: 6px; }
-  .hc-story-ad .hc-ad-copy { min-height: 48px; padding: 3px 7px 7px; font-size: 7px; }
-  .hc-story-creative-overlay { left: 8px; bottom: 8px; max-width: calc(100% - 16px); padding: 10px 12px; font-size: 18px; letter-spacing: .02em; }
-  .hc-story-ad .hc-ad-link { min-height: 39px; padding: 5px 6px; }
-  .hc-story-ad .hc-ad-link-button { display: none; }
+  .hc-story-ad .hc-meta-feed-head { min-height: 34px; grid-template-columns: 24px minmax(0,1fr) auto; gap: 5px; padding: 5px 6px; }
+  .hc-story-ad .hc-meta-avatar { width: 24px; height: 24px; font-size: 6px; }
+  .hc-story-ad .hc-meta-feed-head strong { font-size: 8px; }
+  .hc-story-ad .hc-meta-feed-head small { font-size: 6px; }
+  .hc-story-ad .hc-meta-feed-copy { padding: 3px 7px 7px; font-size: 7px; }
+  .hc-story-creative-overlay { right: 8px; bottom: 8px; left: 8px; font-size: 18px; letter-spacing: .02em; }
+  .hc-story-ad .hc-meta-link-preview { min-height: 36px; padding: 5px 6px; }
+  .hc-story-ad .hc-meta-link-preview small { font-size: 6px; }
+  .hc-story-ad .hc-meta-link-preview strong { font-size: 7px; }
+  .hc-story-ad .hc-meta-link-preview b { display: none; }
+  .hc-story-ad .hc-meta-actions { min-height: 26px; margin-inline: 6px; }
+  .hc-story-ad .hc-meta-actions > span { gap: 3px; font-size: 6.5px; }
   .hc-story-edit-panel { gap: 7px; padding: 11px; }
   .hc-story-edit-panel h3 { margin-bottom: 2px; font-size: 16px; }
-  .hc-story-edit-panel label > strong { min-height: 68px; padding: 8px; font-size: 7.5px; }
+  .hc-story-edit-panel label > strong { padding: 8px; font-size: 7.5px; }
   .hc-story-review { grid-template-columns: minmax(120px, .82fr) minmax(164px, 1.18fr); gap: 8px; padding: 10px; }
   .hc-story-ad.is-review { width: min(100%, 142px); }
   .hc-story-review-panel { padding: 13px; }
