@@ -77,7 +77,9 @@ function note(message: EmailMessage, padding: string) {
   return message.note ? `<tr><td class="body-cell muted"${style(`${padding};font:400 12px/18px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#545a66`)}>${escapeHtml(message.note)}</td></tr>` : "";
 }
 function signOff(message: EmailMessage, padding: string) {
-  return `<tr><td class="body-cell"${style(`${padding};font:400 14px/21px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#16181d`)}>${escapeHtml(message.signOff ?? "The Blockwise team")}</td></tr>`;
+  // A sign-off is written with line breaks ("Steven\nPerth"); without pre-line
+  // the HTML part collapses it onto one line while the text part keeps it.
+  return `<tr><td class="body-cell"${style(`${padding};font:400 14px/21px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#16181d;white-space:pre-line`)}>${escapeHtml(message.signOff ?? "The Blockwise team")}</td></tr>`;
 }
 
 const BASE_CSS = `body{margin:0!important;padding:0!important;background:#f6f7f9;color:#16181d}table{mso-table-lspace:0pt;mso-table-rspace:0pt}td{word-wrap:break-word}.email-bg{background:#f6f7f9}@media only screen and (max-width:600px){.outer{width:100%!important}.mobile-pad{padding-left:4px!important;padding-right:4px!important}.card{border-radius:16px!important}}@media only screen and (max-width:400px){.outer,.detail-card{table-layout:fixed!important}.body-cell{padding-left:20px!important;padding-right:20px!important}.detail-card td{display:block!important;width:auto!important;text-align:left!important;padding:8px 12px!important;border-top:0!important;word-wrap:break-word!important}.brand-row>tbody>tr>td{display:block!important;width:100%!important;text-align:left!important}.brand-row>tbody>tr>td+td{padding-top:12px!important}.code{font-size:26px!important;letter-spacing:3px!important}}`;
