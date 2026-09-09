@@ -75,6 +75,8 @@ type TextPreflightViolationBase = {
   placement: Placement;
   layerId: string;
   reason: string;
+  /** A path-free box, in the layer's authored units, that fits the exact value at the placement floor. */
+  suggestedGeometry: Rect;
 };
 
 type TextReadabilityPreflightViolation = TextPreflightViolationBase & {
@@ -471,9 +473,13 @@ function assertTextPreflight(input: RenderInput, placements: readonly Placement[
     for (const layer of layout.layers) {
       if (layer.type !== "text") continue;
       if (layer.maxLines > 1 && layer.lineHeight < MINIMUM_MULTILINE_LINE_HEIGHT) {
-        violations.push(multilineLineHeightViolation(placement, layer));
+        violations.push(multilineLineHeightViolation(
+          placement,
+          layer,
+          suggestGeometryForLayer(ctx, layer, input, placement, DIMENSIONS[placement], layout.safeZones, MINIMUM_MULTILINE_LINE_HEIGHT),
+        ));
       }
-      const prepared = prepareText(ctx, layer, input, placement, DIMENSIONS[placement]);
+      const prepared = prepareText(ctx, layer, input, placement, DIMENSIONS[placement], layout.safeZones);
       if (prepared.kind === "violation") violations.push(prepared.violation);
     }
   }
@@ -486,6 +492,7 @@ function prepareText(
   input: RenderInput,
   placement: Placement,
   dims: CanvasDimensions,
+  safeZones: readonly Rect[] = [],
 ): TextPreparation {
   const source = input.textValues[layer.inputKey];
   if (!source) return { kind: "skip" };
@@ -505,9 +512,26 @@ function prepareText(
   const text = applyTextCase(source.slice(0, layer.maxCharacters), textLayer.case);
   const readabilityFloor = MINIMUM_TEXT_SIZE_PX[placement];
   if (baseFontSize < readabilityFloor) {
+    const suggestion = suggestTextGeometry(
+      ctx,
+      textLayer,
+      text,
+      geometry,
+      dims,
+      safeZones,
+      readabilityFloor,
+      layer.lineHeight,
+    );
     return {
       kind: "violation",
-      violation: textPreflightViolation(placement, layer.layerId, "below_readability_floor", readabilityFloor),
+      violation: textPreflightViolation(
+        placement,
+        layer.layerId,
+        "below_readability_floor",
+        readabilityFloor,
+        suggestion,
+        hasPositiveSizeRatio(textLayer) ? undefined : readabilityFloor,
+      ),
     };
   }
   const prepared = prepareTextLayout({
@@ -572,6 +596,214 @@ function normalizeOverflowBehaviour(layer: TextLayer): TextLayer["overflowBehavi
   throw new Error(`Unsupported text overflow behaviour on ${normalizeLayerId(layer.layerId)}`);
 }
 
+type PixelGeometrySuggestion = { geometry: Rect; fits: boolean };
+
+function hasPositiveSizeRatio(layer: Pick<RenderTextLayer, "sizeRatio">): boolean {
+  const ratio = Number(layer.sizeRatio);
+  return Number.isFinite(ratio) && ratio > 0;
+}
+
+/**
+ * Measure a repair box with the same native-canvas metrics used by the final
+ * renderer. The text and font path never leave this function; only finite box
+ * coordinates are copied into the refusal payload.
+ */
+function suggestGeometryForLayer(
+  ctx: SKRSContext2D,
+  layer: TextLayer,
+  input: RenderInput,
+  placement: Placement,
+  dims: CanvasDimensions,
+  safeZones: readonly Rect[],
+  lineHeight: number,
+): Rect {
+  const geometry = resolveRenderGeometry(layer.geometry, dims);
+  const source = input.textValues[layer.inputKey];
+  if (!source) return geometryInAuthoredUnits(geometry, layer.geometry, dims);
+  const textLayer = layer as RenderTextLayer;
+  const text = applyTextCase(source.slice(0, layer.maxCharacters), textLayer.case);
+  return suggestTextGeometry(
+    ctx,
+    textLayer,
+    text,
+    geometry,
+    dims,
+    safeZones,
+    MINIMUM_TEXT_SIZE_PX[placement],
+    lineHeight,
+  );
+}
+
+function suggestTextGeometry(
+  ctx: SKRSContext2D,
+  layer: RenderTextLayer,
+  text: string,
+  geometry: Rect,
+  dims: CanvasDimensions,
+  safeZones: readonly Rect[],
+  fontSize: number,
+  lineHeight: number,
+): Rect {
+  const family = resolveTextFontFamily(layer);
+  ctx.font = fontDeclaration(layer, family, fontSize);
+  const bounds = textSuggestionBounds(layer, geometry, safeZones, dims);
+  let fallback: PixelGeometrySuggestion | null = null;
+  for (const bound of bounds) {
+    const candidate = suggestTextGeometryWithinBound(ctx, layer, text, geometry, bound, fontSize, lineHeight);
+    if (candidate.fits) return geometryInAuthoredUnits(candidate.geometry, layer.geometry, dims);
+    fallback ??= candidate;
+  }
+  // An authored box outside every declared safe region, or text wider than
+  // the whole safe region at the readability floor, has no geometry-only
+  // solution. Still return the largest deterministic in-bounds box so a
+  // controller can quarantine it without exposing the source value.
+  return geometryInAuthoredUnits(fallback?.geometry ?? geometry, layer.geometry, dims);
+}
+
+function textSuggestionBounds(
+  layer: Pick<TextLayer, "alignment">,
+  geometry: Rect,
+  safeZones: readonly Rect[],
+  dims: CanvasDimensions,
+): Rect[] {
+  const canvas = { x: 0, y: 0, width: dims.width, height: dims.height };
+  const zones = safeZones
+    .map((zone) => intersectRects(resolveRenderGeometry(zone, dims), canvas))
+    .filter((zone): zone is Rect => zone !== null);
+  if (zones.length === 0) return [canvas];
+
+  const anchorX = horizontalTextAnchor(layer.alignment, geometry);
+  const contained = zones.filter((zone) => containsRect(zone, geometry));
+  if (contained.length > 0) return contained;
+  const anchored = zones.filter((zone) => (
+    anchorX >= zone.x
+    && anchorX <= zone.x + zone.width
+    && geometry.y >= zone.y
+    && geometry.y <= zone.y + zone.height
+  ));
+  return anchored.length > 0 ? anchored : zones;
+}
+
+function suggestTextGeometryWithinBound(
+  ctx: SKRSContext2D,
+  layer: RenderTextLayer,
+  text: string,
+  geometry: Rect,
+  bound: Rect,
+  fontSize: number,
+  lineHeight: number,
+): PixelGeometrySuggestion {
+  const anchorX = horizontalTextAnchor(layer.alignment, geometry);
+  const boundRight = bound.x + bound.width;
+  const boundBottom = bound.y + bound.height;
+  const maxWidth = layer.alignment === "left"
+    ? boundRight - anchorX
+    : layer.alignment === "right"
+      ? anchorX - bound.x
+      : 2 * Math.min(anchorX - bound.x, boundRight - anchorX);
+  const availableHeight = boundBottom - geometry.y;
+  if (maxWidth <= 0 || availableHeight <= 0 || geometry.y < bound.y) {
+    return { geometry: clampRectToBound(geometry, bound), fits: false };
+  }
+
+  const minimumRatioHeight = hasPositiveSizeRatio(layer) ? fontSize / Number(layer.sizeRatio) : 0;
+  const measure = (width: number) => {
+    const lines = wrapText(ctx, text, width, layer.tracking);
+    const widest = Math.max(0, ...lines.map((line) => measureTrackedTextWidth(ctx, line, layer.tracking)));
+    const requiredHeight = Math.max(
+      geometry.height,
+      minimumRatioHeight,
+      paintedHeight(ctx, lines, fontSize, lineHeight),
+    );
+    return {
+      requiredHeight,
+      fits: lines.length <= layer.maxLines
+        && widest <= width + 0.0001
+        && requiredHeight <= availableHeight + 0.0001,
+    };
+  };
+
+  const minimumWidth = Math.min(maxWidth, Math.max(0.001, geometry.width));
+  const maximum = measure(maxWidth);
+  let width = maxWidth;
+  let result = maximum;
+  if (maximum.fits) {
+    const minimum = measure(minimumWidth);
+    if (minimum.fits) {
+      width = minimumWidth;
+      result = minimum;
+    } else {
+      let low = minimumWidth;
+      let high = maxWidth;
+      for (let iteration = 0; iteration < 48; iteration += 1) {
+        const midpoint = (low + high) / 2;
+        if (measure(midpoint).fits) high = midpoint;
+        else low = midpoint;
+      }
+      width = Math.min(maxWidth, Math.ceil(high * 1000) / 1000);
+      result = measure(width);
+    }
+  }
+
+  const height = Math.min(availableHeight, Math.ceil(result.requiredHeight * 1000) / 1000);
+  const x = layer.alignment === "left"
+    ? anchorX
+    : layer.alignment === "right"
+      ? anchorX - width
+      : anchorX - width / 2;
+  return {
+    geometry: { x, y: geometry.y, width, height },
+    fits: result.fits && height + 0.0001 >= result.requiredHeight,
+  };
+}
+
+function horizontalTextAnchor(alignment: TextLayer["alignment"], geometry: Rect): number {
+  return alignment === "left"
+    ? geometry.x
+    : alignment === "right"
+      ? geometry.x + geometry.width
+      : geometry.x + geometry.width / 2;
+}
+
+function intersectRects(left: Rect, right: Rect): Rect | null {
+  const x = Math.max(left.x, right.x);
+  const y = Math.max(left.y, right.y);
+  const rightEdge = Math.min(left.x + left.width, right.x + right.width);
+  const bottomEdge = Math.min(left.y + left.height, right.y + right.height);
+  return rightEdge > x && bottomEdge > y
+    ? { x, y, width: rightEdge - x, height: bottomEdge - y }
+    : null;
+}
+
+function containsRect(bound: Rect, geometry: Rect): boolean {
+  return geometry.x >= bound.x
+    && geometry.y >= bound.y
+    && geometry.x + geometry.width <= bound.x + bound.width
+    && geometry.y + geometry.height <= bound.y + bound.height;
+}
+
+function clampRectToBound(geometry: Rect, bound: Rect): Rect {
+  const width = Math.min(Math.max(0.001, geometry.width), bound.width);
+  const height = Math.min(Math.max(0.001, geometry.height), bound.height);
+  return {
+    x: Math.min(bound.x + bound.width - width, Math.max(bound.x, geometry.x)),
+    y: Math.min(bound.y + bound.height - height, Math.max(bound.y, geometry.y)),
+    width,
+    height,
+  };
+}
+
+function geometryInAuthoredUnits(geometry: Rect, authored: Rect, dims: CanvasDimensions): Rect {
+  const authoredValues = [authored.x, authored.y, authored.width, authored.height];
+  if (!authoredValues.every((value) => Number.isFinite(value) && Math.abs(value) <= 1.001)) return geometry;
+  return {
+    x: geometry.x / dims.width,
+    y: geometry.y / dims.height,
+    width: geometry.width / dims.width,
+    height: geometry.height / dims.height,
+  };
+}
+
 function textPreflightViolation(
   placement: Placement,
   layerId: string,
@@ -588,12 +820,15 @@ function textPreflightViolation(
     readabilityFloorPx,
     ...sizing,
     reason: `${placement} text layer ${safeLayerId} ${qualifier} the ${readabilityFloorPx}px readability floor`,
+    suggestedGeometry: normalizeSuggestedGeometry(suggestedGeometry),
+    ...(suggestedFontSizePx === undefined ? {} : { suggestedFontSizePx }),
   };
 }
 
 function multilineLineHeightViolation(
   placement: Placement,
   layer: Pick<TextLayer, "layerId" | "lineHeight" | "maxLines">,
+  suggestedGeometry: Rect,
 ): MultilineLineHeightPreflightViolation {
   const safeLayerId = normalizeLayerId(layer.layerId);
   return {
@@ -604,12 +839,13 @@ function multilineLineHeightViolation(
     lineHeight: layer.lineHeight,
     minimumLineHeight: MINIMUM_MULTILINE_LINE_HEIGHT,
     reason: `${placement} text layer ${safeLayerId} with maxLines ${layer.maxLines} must use lineHeight at least ${MINIMUM_MULTILINE_LINE_HEIGHT}`,
+    suggestedGeometry: normalizeSuggestedGeometry(suggestedGeometry),
   };
 }
 
 function normalizeTextPreflightViolation(violation: TextPreflightViolation): TextPreflightViolation {
   if (violation.kind === "multiline_line_height_below_minimum") {
-    return multilineLineHeightViolation(violation.placement, violation);
+    return multilineLineHeightViolation(violation.placement, violation, violation.suggestedGeometry);
   }
   return textPreflightViolation(
     violation.placement,
@@ -623,6 +859,16 @@ function normalizeTextPreflightViolation(violation: TextPreflightViolation): Tex
         .map((key) => [key, violation[key]]),
     ),
   );
+}
+
+function normalizeSuggestedGeometry(geometry: Rect): Rect {
+  const finite = (value: number, fallback: number) => Number.isFinite(value) ? value : fallback;
+  return {
+    x: finite(geometry.x, 0),
+    y: finite(geometry.y, 0),
+    width: Math.max(0.001, finite(geometry.width, 0.001)),
+    height: Math.max(0.001, finite(geometry.height, 0.001)),
+  };
 }
 
 function normalizeLayerId(layerId: string): string {
