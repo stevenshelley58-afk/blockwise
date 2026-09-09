@@ -20,6 +20,7 @@ import {
   measureTrackedTextWidth as measureSharedTrackedTextWidth,
   prepareTextLayout,
   segmentGraphemes,
+  wrapText,
 } from "./text-layout.ts";
 
 export interface RenderInput {
@@ -50,6 +51,9 @@ type TextPreflightViolationBase = {
 type TextReadabilityPreflightViolation = TextPreflightViolationBase & {
   kind: "below_readability_floor" | "cannot_fit_readability_floor";
   readabilityFloorPx: number;
+  requiredLinesAtFloor?: number;
+  requiredHeightAtFloorPx?: number;
+  requiredWidthAtFloorPx?: number;
 };
 
 type MultilineLineHeightPreflightViolation = TextPreflightViolationBase & {
@@ -408,9 +412,25 @@ function prepareText(
   });
   if (prepared.kind === "skip") return prepared;
   if (prepared.kind === "unfit") {
+    // Use the same registered font, wrapping and ink metrics as production.
+    // Diagnostics describe the needed box; they never resize or approve it.
+    const measure = (value: string, fontSize: number) => {
+      ctx.font = fontDeclaration(textLayer, family, fontSize);
+      return textMetrics(ctx, value, fontSize);
+    };
+    const lines = wrapText(text, geometry.width, readabilityFloor, layer.tracking, measure);
+    const metrics = lines.map((line) => measure(line || "M", readabilityFloor));
+    const sizing = {
+      requiredLinesAtFloor: lines.length,
+      requiredHeightAtFloorPx: Math.ceil(Math.max(0, ...metrics.map((metric) => metric.ascent))
+        + Math.max(0, ...metrics.map((metric) => metric.descent))
+        + Math.max(0, lines.length - 1) * readabilityFloor * layer.lineHeight),
+      requiredWidthAtFloorPx: Math.ceil(Math.max(0, ...lines.map((line) =>
+        measureSharedTrackedTextWidth(measure, line, readabilityFloor, layer.tracking)))),
+    };
     return {
       kind: "violation",
-      violation: textPreflightViolation(placement, layer.layerId, "cannot_fit_readability_floor", readabilityFloor),
+      violation: textPreflightViolation(placement, layer.layerId, "cannot_fit_readability_floor", readabilityFloor, sizing),
     };
   }
   return { ...prepared, textLayer, geometry };
@@ -442,6 +462,7 @@ function textPreflightViolation(
   layerId: string,
   kind: TextReadabilityPreflightViolation["kind"],
   readabilityFloorPx: number,
+  sizing?: Pick<TextReadabilityPreflightViolation, "requiredLinesAtFloor" | "requiredHeightAtFloorPx" | "requiredWidthAtFloorPx">,
 ): TextReadabilityPreflightViolation {
   const safeLayerId = normalizeLayerId(layerId);
   const qualifier = kind === "below_readability_floor" ? "is below" : "cannot fit at";
@@ -450,6 +471,7 @@ function textPreflightViolation(
     layerId: safeLayerId,
     kind,
     readabilityFloorPx,
+    ...sizing,
     reason: `${placement} text layer ${safeLayerId} ${qualifier} the ${readabilityFloorPx}px readability floor`,
   };
 }
@@ -479,6 +501,12 @@ function normalizeTextPreflightViolation(violation: TextPreflightViolation): Tex
     violation.layerId,
     violation.kind,
     violation.readabilityFloorPx,
+    Object.fromEntries(
+      (["requiredLinesAtFloor", "requiredHeightAtFloorPx", "requiredWidthAtFloorPx"] as const)
+        .filter((key) => typeof violation[key] === "number" && Number.isFinite(violation[key])
+          && violation[key]! >= 0 && violation[key]! <= 1_000_000)
+        .map((key) => [key, violation[key]]),
+    ),
   );
 }
 
