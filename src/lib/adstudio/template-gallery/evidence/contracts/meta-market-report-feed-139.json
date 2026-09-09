@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "templateId": "meta-market-report-feed-139",
+  "source": { "file": "01_feed_4x5_best/meta_139.png", "contentHash": "4d627695b6ee3ca05db7a3c263bdbb544860a95f49e672f148d0b1d8ed02b328" },
+  "method": "manual_full_size_visual_contract_audit",
+  "result": "The contract records the visible logo, land visual, and land-enquiry text; the former market-report contract was removed.",
+  "reviewedAt": "2026-08-11T00:00:00.000Z"
+}
