@@ -1050,6 +1050,8 @@ export async function evaluateMetaPublishPlanPreProviderReadiness(service: Supab
   if (bindings.length === 0 || bindingChecks.some(Boolean)) {
     readiness.blockers.push("A finished clone changed after compliance. Re-run compliance before publishing.");
   }
+  const pausedEvidenceBlocker = pausedReadbackEvidenceBlocker(plan);
+  if (pausedEvidenceBlocker) readiness.blockers.push(pausedEvidenceBlocker);
   return readiness;
 }
 
