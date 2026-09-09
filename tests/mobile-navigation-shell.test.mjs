@@ -23,31 +23,29 @@ test("customer mobile navigation keeps the five permanent destinations", () => {
   assert.match(mobileNav, /<span>\{copy\.more\}<\/span>/);
 });
 
-test("unified surfaces share one customer mobile nav (no monitor/operator split)", () => {
-  assert.doesNotMatch(mobileNav, /function monitorItems/);
-  assert.doesNotMatch(mobileNav, /function itemsForVariant/);
-  assert.doesNotMatch(mobileNav, /variant === "monitor"/);
-  assert.doesNotMatch(mobileNav, /variant: SidebarVariant/);
-  // Unified access: monitor-mode workspaces keep self-serve + adstudio access.
+test("mobile navigation is one customer bar in every workspace", () => {
+  assert.doesNotMatch(mobileNav, /variant/);
+  assert.doesNotMatch(mobileNav, /monitorItems|itemsForVariant/);
+  assert.match(mobileNav, /const allItems = navByVariant\.self_serve/);
   assert.equal(canAccessSurface({ role: "owner", workspaceMode: "monitor" }, "self_serve"), true);
   assert.equal(canAccessSurface({ role: "owner", workspaceMode: "monitor" }, "adstudio"), true);
 });
 
 test("Ad Studio shares the global mobile frame on every route, including the editor", () => {
-  assert.match(studioShell, /<MobileBottomNav homeHref=\{homeHref\}/);
-  assert.doesNotMatch(studioShell, /<MobileBottomNav variant=/);
+  assert.match(studioShell, /<MobileBottomNav homeHref=\{homeHref\} account=\{account\} \/>/);
   assert.match(studioShell, /contextual \? "min-h-0 overflow-hidden pb-\[calc\(5rem\+env\(safe-area-inset-bottom\)\+var\(--consent-banner-height,0px\)\)\]/);
   assert.doesNotMatch(studioShell, /aria-label="Studio mobile navigation"/);
   assert.match(mobileNav, /pathname === "\/ad-studio" \|\| pathname\.startsWith\("\/ad-studio\/"/);
 });
 
-test("More owns overflow state on the unified nav", () => {
-  assert.match(mobileNav, /const moreActive = moreOpen/);
+test("More owns overflow state and signs out directly to login", () => {
+  assert.match(mobileNav, /const moreActive = moreOpen \|\| moreCurrent/);
   assert.match(mobileNav, /aria-current=\{moreCurrent \? "page"/);
   assert.match(mobileNav, /aria-pressed=\{moreActive\}/);
+  assert.match(mobileNav, /void signOut\(\)/);
+  assert.match(mobileNav, /router\.replace\("\/login"\)/);
   assert.match(mobileNav, /<Sheet open=\{moreOpen\}/);
-  assert.match(selfServeShell, /<MobileBottomNav homeHref=/);
-  assert.doesNotMatch(selfServeShell, /<MobileBottomNav variant=/);
+  assert.match(selfServeShell, /<MobileBottomNav homeHref="\/self-serve"/);
   assert.match(routeShell, /pathname === "\/ad-studio" \|\| pathname\.startsWith\("\/ad-studio\/"/);
   assert.match(routeShell, /<StudioShell[\s\S]*workspaceName=\{workspaceName\}/);
 });
