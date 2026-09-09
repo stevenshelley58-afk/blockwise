@@ -49,8 +49,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: { absolute: `Every live ad across ${postcode} | Blockwise` },
     description,
-    alternates: { canonical: `/suburb/${postcode}` },
-    openGraph: { title: `Every live ad across ${postcode}`, description, url: `/suburb/${postcode}`, type: "website" },
+    alternates: { canonical: `/${postcode}` },
+    openGraph: { title: `Every live ad across ${postcode}`, description, url: `/${postcode}`, type: "website" },
   };
 }
 

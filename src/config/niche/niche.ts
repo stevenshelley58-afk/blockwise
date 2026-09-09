@@ -13,6 +13,8 @@ export type NicheFeatures = {
   propertyCheck: boolean;
   /** Public area/suburb report pages. */
   suburbPages: boolean;
+  /** Internal hero design playground; never enable in a customer deployment. */
+  heroLab: boolean;
   /** Marketing guides section. */
   guides: boolean;
 };

@@ -79,6 +79,16 @@ const nextConfig: NextConfig = {
       { source: "/campaigns", destination: "/results", permanent: false },
     ];
   },
+
+  // Public suburb reports are linked from outbound email as blockwise.sale/6153.
+  // A plain array is afterFiles: real pages win, and only bare four-digit paths
+  // fall through to the report route. The proxy sees the original "/6153" path,
+  // which matches no feature-gated prefix, so the gate still governs "/suburb".
+  async rewrites() {
+    return [
+      { source: "/:postcode(\\d{4})", destination: "/suburb/:postcode" },
+    ];
+  },
   async headers() {
     // Security headers for the standalone Next server behind Caddy.
     // Directives are composed from the verified browser-loaded provider
