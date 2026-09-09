@@ -125,6 +125,7 @@ export default async function SuburbEmailPreviewPage({ params, searchParams }: P
     unsubscribeUrl: `${siteUrl()}/preferences/unsubscribe`,
     areaSummary: snapshotResult.summary,
     subjectStyle: style,
+    allowedMediaOrigins: configuredMediaOrigins(),
     theme,
   });
 
