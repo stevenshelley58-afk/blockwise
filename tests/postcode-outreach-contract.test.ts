@@ -50,10 +50,12 @@ test("public projection strips CRM fields and requires both rights and allowed m
 test("segment-specific email uses the same clock, two peers, Steven and a genuine unsubscribe link", () => {
   const observed = buildOutreachEmail(input());
   const noAds = buildOutreachEmail({ ...input(), prospect: person("no_ads_found_after_successful_recent_scan") });
-  assert.match(observed.subject, /Your ads alongside/); assert.match(noAds.subject, /What agents around/);
+  assert.match(observed.subject, /I audited every property ad in 6000/); assert.match(noAds.subject, /I audited every property ad in 6000/);
+  assert.match(buildOutreachEmail({ ...input(), subjectStyle: "peers" }).subject, /Example City Realty/);
   assert.match(observed.text, /Example City Realty/); assert.match(noAds.text, /Example Local Property/);
-  assert.match(noAds.text, /Steven/); assert.doesNotMatch(noAds.text, /not advertising|private report|consent basis|Manage preferences/);
-  assert.equal((observed.text.match(/View the Perth ad report/g) ?? []).length, 1);
+  assert.match(observed.text, /See it in the Ad Library/); assert.match(noAds.text, /Steven/);
+  assert.doesNotMatch(noAds.text, /not advertising|private report|consent basis|Manage preferences/);
+  assert.equal((observed.text.match(/See all 6 ads/g) ?? []).length, 1);
   assert.throws(() => buildOutreachEmail({ ...input(), unsubscribeUrl: input().reportUrl }), /separate/);
   assert.throws(() => buildOutreachEmail({ ...input(), snapshot: { ...area, adExamples: [] } }), /Two sourced/);
 });
