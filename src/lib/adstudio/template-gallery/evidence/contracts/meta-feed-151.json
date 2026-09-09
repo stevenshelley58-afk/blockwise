@@ -1,8 +1,0 @@
-{
-  "schemaVersion": 1,
-  "templateId": "meta-feed-151",
-  "source": { "file": "01_feed_4x5_best/meta_151.png", "contentHash": "14b9dc6b4444b2da96cdc95cec203654772ac935125035ef8d5230fa4f028979" },
-  "method": "manual_full_size_visual_contract_audit",
-  "result": "Every visible customer-owned image and editable text value is declared; no layout recipe was recorded.",
-  "reviewedAt": "2026-08-11T00:00:00.000Z"
-}
