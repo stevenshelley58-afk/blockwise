@@ -21,6 +21,8 @@ alternate production versions.
 - [Product worker deployment](runbooks/vps-worker-deploy.md)
 - [Client-data isolation](security/client-data-isolation.md)
 - [Product-agent safety](security/agent-safety.md)
+- [Transactional email outbox](runbooks/transactional-email.md)
+- [Postcode outreach drafts and sample previews](runbooks/postcode-outreach.md)
 
 The maintained production target is the self-hosted VPS product stack behind
 Caddy. Verify its current revision through the production runbook; an old
@@ -50,6 +52,8 @@ guides. Third-party licence text is retained unchanged.
 
 - [8 September documentation audit](releases/2026-09-08-docs-alignment.md)
 - [8 September customer UX swarm lane 3 (draft evidence)](releases/2026-09-08-customer-ux-swarm.md)
+- [7 September postcode outreach release](releases/2026-09-07-postcode-outreach.md)
+- [7 September guides editorial redesign](releases/2026-09-07-guides-editorial.md)
 - [6 September template-editor release](releases/2026-09-06-template-editor.md)
 - [OSS migration record](runbooks/oss-product-migration.md)
 
