@@ -183,17 +183,19 @@ describe("customer Ad Studio workbench contract", () => {
     const panel = readFileSync("src/components/adstudio/editor/meta-copy-panel.tsx", "utf8");
     const preview = readFileSync("src/components/adstudio/editor/meta-placement-preview.tsx", "utf8");
     const state = readFileSync("src/components/adstudio/editor/use-editor-state.ts", "utf8");
+    const shell = readFileSync("src/components/adstudio/editor/editor-shell.tsx", "utf8");
 
     assert.match(panel, /META_CTA_VALUES/);
     assert.match(panel, /value=\{toMetaCta\(values\.cta\)\}/);
     assert.match(panel, /\{labelForMetaCta\(cta\)\}/);
     assert.match(preview, /return labelForMetaCta\(toMetaCta\(value\)\)/);
     assert.match(state, /metaCopy: normalizeEditorMetaCopy\(defaults\.metaCopy\)/);
-    assert.match(state, /metaCopy: normalizeEditorMetaCopy\(\{[\s\S]*?cta: initialDocument\.metaCta/);
+    assert.match(state, /metaCopy: hydrateEditorMetaCopy\(\{[\s\S]*?cta: initialDocument\.metaCta[\s\S]*?\}, base\.metaCopy\)/);
     assert.match(state, /metaCopy: normalizeEditorMetaCopy\(defaults\)/);
     assert.match(state, /metaCopy: normalizeEditorMetaCopy\(\{ \.\.\.prev\.metaCopy, \.\.\.copy \}\)/);
     assert.match(state, /\[field\]: field === "cta" \? toMetaCta\(value\) : value/);
     assert.match(state, /metaCta: toMetaCta\(state\.metaCopy\.cta\)/);
+    assert.match(shell, /destinationKind === "instant_form" \? "Instant form"/);
   });
 
   it("keeps 320px editor actions responsive and navigation touch targets at least 44px", () => {

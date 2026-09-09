@@ -66,6 +66,23 @@ function resolveRect(
   return geometry;
 }
 
+function resolveRect(
+  geometry: z.infer<typeof rectSchema>,
+  width: number,
+  height: number,
+): z.infer<typeof rectSchema> {
+  const values = [geometry.x, geometry.y, geometry.width, geometry.height];
+  if (values.every((value) => Math.abs(value) <= 1.001)) {
+    return {
+      x: geometry.x * width,
+      y: geometry.y * height,
+      width: geometry.width * width,
+      height: geometry.height * height,
+    };
+  }
+  return geometry;
+}
+
 const layerSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("plate"), layerId: z.string().min(1), colourRole: colourRoleSchema, assetKey: z.string().min(1).optional(), geometry: rectSchema, protected: z.boolean(), ...appearanceShape }).strict(),
   z.object({ type: z.literal("image_slot"), layerId: z.string().min(1), inputKey: z.string().min(1), geometry: rectSchema, mask: z.enum(["rounded_rect", "circle", "none"]), minSourceWidth: z.number().int().positive(), minSourceHeight: z.number().int().positive(), defaultCrop: rectSchema, allowedPlacementOverrides: z.array(z.enum(["crop", "position"])), effects: effectsSchema.optional(), cornerRadius: z.number().min(0).max(540).optional(), opacity: z.number().min(0).max(1).optional() }).strict(),

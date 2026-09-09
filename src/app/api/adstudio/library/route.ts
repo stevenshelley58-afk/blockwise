@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { requireAdStudioRequest } from "@/lib/adstudio/http";
 import { loadAdStudioLibraryPage } from "@/lib/adstudio/library-read-model";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +21,7 @@ export async function GET(request: NextRequest) {
   try {
     const page = await loadAdStudioLibraryPage({
       supabase: access.supabase,
+      ...(kind === "ads" ? { templateSupabase: createSupabaseServiceClient() } : {}),
       workspaceId: access.access.workspaceId,
       kind,
       limit,

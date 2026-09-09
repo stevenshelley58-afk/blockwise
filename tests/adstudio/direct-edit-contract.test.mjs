@@ -36,7 +36,7 @@ describe("Ad Studio direct-edit contract", () => {
 
     assert.match(canvas, /const selectedLayerIdRef = useRef\(selectedLayerId\)/);
     assert.match(canvas, /selectedLayerIdRef\.current = selectedLayerId/);
-    assert.match(renderEffect, /\[colours, cropOverrides, imageValues, layout, templateId, ready, textValues\]/);
+    assert.match(renderEffect, /\[colours, cropOverrides, existingAdId, imageValues, layout, templateId, ready, textValues\]/);
     assert.doesNotMatch(renderEffect, /ready, selectedLayerId/);
     assert.match(canvas, /\[ready, selectedLayerId\]/);
   });

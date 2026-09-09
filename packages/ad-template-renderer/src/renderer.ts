@@ -323,6 +323,25 @@ export function imageMaskRadius(geometry: Pick<Rect, "width" | "height">): numbe
   return Math.min(16, geometry.width / 2, geometry.height / 2);
 }
 
+/** Preserve the complete source inside a logo slot without distortion. */
+export function resolveContainDestinationRect(
+  sourceWidth: number,
+  sourceHeight: number,
+  destination: { x: number; y: number; width: number; height: number },
+): { x: number; y: number; width: number; height: number } {
+  const width = Math.max(1, sourceWidth);
+  const height = Math.max(1, sourceHeight);
+  const scale = Math.min(destination.width / width, destination.height / height);
+  const renderedWidth = width * scale;
+  const renderedHeight = height * scale;
+  return {
+    x: destination.x + (destination.width - renderedWidth) / 2,
+    y: destination.y + (destination.height - renderedHeight) / 2,
+    width: renderedWidth,
+    height: renderedHeight,
+  };
+}
+
 function normalizeCrop(crop: Rect): Rect {
   // Keep the source rectangle non-empty even for malformed overrides at the
   // lower/right edge. drawImage rejects a zero-sized source rectangle.

@@ -14,6 +14,7 @@ import { LayeredCanvas } from "./layered-canvas";
 import { MetaCopyPanel } from "./meta-copy-panel";
 import { FeedPreview, StoryPreview } from "./meta-previews";
 import { uploadCustomerImage } from "./customer-image-upload";
+import { templateAssetProxyUrl } from "@/lib/adstudio/pack-gallery";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

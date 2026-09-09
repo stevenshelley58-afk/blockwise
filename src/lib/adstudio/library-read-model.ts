@@ -57,6 +57,8 @@ type Cursor = { orderAt: string; id: string };
 
 export async function loadAdStudioLibraryPage(input: {
   supabase: QueryClient;
+  /** Internal template reader; ad rows remain workspace-scoped on supabase. */
+  templateSupabase?: QueryClient;
   workspaceId: string;
   kind: "assets" | "ads";
   limit?: number;

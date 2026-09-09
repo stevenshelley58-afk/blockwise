@@ -10,6 +10,7 @@ export interface TemplateSummary {
 }
 export type TemplateLeadType = "seller" | "buyer" | "appraisal" | "open_home" | "market_update" | "other";
 export type GallerySamplePlacement = "feed" | "story";
+export type TemplateLibraryStatus = "active" | "quarantined";
 type TemplateRow = { template_id: unknown; template_json: unknown; created_at: unknown };
 function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;

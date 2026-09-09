@@ -2,6 +2,7 @@ import { StudioLibrary } from "@/components/adstudio/studio-library";
 import { loadAdStudioLibraryPage, type LibraryAdModel, type LibraryAssetModel } from "@/lib/adstudio/library-read-model";
 import { isExampleBrandKitSourceUrl } from "@/lib/adstudio/persistence";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 

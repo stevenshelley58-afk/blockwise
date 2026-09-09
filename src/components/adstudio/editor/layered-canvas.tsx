@@ -526,13 +526,16 @@ async function createLayerObject({
 function fitImageToGeometry(image: import("fabric").FabricImage, geometry: Rect) {
   const width = Math.max(1, image.width);
   const height = Math.max(1, image.height);
+  const scale = Math.min(geometry.width / width, geometry.height / height);
+  const renderedWidth = width * scale;
+  const renderedHeight = height * scale;
   image.set({
-    left: geometry.x,
-    top: geometry.y,
+    left: geometry.x + (geometry.width - renderedWidth) / 2,
+    top: geometry.y + (geometry.height - renderedHeight) / 2,
     originX: "left",
     originY: "top",
-    scaleX: geometry.width / width,
-    scaleY: geometry.height / height,
+    scaleX: scale,
+    scaleY: scale,
   });
 }
 
