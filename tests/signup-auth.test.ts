@@ -14,7 +14,7 @@ const accessUnavailablePagePath = "src/app/access-unavailable/page.tsx";
 const accessUnavailableActionsPath = "src/app/access-unavailable/access-unavailable-actions.tsx";
 const turnstileVerificationPath = "src/components/auth/turnstile-verification.tsx";
 
-test("signup starts or resumes an account with one passwordless email field", () => {
+test("signup offers magic-link, password and SSO account paths", () => {
   const source = readFileSync(signupFormPath, "utf8");
   const turnstile = readFileSync(turnstileVerificationPath, "utf8");
 
@@ -29,17 +29,21 @@ test("signup starts or resumes an account with one passwordless email field", ()
   assert.match(source, /captchaToken:\s*turnstileToken/i);
   assert.match(source, /signInWithOtp\(\{/i);
   assert.match(source, /shouldCreateUser:\s*true/i);
-  assert.match(source, /emailRedirectTo:\s*`\$\{location\.origin\}\/auth\/confirm\?next=\/self-serve&flow=signup`/i);
+  assert.match(source, /emailRedirectTo:/i);
+  assert.match(source, /\/auth\/confirm\?next=\/self-serve&flow=signup/i);
   assert.match(source, /signup_flow:\s*"trial_self_serve"/i);
   assert.match(source, /name="company_website"/i);
   assert.match(source, /signup-honeypot/i);
   assert.match(source, /By continuing, you accept the/i);
   assert.match(source, /href="\/terms"/i);
   assert.match(source, /href="\/privacy"/i);
-  assert.doesNotMatch(source, /type="password"/i);
+  assert.match(source, /useState<"magic" \| "password">/i);
+  assert.match(source, /<SSOButtons/i);
+  assert.match(source, /type="password"/i);
+  assert.match(source, /signUp\(\{/i);
+  assert.match(source, /Password must be at least 8 characters/i);
   assert.doesNotMatch(source, /name="agency_name"/i);
   assert.doesNotMatch(source, /name="terms"/i);
-  assert.doesNotMatch(source, /signUp\(\{/i);
   assert.doesNotMatch(source, /onboarding_status/i);
 });
 

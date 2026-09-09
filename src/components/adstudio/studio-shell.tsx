@@ -149,7 +149,7 @@ export function StudioShell({
         <main className={cn("min-w-0 flex-1", contextual ? "min-h-0 overflow-hidden pb-[calc(5rem+env(safe-area-inset-bottom)+var(--consent-banner-height,0px))] md:pb-0" : "pb-[calc(5rem+env(safe-area-inset-bottom)+var(--consent-banner-height,0px))] md:pb-0")}>
           {children}
         </main>
-        <MobileBottomNav variant="self_serve" homeHref={homeHref} account={account} />
+        <MobileBottomNav homeHref={homeHref} account={account} />
       </div>
     </div>
   );

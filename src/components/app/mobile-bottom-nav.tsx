@@ -1,32 +1,22 @@
 "use client";
 
-import { ChartNoAxesCombined, Download, Ellipsis, House, LifeBuoy, LogOut, Megaphone, MoreHorizontal, UsersRound } from "lucide-react";
+import { ChartNoAxesCombined, Download, Ellipsis, House, LifeBuoy, LogOut, Megaphone, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 
 import { niche } from "@/config/niche";
-import { isItemActive, navByVariant, type NavItem, type SidebarVariant } from "@/components/sidebar-nav";
+import { isItemActive, navByVariant, type NavItem } from "@/components/sidebar-nav";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type MobileBottomNavProps = {
-  variant: SidebarVariant;
   homeHref?: string;
   account: { email: string; name: string; role: string };
   homePilot?: boolean;
 };
 
 type MobileNavItem = NavItem & { mobileLabel?: string };
-
-const legacyPrimaryHrefs: Partial<Record<SidebarVariant, string[]>> = {
-  operator: ["/operator", "/operator/customers"],
-};
-
-const legacyMobileLabels: Record<string, string> = {
-  "/operator/customers": "Customers",
-  "/model-control": "Model",
-};
 
 function customerItems(): { primaryItems: MobileNavItem[]; overflowItems: MobileNavItem[] } {
   const allItems = navByVariant.self_serve;
@@ -37,55 +27,28 @@ function customerItems(): { primaryItems: MobileNavItem[]; overflowItems: Mobile
   return { primaryItems, overflowItems: allItems.filter((item) => !primaryHrefs.has(item.href)) };
 }
 
-function monitorItems(): { primaryItems: MobileNavItem[]; overflowItems: MobileNavItem[] } {
-  const allItems = navByVariant.monitor;
-  const primaryHrefs = ["/results", "/leads", "/settings"];
-  const primaryItems = primaryHrefs
-    .map((href) => allItems.find((item) => item.href === href))
-    .filter((item): item is NavItem => Boolean(item));
-  const primarySet = new Set(primaryItems.map((item) => item.href));
-  return { primaryItems, overflowItems: allItems.filter((item) => !primarySet.has(item.href)) };
-}
-
-function itemsForVariant(variant: SidebarVariant) {
-  if (variant === "self_serve") return customerItems();
-  if (variant === "monitor") return monitorItems();
-  const allItems = navByVariant[variant];
-  const primaryHrefs = legacyPrimaryHrefs[variant] ?? [];
-  const primaryItems = primaryHrefs
-    .map((href) => allItems.find((item) => item.href === href))
-    .filter((item): item is NavItem => Boolean(item))
-    .map((item) => ({ ...item, mobileLabel: item.mobileLabel ?? legacyMobileLabels[item.href] }));
-  const primarySet = new Set(primaryItems.map((item) => item.href));
-  return { primaryItems, overflowItems: allItems.filter((item) => !primarySet.has(item.href)) };
-}
-
-function itemIsActive(pathname: string, item: MobileNavItem, homeHref: string, activeItems = navByVariant.self_serve) {
+function itemIsActive(pathname: string, item: MobileNavItem, homeHref: string) {
   if (item.href === "/ad-studio") return pathname === "/ad-studio" || pathname.startsWith("/ad-studio/");
   if (pathname.startsWith("/ad-studio/")) return false;
-  if (item.href === homeHref && homeHref !== "/results" && !homeHref.startsWith("/results?")) {
+  if (item.href === homeHref) {
     return pathname === homeHref || pathname.startsWith(`${homeHref}/`);
   }
-  return isItemActive(pathname, item.href, activeItems);
+  return isItemActive(pathname, item.href, navByVariant.self_serve);
 }
 
-export function MobileBottomNav({ variant, homeHref = "/self-serve", account, homePilot = false }: MobileBottomNavProps) {
+export function MobileBottomNav({ homeHref = "/self-serve", account, homePilot = false }: MobileBottomNavProps) {
   const pathname = usePathname() ?? "";
   const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
   const moreButton = useRef<HTMLButtonElement>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const { primaryItems, overflowItems } = useMemo(
-    () => itemsForVariant(variant),
-    [variant],
-  );
+  const { primaryItems, overflowItems } = useMemo(() => customerItems(), []);
   const copy = niche.copy.shell;
-  const activeItems = navByVariant[variant];
-  const moreCurrent = !pathname.startsWith("/ad-studio/") && overflowItems.some((item) => itemIsActive(pathname, item, homeHref, activeItems));
+  const activeItems = navByVariant.self_serve;
+  const moreCurrent = !pathname.startsWith("/ad-studio/") && overflowItems.some((item) => itemIsActive(pathname, item, homeHref));
   const moreActive = moreOpen || moreCurrent;
 
   async function signOut() {
-    if (pathname.startsWith("/ad-studio/ads/") && !window.confirm("Leave this editor and sign out?")) return;
     setIsSigningOut(true);
     const supabase = createSupabaseBrowserClient();
     await supabase.auth.signOut();
@@ -100,9 +63,9 @@ export function MobileBottomNav({ variant, homeHref = "/self-serve", account, ho
 
   return (
     <>
-      <nav className={variant === "self_serve" ? `mobile-bottom-nav mobile-bottom-nav--customer${homePilot ? " mobile-bottom-nav--customer-home" : ""}` : "mobile-bottom-nav"} aria-label="Primary mobile navigation">
+      <nav className={`mobile-bottom-nav mobile-bottom-nav--customer${homePilot ? " mobile-bottom-nav--customer-home" : ""}`} aria-label="Primary mobile navigation">
         {primaryItems.map((item) => {
-          const Icon = homePilot && variant === "self_serve"
+          const Icon = homePilot
             ? item.href === homeHref
               ? House
               : item.href === "/ad-studio"
@@ -113,23 +76,19 @@ export function MobileBottomNav({ variant, homeHref = "/self-serve", account, ho
                     ? UsersRound
                     : item.icon
             : item.icon;
-          const active = itemIsActive(pathname, item, homeHref, activeItems);
+          const active = itemIsActive(pathname, item, homeHref);
           return (
             <Link className={active ? "mobile-bottom-nav-item active" : "mobile-bottom-nav-item"} href={item.href} key={item.href} aria-current={active ? "page" : undefined}>
-              <Icon
-                aria-hidden
-                size={homePilot && variant === "self_serve" ? 22 : 21}
-                strokeWidth={homePilot && variant === "self_serve" ? 1.9 : undefined}
-              />
+              <Icon aria-hidden size={homePilot ? 22 : 21} strokeWidth={homePilot ? 1.9 : undefined} />
               <span>{item.mobileLabel ?? item.label}</span>
             </Link>
           );
         })}
         <button ref={moreButton} className={moreActive ? "mobile-bottom-nav-item active" : "mobile-bottom-nav-item"} type="button" onClick={() => setMoreOpen(true)} aria-expanded={moreOpen} aria-controls="mobile-more-sheet" aria-current={moreCurrent ? "page" : undefined} aria-pressed={moreActive}>
-          {homePilot && variant === "self_serve" ? (
+          {homePilot ? (
             <Ellipsis aria-hidden size={22} strokeWidth={1.9} />
           ) : (
-            <MoreHorizontal aria-hidden size={22} />
+            <span className="text-[18px]">⋯</span>
           )}
           <span>{copy.more}</span>
         </button>
@@ -145,7 +104,7 @@ export function MobileBottomNav({ variant, homeHref = "/self-serve", account, ho
             <div className="grid gap-1 px-3">
               {overflowItems.map((item) => {
                 const Icon = item.icon;
-                const active = itemIsActive(pathname, item, homeHref, activeItems);
+                const active = itemIsActive(pathname, item, homeHref);
                 return (
                   <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} onClick={() => setMoreOpen(false)} className={active ? "flex min-h-11 items-center gap-3 rounded-(--r-card) bg-(--accent-tint) px-3 text-sm font-semibold text-foreground" : "flex min-h-11 items-center gap-3 rounded-(--r-card) px-3 text-sm font-semibold text-foreground hover:bg-muted"}>
                     <Icon aria-hidden size={18} />

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 test("approval workflow stays contextual instead of exposing a standalone section", () => {
@@ -64,13 +64,12 @@ test("operator prompt preview surfaces avoid stale Phase 1 test copy", () => {
   assert.doesNotMatch(`${promptPanel}\n${promptPreviewRoute}`, /Phase 1|PR 1|Run test|Test Result/);
 });
 
-test("operator sidebar does not hardcode Hermes runtime health", () => {
+test("unified shell carries no legacy workspace variants", () => {
   const appShell = readFileSync("src/components/app-shell.tsx", "utf8");
-  const legacyShell = readFileSync("src/components/route-aware-legacy-shell.tsx", "utf8");
 
-  assert.match(appShell, /<RouteAwareLegacyShell/);
-  assert.match(legacyShell, /Hermes Engine/);
-  assert.match(legacyShell, /Open runtime workspace/);
+  assert.match(appShell, /<SelfServeShell/);
+  assert.doesNotMatch(appShell, /RouteAwareLegacyShell/);
+  assert.doesNotMatch(appShell, /Hermes Engine/);
   assert.doesNotMatch(appShell, /Operational/);
-  assert.doesNotMatch(legacyShell, /Operational/);
+  assert.equal(existsSync("src/components/route-aware-legacy-shell.tsx"), false);
 });

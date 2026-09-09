@@ -1,0 +1,8 @@
+**
+!public
+!public/**
+!.next
+!.next/standalone
+!.next/standalone/**
+!.next/static
+!.next/static/**

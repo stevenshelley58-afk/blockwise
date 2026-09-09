@@ -7,7 +7,6 @@ import { canAccessSurface } from "../src/lib/auth/access-control.ts";
 const mobileNav = readFileSync("src/components/app/mobile-bottom-nav.tsx", "utf8");
 const studioShell = readFileSync("src/components/adstudio/studio-shell.tsx", "utf8");
 const selfServeShell = readFileSync("src/components/self-serve-shell.tsx", "utf8");
-const legacyShell = readFileSync("src/components/route-aware-legacy-shell.tsx", "utf8");
 const globalCss = readFileSync("src/app/globals.css", "utf8");
 const consent = readFileSync("src/components/consent-banner.tsx", "utf8");
 
@@ -23,32 +22,29 @@ test("customer mobile navigation keeps the five permanent destinations", () => {
   assert.match(mobileNav, /<span>\{copy\.more\}<\/span>/);
 });
 
-test("monitor mobile navigation remains restricted to monitor metadata", () => {
-  const monitorSelector = mobileNav.slice(mobileNav.indexOf("function monitorItems"), mobileNav.indexOf("function itemsForVariant"));
-  assert.match(mobileNav, /if \(variant === "monitor"\) return monitorItems\(\)/);
-  assert.match(monitorSelector, /const allItems = navByVariant.monitor/);
-  assert.match(monitorSelector, /const primaryHrefs = \["\/results", "\/leads", "\/settings"\]/);
-  assert.doesNotMatch(monitorSelector, /ad-studio|Brand Pack|self_serve/);
-  assert.doesNotMatch(mobileNav, /results\?view=home|homeItemHref/);
-  assert.equal(canAccessSurface({ role: "owner", workspaceMode: "monitor" }, "self_serve"), false);
-  assert.equal(canAccessSurface({ role: "owner", workspaceMode: "monitor" }, "adstudio"), false);
+test("mobile navigation is one customer bar in every workspace", () => {
+  assert.doesNotMatch(mobileNav, /variant/);
+  assert.doesNotMatch(mobileNav, /monitorItems|itemsForVariant/);
+  assert.match(mobileNav, /const allItems = navByVariant\.self_serve/);
+  assert.equal(canAccessSurface({ role: "owner", workspaceMode: "monitor" }, "self_serve"), true);
+  assert.equal(canAccessSurface({ role: "owner", workspaceMode: "monitor" }, "adstudio"), true);
 });
 
 test("Ad Studio shares the global mobile frame on every route, including the editor", () => {
-  assert.match(studioShell, /<MobileBottomNav variant="self_serve"/);
+  assert.match(studioShell, /<MobileBottomNav homeHref=\{homeHref\} account=\{account\} \/>/);
   assert.match(studioShell, /contextual \? "min-h-0 overflow-hidden pb-\[calc\(5rem\+env\(safe-area-inset-bottom\)\+var\(--consent-banner-height,0px\)\)\]/);
   assert.doesNotMatch(studioShell, /aria-label="Studio mobile navigation"/);
   assert.match(mobileNav, /pathname === "\/ad-studio" \|\| pathname\.startsWith\("\/ad-studio\/"/);
 });
 
-test("More owns overflow state and protects editor sign-out", () => {
-  assert.match(mobileNav, /const moreActive = moreOpen/);
+test("More owns overflow state and signs out directly to login", () => {
+  assert.match(mobileNav, /const moreActive = moreOpen \|\| moreCurrent/);
   assert.match(mobileNav, /aria-current=\{moreCurrent \? "page"/);
   assert.match(mobileNav, /aria-pressed=\{moreActive\}/);
-  assert.match(mobileNav, /pathname\.startsWith\("\/ad-studio\/ads\/"\) && !window\.confirm/);
+  assert.match(mobileNav, /void signOut\(\)/);
+  assert.match(mobileNav, /router\.replace\("\/login"\)/);
   assert.match(mobileNav, /<Sheet open=\{moreOpen\}/);
-  assert.match(selfServeShell, /<MobileBottomNav variant="self_serve"/);
-  assert.match(legacyShell, /<MobileBottomNav variant=\{variant\} homeHref=\{homeHref\}/);
+  assert.match(selfServeShell, /<MobileBottomNav homeHref="\/self-serve"/);
 });
 
 test("mobile layer order keeps sheets and consent above the persistent bar", () => {

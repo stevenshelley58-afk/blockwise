@@ -5,30 +5,76 @@ import test from "node:test";
 
 import { START_TEMPLATES } from "../src/components/home-landing/data.ts";
 
-// The homepage renders from src/app/page.tsx plus the home-landing component
-// tree (desktop + mobile variants of every section). Guards that used to read
-// page.tsx alone now read the combined homepage source.
+// The homepage renders from src/app/page.tsx plus the homepage-concept tree.
+// home-landing no longer renders on /, but /pricing and /hero-lab still import
+// it, so it keeps its own guards below.
 const HOME_LANDING_DIR = "src/components/home-landing";
+const HOMEPAGE_CONCEPT_DIR = "src/components/homepage-concept";
+const HOMEPAGE_CONCEPT_LIB = "src/lib/homepage-concept";
+
+function readTree(dir: string, extensions = [".ts", ".tsx"]): string[] {
+  return readdirSync(dir)
+    .filter((file) => extensions.some((extension) => file.endsWith(extension)))
+    .sort()
+    .map((file) => readFileSync(path.join(dir, file), "utf8"));
+}
+
+// Only the components the homepage actually renders, so an unrendered file in
+// the same directory can never satisfy a homepage guard.
+const HOMEPAGE_CONCEPT_FILES = [
+  "homepage-concept.tsx",
+  "hero-ad-showcase.tsx",
+  "homepage-pricing.tsx",
+  "results-reporting.tsx",
+  "workflow-showcase.tsx",
+] as const;
 
 function readHomeSources(): { page: string; combined: string } {
   const page = readFileSync("src/app/page.tsx", "utf8");
-  const parts = readdirSync(HOME_LANDING_DIR)
-    .filter((file) => file.endsWith(".ts") || file.endsWith(".tsx"))
-    .sort()
-    .map((file) => readFileSync(path.join(HOME_LANDING_DIR, file), "utf8"));
+  const parts = [
+    ...HOMEPAGE_CONCEPT_FILES.map((file) =>
+      readFileSync(path.join(HOMEPAGE_CONCEPT_DIR, file), "utf8"),
+    ),
+    ...readTree(HOMEPAGE_CONCEPT_LIB),
+  ];
   return { page, combined: [page, ...parts].join("\n") };
+}
+
+function readHomeStyles(): string {
+  return [
+    readFileSync("src/app/concept/concept.css", "utf8"),
+    ...readTree(HOMEPAGE_CONCEPT_DIR, [".css"]),
+  ].join("\n");
+}
+
+function readLandingSources(): string {
+  return readTree(HOME_LANDING_DIR).join("\n");
 }
 
 test("public homepage does not redirect anonymous visitors to the login screen", () => {
   const { page, combined } = readHomeSources();
-  const homepageCss = readFileSync("src/app/homepage.css", "utf8");
 
   assert.doesNotMatch(page, /redirect\(/);
   // Signup flow stays reachable; wording of buttons/sections is free to change.
-  assert.match(combined, /href="\/signup"/);
+  assert.match(combined, /\/signup\?offer=self-serve/);
+  // Sign-in stays reachable from the header without gating the page, and the
+  // mobile menu carries it too. Label text itself is not pinned.
+  assert.match(combined, /LOGIN_HREF = "https:\/\/blockwise\.sale\/login"/);
+  const loginLinks = [...combined.matchAll(/href=\{LOGIN_HREF\}/g)];
+  assert.ok(
+    loginLinks.length >= 2,
+    "Log in must stay reachable from both the desktop header and the mobile menu",
+  );
+});
+
+test("home-landing chrome still used by /pricing and /hero-lab keeps its sign-in affordances", () => {
+  const landing = readLandingSources();
+  const homepageCss = readFileSync("src/app/homepage.css", "utf8");
+
+  assert.match(landing, /href="\/signup"/);
   // C5: sign-in stays in its own component so Space-key activations scroll the
   // page rather than navigating to /login. Label text itself is not pinned.
-  assert.match(combined, /SignInLink/);
+  assert.match(landing, /SignInLink/);
   assert.match(
     homepageCss,
     /@media \(max-width: 767\.98px\)[\s\S]*?\.hw-header \.hw-login \{ display: inline-flex; \}/,
@@ -50,12 +96,8 @@ test("public audit report route stays public and off the protected Ad Radar surf
   assert.match(route, /createSupabaseServiceClient/);
 });
 
-test("landing page anchors, sections, and claims stay connected", () => {
+test("homepage anchors, sections, and claims stay connected", () => {
   const { page, combined } = readHomeSources();
-  const workspaceHeroCss = readFileSync(
-    "src/components/home-landing/workspace-hero.css",
-    "utf8",
-  );
   const oldProductName = new RegExp("Aur" + "alis", "i");
   const deadAnchor = new RegExp('href="' + '#"');
   const staleSignupAnchor = 'href="#sig' + 'nup"';
@@ -80,38 +122,85 @@ test("landing page anchors, sections, and claims stay connected", () => {
   assert.doesNotMatch(combined, new RegExp(staleSignupAnchor));
   assert.doesNotMatch(combined, forbiddenClaims);
 
-  // One section element per anchor id; both breakpoint variants render inside
-  // it, so every anchor resolves at desktop and mobile widths. The former
-  // #done-for-you fold was merged into #workflow (headline + approval panel).
-  const expectedSections = [
-    "top",
-    "start",
-    "workflow",
-    "control",
-    "updates",
-    "property-check",
-    "free-trial",
-    "managed-setup",
-    "faq",
-  ];
+  // page.tsx delegates to HomepageConcept, so the section anchors live in the
+  // component. One section element per anchor id, in document order.
+  assert.match(page, /<HomepageConcept \/>/);
+
+  const expectedSections = ["top", "how-it-works", "results", "pricing", "faq", "trial"];
 
   for (const id of expectedSections) {
-    assert.match(page, new RegExp(`id="${id}"`), `missing #${id}`);
+    assert.match(combined, new RegExp(`id="${id}"`), `missing #${id}`);
   }
 
+  // #results and #pricing are owned by the child components, so document order
+  // is asserted against the composition that renders them.
+  const concept = readFileSync(
+    path.join(HOMEPAGE_CONCEPT_DIR, "homepage-concept.tsx"),
+    "utf8",
+  );
+  const composition = [
+    ['id="top"', "top"],
+    ['id="how-it-works"', "how-it-works"],
+    ["<ResultsReporting />", "results"],
+    ["<HomepagePricing />", "pricing"],
+    ['id="faq"', "faq"],
+    ['id="trial"', "trial"],
+  ] as const;
+
   let previousIndex = -1;
-  for (const id of expectedSections) {
-    const index = page.indexOf(`id="${id}"`);
-    assert.ok(index > previousIndex, `#${id} should appear after the previous major section`);
+  for (const [marker, label] of composition) {
+    const index = concept.indexOf(marker);
+    assert.ok(index > previousIndex, `#${label} should appear after the previous major section`);
     previousIndex = index;
   }
 
+  const ids = [...combined.matchAll(/id="([^"]+)"/g)].map((match) => match[1]);
+  assert.equal(new Set(ids).size, ids.length, "homepage IDs must be unique");
+
+  const localAnchors = [...combined.matchAll(/href="#([A-Za-z0-9_-]+)"/g)].map(
+    (match) => match[1],
+  );
+  for (const target of localAnchors) {
+    assert.ok(ids.includes(target), `#${target} anchor must target an existing ID`);
+  }
+});
+
+test("every rendered homepage component is covered by the homepage guards", () => {
+  // Keeps HOMEPAGE_CONCEPT_FILES honest: any .tsx in the directory must either
+  // be listed above or be genuinely unreferenced by the rest of the app.
+  const referenced = new Set<string>(HOMEPAGE_CONCEPT_FILES);
+  const sources = [
+    readFileSync("src/app/page.tsx", "utf8"),
+    readFileSync("src/app/concept/page.tsx", "utf8"),
+    ...readTree(HOMEPAGE_CONCEPT_DIR),
+  ].join("\n");
+
+  for (const file of readdirSync(HOMEPAGE_CONCEPT_DIR).filter((name) => name.endsWith(".tsx"))) {
+    if (referenced.has(file)) continue;
+    const moduleName = file.replace(/\.tsx$/, "");
+    assert.doesNotMatch(
+      sources,
+      new RegExp(`homepage-concept/${moduleName}"`),
+      `${file} is imported but missing from HOMEPAGE_CONCEPT_FILES`,
+    );
+  }
+});
+
+test("home-landing sections and claims stay connected for the surfaces that still use them", () => {
+  const combined = readLandingSources();
+  const workspaceHeroCss = readFileSync(
+    "src/components/home-landing/workspace-hero.css",
+    "utf8",
+  );
+  const oldProductName = new RegExp("Aur" + "alis", "i");
+  const deadAnchor = new RegExp('href="' + '#"');
+
+  assert.doesNotMatch(combined, oldProductName);
+  assert.doesNotMatch(combined, deadAnchor);
+
   assert.match(combined, /Your competition<\/span>\s*<span[^>]*>is running ads\.<\/span>\s*<span[^>]*>Are you\?<\/span>/);
   assert.doesNotMatch(combined, /hw-ws__eyebrow/);
-  assert.match(
-    combined,
-    /More listings, less marketing stress\./,
-  );
+  assert.match(combined, /More listings, less marketing stress\./);
   assert.match(combined, /Know the property before the call/);
   assert.match(combined, /Run a property check/);
   // Illustrative dashboard and offer values must be labelled as examples so
@@ -130,16 +219,6 @@ test("landing page anchors, sections, and claims stay connected", () => {
     "mobile hero must not show clipped prepared-ad cards",
   );
 
-  const ids = [...combined.matchAll(/id="([^"]+)"/g)].map((match) => match[1]);
-  assert.equal(new Set(ids).size, ids.length, "landing and setup form IDs must be unique");
-
-  const localAnchors = [...combined.matchAll(/href="#([A-Za-z0-9_-]+)"/g)].map(
-    (match) => match[1],
-  );
-  for (const target of localAnchors) {
-    assert.ok(ids.includes(target), `#${target} anchor must target an existing ID`);
-  }
-
   assert.match(combined, /href="\/#free-trial"/);
   // The walkthrough CTAs use CtaLink's default #managed-setup target.
   assert.match(combined, /location="faq_walkthrough"/);
@@ -147,18 +226,13 @@ test("landing page anchors, sections, and claims stay connected", () => {
 
 test("landing page local image assets resolve from public/", () => {
   const componentSources = [
-    readFileSync("src/app/page.tsx", "utf8"),
-    ...readdirSync(HOME_LANDING_DIR)
-      .filter((file) => file.endsWith(".tsx"))
-      .sort()
-      .map((file) => readFileSync(path.join(HOME_LANDING_DIR, file), "utf8")),
+    readHomeSources().combined,
+    ...readTree(HOME_LANDING_DIR, [".tsx"]),
   ].join("\n");
   const styleSources = [
+    readHomeStyles(),
     readFileSync("src/app/homepage.css", "utf8"),
-    ...readdirSync(HOME_LANDING_DIR)
-      .filter((file) => file.endsWith(".css"))
-      .sort()
-      .map((file) => readFileSync(path.join(HOME_LANDING_DIR, file), "utf8")),
+    ...readTree(HOME_LANDING_DIR, [".css"]),
   ].join("\n");
   const componentAssets = [
     ...componentSources.matchAll(
@@ -203,12 +277,20 @@ test("public marketing copy states the approved progressive offer", () => {
   const layout = readFileSync("src/app/layout.tsx", "utf8");
   const combined = `${home}\n${pricing}\n${pricingMarket}\n${pricingFaq}\n${layout}`;
 
-  assert.match(home, /Nothing spends until you approve/i);
-  assert.match(home, /Nothing spends before approval/i);
-  assert.match(home, /before and after approval/i);
-  assert.match(home, /Approve every ad before it goes live/i);
-  assert.match(home, /Create three complete ads free/i);
-  assert.match(home, /Start with only your email/i);
+  // The homepage must still state, in its own wording, that Meta ad spend is
+  // separate, that the free start needs no card, and that only an explicit
+  // choice starts billing.
+  //
+  // Deliberate omission, owner decision 9 September 2026: this page carries no
+  // approval-before-launch statement. acab35d3 dropped the CampaignControls
+  // section that said "You approve before launch."; the homepage it replaced
+  // said "Nothing spends until you approve" and "Approve every ad before it
+  // goes live". Restore an approval statement here if that copy comes back.
+  assert.match(home, /Meta ad spend is paid separately to Meta/i);
+  assert.match(home, /Starting free does not auto-charge you/i);
+  assert.match(home, /No card is required/i);
+  assert.match(home, /you only pay if you choose a paid plan/i);
+  assert.match(home, /three Feed and Story packs/i);
   assert.ok(pricing.includes("Start free. Manage your own ads, or let us help."));
   assert.match(pricingMarket, /no card/i);
   assert.match(pricingMarket, /14 days start when your first ad runs on Meta/i);
