@@ -624,6 +624,15 @@
   .pricing-summary-card--featured:hover {
     transform: none;
   }
+
+  .pricing-summary-card,
+  .pricing-summary-card:hover,
+  .pricing-summary-card--featured,
+  .pricing-summary-card--featured:hover,
+  .pricing-page .hw-btn:active {
+    transform: none;
+    transition: none;
+  }
 }
 
 .pricing-detail-actions {
