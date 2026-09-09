@@ -8,11 +8,44 @@ const source=readFileSync('hermes/tools/research-runtime/bin/supabase-supervisor
 function load(name,next,context){const start=source.indexOf('async function '+name+'('),end=source.indexOf('\nasync function '+next+'(',start)>=0?source.indexOf('\nasync function '+next+'(',start):source.indexOf('\nfunction '+next+'(',start);assert.ok(start>=0&&end>start);const code=source.slice(start,end).replaceAll('import.meta.url',JSON.stringify('file:///srv/test/supabase-supervisor.mjs'));return vm.runInNewContext(code+';'+name,{...context});}
 function loadWithDependency(name, dependency, next, context){const start=source.indexOf('async function '+dependency+'('),end=source.indexOf('\nasync function '+next+'(',start);assert.ok(start>=0&&end>start);const code=source.slice(start,end).replaceAll('import.meta.url',JSON.stringify('file:///srv/test/supabase-supervisor.mjs'));return vm.runInNewContext(code+';'+name,{...context});}
 const creative='11111111-1111-4111-8111-111111111111',ad='22222222-2222-4222-8222-222222222222',asset='33333333-3333-4333-8333-333333333333';
+test('ScrapingBee Auto-Mode includes a bounded Meta render wait',()=>{
+  assert.match(source,/HERMES_SCRAPINGBEE_WAIT_MS[^\n]+5_000/);
+  assert.match(source,/wait: String\(scrapingBeeWaitMs\)/);
+  assert.match(source,/Math\.min\([^\n]+35_000\)/);
+});
+test('primary ScrapingBee failure fails closed without legacy browser fallback',async()=>{
+  let fallbackCalls=0;
+  const fn=load('runMetaPageCapture','failedCaptureOutcome',{
+    configuredMetaFallbackSourceProvider:()=> 'hermes_meta_page_capture',
+    scrapingBeeEnabled:true,scrapingBeeOrder:'primary',metaOfficialApiEnabled:false,
+    runScrapingBeePageCapture:async()=>({status:'FAILED',errorMessage:'provider failed',metadata:{charge_known:true}}),
+    runFallbackMetaPageCapture:async()=>{fallbackCalls+=1;throw Error('legacy fallback must not run')},
+    log:()=>{},META_SCRAPINGBEE_SOURCE_PROVIDER:'scrapingbee_meta_ad_library',
+    captureModeForSourceProvider:()=> 'scrapingbee_auto',
+  });
+  const result=await fn({advertiserPageId:ad,metaPageId:'42'});
+  assert.equal(result.outcome.status,'FAILED');
+  assert.equal(result.sourceProvider,'scrapingbee_meta_ad_library');
+  assert.equal(fallbackCalls,0);
+});
 test('media collector uses verified archive without legacy overwrite or AI follow-up',async()=>{
   const captures=[],patches=[];
   const fn=load('handleMediaCollector','loadCreativeForMediaCapture',{rest:async()=>[{id:asset,observed_ad_id:ad}],captureMediaAsset:async a=>captures.push(a.id),patchMediaAsset:async(...a)=>patches.push(a),enqueueFollowUp:()=>{throw Error('AI must not be queued')},refreshCreativeStoredMedia:()=>{throw Error('legacy public URL path must not run')},refreshClassifiedCreativeDisplay:async()=>{}});
   const result=await fn({payload:{adCreativeId:creative,observedAdId:ad}});
   assert.equal(result.result.captured,1);assert.equal(result.result.model_calls,0);assert.deepEqual(captures,[asset]);assert.equal(patches.length,0);
+});
+test('media collector captures a large carousel in one canonical job',async()=>{
+  const assets=Array.from({length:37},(_,index)=>({id:`asset-${index}`,observed_ad_id:ad})),captures=[],queries=[];
+  const fn=load('handleMediaCollector','loadCreativeForMediaCapture',{
+    rest:async(_schema,query)=>{queries.push(query);return assets;},
+    captureMediaAsset:async asset=>captures.push(asset.id),
+    patchMediaAsset:async()=>{throw Error('successful assets must not be patched as failed')},
+  });
+  const result=await fn({payload:{adCreativeId:creative,observedAdId:ad}});
+  assert.equal(result.result.captured,37);
+  assert.equal(result.result.failed,0);
+  assert.equal(captures.length,37);
+  assert.ok(queries[0].includes('&limit=250'));
 });
 test('media collector rejects invalid scope without querying or spawning',async()=>{
  const fn=load('handleMediaCollector','loadCreativeForMediaCapture',{rest:()=>{throw Error('must not query')}});
