@@ -19,9 +19,9 @@ import { AD_EXAMPLES, withBasePath } from "@/lib/homepage-concept/content";
 import "./workflow-showcase.css";
 
 const PROCESS_STEPS = [
-  { label: "Choose" },
-  { label: "Customise" },
-  { label: "Review" },
+  { label: "Choose", hint: "Pick a ready-made template" },
+  { label: "Customise", hint: "Change the wording and image" },
+  { label: "Review", hint: "Set the budget and go live" },
 ] as const;
 
 const STORY_PHASE_DELAYS = [1100, 1000, 1000, 1100, 1200, 850, 1050, 750, 1400] as const;
@@ -56,6 +56,25 @@ const STORY_EASE = [0.16, 1, 0.3, 1] as const;
 const STORY_MOVE = { duration: 0.55, ease: STORY_EASE };
 const STORY_ENTER = { duration: 0.45, ease: STORY_EASE };
 const STORY_EXIT = { duration: 0.25, ease: [0.32, 0, 0.67, 0] as const };
+
+/** Entrance choreography: the section rises once, then its children cascade. */
+const SECTION_IN_VIEW = { once: true, margin: "-12%" } as const;
+const SECTION_RISE = {
+  hidden: { opacity: 0, y: 18 },
+  shown: { opacity: 1, y: 0 },
+} as const;
+const COPY_CASCADE = {
+  hidden: {},
+  shown: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+} as const;
+const COPY_ITEM = {
+  hidden: { opacity: 0, y: 12 },
+  shown: { opacity: 1, y: 0, transition: { duration: 0.5, ease: STORY_EASE } },
+} as const;
+const DEMO_RISE = {
+  hidden: { opacity: 0, scale: 0.97, y: 14 },
+  shown: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.7, ease: STORY_EASE, delay: 0.12 } },
+} as const;
 
 function StoryCursor({ pressed = false }: { pressed?: boolean }) {
   return (
@@ -293,13 +312,52 @@ function ReviewScene({ phase }: { phase: number }) {
         </dl>
         <motion.strong
           className={`hc-story-approve${approved ? " is-approved" : ""}`}
-          animate={{ scale: pressing ? 0.97 : 1 }}
+          animate={{ scale: pressing ? 0.97 : approved ? 1 : 1 }}
           transition={{ duration: 0.15, ease: "easeInOut" }}
         >
-          <ShieldCheck aria-hidden="true" size={15} />
+          <span className="hc-story-approve-mark" aria-hidden="true">
+            <AnimatePresence mode="wait" initial={false}>
+              {approved ? (
+                <motion.span
+                  key="approved-check"
+                  className="hc-story-approve-check"
+                  initial={{ scale: 0.4, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.4, opacity: 0 }}
+                  transition={{ duration: 0.34, ease: STORY_EASE }}
+                >
+                  <Check size={15} strokeWidth={3} />
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="pending-shield"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  <ShieldCheck size={15} />
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </span>
           {approved ? "Campaign approved" : "Approve campaign"}
           {pressing ? <StoryCursor pressed /> : null}
         </motion.strong>
+
+        <AnimatePresence>
+          {approved ? (
+            <motion.span
+              className="hc-story-live-toast"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.4, ease: STORY_EASE, delay: 0.18 }}
+            >
+              Campaign is live
+            </motion.span>
+          ) : null}
+        </AnimatePresence>
       </motion.div>
     </motion.div>
   );
@@ -363,11 +421,20 @@ export function WorkflowShowcase() {
   const scene = phase <= 1 ? "browse" : phase <= 4 ? "edit" : "review";
 
   return (
-    <div className="hc-process-layout" ref={sectionRef}>
-      <div className="hc-process-copy">
-        <h2>Create real estate ads for Facebook &amp; Instagram.</h2>
+    <motion.div
+      className="hc-process-layout"
+      ref={sectionRef}
+      variants={SECTION_RISE}
+      initial="hidden"
+      whileInView="shown"
+      viewport={SECTION_IN_VIEW}
+      transition={{ duration: 0.6, ease: STORY_EASE }}
+    >
+      <motion.div className="hc-process-copy" variants={COPY_CASCADE}>
+        <motion.small className="hc-process-eyebrow" variants={COPY_ITEM}>Blockwise Ad Studio</motion.small>
+        <motion.h2 variants={COPY_ITEM}>Create real estate ads for Facebook &amp; Instagram.</motion.h2>
 
-        <div className="hc-process-steps" aria-label="How Blockwise works">
+        <motion.div className="hc-process-steps" aria-label="How Blockwise works" variants={COPY_ITEM}>
           {PROCESS_STEPS.map((item, index) => (
             <button
               key={item.label}
@@ -376,20 +443,29 @@ export function WorkflowShowcase() {
               onClick={() => selectStep(index)}
             >
               <span className="hc-process-step-mark" aria-hidden="true" />
-              <span><strong>{item.label}</strong></span>
+              <span>
+                <strong>{item.label}</strong>
+                <small>{item.hint}</small>
+              </span>
             </button>
           ))}
-        </div>
+        </motion.div>
 
-        <div className="hc-process-actions">
+        <motion.div className="hc-process-actions" variants={COPY_ITEM}>
           <a className="hc-button hc-button--primary" href="#trial">
             Start free trial
             <ArrowRight aria-hidden="true" size={17} />
           </a>
-        </div>
-      </div>
+          <small className="hc-process-note">Free 14-day trial · No card required · Cancel anytime</small>
+        </motion.div>
+      </motion.div>
 
-      <div className="hc-process-demo" data-scene={scene} aria-label="Animated example of creating and approving an ad">
+      <motion.div
+        className="hc-process-demo"
+        data-scene={scene}
+        aria-label="Animated example of creating and approving an ad"
+        variants={DEMO_RISE}
+      >
         <div className="hc-process-demo-topbar">
           <span><i aria-hidden="true" /> Blockwise Ad Studio</span>
           <ol aria-hidden="true">
@@ -407,7 +483,10 @@ export function WorkflowShowcase() {
             </AnimatePresence>
           </div>
         </LayoutGroup>
-      </div>
-    </div>
+        <div className="hc-process-demo-caption">
+          <small>Preview · Choose → Customise → Review</small>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
