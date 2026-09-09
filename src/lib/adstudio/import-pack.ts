@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { verify } from "node:crypto";
 import { templatePackSchema } from "../../../packages/ad-template-pack-contract/src/schema.ts";
 import { computeManifestHash } from "../../../packages/ad-template-pack-contract/src/hash.ts";
-import type { TemplatePack } from "../../../packages/ad-template-pack-contract/src/types.ts";
+import type { TemplatePackParsed as TemplatePack } from "../../../packages/ad-template-pack-contract/src/schema.ts";
 import { extractArchiveEntries, verifyEntrySet } from "./import-archive.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 

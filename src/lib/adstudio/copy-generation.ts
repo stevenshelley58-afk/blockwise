@@ -27,9 +27,11 @@ import {
   truncateAtWordBoundary,
   type AdStudioMetaCopy,
 } from "./meta-copy-contract.ts";
-import { toMetaCta } from "./meta-cta.ts";
 
 export type AdStudioCopyFields = AdStudioMetaCopy;
+
+/** Low-risk customer copy belongs on the cheap draft-text lane. */
+const ADSTUDIO_COPY_MODEL_PROFILE = "cheap_draft_text" as const;
 
 export type AdStudioAiWritingGuidance = {
   summary: string;
