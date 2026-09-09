@@ -55,6 +55,10 @@ values (
 )
 on conflict (id) do nothing;
 
+insert into public.ad_templates (template_id, template_json)
+values ('queue-lease-test-template', '{}')
+on conflict (template_id) do nothing;
+
 insert into public.ad_template_packs (
   pack_id, template_id, version, manifest_sha256, signature, pack_json
 )
