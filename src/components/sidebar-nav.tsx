@@ -6,9 +6,9 @@ import {
   FileSearch,
   LayoutGrid,
   LineChart,
+  Palette,
   Settings,
   Settings2,
-  Star,
   UserRound,
   ContactRound,
   UsersRound,
@@ -56,7 +56,7 @@ function RadarIcon({ size = 18, ...props }: { size?: number } & SVGProps<SVGSVGE
 
 const customerToolIcons = {
   home: LayoutGrid,
-  studio: Star,
+  studio: Palette,
   performance: LineChart,
   radar: RadarIcon,
   property: FileSearch,
