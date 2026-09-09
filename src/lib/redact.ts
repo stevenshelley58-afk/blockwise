@@ -45,5 +45,3 @@ export function redactString(value: string): string {
     .replace(URL_SENSITIVE_QUERY_PATTERN, "[redacted url]")
     .replace(EMAIL_BODY_MARKER, "[redacted email body]");
 }
-
-export { redactString };
