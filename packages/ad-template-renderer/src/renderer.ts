@@ -94,7 +94,23 @@ type MultilineLineHeightPreflightViolation = TextPreflightViolationBase & {
   minimumLineHeight: number;
 };
 
-export type TextPreflightViolation = TextReadabilityPreflightViolation | MultilineLineHeightPreflightViolation;
+type PaintedBoundsPreflightViolation = TextPreflightViolationBase & {
+  kind: "painted_bounds_outside_geometry";
+  edge: "left" | "top" | "right" | "bottom";
+  overflowPx: number;
+};
+
+type EssentialTextOverlapPreflightViolation = TextPreflightViolationBase & {
+  kind: "essential_text_overlap";
+  otherLayerId: string;
+  overlapPx: number;
+};
+
+export type TextPreflightViolation =
+  | TextReadabilityPreflightViolation
+  | MultilineLineHeightPreflightViolation
+  | PaintedBoundsPreflightViolation
+  | EssentialTextOverlapPreflightViolation;
 
 /**
  * One deterministic, machine-readable refusal for every text-fit problem in a
@@ -485,10 +501,13 @@ function boundsWithinGeometry(bounds: PixelBounds, geometry: Rect): boolean {
 }
 
 function assertTextPreflight(input: RenderInput, placements: readonly Placement[]): void {
-  const ctx = createCanvas(1, 1).getContext("2d");
   const violations: TextPreflightViolation[] = [];
   for (const placement of placements) {
+    const dims = DIMENSIONS[placement];
+    const diagnosticCanvas = createCanvas(dims.width, dims.height);
+    const ctx = diagnosticCanvas.getContext("2d");
     const layout = placement === "feed" ? input.template.feedLayout : input.template.storyLayout;
+    const essentialText: Array<{ layer: TextLayer; paintedBounds: PixelBounds }> = [];
     for (const layer of layout.layers) {
       if (layer.type !== "text") continue;
       if (layer.maxLines > 1 && layer.lineHeight < MINIMUM_MULTILINE_LINE_HEIGHT) {
@@ -862,9 +881,57 @@ function multilineLineHeightViolation(
   };
 }
 
+function paintedBoundsViolation(
+  placement: Placement,
+  layerId: string,
+  edge: PaintedBoundsPreflightViolation["edge"],
+  overflowPx: number,
+): PaintedBoundsPreflightViolation {
+  const safeLayerId = normalizeLayerId(layerId);
+  const safeOverflowPx = Math.max(1, Math.round(overflowPx));
+  return {
+    placement,
+    layerId: safeLayerId,
+    kind: "painted_bounds_outside_geometry",
+    edge,
+    overflowPx: safeOverflowPx,
+    reason: `${placement} text layer ${safeLayerId} painted bounds exceed geometry by ${safeOverflowPx}px on ${edge}`,
+  };
+}
+
+function essentialTextOverlapViolation(
+  placement: Placement,
+  layerId: string,
+  otherLayerId: string,
+  overlapPx: number,
+): EssentialTextOverlapPreflightViolation {
+  const safeLayerId = normalizeLayerId(layerId);
+  const safeOtherLayerId = normalizeLayerId(otherLayerId);
+  const safeOverlapPx = Math.max(1, Math.round(overlapPx));
+  return {
+    placement,
+    layerId: safeLayerId,
+    otherLayerId: safeOtherLayerId,
+    kind: "essential_text_overlap",
+    overlapPx: safeOverlapPx,
+    reason: `${placement} essential text layers ${safeLayerId} and ${safeOtherLayerId} overlap by ${safeOverlapPx}px vertically`,
+  };
+}
+
 function normalizeTextPreflightViolation(violation: TextPreflightViolation): TextPreflightViolation {
   if (violation.kind === "multiline_line_height_below_minimum") {
     return multilineLineHeightViolation(violation.placement, violation, violation.suggestedGeometry);
+  }
+  if (violation.kind === "painted_bounds_outside_geometry") {
+    return paintedBoundsViolation(violation.placement, violation.layerId, violation.edge, violation.overflowPx);
+  }
+  if (violation.kind === "essential_text_overlap") {
+    return essentialTextOverlapViolation(
+      violation.placement,
+      violation.layerId,
+      violation.otherLayerId,
+      violation.overlapPx,
+    );
   }
   return textPreflightViolation(
     violation.placement,
