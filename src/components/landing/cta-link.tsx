@@ -20,7 +20,7 @@ type CtaLinkProps = {
 export function CtaLink({ location, href = "#managed-setup", className, children }: CtaLinkProps) {
   function handleClick() {
     trackCtaClick(location, { href });
-    if (href === "#managed-setup") {
+    if (href.endsWith("#managed-setup")) {
       trackDemoCtaClick(location);
     }
   }

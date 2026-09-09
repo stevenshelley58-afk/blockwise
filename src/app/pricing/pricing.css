@@ -37,6 +37,34 @@
   font-size: var(--hw-text-lede);
   line-height: 1.55;
 }
+.pricing-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 32px;
+}
+
+.pricing-hero-actions .hw-btn {
+  min-height: 48px;
+  padding-inline: 22px;
+}
+
+.pricing-hero-actions .hw-btn svg {
+  flex: none;
+}
+
+.pricing-hero-reassurance {
+  max-width: 540px;
+  margin: 14px 0 0;
+  color: var(--hw-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.pricing-page .hw-btn:focus-visible {
+  outline: 2px solid var(--hw-ink);
+  outline-offset: 3px;
+}
 
 .pricing-offers {
   padding: 42px 0 72px;
@@ -521,7 +549,15 @@
   .pricing-hero {
     padding: 44px 0 36px;
   }
+  .pricing-hero-actions {
+    display: grid;
+    gap: 10px;
+    margin-top: 28px;
+  }
 
+  .pricing-hero-actions .hw-btn {
+    width: 100%;
+  }
   .pricing-offers {
     padding: 30px 0 56px;
   }

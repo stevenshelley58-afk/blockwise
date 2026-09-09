@@ -3,7 +3,6 @@
 import { Check, ChevronRight } from "lucide-react";
 import { motion } from "motion/react";
 
-import { AnimatedNumber } from "@/components/ui/animated-number";
 import { CtaLink } from "@/components/landing/cta-link";
 import { entrance, useReducedMotion } from "@/lib/motion";
 
@@ -116,7 +115,8 @@ const DETAIL_SECTIONS = [
   },
 ] as const;
 
-const formatPrice = (value: number) => `A$${Math.round(value).toLocaleString("en-AU")}`;
+const formatPrice = (value: number) =>
+  `A$${Math.round(value).toLocaleString("en-AU")}`;
 
 export function MarketPricing() {
   const reduced = useReducedMotion();

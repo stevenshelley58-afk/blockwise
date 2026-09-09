@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 
-import { Building2, Wallet } from "lucide-react";
+import { ArrowRight, Building2, Wallet } from "lucide-react";
 
+import { CtaLink } from "@/components/landing/cta-link";
 import { SiteFooter, SiteHeader } from "@/components/home-landing/site-chrome";
 import { MarketPricing } from "@/components/pricing/market-pricing";
 import { PricingFaq } from "@/components/pricing/pricing-faq";
