@@ -1,8 +1,23 @@
 -- Truthful, per-entity Facebook discovery coverage.
 -- Only current-version entity receipts count. Older completed jobs remain
 -- historical evidence and do not turn an entity green in this read model.
-begin;
+--
+-- No-op guard: the research schema was retired by the 20260728 VPS cutover,
+-- so databases built from this chain have no research roster tables and skip
+-- the view with a notice instead of failing. Databases that still carry the
+-- pre-cutover tables get the original view below.
 
+do $$
+begin
+  if to_regclass('research.agents') is null
+    or to_regclass('research.agencies') is null
+    or to_regclass('research.work_queue') is null
+  then
+    raise notice 'Skipping 202609080005: research roster tables are absent (research schema retired).';
+    return;
+  end if;
+
+  execute $view$
 create or replace view research.v_ad_radar_facebook_discovery_coverage
 with (security_invoker = true) as
 with roster as (
@@ -50,9 +65,11 @@ select r.entity_kind,
   left join latest_receipt lr
     on lr.entity_kind = r.entity_kind
    and lr.entity_id = r.entity_id::text;
+  $view$;
 
-comment on view research.v_ad_radar_facebook_discovery_coverage is
-  'Every WA agent and agency with the latest v2 Facebook discovery receipt, or not_checked. Legacy jobs are excluded.';
+  comment on view research.v_ad_radar_facebook_discovery_coverage is
+    'Every WA agent and agency with the latest v2 Facebook discovery receipt, or not_checked. Legacy jobs are excluded.';
 
-grant select on research.v_ad_radar_facebook_discovery_coverage to service_role;
-commit;
+  grant select on research.v_ad_radar_facebook_discovery_coverage to service_role;
+end
+$$;

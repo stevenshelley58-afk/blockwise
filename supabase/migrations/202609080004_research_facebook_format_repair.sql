@@ -1,6 +1,26 @@
 -- Repair Facebook vanity values that were truncated by the historical slug
 -- migration. This is bounded to unresolved Facebook pages and derives a
 -- vanity only from an allowed, page-shaped URL.
+--
+-- No-op guard: the research schema was retired by the 20260728 VPS cutover,
+-- and research.advertiser_pages.page_vanity never existed in this migration
+-- lineage, so databases built from this chain skip the repair with a notice
+-- instead of failing. Databases that still carry a pre-cutover table with
+-- the column get the original repair below.
+
+do $$
+begin
+  if to_regclass('research.advertiser_pages') is null
+    or not exists (
+      select 1 from information_schema.columns
+      where table_schema = 'research'
+        and table_name = 'advertiser_pages'
+        and column_name = 'page_vanity'
+    )
+  then
+    raise notice 'Skipping 202609080004: research.advertiser_pages.page_vanity is absent.';
+    return;
+  end if;
 
 with normalized as (
   select ap.id, ap.page_id, ap.page_vanity as original_page_vanity,
@@ -52,6 +72,23 @@ set page_vanity = c.repaired_page_vanity,
 from safe_candidates c
 where ap.id = c.id and ap.page_id is null
   and ap.page_vanity is distinct from c.repaired_page_vanity;
+end
+$$;
+
+do $$
+begin
+  if to_regclass('research.advertiser_pages') is null
+    or not exists (
+      select 1 from information_schema.columns
+      where table_schema = 'research'
+        and table_name = 'advertiser_pages'
+        and column_name = 'page_vanity'
+    )
+  then
+    return;
+  end if;
 
 comment on column research.advertiser_pages.page_vanity is
   'Conservative Facebook vanity derived from a trustworthy page URL; never a guessed numeric ID.';
+end
+$$;
