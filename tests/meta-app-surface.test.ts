@@ -64,13 +64,14 @@ test("operator prompt preview surfaces avoid stale Phase 1 test copy", () => {
   assert.doesNotMatch(`${promptPanel}\n${promptPreviewRoute}`, /Phase 1|PR 1|Run test|Test Result/);
 });
 
-test("operator sidebar does not hardcode Hermes runtime health", () => {
+test("unified shell keeps operator console out of the customer app", () => {
   const appShell = readFileSync("src/components/app-shell.tsx", "utf8");
-  const legacyShell = readFileSync("src/components/route-aware-legacy-shell.tsx", "utf8");
+  const routeShell = readFileSync("src/components/adstudio/studio-route-shell.tsx", "utf8");
 
-  assert.match(appShell, /<RouteAwareLegacyShell/);
-  assert.match(legacyShell, /Hermes Engine/);
-  assert.match(legacyShell, /Open runtime workspace/);
+  assert.match(appShell, /<StudioRouteShell/);
+  assert.doesNotMatch(appShell, /RouteAwareLegacyShell/);
+  assert.doesNotMatch(appShell, /Hermes Engine/);
+  assert.doesNotMatch(routeShell, /Hermes Engine/);
   assert.doesNotMatch(appShell, /Operational/);
-  assert.doesNotMatch(legacyShell, /Operational/);
+  assert.doesNotMatch(routeShell, /Operational/);
 });
