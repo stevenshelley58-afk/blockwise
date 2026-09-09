@@ -1,6 +1,6 @@
 "use client";
 
-import { ChartNoAxesCombined, Download, Ellipsis, House, LifeBuoy, LogOut, Megaphone, UsersRound } from "lucide-react";
+import { ChartNoAxesCombined, Download, Ellipsis, House, LifeBuoy, LogOut, Palette, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
@@ -69,7 +69,7 @@ export function MobileBottomNav({ homeHref = "/self-serve", account, homePilot =
             ? item.href === homeHref
               ? House
               : item.href === "/ad-studio"
-                ? Megaphone
+                ? Palette
                 : item.href === "/results"
                   ? ChartNoAxesCombined
                   : item.href === "/leads"
