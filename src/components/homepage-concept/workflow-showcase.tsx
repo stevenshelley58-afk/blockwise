@@ -3,9 +3,13 @@
 import {
   ArrowRight,
   Check,
+  Globe2,
+  MessageCircle,
   MoreHorizontal,
   MousePointer2,
+  Share2,
   ShieldCheck,
+  ThumbsUp,
 } from "lucide-react";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
@@ -20,7 +24,7 @@ const PROCESS_STEPS = [
   { label: "Review" },
 ] as const;
 
-const STORY_PHASE_DELAYS = [950, 900, 900, 950, 1100, 650, 950, 650, 1200] as const;
+const STORY_PHASE_DELAYS = [1100, 1000, 1000, 1100, 1200, 850, 1050, 750, 1400] as const;
 const STORY_STEP_PHASES = [1, 2, 5] as const;
 const STORY_PHASE_TO_STEP = [0, 0, 1, 1, 1, 2, 2, 2, 2] as const;
 const STORY_TEMPLATE_SEQUENCE = [0, 1, 2, 0] as const;
@@ -48,15 +52,14 @@ const STORY_CREATIVE = {
   linkTitle: "Get the suburb property guide",
 } as const;
 
-const STORY_EASE = [0.22, 1, 0.36, 1] as const;
-const STORY_MOVE = { duration: 0.62, ease: STORY_EASE };
-const STORY_ENTER = { duration: 0.42, ease: STORY_EASE };
-const STORY_EXIT = { duration: 0.22, ease: [0.4, 0, 1, 1] as const };
+const STORY_EASE = [0.16, 1, 0.3, 1] as const;
+const STORY_MOVE = { duration: 0.55, ease: STORY_EASE };
+const STORY_ENTER = { duration: 0.45, ease: STORY_EASE };
+const STORY_EXIT = { duration: 0.25, ease: [0.32, 0, 0.67, 0] as const };
 
 function StoryCursor({ pressed = false }: { pressed?: boolean }) {
   return (
     <motion.span
-      layoutId="story-cursor"
       className="hc-story-cursor"
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0, scale: pressed ? 0.88 : 1 }}
@@ -72,22 +75,19 @@ function StoryOverlayText({ editing, edited }: { editing: boolean; edited: boole
   if (!editing) return <>{edited ? STORY_CREATIVE.editedOverlay : STORY_CREATIVE.startingOverlay}</>;
 
   return (
-    <>
-      <span className="hc-story-selection">{STORY_CREATIVE.startingOverlay}</span>
-      <span className="hc-story-replacement" aria-label={STORY_CREATIVE.editedOverlay}>
-        {Array.from(STORY_CREATIVE.editedOverlay).map((character, index) => (
-          <motion.span
-            key={`${character}-${index}`}
-            initial={{ opacity: 0, width: 0 }}
-            animate={{ opacity: 1, width: "auto" }}
-            transition={{ delay: index * 0.045, duration: 0.08, ease: "linear" }}
-          >
-            {character === " " ? "\u00a0" : character}
-          </motion.span>
-        ))}
-      </span>
+    <span className="hc-story-replacement" aria-label={STORY_CREATIVE.editedOverlay}>
+      {Array.from(STORY_CREATIVE.editedOverlay).map((character, index) => (
+        <motion.span
+          key={`${character}-${index}`}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: index * 0.045, duration: 0.06, ease: "linear" }}
+        >
+          {character === " " ? "\u00a0" : character}
+        </motion.span>
+      ))}
       <span className="hc-story-caret" />
-    </>
+    </span>
   );
 }
 
@@ -96,14 +96,14 @@ function StoryAd({ phase, review = false }: { phase: number; review?: boolean })
   const creativeEdited = phase >= 4;
 
   return (
-    <motion.article layoutId="story-ad" className={`hc-story-ad${review ? " is-review" : ""}`} transition={STORY_MOVE}>
-      <div className="hc-ad-account">
-        <span className="hc-ad-avatar" aria-hidden="true">{STORY_CREATIVE.avatar}</span>
-        <span><strong>{STORY_CREATIVE.account}</strong><small>Sponsored</small></span>
-        <MoreHorizontal aria-hidden="true" size={18} />
-      </div>
+    <motion.article layoutId="story-ad" className={`hc-meta-ad hc-meta-feed hc-story-ad${review ? " is-review" : ""}`} transition={STORY_MOVE}>
+      <header className="hc-meta-feed-head">
+        <span className="hc-meta-avatar" aria-hidden="true">{STORY_CREATIVE.avatar}</span>
+        <span><strong>{STORY_CREATIVE.account}</strong><small>Sponsored <Globe2 aria-hidden="true" size={9} /></small></span>
+        <MoreHorizontal aria-hidden="true" size={16} />
+      </header>
       <motion.p
-        className={`hc-ad-copy${phase === 3 ? " is-editing" : ""}`}
+        className={`hc-meta-feed-copy${phase === 3 ? " is-editing" : ""}`}
         key={copyEdited ? "edited-copy" : "starting-copy"}
         initial={{ opacity: 0.35, y: 3 }}
         animate={{ opacity: 1, y: 0 }}
@@ -111,8 +111,9 @@ function StoryAd({ phase, review = false }: { phase: number; review?: boolean })
       >
         {copyEdited ? STORY_CREATIVE.editedCopy : STORY_CREATIVE.startingCopy}{phase === 3 ? <span className="hc-story-caret" /> : null}
       </motion.p>
-      <motion.div layoutId="story-template-image" className="hc-ad-image-wrap hc-story-ad-image" transition={STORY_MOVE}>
+      <motion.div layoutId="story-template-image" className="hc-story-ad-image" transition={STORY_MOVE}>
         <img src={withBasePath(STORY_CREATIVE.image)} alt="" width="1080" height="1350" />
+        <span className="hc-story-image-shade" aria-hidden="true" />
         <motion.span
           className={`hc-story-creative-overlay${phase === 4 ? " is-editing" : ""}`}
           role="textbox"
@@ -127,9 +128,14 @@ function StoryAd({ phase, review = false }: { phase: number; review?: boolean })
           <StoryOverlayText editing={phase === 4} edited={creativeEdited} />
         </motion.span>
       </motion.div>
-      <div className="hc-ad-link">
+      <div className="hc-meta-link-preview">
         <span><small>{STORY_CREATIVE.domain}</small><strong>{STORY_CREATIVE.linkTitle}</strong></span>
-        <span className="hc-ad-link-button">Learn more</span>
+        <b>Learn more</b>
+      </div>
+      <div className="hc-meta-actions" aria-hidden="true">
+        <span><ThumbsUp size={12} />Like</span>
+        <span><MessageCircle size={12} />Comment</span>
+        <span><Share2 size={12} />Share</span>
       </div>
     </motion.article>
   );
@@ -145,8 +151,8 @@ function TemplateBrowser({ phase }: { phase: number }) {
       className="hc-story-scene hc-story-browser"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0, x: -34, filter: "blur(3px)" }}
-      transition={{ ...STORY_EXIT, opacity: { duration: 0.18 } }}
+      exit={{ opacity: 0 }}
+      transition={{ ...STORY_EXIT, opacity: { duration: 0.22 } }}
     >
       <div className="hc-story-scene-heading">
         <span>Ready-made ads</span>
@@ -176,7 +182,6 @@ function TemplateBrowser({ phase }: { phase: number }) {
                   {selected && active ? <span className="hc-story-selected"><Check aria-hidden="true" size={13} /> Selected</span> : null}
                 </motion.div>
                 <span><strong>{index === 1 ? "Suburb guide" : example.label}</strong><small>Facebook &amp; Instagram</small></span>
-                {active ? <StoryCursor pressed={selected} /> : null}
               </motion.div>
             );
           })}
@@ -194,9 +199,9 @@ function EditorScene({ phase }: { phase: number }) {
     <motion.div
       key="editor"
       className="hc-story-scene hc-story-editor"
-      initial={{ opacity: 0, x: 38 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -30, filter: "blur(3px)" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       transition={STORY_ENTER}
     >
       <aside className="hc-story-mini-rail">
@@ -251,8 +256,8 @@ function ReviewScene({ phase }: { phase: number }) {
     <motion.div
       key="review"
       className="hc-story-scene hc-story-review"
-      initial={{ opacity: 0, x: 38 }}
-      animate={{ opacity: 1, x: 0 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={STORY_ENTER}
     >
