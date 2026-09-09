@@ -9,6 +9,14 @@ const AUTHENTICATED_API_PREFIXES = ["/api/adstudio/", "/api/operator/"] as const
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Preview is a read-only UI: do not refresh auth or expose product endpoints.
+  if (process.env.BLOCKWISE_HOMEPAGE_PREVIEW === "true") {
+    if (pathname === "/concept" || pathname.startsWith("/_next/")) {
+      return NextResponse.next();
+    }
+    return new NextResponse("Not found", { status: 404 });
+  }
+
   if (process.env.NODE_ENV === "production" && pathname.startsWith("/api/dev/")) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

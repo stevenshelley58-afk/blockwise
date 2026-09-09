@@ -1,0 +1,43 @@
+.hp-pricing { padding-block: clamp(68px, 8vw, 108px); background: var(--hc-canvas); color: var(--hc-ink); }
+.hp-pricing-heading { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, .55fr); align-items: end; gap: 28px; margin-bottom: 32px; }
+.hp-pricing-heading h2 { max-width: 14ch; margin: 0; font-size: clamp(36px, 4.2vw, 58px); letter-spacing: -.045em; line-height: 1.02; }
+.hp-pricing-heading p { max-width: 34ch; margin: 0 0 4px; color: var(--hc-muted); font-size: 15px; line-height: 1.55; }
+.hp-pricing-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
+.hp-plan { display: flex; min-width: 0; flex-direction: column; border: 1px solid var(--hc-line); border-radius: 18px; background: #fff; padding: 24px; }
+.hp-plan--featured { border-color: var(--hc-ink); box-shadow: inset 0 0 0 1px var(--hc-ink); }
+.hp-plan-header h3, .hp-plan-price, .hp-plan-billing, .hp-plan-outcome, .hp-plan-terms, .hp-plan-details-link { margin: 0; }
+.hp-plan-header h3 { font-size: 17px; line-height: 1.25; }
+.hp-plan-price { margin-top: 20px; font-size: clamp(29px, 3vw, 39px); font-weight: 780; letter-spacing: -.045em; line-height: 1; }
+.hp-plan-billing, .hp-plan-outcome, .hp-plan-terms, .hp-plan-details-link { color: var(--hc-muted); font-size: 13px; line-height: 1.45; }
+.hp-plan-billing { min-height: 38px; margin-top: 7px; }
+.hp-plan-outcome { min-height: 42px; margin-top: 15px; color: var(--hc-ink); font-weight: 600; }
+.hp-plan-included, .hp-plan-details ul { display: grid; gap: 10px; margin: 18px 0 0; padding: 0; list-style: none; }
+.hp-plan-included li, .hp-plan-details li { display: flex; align-items: flex-start; gap: 8px; color: var(--hc-ink); font-size: 13px; line-height: 1.4; }
+.hp-plan-included svg, .hp-plan-details svg { flex: 0 0 auto; margin-top: 1px; }
+.hp-plan-details { margin-top: 16px; border-top: 1px solid var(--hc-line); }
+.hp-plan-details summary { min-height: 44px; padding-block: 13px; color: var(--hc-ink); font-size: 13px; font-weight: 700; cursor: pointer; }
+.hp-plan-details ul { margin-top: 12px; }
+.hp-plan-terms { margin-top: 18px; }
+.hp-plan-cta { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 8px; margin-top: 18px; border-radius: 999px; background: var(--hc-ink); color: #fff; font-size: 13px; font-weight: 750; text-align: center; }
+.hp-plan-cta:hover, .hp-plan-cta:focus-visible { background: #30373e; }
+.hp-plan-details-link { display: inline-flex; min-height: 44px; align-items: center; gap: 5px; margin-top: 13px; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
+.hp-pricing-sequence { display: flex; flex-wrap: wrap; gap: 12px 28px; margin: 24px 0 0; padding: 0; list-style: none; }
+.hp-pricing-sequence li { display: flex; align-items: baseline; gap: 8px; color: var(--hc-muted); font-size: 13px; }
+.hp-pricing-sequence strong { color: var(--hc-ink); }
+@media (max-width: 760px) {
+  .hp-pricing { padding-block: 64px; }
+  .hp-pricing-heading { grid-template-columns: 1fr; gap: 15px; margin-bottom: 24px; }
+  .hp-pricing-heading h2 { max-width: 12ch; font-size: clamp(37px, 11vw, 52px); }
+  .hp-pricing-grid { grid-template-columns: 1fr; gap: 10px; }
+  .hp-plan { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; border-radius: 15px; padding: 18px; }
+  .hp-plan-header { grid-column: 1; }
+  .hp-plan-price { margin-top: 11px; font-size: 30px; }
+  .hp-plan-billing { min-height: 0; }
+  .hp-plan-outcome, .hp-plan-included, .hp-plan-details, .hp-plan-terms, .hp-plan-cta, .hp-plan-details-link { grid-column: 1 / -1; }
+  .hp-plan-outcome { min-height: 0; margin-top: 13px; }
+  .hp-plan-included { margin-top: 14px; }
+  .hp-plan-terms { margin-top: 14px; }
+  .hp-plan-cta { margin-top: 15px; }
+  .hp-pricing-sequence { display: grid; gap: 8px; margin-top: 18px; }
+}
+@media (prefers-reduced-motion: reduce) { .hp-pricing * { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
