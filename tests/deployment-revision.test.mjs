@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -45,4 +45,15 @@ test("release health check rejects wrong, missing and degraded revisions", () =>
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('worker deploy exposes safe staged activation guards', () => {
+  const script = readFileSync('scripts/vps/ad-radar-worker-deploy.sh', 'utf8');
+  assert.match(script, /\[\[ "\$\{2:-\}" == "--activate" \]\]/);
+  assert.match(script, /\^\[0-9a-f\]\{40\}\$/);
+  assert.match(script, /Release revision marker mismatch/);
+  assert.match(script, /test -f "\$release\/worker\.service"/);
+  assert.match(script, /test -d "\$release\/runtime"/);
+  assert.match(script, /install -m 644 "\$release\/worker\.service" "\$unit"/);
+  assert.match(script, /systemctl restart hermes-ad-db-worker\.service/);
 });

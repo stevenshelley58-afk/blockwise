@@ -11,6 +11,7 @@ import {
   CLASSIFIER_VERSION,
   assessCapturedImageQuality,
   classifyCreativeWithModels,
+  classifyCreativeFromSavedEvidence,
   hasUnresolvedDynamicPlaceholder,
   hasUsableCapturedMedia,
   readImageDimensions,
@@ -21,13 +22,30 @@ import {
 import { CONTENT_RUN_JOB_TYPE, handleHermesContentRun } from "./content-engine.mjs";
 import { runAdRadarAccuracyAudit } from "./ad-radar-accuracy-audit.mjs";
 import { resolveAdRadarRuntime } from "./ad-radar-runtime-gate.mjs";
-import { classifyMetaAdLibraryPayload } from "./meta-ad-library-parser.mjs";
+import { buildMetaPaginationScenario, parseMetaPaginatedCapture } from "./meta-ad-library-pagination.mjs";
 import {
   assertBudgetWithinConfiguredCap,
   executeScrapingBeePaidAttempt,
   parseScrapingBeeUsage,
 } from "./scrapingbee-paid-attempt.mjs";
 import { publishCustomerReadModels } from "./customer-read-model-publisher.mjs";
+import { selectDueAdRadarPages, chunkIds } from "./ad-radar-scheduling.mjs";
+import { saveCaptureJournal, loadCaptureJournal, reconcileSavedCaptureSettlement, ensureFetchRun } from "./ad-radar-capture-journal.mjs";
+import { syncCustomerAdRadarInterests } from "./customer-freshness-sync.mjs";
+import { createFacebookSearchEvidence } from "./facebook-discovery-search.mjs";
+import { createFacebookPageIdentityEvidence } from "./facebook-page-identity.mjs";
+import {
+  DIRECTORY_DISCOVERY_JOB_TYPE,
+  enqueueAdRadarDirectoryDiscovery,
+  handleAdRadarEntityDiscovery,
+  handleAdRadarPageDiscovery,
+} from "./ad-radar-directory-coverage.mjs";
+import {
+  laneForJob,
+  resolveAdRadarLaneConfigs,
+  runLaneBatch,
+  startAdRadarLaneLoops,
+} from "./ad-radar-lane-scheduler.mjs";
 import { runInactiveAdPurge } from "./inactive-ad-purge.mjs";
 import {
   assertHermesOwnedStorageUrl,
@@ -41,6 +59,7 @@ const COVERAGE_AUDITOR_JOB_TYPE = "blockwise-coverage-auditor";
 const DEFECT_INVESTIGATOR_JOB_TYPE = "blockwise-defect-investigator";
 const AD_RADAR_JOB_TYPES = [
   "blockwise-agent-census",
+  DIRECTORY_DISCOVERY_JOB_TYPE,
   "blockwise-page-resolver",
   "blockwise-ad-collector",
   "blockwise-media-collector",
@@ -118,19 +137,18 @@ const metaCaptureResultsLimit = Math.min(positiveInt("HERMES_META_CAPTURE_RESULT
 const requestedTargetPostcodes = uniqueCsv(env.HERMES_RESEARCH_TARGET_POSTCODES, DEFAULT_POSTCODES);
 const sourceTemplates = uniqueCsv(env.HERMES_CENSUS_SOURCE_URL_TEMPLATES, []);
 const adPageRefreshEnabled = env.HERMES_AD_PAGE_REFRESH_ENABLED !== "false";
-const adPageRefreshIntervalMinutes = positiveInt("HERMES_AD_PAGE_REFRESH_INTERVAL_MINUTES", mode === "build" ? 720 : 360);
+const adPageRefreshIntervalMinutes = positiveInt("HERMES_AD_PAGE_REFRESH_INTERVAL_MINUTES", 1440);
 const adPageRefreshBatchSize = positiveInt("HERMES_AD_PAGE_REFRESH_BATCH_SIZE", mode === "build" ? 40 : 16);
 const adPageRefreshMaxActive = positiveInt("HERMES_AD_PAGE_REFRESH_MAX_ACTIVE", mode === "build" ? 200 : 80);
 const adPageRefreshScanLimit = Math.max(adPageRefreshBatchSize * 16, adPageRefreshMaxActive + adPageRefreshBatchSize * 4);
 const adPageRefreshMaxConsecutiveFailures = 3;
+const adRadarInterestSyncIntervalMs = positiveInt("HERMES_AD_RADAR_INTEREST_SYNC_INTERVAL_SECONDS", 300) * 1000;
 // Lifecycle reconciliation (active→inactive flips) is gated on coverage-
 // complete runs via research.mark_missing_ads_inactive. Disable only for
 // forensic audits.
 const adPageRefreshLifecycleEnabled = env.HERMES_AD_PAGE_LIFECYCLE_RECONCILIATION !== "false";
-// Location ad search (Path 2) has been removed. The census → page-resolver →
-// ad-collector pipeline (Path 1) is the sole discovery mechanism.
-// Provider for the suburb/keyword discovery search. "hermes_browser" (default) enumerates
-// via the Meta Ad Library capture CLI driven through the Steel browser.
+// The narrow Ad Radar worker uses entity discovery → exact Page identity →
+// page collection. Postcodes select scope and freshness; they are not discovery roots.
 const classificationBackfillBatchSize = positiveInt("HERMES_CLASSIFICATION_BACKFILL_BATCH_SIZE", mode === "build" ? 200 : 80);
 const classificationBackfillWeakBatchSize = positiveInt(
   "HERMES_CLASSIFICATION_WEAK_BACKFILL_BATCH_SIZE",
@@ -166,6 +184,9 @@ const scrapingBeeOrder = String(env.HERMES_SCRAPINGBEE_ORDER || "fallback").toLo
 const scrapingBeeMaxCostPerCapture = Math.min(positiveInt("HERMES_SCRAPINGBEE_MAX_CREDITS_PER_CAPTURE", 25), 100);
 const scrapingBeeMonthlyCreditCap = positiveInt("HERMES_SCRAPINGBEE_MONTHLY_CREDIT_CAP", 200_000);
 const scrapingBeeTimeoutMs = positiveInt("HERMES_SCRAPINGBEE_TIMEOUT_MS", 120_000);
+// Auto-Mode chooses proxy/rendering tiers but does not wait for page-specific
+// asynchronous results. Meta Ad Library needs a short post-render settle time.
+const scrapingBeeWaitMs = Math.min(positiveInt("HERMES_SCRAPINGBEE_WAIT_MS", 5_000), 35_000);
 const RAW_EVIDENCE_BUCKET = env.HERMES_RESEARCH_RAW_EVIDENCE_BUCKET || "research-raw-evidence";
 const META_BROWSER_CHALLENGE_DISABLED_UNTIL_SETTING = "meta_browser_challenge_disabled_until";
 const META_BROWSER_CHALLENGE_RESUME_SPREAD_MS = 15 * 60 * 1000;
@@ -185,7 +206,9 @@ const META_OFFICIAL_ADS_ARCHIVE_FIELDS = [
 const targetAllPostcodes = requestedTargetPostcodes.some((value) => /^(?:all|\*)$/iu.test(value));
 const targetPostcodes = targetAllPostcodes ? [] : requestedTargetPostcodes;
 
-function adRefreshPriorityForPage(page) {
+function adRefreshPriorityForPage(page, { customerInterested = false } = {}) {
+  if (customerInterested) return 1;
+  if (page.scan_state === "needs_first_fill") return 2;
   return page.status === "resolved_collectable" ? 4 : 8;
 }
 
@@ -607,43 +630,45 @@ async function enqueueDueAdPageRefreshJobs(buildRunId) {
     return { adRefreshCandidates: 0, adRefreshEnqueued: 0, adRefreshSkippedChallengeCooldown: true, adRefreshChallengeCooldownMs: challengeCooldownMs };
   }
   const activeCollectors = await rest("research", `work_queue?select=id,advertiser_page_id,priority&job_type=eq.blockwise-ad-collector&status=in.(pending,claimed)&limit=${Math.max(adPageRefreshMaxActive * 2, adPageRefreshBatchSize)}`);
-  const blockingCollectors = activeCollectors.filter((job) => Number(job.priority || 99) <= adRefreshPriorityForPage({ status: "resolved_collectable" }));
+  const blockingCollectors = activeCollectors.filter((job) => Number(job.priority || 99) <= 4);
   if (blockingCollectors.length >= adPageRefreshMaxActive) {
     return { adRefreshCandidates: 0, adRefreshEnqueued: 0, adRefreshSkippedActive: blockingCollectors.length, adRefreshBacklog: activeCollectors.length };
   }
   const activePageIds = new Set(activeCollectors.map((job) => job.advertiser_page_id).filter(Boolean));
   // Ad Radar v2 scheduling: read durable scan state straight off the page
   // registry. Cadence and backoff live in next_scan_at/backoff_until
-  // (maintained by research.schedule_page_after_scan / the collector); a
   // never-scanned page is immediately due (first-fill queue). Postcode
   // refresh policies are no longer a scheduler input.
   const pages = await rest(
     "research",
-    `advertiser_pages?select=id,page_id,page_name,status,scan_state,next_scan_at,backoff_until,consecutive_failures,has_ever_run_ads&scan_enabled=eq.true&status=neq.rejected_non_real_estate&page_id=not.is.null&next_scan_at=lte.${now()}&order=next_scan_at.asc&limit=${adPageRefreshScanLimit}`,
+    `advertiser_pages?select=id,page_id,page_name,status,scan_state,next_scan_at,backoff_until,consecutive_failures,has_ever_run_ads,initial_fill_completed_at,last_scan_completed_at,agent_id,agency_id&scan_enabled=eq.true&status=neq.rejected_non_real_estate&page_id=not.is.null&order=next_scan_at.asc&limit=10000`,
+  );
+  const customerInterestScope = await loadAdRadarCustomerInterestScope(pages);
+  // Keep the identity gap visible without allowing metadata-only pages to
+  // consume paid captures. WA completion reports this count separately.
+  const unmappedIdentityPages = await rest(
+    "research",
+    "advertiser_pages?select=id,page_id,status&scan_enabled=eq.true&status=neq.rejected_non_real_estate&agent_id=is.null&agency_id=is.null&page_id=not.is.null&limit=10000",
   );
   const capacity = Math.max(0, Math.min(adPageRefreshMaxActive - blockingCollectors.length, adPageRefreshBatchSize));
-  const candidates = pages.filter((page) => {
-    if (!page.page_id || String(page.page_id).startsWith("slug:")) return false;
-    if (activePageIds.has(page.id)) return false;
-    if ((page.consecutive_failures || 0) >= adPageRefreshMaxConsecutiveFailures && page.backoff_until && Date.parse(page.backoff_until) > Date.now()) return false;
-    return true;
-  }).slice(0, capacity);
+  if (capacity === 0) return { adRefreshEnqueued: 0 };
+  const candidates = selectDueAdRadarPages(pages, customerInterestScope, new Date(), capacity, activePageIds);
   let enqueued = 0;
   for (const [index, page] of candidates.entries()) {
-    const scanMode = page.scan_state === "needs_first_fill" || !page.has_ever_run_ads ? "initial_fill" : "refresh";
+    const scanMode = page.scan_state === "needs_first_fill" ? "initial_fill" : "refresh";
     const queued = await enqueueFollowUp({
       queue_name: "research",
       job_type: "blockwise-ad-collector",
-      dedupe_key: `ad-scan:${page.id}:${scanMode}:${Math.floor(Date.now() / 60_000)}`,
+      dedupe_key: `ad-radar:collector:${page.id}:${page.next_scan_at || "first-fill"}`,
       advertiser_page_id: page.id,
-      priority: adRefreshPriorityForPage(page),
+      priority: adRefreshPriorityForPage(page, { customerInterested: customerInterestScope.isInterested(page) }),
       payload: {
         advertiserPageId: page.id,
         metaPageId: String(page.page_id),
         build_run_id: buildRunId,
         scanMode,
         country: "AU",
-        activeStatus: "all",
+        activeStatus: "active",
         resultsLimit: metaCaptureResultsLimit,
       },
       status: "pending",
@@ -654,18 +679,17 @@ async function enqueueDueAdPageRefreshJobs(buildRunId) {
       enqueued += 1;
     }
   }
-  return { adRefreshCandidates: candidates.length, adRefreshEnqueued: enqueued, adRefreshActive: blockingCollectors.length, adRefreshBacklog: activeCollectors.length, adRefreshScanned: pages.length };
+  return { adRefreshCandidates: candidates.length, adRefreshEnqueued: enqueued, adRefreshActive: blockingCollectors.length, adRefreshBacklog: activeCollectors.length, adRefreshScanned: pages.length, adRefreshCustomerInterests: customerInterestScope.count, adRefreshUnmappedIdentityPages: Array.isArray(unmappedIdentityPages) ? unmappedIdentityPages.length : 0 };
 }
 
 async function runWatchdogs() {
   const runHourlyWatchdogs = Date.now() % (60 * 60 * 1000) < intervalMs;
-  const [stale, providerFailures, zeroAds, missingMedia, unclassified, classificationBackfill, staleBlockedArchive, staleAgencyRecheck, unresolvedPageRetry] = await Promise.all([
+  const [stale, providerFailures, zeroAds, missingMedia, unclassified, staleBlockedArchive, staleAgencyRecheck, unresolvedPageRetry] = await Promise.all([
     rpc("watchdog_requeue_stale_jobs", { p_limit: 100 }),
     rpc("watchdog_record_provider_failures", { p_since: "24 hours", p_failure_threshold: 3 }),
     rpc("watchdog_record_zero_ad_anomalies", { p_since: "48 hours", p_limit: 100 }),
     rpc("watchdog_record_missing_media", { p_since: "24 hours", p_limit: 100 }),
     rpc("watchdog_record_unclassified_creatives", { p_since: "24 hours", p_limit: 100 }),
-    enqueueClassificationBackfillJobs(),
     watchdogArchiveStaleBlockedJobs(),
     runHourlyWatchdogs
       ? watchdogRecheckStaleAgencies()
@@ -680,7 +704,6 @@ async function runWatchdogs() {
     zeroAds: zeroAds.length,
     missingMedia: missingMedia.length,
     unclassified: unclassified.length,
-    classificationBackfill,
     ...staleBlockedArchive,
     ...staleAgencyRecheck,
     ...unresolvedPageRetry,
@@ -851,23 +874,55 @@ async function enqueueClassificationBackfillJobs() {
   return enqueued;
 }
 
+async function loadWaOwnedAdCreativeIds(rows) {
+  const observedIds = [...new Set(rows.map((row) => row?.observed_ad_id).filter((id) => uuidPattern.test(String(id || ""))))];
+  if (!observedIds.length) return new Set();
+  const observed = await rest("research", `observed_ads?select=id,advertiser_page_id&id=in.(${observedIds.map(encode).join(",")})&limit=${observedIds.length}`);
+  if (!Array.isArray(observed)) throw new Error("Classification backfill observed-ad response was not an array");
+  const pageIds = [...new Set(observed.map((row) => row?.advertiser_page_id).filter((id) => uuidPattern.test(String(id || ""))))];
+  if (!pageIds.length) return new Set();
+  const pages = await rest("research", `advertiser_pages?select=id,agent_id,agency_id&id=in.(${pageIds.map(encode).join(",")})&limit=${pageIds.length}`);
+  if (!Array.isArray(pages)) throw new Error("Classification backfill page response was not an array");
+  const agentIds = [...new Set(pages.map((row) => row?.agent_id).filter((id) => uuidPattern.test(String(id || ""))))];
+  const agencyIds = [...new Set(pages.map((row) => row?.agency_id).filter((id) => uuidPattern.test(String(id || ""))))];
+  const [agents, agencies] = await Promise.all([
+    agentIds.length ? rest("research", `agents?select=id,state&id=in.(${agentIds.map(encode).join(",")})&limit=${agentIds.length}`) : [],
+    agencyIds.length ? rest("research", `agencies?select=id,state&id=in.(${agencyIds.map(encode).join(",")})&limit=${agencyIds.length}`) : [],
+  ]);
+  if (!Array.isArray(agents) || !Array.isArray(agencies)) throw new Error("Classification backfill owner response was not an array");
+  const waAgents = new Set(agents.filter((row) => String(row?.state || "").toUpperCase() === "WA").map((row) => row.id));
+  const waAgencies = new Set(agencies.filter((row) => String(row?.state || "").toUpperCase() === "WA").map((row) => row.id));
+  const waPageIds = new Set(pages.filter((row) => waAgents.has(row.agent_id) || waAgencies.has(row.agency_id)).map((row) => row.id));
+  const waObservedIds = new Set(observed.filter((row) => waPageIds.has(row.advertiser_page_id)).map((row) => row.id));
+  return new Set(rows.filter((row) => waObservedIds.has(row.observed_ad_id)).map((row) => row.id));
+}
+
 async function loadClassificationBackfillCandidates() {
   const select = "id,observed_ad_id,creative_hash,classification_status,classification,ad_type,primary_intent,updated_at";
   const sources = [
-    `ad_creatives?select=${select}&or=(classified_at.is.null,classification_status.in.(unclassified,failed),classification.eq.%7B%7D)&order=updated_at.asc.nullsfirst&limit=${classificationBackfillBatchSize}`,
-    `ad_creatives?select=${select}&classification_status=eq.classified&order=updated_at.asc.nullsfirst&limit=${classificationBackfillBatchSize}`,
-    `ad_creatives?select=${select}&or=(ad_type.eq.other,primary_intent.eq.other)&order=updated_at.asc.nullsfirst&limit=${classificationBackfillWeakBatchSize}`,
+    `ad_creatives?select=${select}&or=(classified_at.is.null,classification_status.in.(unclassified,failed),classification.eq.%7B%7D)&order=updated_at.asc.nullsfirst`,
+    `ad_creatives?select=${select}&classification_status=eq.classified&order=updated_at.asc.nullsfirst`,
+    `ad_creatives?select=${select}&or=(ad_type.eq.other,primary_intent.eq.other)&order=updated_at.asc.nullsfirst`,
   ];
   const seen = new Set();
   const candidates = [];
-  for (const path of sources) {
-    const rows = await rest("research", path);
-    for (const row of rows) {
-      if (!row?.id || seen.has(row.id)) continue;
-      seen.add(row.id);
-      if (!shouldReclassifyCreative(row)) continue;
-      candidates.push(row);
-      if (candidates.length >= classificationBackfillBatchSize) return candidates;
+  for (const [sourceIndex, basePath] of sources.entries()) {
+    const pageLimit = sourceIndex === 2 ? classificationBackfillWeakBatchSize : classificationBackfillBatchSize;
+    for (let offset = 0; ; offset += pageLimit) {
+      const rows = await rest("research", basePath + "&limit=" + pageLimit + "&offset=" + offset);
+      if (!Array.isArray(rows)) throw new Error("Classification backfill creative response was not an array");
+      const waOwned = await loadWaOwnedAdCreativeIds(rows);
+      for (const row of rows) {
+        if (!row?.id || seen.has(row.id) || !waOwned.has(row.id)) continue;
+        seen.add(row.id);
+        if (row.classification_status === "classified" &&
+          row.classification?.classifier_version === CLASSIFIER_VERSION + ":saved" &&
+          row.classification?.creative_hash === row.creative_hash) continue;
+        if (!shouldReclassifyCreative(row)) continue;
+        candidates.push(row);
+        if (candidates.length >= classificationBackfillBatchSize) return candidates;
+      }
+      if (rows.length < pageLimit) break;
     }
   }
   return candidates;
@@ -1733,26 +1788,39 @@ function isLegalEntityAliasAgency(existingAgency, verifiedAgency) {
   return tradingNames.map((name) => normalizeName(name)).filter(Boolean).includes(existingName);
 }
 
+function classifierCreativeHash(creative) {
+  if (creative?.creative_hash) return String(creative.creative_hash);
+  return hash(JSON.stringify({
+    headline: creative?.headline || null,
+    body: creative?.body || null,
+    cta: creative?.cta || null,
+    landing_url: creative?.landing_url || null,
+    format: creative?.format || null,
+  }));
+}
+
 async function enqueueClassificationJob(creative, parentJob) {
+  const creativeHash = classifierCreativeHash(creative);
   return enqueueFollowUp({
     queue_name: "research",
     job_type: "blockwise-ad-classifier",
-    dedupe_key: `classifier:${creative.id}:${creative.creative_hash || "unknown"}:${CLASSIFIER_VERSION}`,
+    dedupe_key: `ad-radar:classifier:${creative.id}:${creativeHash}:${CLASSIFIER_VERSION}:saved`,
     advertiser_page_id: null,
     priority: 5,
     payload: {
       adCreativeId: creative.id,
       observedAdId: creative.observed_ad_id || null,
-      classifier_version: CLASSIFIER_VERSION,
-      force: true,
+      creative_hash: creativeHash,
+      classifier_version: CLASSIFIER_VERSION + ":saved",
+      classifierMode: "deterministic",
+      ad_db_child: true,
     },
     status: "pending",
     max_attempts: 3,
   }, parentJob);
 }
-
 async function enqueueFollowUp(input, parentJob) {
-  const existing = await rest("research", `work_queue?select=id,status&dedupe_key=eq.${encode(input.dedupe_key)}&status=in.(pending,claimed,failed,blocked)&limit=1`);
+  const existing = await rest("research", `work_queue?select=id,status&dedupe_key=eq.${encode(input.dedupe_key)}&limit=1`);
   const active = existing.find((job) => job.status === "pending" || job.status === "claimed");
   if (active) return false;
   const recyclable = existing.find((job) => job.status === "failed" || job.status === "blocked");
@@ -1782,6 +1850,7 @@ async function enqueueFollowUp(input, parentJob) {
     await recordEvent("requeue", "work_queue", recyclable.id, { parent_work_queue_id: parentJob?.id || null, job_type: input.job_type }, { work_queue_id: recyclable.id });
     return true;
   }
+  if (existing.length) return false;
   const created = await rest("research", "work_queue", { method: "POST", headers: { Prefer: "return=representation" }, body: json(input) });
   if (created?.[0]?.id) await recordEvent("insert", "work_queue", created[0].id, { parent_work_queue_id: parentJob?.id || null, job_type: input.job_type }, { work_queue_id: created[0].id });
   return Boolean(created?.[0]?.id);
@@ -1800,14 +1869,23 @@ async function enqueuePostIngestJobs(item, advertiserPageId, buildRunId, parentJ
       max_attempts: 3,
     }, parentJob);
   }
-  if (env.HERMES_AD_DB_ENABLE_CLASSIFICATION !== "true") return;
+  if (!item.creative_hash) return;
+  const creativeHash = String(item.creative_hash);
   await enqueueFollowUp({
     queue_name: "research",
     job_type: "blockwise-ad-classifier",
-    dedupe_key: `classifier:${item.ad_creative_id}:${item.creative_hash}:${CLASSIFIER_VERSION}`,
+    dedupe_key: `ad-radar:classifier:${item.ad_creative_id}:${creativeHash}:${CLASSIFIER_VERSION}:saved`,
     advertiser_page_id: advertiserPageId,
     priority: 5,
-    payload: { adCreativeId: item.ad_creative_id, observedAdId: item.observed_ad_id, build_run_id: buildRunId, classifier_version: CLASSIFIER_VERSION },
+    payload: {
+      adCreativeId: item.ad_creative_id,
+      observedAdId: item.observed_ad_id,
+      build_run_id: buildRunId,
+      creative_hash: creativeHash,
+      classifier_version: CLASSIFIER_VERSION + ":saved",
+      classifierMode: "deterministic",
+      ad_db_child: true,
+    },
     status: "pending",
     max_attempts: 3,
   }, parentJob);
@@ -2299,7 +2377,7 @@ async function enqueueCollectorForPage(page, job) {
         verifiedAt: now(),
       },
       country: "AU",
-      activeStatus: "all",
+      activeStatus: "active",
       resultsLimit: metaCaptureResultsLimit,
     },
     status: "pending",
@@ -2654,7 +2732,7 @@ function captureInput(payload) {
     advertiserPageId: payload.advertiserPageId,
     metaPageId: String(payload.metaPageId),
     country: String(payload.country || "AU").toUpperCase(),
-    activeStatus: ["active", "inactive", "all"].includes(payload.activeStatus) ? payload.activeStatus : "all",
+    activeStatus: ["active", "inactive", "all"].includes(payload.activeStatus) ? payload.activeStatus : "active",
     resultsLimit: Math.max(1, Math.min(Number.parseInt(payload.resultsLimit || ("" + metaCaptureResultsLimit), 10) || metaCaptureResultsLimit, 250)),
     runCreditCap: captureCreditCap(payload),
     realEstateGate: payload.realEstateGate,
@@ -2719,7 +2797,7 @@ async function runHermesBrowserCapture(input) {
     kind: "page",
     metaPageId: input.metaPageId,
     country: input.country || "AU",
-    activeStatus: input.activeStatus || "all",
+    activeStatus: input.activeStatus || "active",
     resultsLimit: input.resultsLimit,
     timeoutMs: metaCaptureTimeoutMs,
     proxyUrl: env.RESIDENTIAL_PROXY_URL || env.HERMES_META_CAPTURE_PROXY_URL || "",
@@ -2766,11 +2844,14 @@ function captureModeForSourceProvider(sourceProvider, suffix = "") {
 // are still captured by the existing media collector directly from source.
 
 let scrapingBeeUsageCache = { at: 0, value: null };
+let scrapingBeeUsageInFlight = null;
 
 async function scrapingBeeBalanceEvidence() {
   if (scrapingBeeUsageCache.value && Date.now() - scrapingBeeUsageCache.at < 65_000) {
     return scrapingBeeUsageCache.value;
   }
+  if (scrapingBeeUsageInFlight) return scrapingBeeUsageInFlight;
+  scrapingBeeUsageInFlight = (async () => {
   const response = await fetch(`https://app.scrapingbee.com/api/v1/usage?api_key=${encodeURIComponent(scrapingBeeApiKey)}`, {
     signal: AbortSignal.timeout(15_000),
   });
@@ -2781,11 +2862,45 @@ async function scrapingBeeBalanceEvidence() {
     value: parseScrapingBeeUsage(usage, now()),
   };
   return scrapingBeeUsageCache.value;
+  })();
+  try { return await scrapingBeeUsageInFlight; }
+  finally { scrapingBeeUsageInFlight = null; }
+
 }
 
 async function assertScrapingBeeBudgetConfiguration() {
   const budgets = await rest("research", "provider_credit_budgets?provider=eq.scrapingbee&select=max_credits&order=period_start.desc&limit=1");
   assertBudgetWithinConfiguredCap(budgets?.[0]?.max_credits, scrapingBeeMonthlyCreditCap);
+}
+
+let facebookSearchAdapter = null;
+async function searchFacebookEvidence(input) {
+  facebookSearchAdapter ||= createFacebookSearchEvidence({
+    rest,
+    rpc,
+    apiKey: scrapingBeeApiKey,
+    enabled: scrapingBeeEnabled,
+    balanceEvidence: scrapingBeeBalanceEvidence,
+    recordAttempt: recordAdFetchAttempt,
+    patchAttempt: patchAdFetchAttempt,
+    sourceDocument,
+    rawEvidenceDir,
+    now,
+  });
+  return facebookSearchAdapter(input);
+}
+
+let facebookPageIdentityAdapter = null;
+async function resolveFacebookPageEvidence(input) {
+  facebookPageIdentityAdapter ||= createFacebookPageIdentityEvidence({
+    rest, rpc, apiKey: scrapingBeeApiKey, enabled: scrapingBeeEnabled,
+    balanceEvidence: scrapingBeeBalanceEvidence,
+    recordAttempt: recordAdFetchAttempt, patchAttempt: patchAdFetchAttempt,
+    sourceDocument, rawEvidenceDir, now,
+    captureMode: env.HERMES_FACEBOOK_IDENTITY_CAPTURE_MODE || "classic",
+    creditCap: Number(env.HERMES_FACEBOOK_IDENTITY_CREDIT_CAP || "1"),
+  });
+  return facebookPageIdentityAdapter(input);
 }
 
 async function recordAdFetchAttempt(attempt) {
@@ -2864,9 +2979,10 @@ async function runScrapingBeePageCapture(input) {
     return failedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt, "scrapingbee_missing_durable_fetch_run", {}, 0);
   }
 
+  const savedCapture = await loadCaptureJournal(rawEvidenceDir, input);
   let balance;
   try {
-    balance = await scrapingBeeBalanceEvidence();
+    balance = savedCapture ? { verifiedAt: savedCapture.capturedAt } : await scrapingBeeBalanceEvidence();
   } catch (error) {
     return failedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt,
       `scrapingbee_balance_unverified (${error.message})`, {}, 0);
@@ -2890,11 +3006,124 @@ async function runScrapingBeePageCapture(input) {
     provider_balance_verified_at: balance.verifiedAt,
     charge_known: false,
   };
+  const processResponse = async ({ response, body: html, receipt }) => {
+        telemetry.scraper_run_id = receipt.requestId;
+        if (receipt.requestId) telemetry.request_ids.push(receipt.requestId);
+        const evidence = await savePaidCaptureEvidence(input, html, receipt);
+        const evidenceMetadata = {
+          raw_evidence_ref: evidence.ref,
+          source_document_id: evidence.sourceDocumentId,
+          raw_evidence_sha256: evidence.contentHash,
+          raw_evidence_bytes: evidence.byteSize,
+        };
+        await patchAdFetchAttempt(attemptId, { raw_evidence_ref: evidence.ref });
+        // Auto Mode may recover an initial 403 at a later tier. Only the
+        // final HTTP result and strict payload parsing determine usability.
+        // The initial status remains in the receipt for diagnostics/accounting.
+        const blocked = !response.ok || response.status === 401 || response.status === 429;
+        if (blocked) {
+          const message = `scrapingbee request failed ${response.status}`;
+          return {
+            attempt: { outcome: "blocked", httpStatus: response.status, responseBytes: html.length, error: message },
+            result: failedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt, message,
+              { ...evidenceMetadata, provider_telemetry: telemetry, http_status: response.status, spb_initial_status_code: receipt.initialStatus }, 0),
+          };
+        }
+        const classified = parseMetaPaginatedCapture(html, input.metaPageId, { country: input.country || "AU", activeStatus: input.activeStatus || "active" });
+        if (["challenge", "login_wall", "unparseable"].includes(classified.outcome)) {
+          const outcome = classified.outcome === "unparseable" ? "unparseable" : "blocked";
+          const message = `scrapingbee_${classified.outcome}`;
+          return {
+            attempt: { outcome, httpStatus: response.status, responseBytes: html.length, error: message },
+            result: failedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt, message,
+              { ...evidenceMetadata, provider_telemetry: telemetry, parser_outcome: classified.outcome, html_bytes: html.length }, 0),
+          };
+        }
+        // Partial parser evidence is still valuable. Keep every validated ad
+        // ID (including sparse nodes) as an observation, but mark coverage
+        // incomplete so lifecycle and zero-ad scheduling remain untouched.
+        const parsed = normaliseHostedMetaItems({
+          body: classified.ads.map((ad) => ad.node || { ad_archive_id: ad.id, page_id: input.metaPageId }),
+          pageId: input.metaPageId,
+          limit: Math.max(Number(input.resultsLimit) || 250, classified.ads.length),
+        });
+        const paginationExhausted = classified.pageInfo.hasNextPage === false;
+        const confirmedAbsence = classified.outcome === "confirmed_absence";
+        const partialEvidence = classified.outcome === "partial";
+        return {
+          attempt: { outcome: "success", httpStatus: response.status, responseBytes: html.length, error: null },
+          result: {
+            runId: `scrapingbee-${input.metaPageId}-${Date.now()}`,
+            provider: META_SCRAPINGBEE_SOURCE_PROVIDER,
+            status: "SUCCEEDED",
+            startedAt,
+            finishedAt: now(),
+            costUsd: 0,
+            itemCount: parsed.items.length,
+            items: parsed.items,
+            rawDatasetId: null,
+            errorMessage: parsed.warnings.join("; ") || null,
+            coverageComplete: !partialEvidence && (confirmedAbsence || paginationExhausted),
+            paginationExhausted,
+            stopReason: confirmedAbsence ? "confirmed_absence" : partialEvidence ? "partial_evidence" : paginationExhausted ? "page_exhausted" : "pagination_unresolved",
+            metadata: {
+              ...evidenceMetadata,
+              advertiserPageId: input.advertiserPageId,
+              resolverDecisionId: input.resolverDecisionId,
+              confirmed_absence: confirmedAbsence,
+              challenge_detected: false,
+              connection_count: classified.connectionCount,
+              pagination_records: classified.paginationRecords || 0,
+              capture_strategy: classified.captureStrategy,
+              page_info: classified.pageInfo,
+              parser_outcome: classified.outcome,
+              partial_evidence: partialEvidence,
+              warnings: [...new Set([...classified.warnings, ...parsed.warnings])],
+              provider_telemetry: telemetry,
+            },
+          },
+        };
+  };
+  if (savedCapture) {
+    const receipt = savedCapture.receipt;
+    const handled = await processResponse({
+      response: { status: savedCapture.status, ok: savedCapture.status >= 200 && savedCapture.status < 300 },
+      body: savedCapture.body, receipt,
+    });
+    await reconcileSavedCaptureSettlement({
+      rest,
+      settle: (payload) => rpc("settle_provider_attempt_credits", payload),
+      attemptId,
+      runId: input.adFetchRunId,
+      receipt,
+      outcome: handled.attempt.outcome,
+    });
+    telemetry.provider_request_count = 1;
+    telemetry.provider_credits = receipt.chargeKnown ? receipt.credits : runCreditCap;
+    telemetry.provider_cost_usd = scrapingBeeCostUsd(telemetry.provider_credits);
+    telemetry.charge_known = receipt.chargeKnown;
+    handled.result.metadata = { ...handled.result.metadata, replayed_saved_capture: true, provider_telemetry: telemetry };
+    handled.result.costUsd = telemetry.provider_cost_usd;
+    return handled.result;
+  }
+  // Every capture uses ScrapingBee JSON wrapping so native XHR evidence is
+  // available when needed. Only a saved, positive, explicitly non-exhausted
+  // result adds the bounded native scrolling scenario.
+  const priorPartial = env.HERMES_AD_RADAR_NATIVE_PAGINATION === "true" && input.advertiserPageId
+    ? await rest("research", "ad_fetch_runs?select=id&advertiser_page_id=eq." + encode(input.advertiserPageId)
+      + "&source_provider=eq.scrapingbee_meta_ad_library&status=eq.success&coverage_complete=eq.false"
+      + "&result_summary->>active_ads=gt.0&result_summary->metadata->page_info->>hasNextPage=eq.true&limit=1")
+    : [];
+  const nativePagination = priorPartial.length > 0;
   const params = new URLSearchParams({
-    api_key: scrapingBeeApiKey,
     url,
     mode: "auto",
     max_cost: String(runCreditCap),
+    wait: String(scrapingBeeWaitMs),
+    json_response: "true",
+    ...(nativePagination ? {
+      js_scenario: JSON.stringify(buildMetaPaginationScenario()),
+    } : {}),
   });
 
   try {
@@ -2917,7 +3146,7 @@ async function runScrapingBeePageCapture(input) {
         provider_credit_attempt_id: attemptId,
         tier: "auto_mode",
         request_url_host: "app.scrapingbee.com",
-        request_params: { mode: "auto", max_cost: runCreditCap, target_host: new URL(url).host },
+        request_params: { mode: "auto", max_cost: runCreditCap, wait_ms: scrapingBeeWaitMs, json_response: true, pagination: nativePagination ? "native_cursor" : "initial_page", target_host: new URL(url).host },
         outcome: "error",
         error: "reserved_before_provider_request",
         started_at: new Date(requestStartedAt).toISOString(),
@@ -2925,79 +3154,13 @@ async function runScrapingBeePageCapture(input) {
       request: async () => {
         telemetry.provider_request_count = 1;
         return fetch(`https://app.scrapingbee.com/api/v1/?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${scrapingBeeApiKey}` },
           signal: AbortSignal.timeout(scrapingBeeTimeoutMs),
         });
       },
       handleResponse: async ({ response, body: html, receipt }) => {
-        telemetry.scraper_run_id = receipt.requestId;
-        if (receipt.requestId) telemetry.request_ids.push(receipt.requestId);
-        const evidence = await savePaidCaptureEvidence(input, html, receipt);
-        const evidenceMetadata = {
-          raw_evidence_ref: evidence.ref,
-          source_document_id: evidence.sourceDocumentId,
-          raw_evidence_sha256: evidence.contentHash,
-          raw_evidence_bytes: evidence.byteSize,
-        };
-        await patchAdFetchAttempt(attemptId, { raw_evidence_ref: evidence.ref });
-        const blocked = !response.ok || response.status === 401 || response.status === 429
-          || ([403, 429].includes(receipt.initialStatus));
-        if (blocked) {
-          const message = `scrapingbee request failed ${response.status}`;
-          return {
-            attempt: { outcome: "blocked", httpStatus: response.status, responseBytes: html.length, error: message },
-            result: failedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt, message,
-              { ...evidenceMetadata, provider_telemetry: telemetry, http_status: response.status, spb_initial_status_code: receipt.initialStatus }, 0),
-          };
-        }
-        const classified = classifyMetaAdLibraryPayload(html, { requestedPageId: input.metaPageId });
-        if (["challenge", "login_wall", "unparseable"].includes(classified.outcome)) {
-          const outcome = classified.outcome === "unparseable" ? "unparseable" : "blocked";
-          const message = `scrapingbee_${classified.outcome}`;
-          return {
-            attempt: { outcome, httpStatus: response.status, responseBytes: html.length, error: message },
-            result: failedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt, message,
-              { ...evidenceMetadata, provider_telemetry: telemetry, parser_outcome: classified.outcome, html_bytes: html.length }, 0),
-          };
-        }
-        if (classified.outcome === "partial") throw new Error("scrapingbee payload was only partial; refusing incomplete ingestion");
-
-        const parsed = normaliseHostedMetaItems({
-          body: classified.ads.map((ad) => ad.node),
-          pageId: input.metaPageId,
-          limit: input.resultsLimit,
-        });
-        const paginationExhausted = classified.pageInfo.hasNextPage === false;
-        const confirmedAbsence = classified.outcome === "confirmed_absence";
-        return {
-          attempt: { outcome: "success", httpStatus: response.status, responseBytes: html.length, error: null },
-          result: {
-            runId: `scrapingbee-${input.metaPageId}-${Date.now()}`,
-            provider: META_SCRAPINGBEE_SOURCE_PROVIDER,
-            status: "SUCCEEDED",
-            startedAt,
-            finishedAt: now(),
-            costUsd: 0,
-            itemCount: parsed.items.length,
-            items: parsed.items,
-            rawDatasetId: null,
-            errorMessage: parsed.warnings.join("; ") || null,
-            coverageComplete: confirmedAbsence || paginationExhausted,
-            paginationExhausted,
-            stopReason: confirmedAbsence ? "confirmed_absence" : paginationExhausted ? "page_exhausted" : "pagination_unresolved",
-            metadata: {
-              ...evidenceMetadata,
-              advertiserPageId: input.advertiserPageId,
-              resolverDecisionId: input.resolverDecisionId,
-              confirmed_absence: confirmedAbsence,
-              challenge_detected: false,
-              connection_count: classified.connectionCount,
-              page_info: classified.pageInfo,
-              parser_outcome: classified.outcome,
-              warnings: [...new Set([...classified.warnings, ...parsed.warnings])],
-              provider_telemetry: telemetry,
-            },
-          },
-        };
+        await saveCaptureJournal(rawEvidenceDir, input, { body: html, receipt, status: response.status });
+        return processResponse({ response, body: html, receipt });
       },
       persistReceipt: ({ receipt, response }) => patchAdFetchAttempt(attemptId, {
         http_status: response.status,
@@ -3038,6 +3201,9 @@ async function runScrapingBeePageCapture(input) {
       return result;
     });
   } catch (error) {
+    // Paid bytes are already safe. A database/ingestion failure retries this
+    // same queue job and run from the journal, not a new paid capture.
+    if (await loadCaptureJournal(rawEvidenceDir, input)) throw error;
     return failedCaptureOutcome(META_SCRAPINGBEE_SOURCE_PROVIDER, input, startedAt,
       `scrapingbee request error: ${error.message}`, { provider_telemetry: telemetry, error: error.message },
       telemetry.provider_cost_usd);
@@ -3058,7 +3224,7 @@ async function runMetaPageCapture(input) {
   // attempt is never followed by a second paid attempt for the same page.
   let scrapingBeeAttempted = false;
 
-  const tryScrapingBee = async (metadataExtras = {}) => {
+  const tryScrapingBee = async (metadataExtras = {}, preserveFailure = false) => {
     if (!scrapingBeeEnabled || scrapingBeeAttempted) return null;
     scrapingBeeAttempted = true;
     const spb = await runScrapingBeePageCapture(input);
@@ -3074,19 +3240,19 @@ async function runMetaPageCapture(input) {
       meta_page_id: input.metaPageId,
       error: spb.errorMessage,
     }, "warn");
-    return null;
+    return preserveFailure
+      ? {
+          outcome: { ...spb, metadata: { ...(spb.metadata || {}), ...metadataExtras } },
+          sourceProvider: META_SCRAPINGBEE_SOURCE_PROVIDER,
+          captureMode: captureModeForSourceProvider(META_SCRAPINGBEE_SOURCE_PROVIDER),
+        }
+      : null;
   };
 
   if (scrapingBeeEnabled && scrapingBeeOrder === "primary") {
-    const primary = await tryScrapingBee();
-    if (primary) return primary;
-    const fallback = await runFallbackMetaPageCapture(input, fallbackSourceProvider);
-    const sourceProvider = fallback.provider || fallbackSourceProvider;
-    return {
-      outcome: fallback,
-      sourceProvider,
-      captureMode: captureModeForSourceProvider(sourceProvider, "after_scrapingbee_failure"),
-    };
+    // Primary paid collection fails closed. A provider error must not invoke
+    // an unrelated browser path or make a second provider request.
+    return tryScrapingBee({}, true);
   }
 
   if (metaOfficialApiEnabled) {
@@ -3704,11 +3870,7 @@ async function insertFetchRun(job, buildRunId, input, provider) {
     status: "running",
     result_summary: {},
   };
-  const created = await writeFetchRunWithMissingColumnFallback("ad_fetch_runs", {
-    method: "POST",
-    headers: { Prefer: "return=representation" },
-  }, row);
-  return created?.[0]?.id;
+  return ensureFetchRun(rest, row);
 }
 
 function payloadString(value) {
@@ -3740,33 +3902,21 @@ function runTelemetryPatch(outcome) {
   return patch;
 }
 
-async function updateFetchRun(id, patch) {
-  await writeFetchRunWithMissingColumnFallback(`ad_fetch_runs?id=eq.${id}`, {
+async function updateFetchRun(id, patch, { schedulePage = true } = {}) {
+  const completedAt = now();
+  const updated = await rest("research", `ad_fetch_runs?id=eq.${encode(id)}`, {
     method: "PATCH",
-  }, { completed_at: now(), ...patch });
-}
-
-async function markAdvertiserPageCheckFailed(advertiserPageId) {
-  if (!advertiserPageId) return;
-  const page = await rest("research", `advertiser_pages?select=consecutive_failed_checks,consecutive_failures&id=eq.${advertiserPageId}&limit=1`);
-  const consecutiveFailedChecks = Math.min(99, Number(page?.[0]?.consecutive_failed_checks || 0) + 1);
-  const consecutiveFailures = Math.min(99, Number(page?.[0]?.consecutive_failures || 0) + 1);
-  // Exponential backoff: 1h * 2^n capped at 7 days (mirrors
-  // research.schedule_page_after_scan on the failure path).
-  const backoffHours = Math.min(168, 1 * 2 ** Math.min(consecutiveFailures, 10));
-  const backoffUntil = new Date(Date.now() + backoffHours * 3_600_000).toISOString();
-  await rest("research", `advertiser_pages?id=eq.${advertiserPageId}`, {
-    method: "PATCH",
+    headers: { Prefer: "return=representation" },
     body: json({
-      last_checked_at: now(),
-      last_scan_completed_at: now(),
-      consecutive_failed_checks: consecutiveFailedChecks,
-      consecutive_failures: consecutiveFailures,
-      backoff_until: backoffUntil,
-      next_scan_at: backoffUntil,
-      scan_state: "failing",
+      completed_at: completedAt,
+      ...(patch.status === "success" ? { error: null } : {}),
+      ...patch,
+      ...(schedulePage ? {} : { ad_radar_scheduled_at: completedAt }),
     }),
   });
+  if (!updated?.[0]?.id) throw new Error("ad fetch run finalization was not confirmed");
+  if (schedulePage) await rpc("schedule_ad_radar_after_run", { p_run_id: id });
+  return updated[0];
 }
 
 async function markAdvertiserPageScanStarted(advertiserPageId) {
@@ -3775,78 +3925,6 @@ async function markAdvertiserPageScanStarted(advertiserPageId) {
     method: "PATCH",
     body: json({ last_scan_started_at: now(), scan_state: "scanning" }),
   });
-}
-
-// Success-path scheduling (24h active / 72h historical / 7d no ads). Mirrors
-// research.schedule_page_after_scan; the DB function remains the authority
-// when invoked through RPC.
-function pageScheduleAfterSuccess({ activeCount, everRanAds }) {
-  const hours = activeCount > 0 ? 24 : everRanAds ? 72 : 168;
-  return new Date(Date.now() + hours * 3_600_000).toISOString();
-}
-
-async function markAdvertiserPageScanSucceeded(advertiserPageId, { activeCount = 0, lastActiveSeenAt = null } = {}) {
-  if (!advertiserPageId) return;
-  const page = await rest(
-    "research",
-    `advertiser_pages?select=has_ever_run_ads,scan_state,initial_fill_completed_at&id=eq.${advertiserPageId}&limit=1`,
-  );
-  const current = page?.[0] || {};
-  const everRanAds = current.has_ever_run_ads === true || activeCount > 0;
-  const nextScanAt = pageScheduleAfterSuccess({ activeCount, everRanAds });
-  const checkedAt = now();
-  const scanState = current.scan_state === "paused"
-    ? "paused"
-    : activeCount > 0 || everRanAds ? "healthy" : "zero_ads";
-  await rest("research", `advertiser_pages?id=eq.${advertiserPageId}`, {
-    method: "PATCH",
-    body: json({
-      last_checked_at: checkedAt,
-      last_scan_completed_at: checkedAt,
-      last_successful_check_at: checkedAt,
-      last_successful_scan_at: checkedAt,
-      consecutive_failed_checks: 0,
-      consecutive_failures: 0,
-      backoff_until: null,
-      next_scan_at: nextScanAt,
-      has_ever_run_ads: everRanAds,
-      current_active_ad_count: activeCount,
-      ...(lastActiveSeenAt ? { last_active_ad_seen_at: lastActiveSeenAt } : {}),
-      initial_fill_completed_at: current.initial_fill_completed_at || checkedAt,
-      scan_state: scanState,
-    }),
-  });
-}
-
-async function writeFetchRunWithMissingColumnFallback(path, options, row) {
-  const compatibleRow = { ...row };
-  const removedColumns = [];
-  for (let attempt = 0; attempt < 12; attempt += 1) {
-    try {
-      return await rest("research", path, {
-        ...options,
-        body: json(compatibleRow),
-      });
-    } catch (error) {
-      const column = missingSchemaColumn(error);
-      if (!column || !Object.prototype.hasOwnProperty.call(compatibleRow, column)) {
-        throw error;
-      }
-      delete compatibleRow[column];
-      removedColumns.push(column);
-    }
-  }
-  throw new Error(`ad_fetch_runs write still incompatible after removing ${removedColumns.join(", ")}`);
-}
-
-function missingSchemaColumn(error) {
-  const message = error instanceof Error ? error.message : String(error);
-  return /Could not find the '([^']+)' column/iu.exec(message)?.[1] || null;
-}
-
-function missingSchemaRelation(error, relation) {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.includes("PGRST205") && message.includes(`'research.${relation}'`);
 }
 
 async function ingestMetaAd({ ad, advertiserPageId, adFetchRunId, buildRunId, sourceProvider, parentJob, explicitAreaMatch = null, historicalObservedAt = null, preserveLifecycle = false }) {
@@ -3948,7 +4026,7 @@ function deliveryStoppedAtForMetaAd(ad, activeStatus = activeStatusForMetaAd(ad)
 }
 
 async function isTrustedConfirmedZeroAdCapture({ advertiserPageId, sourceProvider }) {
-  if (sourceProvider === META_OFFICIAL_SOURCE_PROVIDER) return true;
+  if (sourceProvider === META_OFFICIAL_SOURCE_PROVIDER || sourceProvider === META_SCRAPINGBEE_SOURCE_PROVIDER) return true;
   const rows = await rest(
     "research",
     `observed_ads?select=id&advertiser_page_id=eq.${encode(advertiserPageId)}&limit=1`,
@@ -4252,9 +4330,8 @@ async function handleAdCollector(job) {
   if (!payload.advertiserPageId || !payload.metaPageId) {
     return { status: "blocked", blocked_reason: "collector_missing_page", result: { handler: "blockwise-ad-collector", collection_started: false } };
   }
-  // Ad Radar v2: a scan only needs a real Page row with scanning enabled.
-  // Agent/agency resolution, real-estate gates and approvals are optional
-  // descriptive metadata, never a scan precondition.
+  // Queue selection owns WA/customer scope. Execution rechecks the exact
+  // numeric identity and respects a page disabled since it was queued.
   if (!uuidPattern.test(String(payload.advertiserPageId)) || !/^[0-9]+$/.test(String(payload.metaPageId))) {
     return { status: "blocked", blocked_reason: "collector_invalid_page_identity", result: { collection_started: false } };
   }
@@ -4278,17 +4355,26 @@ async function handleAdCollector(job) {
     : metaOfficialApiEnabled ? META_OFFICIAL_SOURCE_PROVIDER : configuredMetaFallbackSourceProvider();
   const adFetchRunId = await insertFetchRun(job, buildRunId, input, initialSourceProvider);
   if (!adFetchRunId) throw new Error("ad_fetch_run insert did not return an id");
-  await markAdvertiserPageScanStarted(pageRow.id);
   // Link provider attempts back to the run row.
   input.adFetchRunId = adFetchRunId;
+  const replayingSavedCapture = initialSourceProvider === META_SCRAPINGBEE_SOURCE_PROVIDER
+    && Boolean(await loadCaptureJournal(rawEvidenceDir, input));
+  if (!replayingSavedCapture) await markAdvertiserPageScanStarted(pageRow.id);
+  // Historical replay can improve evidence without replacing newer scheduling truth.
+  const finalizeFetchRun = (patch) => updateFetchRun(
+    adFetchRunId,
+    patch,
+    { schedulePage: !replayingSavedCapture },
+  );
   const capture = await runMetaPageCapture(input);
   const { outcome, sourceProvider, captureMode: capture_mode } = capture;
   if (outcome.status === "SKIPPED") {
-    await updateFetchRun(adFetchRunId, {
+    await finalizeFetchRun({
       source_provider: sourceProvider,
       status: "failed",
       result_summary: {
         provider: sourceProvider,
+        active_ads: outcome.items.filter((ad) => activeStatusForMetaAd(ad) === "active").length,
         skipped: true,
         skip_reason: outcome.metadata?.skip_reason || "capture_skipped",
         metadata: outcome.metadata || {},
@@ -4296,7 +4382,6 @@ async function handleAdCollector(job) {
       error: outcome.errorMessage || "capture skipped",
       cost_usd: 0,
     });
-    await markAdvertiserPageCheckFailed(payload.advertiserPageId);
     return {
       status: "complete",
       result: {
@@ -4312,8 +4397,7 @@ async function handleAdCollector(job) {
     };
   }
   if (outcome.status !== "SUCCEEDED") {
-    await updateFetchRun(adFetchRunId, { source_provider: sourceProvider, status: "failed", result_summary: { provider: sourceProvider, metadata: outcome.metadata || {} }, error: outcome.errorMessage || "capture failed", cost_usd: outcome.costUsd || 0, ...runTelemetryPatch(outcome) });
-    await markAdvertiserPageCheckFailed(payload.advertiserPageId);
+    await finalizeFetchRun({ source_provider: sourceProvider, status: "failed", result_summary: { provider: sourceProvider, active_ads: null, metadata: outcome.metadata || {} }, error: outcome.errorMessage || "capture failed", cost_usd: outcome.costUsd || 0, ...runTelemetryPatch(outcome) });
     await insertCoverageDefect({
       platform: "facebook",
       reason: "ad_collector_capture_failed",
@@ -4324,7 +4408,20 @@ async function handleAdCollector(job) {
       resolution: { advertiser_page_id: payload.advertiserPageId, meta_page_id: payload.metaPageId, provider: sourceProvider, error: outcome.errorMessage },
       resolved_advertiser_page_id: payload.advertiserPageId,
     });
-    throw new Error(outcome.errorMessage || "Meta capture failed");
+    return {
+      status: "blocked",
+      blocked_reason: "collector_capture_failed",
+      result: {
+        handler: "blockwise-ad-collector",
+        advertiser_page_id: payload.advertiserPageId,
+        meta_page_id: payload.metaPageId,
+        provider: sourceProvider,
+        capture_mode,
+        collection_failed: true,
+        error: outcome.errorMessage || "Meta capture failed",
+        ingest_tables: ingestTables,
+      },
+    };
   }
   const checkedAt = now();
   // Coverage contract: a run is complete/comparable only when pagination ran
@@ -4339,7 +4436,7 @@ async function handleAdCollector(job) {
       sourceProvider,
     });
     if (!zeroCaptureTrusted) {
-      await updateFetchRun(adFetchRunId, {
+      await finalizeFetchRun({
         source_provider: sourceProvider,
         status: "failed",
         result_summary: {
@@ -4354,7 +4451,6 @@ async function handleAdCollector(job) {
         cost_usd: outcome.costUsd || 0,
         ...runTelemetryPatch(outcome),
       });
-      await markAdvertiserPageCheckFailed(payload.advertiserPageId);
       await insertCoverageDefect({
         platform: "facebook",
         reason: "ad_collector_untrusted_zero_after_positive",
@@ -4388,10 +4484,10 @@ async function handleAdCollector(job) {
     // Finalize the run (with coverage flags) BEFORE reconciliation so the
     // DB function sees the authoritative coverage columns. A confirmed
     // zero-ad result is a valid observation, never a fake.
-    await updateFetchRun(adFetchRunId, {
+    await finalizeFetchRun({
       source_provider: sourceProvider,
       status: "success",
-      result_summary: { provider: sourceProvider, item_count: 0, confirmed_absence: true, metadata: outcome.metadata || {} },
+      result_summary: { provider: sourceProvider, active_ads: 0, item_count: 0, confirmed_absence: true, metadata: outcome.metadata || {} },
       cost_usd: outcome.costUsd || 0,
       ...runTelemetryPatch(outcome),
       coverage_complete: coverageComplete,
@@ -4405,7 +4501,6 @@ async function handleAdCollector(job) {
       coverageComplete,
     });
     await openCircuitIfPaidSpendWithoutIngest({ sourceProvider, input, costUsd: outcome.costUsd || 0, ingestedCount: 0, reason: "confirmed_absence", scope: "page_capture_confirmed_absence" });
-    await markAdvertiserPageScanSucceeded(payload.advertiserPageId, { activeCount: 0 });
     await rest("research", `advertiser_pages?id=eq.${payload.advertiserPageId}`, {
       method: "PATCH",
       body: json({ status: "no_ads_confirmed" }),
@@ -4426,11 +4521,12 @@ async function handleAdCollector(job) {
       await enqueuePostIngestJobs(item, payload.advertiserPageId, buildRunId, job);
     }
   } catch (error) {
-    await updateFetchRun(adFetchRunId, {
+    await finalizeFetchRun({
       source_provider: sourceProvider,
       status: "partial",
       result_summary: {
         provider: sourceProvider,
+        active_ads: outcome.items.filter((ad) => activeStatusForMetaAd(ad) === "active").length,
         item_count: outcome.itemCount,
         ingested_count: ingested.length,
         raw_dataset_id: outcome.rawDatasetId,
@@ -4450,16 +4546,28 @@ async function handleAdCollector(job) {
   const activeCount = outcome.items.filter((ad) => activeStatusForMetaAd(ad) === "active").length;
   // Finalize the run (with coverage flags) BEFORE reconciliation so the DB
   // function sees the authoritative coverage columns.
-  await updateFetchRun(adFetchRunId, {
+  await finalizeFetchRun({
     source_provider: sourceProvider,
     status: "success",
-    result_summary: { provider: sourceProvider, item_count: outcome.itemCount, ingested_count: ingested.length, raw_dataset_id: outcome.rawDatasetId, metadata: outcome.metadata || {} },
+    result_summary: { provider: sourceProvider, active_ads: activeCount, item_count: outcome.itemCount, ingested_count: ingested.length, raw_dataset_id: outcome.rawDatasetId, metadata: outcome.metadata || {} },
     cost_usd: outcome.costUsd || 0,
     ...runTelemetryPatch(outcome),
     coverage_complete: coverageComplete,
     pagination_exhausted: paginationExhausted,
     stop_reason: outcome.stopReason || (coverageComplete ? "page_exhausted" : "results_limit_reached"),
   });
+  if (env.HERMES_AD_RADAR_NATIVE_PAGINATION === "true" && !coverageComplete && activeCount > 0
+    && outcome.metadata?.capture_strategy === "initial_page" && outcome.metadata?.page_info?.hasNextPage === true) {
+    // One different capture strategy, in the same canonical queue. A partial
+    // native capture cannot recursively create another immediate paid job.
+    await enqueueFollowUp({
+      queue_name: "research", job_type: "blockwise-ad-collector",
+      dedupe_key: `ad-radar:collector:${payload.advertiserPageId}:pagination:${adFetchRunId}`,
+      advertiser_page_id: payload.advertiserPageId,
+      priority: job.priority || 10, status: "pending", available_at: now(), max_attempts: 3,
+      payload: { ...payload, build_run_id: buildRunId, pagination_parent_run_id: adFetchRunId },
+    }, job);
+  }
   const reconciliation = await reconcileMissingObservedAds({
     advertiserPageId: payload.advertiserPageId,
     seenExternalAdIds: ingested.map((item) => item.external_ad_id),
@@ -4511,10 +4619,6 @@ async function handleAdCollector(job) {
       resolved_advertiser_page_id: payload.advertiserPageId,
     });
   }
-  await markAdvertiserPageScanSucceeded(payload.advertiserPageId, {
-    activeCount,
-    lastActiveSeenAt: activeCount > 0 ? now() : null,
-  });
   await rest("research", `advertiser_pages?id=eq.${payload.advertiserPageId}`, {
     method: "PATCH",
     body: json({ status: "resolved_collectable" }),
@@ -4528,7 +4632,7 @@ async function handleMediaCollector(job) {
   if (!uuid.test(payload.adCreativeId || "") || !uuid.test(payload.observedAdId || "")) {
     return { status: "blocked", blocked_reason: "media_collector_missing_creative", result: { handler: "blockwise-media-collector" } };
   }
-  const load = () => rest("research", "media_assets?select=*&ad_creative_id=eq." + payload.adCreativeId + "&observed_ad_id=eq." + payload.observedAdId + "&capture_status=in.(pending,failed,captured)&archive_object_id=is.null&order=created_at.asc&limit=20");
+  const load = () => rest("research", "media_assets?select=*&ad_creative_id=eq." + payload.adCreativeId + "&observed_ad_id=eq." + payload.observedAdId + "&capture_status=in.(pending,failed,captured)&archive_object_id=is.null&order=created_at.asc&limit=250");
   let assets = await load();
   let seeded = 0;
   if (!assets.length) {
@@ -4550,7 +4654,12 @@ async function handleMediaCollector(job) {
       failed += 1;
     }
   }
-  return { status: "complete", result: { handler: "blockwise-media-collector", ad_creative_id: payload.adCreativeId, seeded, captured, failed, model_calls: 0 } };
+  if (failed > 0) throw new Error("media_capture_failed");
+  await refreshClassifiedCreativeDisplay(payload.adCreativeId);
+  return {
+    status: "complete",
+    result: { handler: "blockwise-media-collector", ad_creative_id: payload.adCreativeId, seeded, captured, failed, model_calls: 0 },
+  };
 }
 
 async function loadCreativeForMediaCapture(adCreativeId) {
@@ -4616,16 +4725,40 @@ async function handleAdClassifier(job) {
   const creatives = await rest("research", `ad_creatives?select=*&id=eq.${payload.adCreativeId}&limit=1`);
   const creative = creatives?.[0];
   if (!creative) return { status: "complete", result: { handler: "blockwise-ad-classifier", ad_creative_id: payload.adCreativeId, stale_creative_skipped: true } };
-  const capturedAssets = await rest("research", `media_assets?select=id,kind,storage_path,source_url,capture_status,byte_size,width,height&ad_creative_id=eq.${creative.id}&capture_status=eq.captured&limit=20`);
-  if (shouldWaitForMediaClassification(creative, capturedAssets)) {
+  const expectedCreativeHash = classifierCreativeHash(creative);
+  if (creative.classification_status === "classified" &&
+      ((creative.classification?.classifier_version === CLASSIFIER_VERSION + ":saved" &&
+        creative.classification?.creative_hash === expectedCreativeHash) ||
+       (creative.ad_type && creative.ad_type !== "other" &&
+        Number(creative.classification?.confidence) >= 0.7))) {
+    return {status:"complete",result:{handler:"blockwise-ad-classifier",
+      ad_creative_id:creative.id,preserved_classification:true,model_calls:0}};
+  }
+  if (payload.creative_hash && String(payload.creative_hash) !== expectedCreativeHash) {
+    return { status: "complete", result: { handler: "blockwise-ad-classifier", ad_creative_id: creative.id, stale_hash_skipped: true, model_calls: 0 } };
+  }
+  const capturedAssets = await rest("research", `media_assets?select=id,kind,storage_path,source_url,capture_status,archive_object_id,archive_verified_at,byte_size,width,height&ad_creative_id=eq.${creative.id}&capture_status=eq.captured&archive_object_id=not.is.null&archive_verified_at=not.is.null&limit=20`);
+  const deterministic = payload.classifierMode === "deterministic" && payload.ad_db_child === true;
+  if (!deterministic && shouldWaitForMediaClassification(creative, capturedAssets)) {
     throw new Error("classifier_waiting_for_media_capture");
   }
-  const classificationResult = await classifyCreativeWithModels(creative, capturedAssets, {
-    env,
-    fetchImpl: fetch,
-    storagePublicUrlForPath,
-  });
-  const classification = classificationResult.classification;
+  if (narrowAdDbMode && !deterministic) {
+    return {
+      status: "blocked",
+      blocked_reason: "legacy_classifier_job_not_allowed_in_narrow_worker",
+      result: { handler: "blockwise-ad-classifier", ad_creative_id: creative.id, model_calls: 0 },
+    };
+  }
+  const classificationResult = deterministic
+    ? classifyCreativeFromSavedEvidence(creative, { evidenceSource: "saved_creative" })
+    : await classifyCreativeWithModels(creative, capturedAssets, {
+      env,
+      fetchImpl: fetch,
+      storagePublicUrlForPath,
+    });
+  const classification = deterministic
+    ? {...classificationResult.classification, classifier_version: CLASSIFIER_VERSION + ":saved", creative_hash: expectedCreativeHash}
+    : classificationResult.classification;
   const requiresMedia = ["image", "video", "carousel"].includes(creative.format);
   const mediaReady = !requiresMedia || hasUsableCapturedMedia(capturedAssets);
   const unresolvedDynamicPlaceholder = hasUnresolvedDynamicPlaceholder(creative);
@@ -4652,7 +4785,7 @@ async function handleAdClassifier(job) {
         unresolved_dynamic_placeholder: unresolvedDynamicPlaceholder,
         evidence_source: classificationResult.evidenceSource,
         classifier_version: CLASSIFIER_VERSION,
-        media_assets: capturedAssets.map((asset) => ({ id: asset.id, kind: asset.kind, storage_path: asset.storage_path, byte_size: asset.byte_size })),
+        media_assets: capturedAssets.map((asset) => ({ id: asset.id, kind: asset.kind, archive_object_id: asset.archive_object_id, archive_verified_at: asset.archive_verified_at, byte_size: asset.byte_size })),
       },
       hermes_session_id: workerId,
       hermes_skill: "blockwise-ad-classifier",
@@ -4671,6 +4804,7 @@ async function handleAdClassifier(job) {
       display_state: displayState,
     }),
   });
+  await refreshClassifiedCreativeDisplay(creative.id);
   return {
     status: "complete",
     result: {
@@ -4686,6 +4820,15 @@ async function handleAdClassifier(job) {
       classifier_version: CLASSIFIER_VERSION,
     },
   };
+}
+
+async function refreshClassifiedCreativeDisplay(creativeId) {
+  const [creative] = await rest("research", `ad_creatives?select=*&id=eq.${encode(creativeId)}&limit=1`);
+  if (!creative || creative.classification_status !== "classified") return;
+  const assets = await rest("research", `media_assets?select=*&ad_creative_id=eq.${encode(creativeId)}&capture_status=eq.captured&archive_object_id=not.is.null&archive_verified_at=not.is.null&limit=250`);
+  const displayState = shouldDisplayClassifiedCreative(creative,assets,creative.classification) ? "displayable" : "hidden";
+  if (displayState !== creative.display_state) await rest("research",`ad_creatives?id=eq.${encode(creativeId)}`,{
+    method:"PATCH",body:json({display_state:displayState})});
 }
 
 async function captureMediaAsset(asset, buildRunId) {
@@ -5093,8 +5236,22 @@ async function handleDefectInvestigator(job) {
 }
 
 async function handleJob(job) {
+  if (job.job_type === DIRECTORY_DISCOVERY_JOB_TYPE) {
+    return handleAdRadarPageDiscovery(job, { rest, fetchImpl: fetch, now, rawEvidenceDir });
+  }
+  if (job.job_type === "blockwise-ad-directory-discovery-entity") {
+    return handleAdRadarEntityDiscovery(job, { rest, fetchImpl: fetch, now, rawEvidenceDir, searchEvidence: searchFacebookEvidence, resolvePageEvidence: resolveFacebookPageEvidence });
+  }
   if (job.job_type === "blockwise-agent-census") return handleAgentCensus(job);
-  if (job.job_type === "blockwise-page-resolver") return handlePageResolver(job);
+  if (job.job_type === "blockwise-page-resolver") {
+    if (job.payload?.ad_radar_discovery === true) {
+      return { status: "blocked", blocked_reason: "canonical_page_discovery_handler_not_loaded", result: { handler: "blockwise-page-resolver", model_calls: 0 } };
+    }
+    if (narrowAdDbMode) {
+      return { status: "blocked", blocked_reason: "legacy_page_resolver_not_allowed_in_narrow_worker", result: { handler: "blockwise-page-resolver", model_calls: 0 } };
+    }
+    return handlePageResolver(job);
+  }
   if (job.job_type === "blockwise-ad-collector") return handleAdCollector(job);
   if (job.job_type === "blockwise-media-collector") return handleMediaCollector(job);
   if (job.job_type === "blockwise-ad-classifier") return handleAdClassifier(job);
@@ -5296,7 +5453,10 @@ async function maybeRunInactiveAdPurge() {
 const exactJobMode = process.argv.includes("--job-id");
 const adDbWorkerMode = process.argv.includes("--ad-db-worker");
 const adDbWorkerPollMs = positiveInt("HERMES_AD_DB_WORKER_POLL_MS", 10_000);
-const EXACT_CANONICAL_JOB_TYPES = new Set(["blockwise-ad-collector", "blockwise-media-collector"]);
+const adRadarLaneConfigs = resolveAdRadarLaneConfigs(env);
+const EXACT_CANONICAL_JOB_TYPES = new Set(
+  Object.values(adRadarLaneConfigs).flatMap((lane) => lane.jobTypes),
+);
 
 function exactJobId() {
   const marker = process.argv.indexOf("--job-id");
@@ -5305,15 +5465,19 @@ function exactJobId() {
   return value;
 }
 
-async function runExactJob(jobId) {
+async function runExactJob(jobId, expectedLane = null) {
   const rows = await rest(
     "research",
     "work_queue?select=*&id=eq." + encode(jobId) + "&queue_name=eq.research&status=eq.pending&available_at=lte." + encode(now()) + "&limit=1",
   );
   const job = rows?.[0];
   if (!job) throw new Error("canonical job is missing or not pending");
-  if (!EXACT_CANONICAL_JOB_TYPES.has(job.job_type)) {
-    throw new Error("exact mode only permits canonical ad collector or media collector jobs");
+  const lane = laneForJob(job, adRadarLaneConfigs);
+  if (!EXACT_CANONICAL_JOB_TYPES.has(job.job_type) || !lane) {
+    throw new Error("exact mode requires a canonical marked Ad Radar lane job");
+  }
+  if (expectedLane && lane.name !== expectedLane.name) {
+    throw new Error("job does not belong to the requested Ad Radar lane");
   }
   const claimToken = randomUUID();
   const claimed = await rest("research", "work_queue?id=eq." + encode(job.id) + "&status=eq.pending", {
@@ -5334,18 +5498,123 @@ async function runExactJob(jobId) {
   return { job_id: job.id, job_type: job.job_type, bounded: true, max_jobs: 1 };
 }
 
-async function runAdDbWorkerPass() {
-  const jobs = await rest(
+let lastAdRadarInterestSyncAt = 0;
+let lastAdRadarClassificationBackfillAt = 0;
+
+async function runAdDbSupervisorPass() {
+  const result = {};
+  try { result.leaseRecovery = await rpc("watchdog_requeue_stale_jobs", { p_limit: 100 }); }
+  catch (error) { result.leaseRecoveryError = error.message; log("ad-db lease recovery failed; continuing", { error: error.message }, "error"); }
+  try {
+    if (Date.now() - lastAdRadarInterestSyncAt >= adRadarInterestSyncIntervalMs) {
+      result.customerInterestSync = await syncCustomerAdRadarInterests({ researchRest: rest, env, now: now() });
+      lastAdRadarInterestSyncAt = Date.now();
+    } else result.customerInterestSync = { skipped: true, reason: "not_due" };
+  } catch (error) { lastAdRadarInterestSyncAt = Date.now(); result.customerInterestSync = { skipped: false, error: error.message }; log("ad-db customer interest sync failed; continuing", { error: error.message }, "error"); }
+  try {
+    const buildRunId = await ensureBuildRun();
+    await refreshMetaBrowserChallengeCooldownFromSettings();
+    result.scheduler = await enqueueDueAdPageRefreshJobs(buildRunId);
+    result.directoryDiscovery = await enqueueAdRadarDirectoryDiscovery({ rest, now, buildRunId });
+    if (Date.now() - lastAdRadarClassificationBackfillAt >= adRadarInterestSyncIntervalMs) {
+      result.classificationBackfill = await enqueueClassificationBackfillJobs();
+      lastAdRadarClassificationBackfillAt = Date.now();
+    } else result.classificationBackfill = { skipped: true, reason: "not_due" };
+  }
+  catch (error) { result.scheduler = { error: error.message }; log("ad-db scheduler failed; continuing", { error: error.message }, "error"); }
+  return result;
+}
+
+async function loadPendingAdRadarLaneJobs(lane) {
+  const jobTypes = lane.jobTypes.map((jobType) => encode(jobType)).join(",");
+  return rest(
     "research",
     "work_queue?select=*&queue_name=eq.research&status=eq.pending&available_at=lte." + encode(now())
-      + "&job_type=in.(blockwise-ad-collector,blockwise-media-collector)&dedupe_key=like.ad-radar:%25"
+      + "&job_type=in.(" + jobTypes + ")"
+      + "&dedupe_key=like." + encode(lane.dedupePrefix) + "%25"
       + "&order=priority.asc,available_at.asc,created_at.asc&limit=100",
   );
-  const job = (jobs || []).find((candidate) => candidate.job_type === "blockwise-ad-collector"
-    || (candidate.job_type === "blockwise-media-collector" && candidate.payload?.ad_db_child === true));
-  if (!job) return { handled: 0, skipped_unmarked_media: (jobs || []).filter((candidate) => candidate.job_type === "blockwise-media-collector").length };
-  await runExactJob(job.id);
-  return { handled: 1, job_id: job.id, job_type: job.job_type };
+}
+
+async function runAdRadarLanePass(lane) {
+  const jobs = await loadPendingAdRadarLaneJobs(lane);
+  // The queue already orders customer refreshes ahead of first fill.
+  const result = await runLaneBatch({
+    jobs,
+    lane,
+    runJob: (job) => runExactJob(job.id, lane),
+  });
+  if (result.attempted) {
+    log("ad-db lane pass", {
+      lane: lane.name,
+      attempted: result.attempted,
+      completed: result.completed,
+      failed: result.failed,
+      jobIds: result.jobIds,
+    });
+  }
+  return result;
+}
+
+async function runAdDbWorkerOnce() {
+  const lanes = Object.values(adRadarLaneConfigs);
+  const settled = await Promise.allSettled([
+    runAdDbSupervisorPass(),
+    ...lanes.map((lane) => runAdRadarLanePass(lane)),
+  ]);
+  const supervisor = settled[0].status === "fulfilled"
+    ? settled[0].value
+    : { error: settled[0].reason?.message || "scheduler failed" };
+  const laneResults = settled.slice(1).map((item, index) => item.status === "fulfilled"
+    ? item.value
+    : { lane: lanes[index].name, attempted: 0, completed: 0, failed: 1, jobIds: [], results: [], error: item.reason?.message || "lane failed" });
+  const attempted = laneResults.reduce((sum, result) => sum + result.attempted, 0);
+  const handled = laneResults.reduce((sum, result) => sum + result.completed, 0);
+  const failures = laneResults.flatMap((result) => [
+    ...(result.error ? [result.error] : []),
+    ...(result.results || []).filter((item) => item.status === "rejected").map((item) => item.reason?.message || "canonical job failed"),
+  ]);
+  return {
+    supervisor,
+    lanes: laneResults.map(({ lane, attempted: laneAttempted, completed, failed, jobIds, error }) => ({ lane, attempted: laneAttempted, completed, failed, jobIds, ...(error ? { error } : {}) })),
+    attempted,
+    handled,
+    failures,
+  };
+}
+
+async function runAdDbWorker() {
+  if (env.HERMES_RESEARCH_RUN_ONCE === "true") {
+    const result = await runAdDbWorkerOnce();
+    log("ad-db worker pass", result);
+    return;
+  }
+
+  const scheduler = startAdRadarLaneLoops({
+    lanes: [{ name: "scheduler" }],
+    pollMs: adDbWorkerPollMs,
+    runLanePass: () => runAdDbSupervisorPass(),
+    onError: (error) => log("ad-db scheduler failed; continuing", { error: error.message }, "error"),
+  }).start();
+  const workers = startAdRadarLaneLoops({
+    lanes: Object.values(adRadarLaneConfigs),
+    pollMs: adDbWorkerPollMs,
+    runLanePass: runAdRadarLanePass,
+    onError: (error, lane) => log("ad-db lane failed; continuing", { lane: lane.name, error: error.message }, "error"),
+  }).start();
+
+  await new Promise((resolve) => {
+    let shuttingDown = false;
+    const shutdown = async (signal) => {
+      if (shuttingDown) return;
+      shuttingDown = true;
+      log("ad-db worker draining", { signal });
+      await Promise.all([scheduler.stop(), workers.stop()]);
+      resolve();
+    };
+    process.once("SIGTERM", () => { void shutdown("SIGTERM"); });
+    process.once("SIGINT", () => { void shutdown("SIGINT"); });
+  });
 }
 
 const historicalReplayMode = process.argv.includes("--historical-replay");
@@ -5477,12 +5746,7 @@ async function runHistoricalReplay(limit) {
 
 async function main() {
   if (adDbWorkerMode) {
-    for (;;) {
-      const pass = await runAdDbWorkerPass();
-      log("ad-db worker pass", pass);
-      if (env.HERMES_RESEARCH_RUN_ONCE === "true") break;
-      await sleep(adDbWorkerPollMs);
-    }
+    await runAdDbWorker();
     return;
   }
   if (exactJobMode) {
@@ -5511,3 +5775,71 @@ main().catch((error) => {
   console.error(error);
   process.exit(1);
 });
+async function loadAdRadarCustomerInterestScope(pages) {
+  let interests = [];
+  try {
+    interests = await rest("research", "ad_radar_customer_interests?select=customer_key,agent_id,advertiser_page_id,postcode,state,last_synced_at,updated_at&active=eq.true&limit=10000");
+  } catch (error) {
+    if (!/ad_radar_customer_interests|PGRST205|PGRST204|42P01/iu.test(error.message)) throw error;
+    log("customer interest table unavailable; continuing with owned page scope", { error: error.message }, "warning");
+  }
+  const directPageIds = new Set(interests.map((row) => row.advertiser_page_id).filter(Boolean));
+  const directAgentIds = new Set(interests.map((row) => row.agent_id).filter(Boolean));
+  const interestLocations = new Set(interests
+    .filter((row) => row.postcode)
+    .map((row) => `${String(row.state || "WA").toUpperCase()}:${String(row.postcode).trim()}`));
+  const pageAgentIds = [...new Set(pages.map((page) => page.agent_id).filter(Boolean))];
+  const agentIds = [...new Set([...pageAgentIds, ...directAgentIds])];
+  const pageAgencyIds = [...new Set(pages.map((page) => page.agency_id).filter(Boolean))];
+  async function readOwners(relation, select, field, ids) {
+    const rows = [];
+    for (const group of chunkIds(ids)) {
+      for (let offset = 0; ; offset += 500) {
+        const result = await rest("research", relation + "?select=" + select + "&" + field
+          + "=in.(" + group.map(encode).join(",") + ")&order=id.asc&limit=500&offset=" + offset);
+        if (!Array.isArray(result)) throw new Error("Invalid research ownership response");
+        rows.push(...result);
+        if (result.length < 500) break;
+      }
+    }
+    return rows;
+  }
+  const [agents, agencies, agentAreas, agencyAreas] = await Promise.all([
+    readOwners("agents", "id,agency_id,state,primary_postcode", "id", agentIds),
+    readOwners("agencies", "id,state,primary_postcode", "id", pageAgencyIds),
+    readOwners("agent_service_areas", "id,agent_id,agency_id,state,postcode", "agent_id", agentIds),
+    readOwners("agent_service_areas", "id,agent_id,agency_id,state,postcode", "agency_id", pageAgencyIds),
+  ]);
+  const serviceAreas = [...agentAreas, ...agencyAreas];
+  const ownerLocations = new Map();
+  for (const row of [...(agents || []), ...(agencies || [])]) {
+    if (row.state && row.primary_postcode) ownerLocations.set(String(row.id), `${String(row.state).toUpperCase()}:${String(row.primary_postcode).trim()}`);
+  }
+  const interestedAgencyIds = new Set((agents || []).filter((row) => directAgentIds.has(row.id) && row.agency_id).map((row) => row.agency_id));
+  const waAgentIds = new Set((agents || []).filter((row) => String(row.state || "").toUpperCase() === "WA").map((row) => row.id));
+  const waAgencyIds = new Set((agencies || []).filter((row) => String(row.state || "").toUpperCase() === "WA").map((row) => row.id));
+  const areaLocations = new Map();
+  for (const row of serviceAreas || []) {
+    if (!row.postcode) continue;
+    const ownerId = row.agent_id || row.agency_id;
+    if (!ownerId) continue;
+    const key = `${String(row.state || "WA").toUpperCase()}:${String(row.postcode).trim()}`;
+    if (!areaLocations.has(String(ownerId))) areaLocations.set(String(ownerId), new Set());
+    areaLocations.get(String(ownerId)).add(key);
+  }
+  const latestInterestSyncedAt = interests.map((row) => row.last_synced_at || row.updated_at).filter((value) => Number.isFinite(Date.parse(value))).sort((a, b) => Date.parse(b) - Date.parse(a))[0] || null;
+  return {
+    count: interests.length,
+    latestSyncedAt: latestInterestSyncedAt,
+    isWaOwned(page) { return waAgentIds.has(page.agent_id) || waAgencyIds.has(page.agency_id); },
+    isInterested(page) {
+      if (directPageIds.has(page.id) || directAgentIds.has(page.agent_id) || interestedAgencyIds.has(page.agency_id)) return true;
+      const agentLocation = ownerLocations.get(page.agent_id);
+      const agencyLocation = ownerLocations.get(page.agency_id);
+      const agentAreas = areaLocations.get(String(page.agent_id || ""));
+      const agencyAreas = areaLocations.get(String(page.agency_id || ""));
+      return Boolean((agentLocation && interestLocations.has(agentLocation)) || (agencyLocation && interestLocations.has(agencyLocation))
+        || [...(agentAreas || []), ...(agencyAreas || [])].some((location) => interestLocations.has(location)));
+    },
+  };
+}

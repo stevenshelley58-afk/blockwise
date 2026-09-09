@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash } from "node:crypto";
+import { resolveDemirsIdentity } from "./demirs-identity.mjs";
 import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
@@ -73,6 +74,7 @@ function parseArgs(argv) {
     dryRun: false,
     skipCrawl: false,
     skipQueue: false,
+    insertMissingOnly: false,
     sourceLimit: 0,
     fromArtifact: null,
     artifactPath: null,
@@ -121,6 +123,9 @@ function parseArgs(argv) {
         break;
       case "--artifact-path":
         args.artifactPath = next();
+        break;
+      case "--insert-missing-only":
+        args.insertMissingOnly = true;
         break;
       case "--dry-run":
         args.dryRun = true;
@@ -613,7 +618,7 @@ async function fetchExistingAgencies(research, agencySubjects) {
   return new Map(rows.map((row) => [row.normalized_name, row]));
 }
 
-async function upsertAgencies(research, agencySubjects, dryRun) {
+async function upsertAgencies(research, agencySubjects, dryRun, insertMissingOnly = false) {
   const byNormalized = new Map();
   for (const subject of agencySubjects) {
     if (!subject.normalizedName) continue;
@@ -630,6 +635,7 @@ async function upsertAgencies(research, agencySubjects, dryRun) {
   const existing = await fetchExistingAgencies(research, subjects);
   const rows = subjects.map((subject) => {
     const current = existing.get(subject.normalizedName);
+    if (insertMissingOnly && current) throw new Error("Directory changed after identity planning; refusing to overwrite agency");
     return {
       name: subject.name,
       trading_name: subject.tradingName || null,
@@ -650,10 +656,9 @@ async function upsertAgencies(research, agencySubjects, dryRun) {
   let upserted = [];
   if (!dryRun && rows.length) {
     for (const batch of chunks(rows, INSERT_BATCH_SIZE)) {
-      const { data, error } = await research
-        .from("agencies")
-        .upsert(batch, { onConflict: "normalized_name,state" })
-        .select("id,normalized_name,name,licence_number,metadata");
+      const table = research.from("agencies");
+      const write = insertMissingOnly ? table.insert(batch) : table.upsert(batch, { onConflict: "normalized_name,state" });
+      const { data, error } = await write.select("id,normalized_name,name,licence_number,metadata");
       if (error) throw new Error(error.message);
       upserted.push(...(data || []));
     }
@@ -665,7 +670,7 @@ async function upsertAgencies(research, agencySubjects, dryRun) {
     rows: upserted,
     matched: subjects.filter((subject) => existing.has(subject.normalizedName)).length,
     inserted: subjects.filter((subject) => !existing.has(subject.normalizedName)).length,
-    idBySubjectKey: new Map(upserted.map((row) => [row.normalized_name, row.id])),
+    idBySubjectKey: new Map(upserted.map((row) => [insertMissingOnly ? normalizeName(row.normalized_name) : row.normalized_name, row.id])),
   };
 }
 
@@ -704,7 +709,7 @@ async function fetchExistingAgents(research, agentSubjects) {
   return { byLicence, byNormalized };
 }
 
-async function upsertAgents(research, agentSubjects, dryRun) {
+async function upsertAgents(research, agentSubjects, dryRun, insertMissingOnly = false) {
   const byKey = new Map();
   for (const subject of agentSubjects) {
     const key = subject.licenceNumber ? `licence:${subject.licenceNumber}` : `name:${subject.normalizedName}`;
@@ -721,6 +726,7 @@ async function upsertAgents(research, agentSubjects, dryRun) {
       (subject.licenceNumber ? existing.byLicence.get(subject.licenceNumber) : null) ||
       existing.byNormalized.get(subject.normalizedName);
     if (current) {
+      if (insertMissingOnly) throw new Error("Directory changed after identity planning; refusing to overwrite agent");
       idBySubjectKey.set(subject.licenceNumber || subject.normalizedName, current.id);
       toUpdate.push({
         id: current.id,
@@ -1045,6 +1051,54 @@ async function loadSourceDocumentRecords(research, limit) {
   );
 }
 
+// Append-only reconciliation never guesses identity from a name or rewrites
+// existing directory links. Ambiguities remain visible for later evidence.
+async function planMissingDirectorySubjects(research, subjects) {
+  const existingByKind = {};
+  for (const [kind, table] of [["agent", "agents"], ["agency", "agencies"]]) {
+    existingByKind[kind] = await fetchAll(() => research.from(table)
+      .select("id,normalized_name,licence_number,metadata,state")
+      .eq("state", "WA").order("id"));
+  }
+  const identityKeys = (row) => {
+    const metadata = row.metadata?.demirs_wa_licence_register || row.metadata || {};
+    const licence = clean(row.licence_number ?? metadata.licence_number);
+    const entity = clean(metadata.entity_id ?? row.entity_id);
+    const name = normalizeName(row.normalized_name ?? row.normalizedName);
+    return [licence && "licence:" + licence, entity && "entity:" + entity,
+      name && "name:" + name].filter(Boolean);
+  };
+  const indexes = { agent: new Map(), agency: new Map() };
+  const indexRow = (kind, row) => {
+    for (const key of identityKeys(row)) {
+      if (!indexes[kind].has(key)) indexes[kind].set(key, []);
+      indexes[kind].get(key).push(row);
+    }
+  };
+  for (const [kind, rows] of Object.entries(existingByKind)) {
+    for (const row of rows) indexRow(kind, row);
+  }
+  const accepted = [];
+  const summary = { matched: 0, missing: 0, ambiguous: 0, reasons: {} };
+  for (const subject of subjects) {
+    const candidates = [...new Set(identityKeys(subject)
+      .flatMap((key) => indexes[subject.kind].get(key) || []))];
+    const resolution = resolveDemirsIdentity(subject, candidates);
+    summary[resolution.status] += 1;
+    if (resolution.status === "ambiguous") {
+      summary.reasons[resolution.reason] = (summary.reasons[resolution.reason] || 0) + 1;
+    }
+    if (resolution.status !== "missing") continue;
+    accepted.push(subject);
+    // Include accepted identities so a second licence/name in this same
+    // input cannot create a duplicate or collide with a normalized-name key.
+    indexRow(subject.kind, { id: "planned:" + subject.sourceDocumentId,
+      normalized_name: subject.normalizedName, licence_number: subject.licenceNumber,
+      metadata: subject.metadata, state: "WA" });
+  }
+  return { subjects: accepted, summary };
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const env = { ...process.env, ...loadEnv(args.envFile) };
@@ -1138,6 +1192,10 @@ async function main() {
       skippedMissingSourceDoc += 1;
       continue;
     }
+    if (args.insertMissingOnly && clean(records[i].licenceStatus).toUpperCase() !== "GNT") {
+      skippedInvalidSubject += 1;
+      continue;
+    }
     const subject = subjectFromRecord(records[i], doc?.id || `dry-run-source:${licenceExternalId(records[i])}`);
     if (!subject || !subject.postcode || clean(records[i].address?.state || "WA").toUpperCase() !== "WA") {
       skippedInvalidSubject += 1;
@@ -1146,11 +1204,14 @@ async function main() {
     subjects.push(subject);
   }
 
-  const agencySubjects = subjects.filter((subject) => subject.kind === "agency");
-  const agentSubjects = subjects.filter((subject) => subject.kind === "agent");
+  const identityPlan = args.insertMissingOnly
+    ? await planMissingDirectorySubjects(research, subjects)
+    : { subjects, summary: null };
+  const agencySubjects = identityPlan.subjects.filter((subject) => subject.kind === "agency");
+  const agentSubjects = identityPlan.subjects.filter((subject) => subject.kind === "agent");
   for (const agent of agentSubjects) {
     const employer = clean(agent.agencyHintName);
-    if (!employer) continue;
+    if (!employer || args.insertMissingOnly) continue;
     const normalizedName = normalizeName(employer);
     if (agencySubjects.some((agency) => agency.normalizedName === normalizedName)) continue;
     agencySubjects.push({
@@ -1181,7 +1242,7 @@ async function main() {
       },
     });
   }
-  const agencyResult = await upsertAgencies(research, agencySubjects, args.dryRun);
+  const agencyResult = await upsertAgencies(research, agencySubjects, args.dryRun, args.insertMissingOnly);
   for (const agent of agentSubjects) {
     const employer = clean(agent.agencyHintName);
     if (!employer) continue;
@@ -1191,7 +1252,7 @@ async function main() {
       agent.agencyName = nameCase(employer);
     }
   }
-  const agentResult = await upsertAgents(research, agentSubjects, args.dryRun);
+  const agentResult = await upsertAgents(research, agentSubjects, args.dryRun, args.insertMissingOnly);
 
   const resolvedSubjects = [];
   for (const subject of agencySubjects) {
@@ -1230,6 +1291,8 @@ async function main() {
     JSON.stringify(
       {
         dryRun: args.dryRun,
+        insertMissingOnly: args.insertMissingOnly,
+        identityPlan: identityPlan.summary,
         source: SOURCE,
         licenceTypes: args.licenceTypes,
         fromArtifact: args.fromArtifact,
@@ -1286,6 +1349,7 @@ Options:
   --artifact-path PATH      Save crawl artifact to a specific path
   --skip-crawl              Reconcile existing DEMIRS source_documents only
   --skip-queue              Do not enqueue page resolver jobs
+  --insert-missing-only     Append only identities proved absent; preserve existing rows
   --dry-run                 Crawl/read and report planned writes only`);
 }
 

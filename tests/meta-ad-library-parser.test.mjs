@@ -33,11 +33,154 @@ test("reordered connection fields still classify as success", () => {
   assert.equal(result.pageInfo.hasNextPage, false);
 });
 
-test("confirmed absence requires count=0, empty edges, and no next page", () => {
-  const result = classifyMetaAdLibraryPayload(fixture("zero-confirmed.json"));
+const strictZeroPayload = ({
+  pageId = "100042841013992",
+  count = 0,
+  edges = [],
+  hasNextPage = false,
+  endCursor = "",
+  includePage = true,
+} = {}) => JSON.stringify({
+  data: {
+    ad_library_main: {
+      search_results_connection: {
+        count,
+        edges,
+        page_info: { has_next_page: hasNextPage, end_cursor: endCursor },
+      },
+    },
+    ...(includePage ? { page: { name: "Fixture Page", id: pageId } } : {}),
+  },
+});
+
+const relayStreamZeroPayload = ({
+  requestedPageId = "100042841013992",
+  mappedPageId = requestedPageId,
+  conflictingPageId = null,
+  queryName = "AdLibraryFoundationRootQuery",
+  complete = true,
+  isFinal = true,
+} = {}) => {
+  const preloaderID = "adp_AdLibraryFoundationRootQueryRelayPreloader_fixture";
+  const preloaders = [{
+    preloaderID,
+    queryName,
+    variables: { viewAllPageID: mappedPageId },
+  }];
+  if (conflictingPageId) {
+    preloaders.push({
+      preloaderID,
+      queryName: "AdLibraryFoundationRootQuery",
+      variables: { viewAllPageID: conflictingPageId },
+    });
+  }
+  const stream = [
+    "RelayPrefetchedStreamCache@fixture",
+    "next",
+    [],
+    [
+      preloaderID,
+      {
+        __bbox: {
+          complete,
+          result: {
+            label: "fixture$defer$AdLibraryV2SearchResultsContainer",
+            data: {
+              ad_library_main: {
+                search_results_connection: {
+                  count: 0,
+                  edges: [],
+                  page_info: { has_next_page: false, end_cursor: "" },
+                },
+              },
+              page: null,
+            },
+            extensions: { is_final: isFinal },
+          },
+        },
+      },
+    ],
+  ];
+  return [
+    '<script type="application/json">',
+    JSON.stringify({ preloaders }),
+    "</script>",
+    '<script data-sjs type="application/json">',
+    JSON.stringify({ require: [stream] }),
+    "</script>",
+  ].join("");
+};
+
+test("complete final Relay zero stream is correlated through its exact preloader", () => {
+  const result = classifyMetaAdLibraryPayload(relayStreamZeroPayload(), {
+    requestedPageId: "100042841013992",
+  });
   assert.equal(result.outcome, "confirmed_absence");
   assert.equal(result.connectionCount, 0);
-  assert.equal(result.pageInfo.hasNextPage, false);
+  assert.deepEqual(result.pageInfo, { hasNextPage: false, endCursor: "" });
+});
+
+test("Relay preloader correlation fails closed on mismatch or ambiguity", () => {
+  for (const html of [
+    relayStreamZeroPayload({ mappedPageId: "999999999999999" }),
+    relayStreamZeroPayload({ conflictingPageId: "999999999999999" }),
+    relayStreamZeroPayload({ queryName: "UnrelatedQuery" }),
+  ]) {
+    const result = classifyMetaAdLibraryPayload(html, {
+      requestedPageId: "100042841013992",
+    });
+    assert.equal(result.outcome, "partial");
+    assert.deepEqual(result.adIds, []);
+  }
+});
+
+test("Relay zero stream must be both complete and final", () => {
+  for (const html of [
+    relayStreamZeroPayload({ complete: false }),
+    relayStreamZeroPayload({ isFinal: false }),
+  ]) {
+    const result = classifyMetaAdLibraryPayload(html, {
+      requestedPageId: "100042841013992",
+    });
+    assert.equal(result.outcome, "partial");
+    assert.deepEqual(result.adIds, []);
+  }
+});
+
+test("confirmed absence requires strict page correlation and exhausted empty connection", () => {
+  const result = classifyMetaAdLibraryPayload(strictZeroPayload(), {
+    requestedPageId: "100042841013992",
+  });
+  assert.equal(result.outcome, "confirmed_absence");
+  assert.equal(result.connectionCount, 0);
+  assert.deepEqual(result.pageInfo, { hasNextPage: false, endCursor: "" });
+});
+
+test("zero connection with a mismatched or missing exact page stays partial", () => {
+  for (const html of [
+    strictZeroPayload({ pageId: "999999999999999" }),
+    strictZeroPayload({ includePage: false }),
+  ]) {
+    const result = classifyMetaAdLibraryPayload(html, {
+      requestedPageId: "100042841013992",
+    });
+    assert.equal(result.outcome, "partial");
+    assert.deepEqual(result.adIds, []);
+    assert.ok(result.warnings.includes("requested_page_connection_not_found"));
+  }
+});
+
+test("zero connection with a cursor or next page stays partial", () => {
+  for (const html of [
+    strictZeroPayload({ endCursor: "opaque-cursor" }),
+    strictZeroPayload({ hasNextPage: true }),
+  ]) {
+    const result = classifyMetaAdLibraryPayload(html, {
+      requestedPageId: "100042841013992",
+    });
+    assert.equal(result.outcome, "partial");
+    assert.equal(result.connectionCount, 0);
+  }
 });
 
 test("pagination evidence is surfaced, not inferred", () => {
@@ -83,4 +226,80 @@ test("requested numeric page id selects only its own connection and fails closed
   assert.equal(mismatch.outcome, "partial");
   assert.deepEqual(mismatch.adIds, []);
   assert.ok(mismatch.warnings.includes("requested_page_connection_not_found"));
+});
+
+const serverRenderedCards = (pageId = "144517189067076") => [
+  '<noscript><meta http-equiv="refresh" content="0; URL=/ads/library/?active_status=all&amp;view_all_page_id=',
+  pageId,
+  '&amp;country=AU"></noscript>',
+  '<a href="https://facebook.com/jenningshopkins"><span>Jennings Hopkins</span></a>',
+  '<div><span>Active</span><a href="https://www.facebook.com/jenningshopkins/">Jennings Hopkins</a><span>Library ID: 2166639457618591</span><div style="white-space: pre-wrap;"><span>JUST LISTED | 35 Endicott Loop, Dunsborough</span></div></div>',
+  '<div><span>Active</span><a href="https://www.facebook.com/jenningshopkins/">Jennings Hopkins</a><span>Library ID: 1875345986779754</span><div style="white-space: pre-wrap;"><span>JUST LISTED | 7 Norfolk Street, Dunsborough</span></div></div>',
+  '<div><span>Active</span><a href="https://www.facebook.com/jenningshopkins/">Jennings Hopkins</a><span>Library ID: 1077701668041882</span><div style="white-space: pre-wrap;"><span>JUST LISTED | 21 North Street, Dunsborough</span></div></div>',
+  '<div><span>Active</span><a href="https://www.facebook.com/jenningshopkins/">Jennings Hopkins</a><span>Library ID: 1097740416278829</span><div style="white-space: pre-wrap;"><span>JUST LISTED | 4 Quindalup Road, Quindalup</span></div></div>',
+].join("");
+
+test("server-rendered cards recover IDs as partial evidence with proven page context", () => {
+  const result = classifyMetaAdLibraryPayload(serverRenderedCards(), { requestedPageId: "144517189067076" });
+  assert.equal(result.outcome, "partial");
+  assert.deepEqual(result.adIds, [
+    "2166639457618591",
+    "1875345986779754",
+    "1077701668041882",
+    "1097740416278829",
+  ]);
+  assert.equal(result.pageInfo.hasNextPage, null);
+  assert.ok(result.warnings.includes("server_rendered_card_fallback"));
+  assert.ok(result.warnings.includes("pagination_unproven"));
+  assert.equal(result.ads[0].node.page_id, "144517189067076");
+  assert.equal(result.ads[0].node.page_name, "Jennings Hopkins");
+  assert.equal(result.ads[0].node.ad_active_status, "active");
+  assert.match(result.ads[0].node.snapshot.body, /Dunsborough/u);
+});
+
+test("server-rendered fallback rejects a wrong requested page", () => {
+  const result = classifyMetaAdLibraryPayload(serverRenderedCards("999999999999999"), { requestedPageId: "144517189067076" });
+  assert.equal(result.outcome, "unparseable");
+  assert.deepEqual(result.adIds, []);
+});
+
+test("server-rendered fallback rejects global or unscoped library IDs", () => {
+  const result = classifyMetaAdLibraryPayload(serverRenderedCards().replace(/<noscript>[\s\S]*?<\/noscript>/u, ""), { requestedPageId: "144517189067076" });
+  assert.equal(result.outcome, "unparseable");
+  assert.deepEqual(result.adIds, []);
+});
+
+test("server-rendered fallback keeps challenge responses as failures", () => {
+  const result = classifyMetaAdLibraryPayload("/__rd_verify_blocked " + serverRenderedCards(), { requestedPageId: "144517189067076" });
+  assert.equal(result.outcome, "challenge");
+  assert.deepEqual(result.adIds, []);
+});
+
+test("server-rendered fallback rejects ambiguous cards with multiple library IDs", () => {
+  const html = serverRenderedCards().replace(
+    /<div><span>Active<\/span><a href="https:\/\/www\.facebook\.com\/jenningshopkins\/">Jennings Hopkins<\/a><span>Library ID: 1875345986779754<\/span>[\s\S]*?<\/div><div><span>Active<\/span>/u,
+    '<div><span>Active</span><a href="https://www.facebook.com/jenningshopkins/">Jennings Hopkins</a><span>Library ID: 1875345986779754</span><span>Library ID: 9999999999999999</span><div style="white-space: pre-wrap;"><span>Ambiguous</span></div></div><div><span>Active</span><a href="https://www.facebook.com/jenningshopkins/">Jennings Hopkins</a>',
+  );
+  const result = classifyMetaAdLibraryPayload(html, { requestedPageId: "144517189067076" });
+  assert.equal(result.outcome, "partial");
+  assert.deepEqual(result.adIds, [
+    "2166639457618591",
+    "1077701668041882",
+    "1097740416278829",
+  ]);
+  assert.ok(result.warnings.includes("server_rendered_card_fallback"));
+});
+
+test("server-rendered fallback does not promote an inactive neighboring card", () => {
+  const html = serverRenderedCards().replace(
+    '<div><span>Active</span><a href="https://www.facebook.com/jenningshopkins/">Jennings Hopkins</a><span>Library ID: 1875345986779754</span>',
+    '<div><span>Inactive</span><a href="https://www.facebook.com/jenningshopkins/">Jennings Hopkins</a><span>Library ID: 1875345986779754</span>',
+  );
+  const result = classifyMetaAdLibraryPayload(html, { requestedPageId: "144517189067076" });
+  assert.equal(result.outcome, "partial");
+  assert.deepEqual(result.adIds, [
+    "1077701668041882",
+    "1097740416278829",
+  ]);
+  assert.ok(!result.adIds.includes("1875345986779754"));
 });

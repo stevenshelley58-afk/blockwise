@@ -33,6 +33,7 @@ contract and does not keep another copy of its score, review or approval rules.
 ## Component references
 
 [Hermes source components](../hermes/README.md) describe skills and tools,
+- [Ad Radar worker runbook](../hermes/tools/research-runtime/AD_RADAR_RUNBOOK.md)
 not a second runtime or proof that a component is enabled. Component skills,
 infra and operations READMEs apply only to their named component and cannot
 override the shared rules or the current release guides.

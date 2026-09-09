@@ -158,17 +158,30 @@ test("paid failed attempts are recorded, never dropped", () => {
 
 test("/usage is cached for 65 seconds and fresh authenticated evidence gates reservation", () => {
   assert.match(supervisor, /Date\.now\(\) - scrapingBeeUsageCache\.at < 65_000/);
-  assert.match(supervisor, /balance = await scrapingBeeBalanceEvidence\(\)/);
+  assert.match(supervisor, /balance = savedCapture \? \{ verifiedAt: savedCapture.capturedAt \} : await scrapingBeeBalanceEvidence\(\)/);
   assert.match(supervisor, /p_provider_balance_verified_at: balance\.verifiedAt/);
+});
+
+test("collection defaults and scheduled jobs request active ads only", () => {
+  assert.match(supervisor, /scanMode,[\s\S]*?activeStatus: "active",[\s\S]*?resultsLimit: metaCaptureResultsLimit/);
+  assert.match(supervisor, /function captureInput\(payload\)[\s\S]*?\? payload\.activeStatus : "active"/);
+  assert.match(supervisor, /function enqueueCollectorForPage[\s\S]*?activeStatus: "active"/);
 });
 
 test("coverage_complete derives only from page_info, never from result-list size", () => {
   assert.match(supervisor, /const paginationExhausted = classified\.pageInfo\.hasNextPage === false;/);
-  assert.match(supervisor, /coverageComplete: confirmedAbsence \|\| paginationExhausted,/);
+  assert.match(supervisor, /coverageComplete: !partialEvidence && \(confirmedAbsence \|\| paginationExhausted\),/);
 });
 
-test("supervisor uses the shared deterministic parser", () => {
-  assert.match(supervisor, /import \{ classifyMetaAdLibraryPayload \} from "\.\/meta-ad-library-parser\.mjs";/);
+test("supervisor uses shared strict parsing with native pagination evidence", () => {
+  const pagination = readFileSync("hermes/tools/research-runtime/bin/meta-ad-library-pagination.mjs", "utf8");
+  assert.match(supervisor, /import \{ buildMetaPaginationScenario, parseMetaPaginatedCapture \} from "\.\/meta-ad-library-pagination\.mjs";/);
+  assert.match(supervisor, /parseMetaPaginatedCapture\(html, input\.metaPageId,/);
+  assert.match(supervisor, /json_response: "true"/);
+  assert.match(supervisor, /js_scenario: JSON\.stringify\(buildMetaPaginationScenario\(\)\)/);
+  assert.match(supervisor, /capture_strategy: classified\.captureStrategy/);
+  assert.match(pagination, /import \{ classifyMetaAdLibraryPayload \} from "\.\/meta-ad-library-parser\.mjs";/);
+  assert.match(pagination, /classifyMetaAdLibraryPayload\(pageHtml\(c\)/);
 });
 
 test("per-job ScrapingBee credit caps are propagated to every reservation and request", () => {
@@ -180,11 +193,13 @@ test("per-job ScrapingBee credit caps are propagated to every reservation and re
   assert.match(supervisor, /assertBudgetWithinConfiguredCap\(runCreditCap, scrapingBeeMaxCostPerCapture\)/);
 });
 
-test("narrow Ad DB worker only selects marked collector/media jobs", () => {
+test("narrow Ad DB worker only selects canonical stage-scoped jobs", () => {
   assert.match(supervisor, /--ad-db-worker/);
-  assert.match(supervisor, /dedupe_key=like\.ad-radar:%25/);
-  assert.match(supervisor, /job_type=in\.\(blockwise-ad-collector,blockwise-media-collector\)/);
-  assert.match(supervisor, /candidate\.payload\?\.ad_db_child === true/);
+  assert.match(supervisor, /loadPendingAdRadarLaneJobs/);
+  assert.match(supervisor, /lane\.jobTypes\.map/);
+  assert.match(supervisor, /encode\(lane\.dedupePrefix\)/);
+  assert.match(supervisor, /laneForJob\(job, adRadarLaneConfigs\)/);
+  assert.match(supervisor, /runAdRadarLanePass/);
   assert.match(supervisor, /available_at=lte\." \+ encode\(now\(\)/);
   assert.match(supervisor, /adDbWorkerPollMs/);
   assert.doesNotMatch(supervisor, /runAdDbWorkerPass[\s\S]*claimJobs\(\)/);
@@ -206,4 +221,36 @@ test("legacy location-search path is removed from the canonical worker", () => {
 const runtimeTypes = readFileSync("hermes/tools/research-runtime/src/types.ts", "utf8");
 test("legacy location-search job schema is removed", () => {
   assert.doesNotMatch(runtimeTypes, /blockwise-location-ad-search|locationAdSearchPayloadSchema|locationSearchGateSchema/u);
+});
+
+test("Auto Mode initial blocking status does not discard a validated final response", () => {
+  const block = supervisor.slice(supervisor.indexOf("const blocked = !response.ok"), supervisor.indexOf(";", supervisor.indexOf("const blocked = !response.ok")));
+  assert.match(block, /!response\.ok/);
+  assert.doesNotMatch(block, /receipt\.initialStatus/);
+  assert.match(supervisor, /\["challenge", "login_wall", "unparseable"\]\.includes\(classified\.outcome\)/);
+});
+
+test("JSON wrapping is always enabled; native scrolling is a one-time follow-up", () => {
+  const captureStart = supervisor.indexOf("const priorPartial");
+  const paramsStart = supervisor.indexOf("const params = new URLSearchParams", captureStart);
+  const params = supervisor.slice(
+    paramsStart,
+    supervisor.indexOf("  try {", paramsStart),
+  );
+  assert.match(params, /max_cost: String\(runCreditCap\)/);
+  assert.match(params, /wait: String\(scrapingBeeWaitMs\)/);
+  assert.match(params, /json_response: "true",\s*\.\.\.\(nativePagination \?/);
+  assert.match(params, /nativePagination \? \{[\s\S]*?js_scenario: JSON\.stringify\(buildMetaPaginationScenario\(\)\)/);
+  assert.equal((params.match(/js_scenario: JSON\.stringify/g) || []).length, 1);
+  assert.match(supervisor, /request_params: \{[^}]*json_response: true, pagination: nativePagination \? "native_cursor" : "initial_page"/);
+  assert.doesNotMatch(supervisor, /capture_strategy: html\.trimStart\(\)/);
+});
+
+test("native pagination is selective and its partial results cannot recursively queue paid continuations", () => {
+  assert.match(supervisor, /const nativePagination = priorPartial\.length > 0/);
+  assert.match(supervisor, /source_provider=eq\.scrapingbee_meta_ad_library&status=eq\.success&coverage_complete=eq\.false/);
+  assert.match(supervisor, /outcome\.metadata\?\.capture_strategy === "initial_page"/);
+  assert.match(supervisor, /outcome\.metadata\?\.page_info\?\.hasNextPage === true/);
+  assert.match(supervisor, /pagination_parent_run_id: adFetchRunId/);
+  assert.match(supervisor, /ad-radar:collector:\$\{payload\.advertiserPageId\}:pagination:\$\{adFetchRunId\}/);
 });

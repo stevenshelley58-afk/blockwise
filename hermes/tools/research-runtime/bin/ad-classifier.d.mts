@@ -17,6 +17,10 @@ export function classifyCreativeDeterministically(
   creative: Record<string, unknown>,
   options?: Record<string, unknown>,
 ): AdClassifierClassification;
+export function classifyCreativeFromSavedEvidence(
+  creative: Record<string, unknown>,
+  options?: Record<string, unknown>,
+): AdClassifierResult;
 export function classifyCreativeWithModels(
   creative: Record<string, unknown>,
   capturedAssets?: Array<Record<string, unknown>>,
