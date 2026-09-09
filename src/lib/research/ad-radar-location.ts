@@ -401,7 +401,9 @@ function postcodeDirectory(): PostcodeDirectory {
     if (!Array.isArray(row.suburbs)) continue;
 
     const stateCode = row.state.toUpperCase();
-    const suburbs = uniqueTerms(row.suburbs.map(normalisePostcodeSuburb).filter((value): value is string => Boolean(value)));
+    const suburbs = dropPostalFacilityLocalities(
+      uniqueTerms(row.suburbs.map(normalisePostcodeSuburb).filter((value): value is string => Boolean(value))),
+    );
     if (suburbs.length === 0) continue;
     byPostcode.set(row.postcode, { stateCode, suburbs });
 
@@ -418,6 +420,29 @@ function postcodeDirectory(): PostcodeDirectory {
 
   postcodeDirectoryCache = { byPostcode, bySuburb };
   return postcodeDirectoryCache;
+}
+
+const POSTAL_FACILITY_PATTERN = /\b(delivery\s+centre|delivery\s+center|mail\s+centre|mail\s+center|gpo|po\s+box(?:es)?|dc|mc|bc|lpo|business\s+centre)\b/iu;
+const DIRECTIONAL_SUFFIX_PATTERN = /\s+(north|south|east|west|central|dc|mc|bc)$/iu;
+
+/**
+ * The AU postcode dataset lists Australia Post delivery points ("City Delivery
+ * Centre", "Perth Gpo", "Nedlands Dc") and directional variants of a listed
+ * suburb ("Claremont North", "Subiaco East") alongside real suburbs. Those read
+ * as nonsense in a public report. Only those two artefacts are removed, because
+ * a compound name is just as often a real suburb ("Lake Coogee", "Mount
+ * Claremont"); the raw list is kept if nothing survives.
+ */
+function dropPostalFacilityLocalities(suburbs: string[]): string[] {
+  const withoutFacilities = suburbs.filter((suburb) => !POSTAL_FACILITY_PATTERN.test(suburb));
+  const base = new Set(withoutFacilities.map((suburb) => suburb.toLowerCase()));
+  const canonical = withoutFacilities.filter((suburb) => {
+    const lower = suburb.toLowerCase();
+    const withoutDirection = lower.replace(DIRECTIONAL_SUFFIX_PATTERN, "").trim();
+    if (withoutDirection !== lower && base.has(withoutDirection)) return false;
+    return true;
+  });
+  return canonical.length > 0 ? canonical : withoutFacilities.length > 0 ? withoutFacilities : suburbs;
 }
 
 function readAuPostcodeRows(): AuPostcodeRow[] {
