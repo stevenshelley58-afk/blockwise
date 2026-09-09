@@ -55,6 +55,31 @@ values (
 )
 on conflict (id) do nothing;
 
+insert into public.ad_template_packs (
+  pack_id, template_id, version, manifest_sha256, signature, pack_json
+)
+values (
+  'queue-lease-test-pack',
+  'queue-lease-test-template',
+  1,
+  'queue-lease-test-sha',
+  'queue-lease-test-sig',
+  '{}'
+)
+on conflict (pack_id) do nothing;
+
+insert into public.ad_customer_ads (
+  id, workspace_id, template_pack_id, template_id, template_version
+)
+values (
+  '74444444-4444-4444-8444-444444444444',
+  '71111111-1111-4111-8111-111111111111',
+  'queue-lease-test-pack',
+  'queue-lease-test-template',
+  1
+)
+on conflict (id) do nothing;
+
 insert into public.meta_publish_plans (
   id,
   workspace_id,
