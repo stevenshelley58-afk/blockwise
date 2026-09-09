@@ -1,0 +1,127 @@
+{
+  "commitSha": "6233ae57a1b2c3d4e5f60718293a4b5c6d7e8f90",
+  "graphVersion": "v23.0",
+  "appId": "990000000000002",
+  "appMode": "development",
+  "accessTier": "standard_access",
+  "permissions": [
+    "ads_read",
+    "ads_management",
+    "business_management",
+    "leads_retrieval",
+    "pages_manage_ads",
+    "pages_show_list",
+    "pages_read_engagement"
+  ],
+  "externalBusinessAttested": true,
+  "utcStart": "2026-01-15T02:10:00.000Z",
+  "utcEnd": "2026-01-15T02:34:00.000Z",
+  "hashedMetaObjectIds": {
+    "externalAdAccount": ["7f3a91c2e5b8d0461a2f3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f7081"],
+    "externalPage": ["2c6b4d1e9f0a3b5c7d8e9f0a1b2c3d4e5f60718293a4b5c6d7e8f9012345678a"],
+    "campaign": ["aa11bb22cc33dd44ee55ff6600112233445566778899aabbccddeeff00112233"],
+    "adSets": ["bb22cc33dd44ee55ff6600112233445566778899aabbccddeeff001122334455"],
+    "creatives": ["cc33dd44ee55ff6600112233445566778899aabbccddeeff0011223344556677"],
+    "ads": ["dd44ee55ff6600112233445566778899aabbccddeeff00112233445566778899"],
+    "leadForms": ["ee55ff6600112233445566778899aabbccddeeff00112233445566778899aabb"]
+  },
+  "probeOutcomes": [
+    {
+      "id": "token_identity",
+      "label": "Token identity (/me + debug_token)",
+      "status": "PASS",
+      "detail": "Token identity and token metadata resolved."
+    },
+    {
+      "id": "ad_account_read",
+      "label": "External ad account read (listing + business check)",
+      "status": "PASS",
+      "detail": "Account visible, active, and owned by the attested external business."
+    },
+    {
+      "id": "page_token_resolution",
+      "label": "Page access-token resolution",
+      "status": "PASS",
+      "detail": "Page token resolved transiently; never printed or persisted."
+    },
+    {
+      "id": "instagram_discovery",
+      "label": "Page-linked Instagram discovery",
+      "status": "PASS",
+      "detail": "Instagram business account is linked to the shared Page; customers do NOT need to share Instagram separately."
+    },
+    {
+      "id": "campaign_listing",
+      "label": "Campaign listing on external ad account",
+      "status": "PASS",
+      "detail": "Listed 0 eligible campaign(s)."
+    },
+    {
+      "id": "insights_read",
+      "label": "Insights/reporting read",
+      "status": "PASS",
+      "detail": "Read 1 insight row(s) for today."
+    },
+    {
+      "id": "publish_path",
+      "label": "Full disposable product path (create + read-back)",
+      "status": "PASS",
+      "detail": "Campaign, ad sets, creatives, ads and Instant Form created PAUSED, read back, and ownership-verified."
+    },
+    {
+      "id": "lead_retrieval",
+      "label": "Synthetic test lead retrieval (repo lead adapter)",
+      "status": "PASS",
+      "detail": "Test lead retrieved through fetchMetaLeadFormLeads; field data redacted and dropped (no local test-lead data stored)."
+    },
+    {
+      "id": "created_object_reporting",
+      "label": "Reporting read for created objects",
+      "status": "PASS",
+      "detail": "Read insights for 2 created ad(s)."
+    }
+  ],
+  "cleanupReceipts": [
+    {
+      "objectType": "ad",
+      "hashedId": "dd44ee55ff6600112233445566778899aabbccddeeff00112233445566778899",
+      "action": "deleted",
+      "detail": "Deleted via Graph DELETE."
+    },
+    {
+      "objectType": "creative",
+      "hashedId": "cc33dd44ee55ff6600112233445566778899aabbccddeeff0011223344556677",
+      "action": "deleted",
+      "detail": "Deleted via Graph DELETE."
+    },
+    {
+      "objectType": "adset",
+      "hashedId": "bb22cc33dd44ee55ff6600112233445566778899aabbccddeeff001122334455",
+      "action": "deleted",
+      "detail": "Deleted via Graph DELETE."
+    },
+    {
+      "objectType": "campaign",
+      "hashedId": "aa11bb22cc33dd44ee55ff6600112233445566778899aabbccddeeff00112233",
+      "action": "deleted",
+      "detail": "Deleted via Graph DELETE."
+    },
+    {
+      "objectType": "lead_form",
+      "hashedId": "ee55ff6600112233445566778899aabbccddeeff00112233445566778899aabb",
+      "action": "deleted",
+      "detail": "Deleted via Graph DELETE."
+    }
+  ],
+  "fixtureHashes": {
+    "ad-account-read.json": "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0",
+    "page-token-resolution.json": "1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f00f1",
+    "instagram-discovery.json": "2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2",
+    "campaign-create-read.json": "3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d",
+    "lead-retrieve.json": "4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c",
+    "insights.json": "5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b"
+  },
+  "expiresAt": "2026-04-15",
+  "proofExecutor": "operator-a",
+  "proofReviewer": "operator-b"
+}
