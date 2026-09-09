@@ -2,7 +2,6 @@
 
 import {
   BarChart3,
-  Bot,
   Database,
   FileSearch,
   LayoutGrid,
@@ -21,7 +20,7 @@ import { usePathname } from "next/navigation";
 import { niche } from "@/config/niche";
 import { activeRouteHref } from "@/lib/navigation/active-nav-item";
 
-export type SidebarVariant = "operator" | "self_serve" | "monitor";
+export type SidebarVariant = "self_serve";
 
 type NavIcon = ComponentType<{ size?: number; "aria-hidden"?: boolean | "true" | "false" }>;
 
@@ -55,25 +54,6 @@ function RadarIcon({ size = 18, ...props }: { size?: number } & SVGProps<SVGSVGE
   );
 }
 
-const operatorNavItems: NavItem[] = [
-  { href: "/operator", label: "Operator", icon: LayoutGrid },
-  { href: "/operator/customers", label: "Customers", icon: ContactRound },
-  { href: "/operator/analytics", label: "Site Analytics", icon: BarChart3 },
-  { href: "/operator/database", label: "Database", icon: Database },
-  { href: "/results", label: "Results", icon: LineChart },
-  { href: "/ad-radar", label: "Ad Radar", icon: RadarIcon },
-  { href: "/ad-studio", label: "Ad Studio", icon: Star },
-  { href: "/property-check", label: "Property Check", icon: FileSearch },
-  { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/settings", label: "Settings", icon: Settings },
-  { href: "/workforce", label: "Workforce", icon: Bot },
-  { href: "/model-control", label: "Model Control", icon: Settings2 },
-].filter((item) => {
-  if (item.href === "/ad-radar") return niche.features.adRadar;
-  if (item.href === "/property-check") return niche.features.propertyCheck;
-  return true;
-});
-
 const customerToolIcons = {
   home: LayoutGrid,
   studio: Star,
@@ -95,17 +75,8 @@ const selfServeNavItems: NavItem[] = niche.nav.items
     section: item.section,
   }));
 
-const monitorNavItems: NavItem[] = [
-  { href: "/results", label: "Results", icon: LineChart },
-  { href: "/ad-radar", label: "Ad Radar", icon: RadarIcon },
-  { href: "/leads", label: "Leads", icon: UsersRound },
-  { href: "/settings", label: "Settings", icon: Settings },
-].filter((item) => item.href !== "/ad-radar" || niche.features.adRadar);
-
 export const navByVariant: Record<SidebarVariant, NavItem[]> = {
-  operator: operatorNavItems,
   self_serve: selfServeNavItems,
-  monitor: monitorNavItems,
 };
 
 export function isItemActive(pathname: string, href: string, items: readonly NavItem[]) {

@@ -15,12 +15,12 @@ const SURFACE_RULES: Record<ProductSurface, (context: AccessContext) => boolean>
   operator: ({ role }) => role === "operator",
   approvals: ({ role }) => role === "operator" || role === "owner" || role === "admin",
   monitor: ({ role }) => ["owner", "admin", "member", "viewer", "operator"].includes(role),
-  self_serve: ({ role, workspaceMode }) =>
-    workspaceMode === "self_serve" && ["owner", "admin", "member", "operator"].includes(role),
-  adstudio: ({ role, workspaceMode }) =>
-    role === "operator" || (workspaceMode === "self_serve" && ["owner", "admin", "member"].includes(role)),
-  property_check: ({ role, workspaceMode }) =>
-    role === "operator" || (workspaceMode === "self_serve" && ["owner", "admin", "member"].includes(role)),
+  self_serve: ({ role }) =>
+    ["owner", "admin", "member", "viewer", "operator"].includes(role),
+  adstudio: ({ role }) =>
+    ["owner", "admin", "member", "viewer", "operator"].includes(role),
+  property_check: ({ role }) =>
+    ["owner", "admin", "member", "viewer", "operator"].includes(role),
 };
 
 export function canAccessSurface(context: AccessContext, surface: ProductSurface): boolean {

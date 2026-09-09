@@ -282,7 +282,7 @@ export function SelfServeShell({
         {children}
       </SidebarInset>
 
-      <MobileBottomNav variant="self_serve" homeHref="/self-serve" account={account} homePilot={isSelfServeHome} />
+      <MobileBottomNav homeHref="/self-serve" account={account} homePilot={isSelfServeHome} />
     </SidebarProvider>
   );
 }
