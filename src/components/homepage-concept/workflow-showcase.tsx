@@ -1,128 +1,408 @@
 "use client";
 
-import { ArrowRight, Check, MoreHorizontal, ShieldCheck } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { withBasePath } from "@/lib/homepage-concept/content";
-import { TRIAL_CTA_LABEL, TRIAL_SIGNUP_URL } from "@/lib/homepage-concept/pricing";
 import {
-  WORKFLOW_AD as AD, WORKFLOW_PHASES, WORKFLOW_STEPS, WORKFLOW_STEP_STARTS,
-  WORKFLOW_TEMPLATES, nextWorkflowPhase, workflowFrame,
-} from "@/lib/homepage-concept/workflow";
+  ArrowRight,
+  Check,
+  MoreHorizontal,
+  MousePointer2,
+  ShieldCheck,
+} from "lucide-react";
+import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
+
+import { AD_EXAMPLES, withBasePath } from "@/lib/homepage-concept/content";
+
 import "./workflow-showcase.css";
 
-type Frame = ReturnType<typeof workflowFrame>;
+const PROCESS_STEPS = [
+  { label: "Choose" },
+  { label: "Customise" },
+  { label: "Review" },
+] as const;
 
-/** One text node changes in place. Its line box never changes size. */
-function useTypedText(before: string, after: string, editing: boolean, edited: boolean, reduced: boolean) {
-  const [text, setText] = useState(before);
-  useEffect(() => {
-    if (!editing || reduced) { setText(edited ? after : before); return; }
-    setText(before);
-    let timer: ReturnType<typeof setTimeout>;
-    let position = 0;
-    const type = () => {
-      position += 1;
-      setText(after.slice(0, position));
-      if (position < after.length) timer = setTimeout(type, Math.min(35, 1100 / after.length));
-    };
-    timer = setTimeout(type, 320);
-    return () => clearTimeout(timer);
-  }, [before, after, editing, edited, reduced]);
-  return text;
+const STORY_PHASE_DELAYS = [950, 900, 900, 950, 1100, 650, 950, 650, 1200] as const;
+const STORY_STEP_PHASES = [1, 2, 5] as const;
+const STORY_PHASE_TO_STEP = [0, 0, 1, 1, 1, 2, 2, 2, 2] as const;
+const STORY_TEMPLATE_SEQUENCE = [0, 1, 2, 0] as const;
+const STORY_STATUS = [
+  "Choose a template",
+  "Template selected",
+  "Customise the ad",
+  "Editing the post copy",
+  "Editing text on the creative",
+  "Review campaign",
+  "Campaign details filled",
+  "Approve campaign",
+  "Campaign approved",
+] as const;
+
+const STORY_CREATIVE = {
+  image: "/home/subiaco-townhouse.webp",
+  account: "West Coast Home Co",
+  avatar: "WCH",
+  startingCopy: "A better way to spend summer starts at home.",
+  editedCopy: "A better way to spend summer starts at home. Explore the new guide.",
+  startingOverlay: "YOUR NEXT HOME",
+  editedOverlay: "YOUR SUBIACO HOME",
+  domain: "WESTCOASTHOME.CO",
+  linkTitle: "Get the suburb property guide",
+} as const;
+
+const STORY_EASE = [0.22, 1, 0.36, 1] as const;
+const STORY_MOVE = { duration: 0.62, ease: STORY_EASE };
+const STORY_ENTER = { duration: 0.42, ease: STORY_EASE };
+const STORY_EXIT = { duration: 0.22, ease: [0.4, 0, 1, 1] as const };
+
+function StoryCursor({ pressed = false }: { pressed?: boolean }) {
+  return (
+    <motion.span
+      layoutId="story-cursor"
+      className="hc-story-cursor"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0, scale: pressed ? 0.88 : 1 }}
+      exit={{ opacity: 0, y: 4 }}
+      transition={pressed ? { duration: 0.14, ease: "easeInOut" } : STORY_ENTER}
+    >
+      <MousePointer2 aria-hidden="true" size={22} strokeWidth={2.2} />
+    </motion.span>
+  );
 }
 
-function PropertyCreative({ template, title, editing = false }: {
-  template: typeof WORKFLOW_TEMPLATES[number]; title?: string; editing?: boolean;
-}) {
-  return <div className="wf-art">
-    <div className="wf-art-photo">
-      <img src={withBasePath(template.image)} alt="" width="1080" height="1350" />
-      <span className="wf-art-brand">WCH<span>WEST COAST<br />HOME CO</span></span>
-    </div>
-    <div className="wf-art-caption">
-      <strong className={`wf-art-title${editing ? " is-editing" : ""}`}>{title ?? template.title}{editing && <i className="wf-caret" />}</strong>
-      <span className="wf-art-suburb">{template.id === "listing" ? AD.subtitle : template.detail}</span>
-      <span className="wf-art-facts">{template.id === "listing" ? template.detail : "West Coast Home Co"}</span>
-    </div>
-  </div>;
+function StoryOverlayText({ editing, edited }: { editing: boolean; edited: boolean }) {
+  if (!editing) return <>{edited ? STORY_CREATIVE.editedOverlay : STORY_CREATIVE.startingOverlay}</>;
+
+  return (
+    <>
+      <span className="hc-story-selection">{STORY_CREATIVE.startingOverlay}</span>
+      <span className="hc-story-replacement" aria-label={STORY_CREATIVE.editedOverlay}>
+        {Array.from(STORY_CREATIVE.editedOverlay).map((character, index) => (
+          <motion.span
+            key={`${character}-${index}`}
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: "auto" }}
+            transition={{ delay: index * 0.045, duration: 0.08, ease: "linear" }}
+          >
+            {character === " " ? "\u00a0" : character}
+          </motion.span>
+        ))}
+      </span>
+      <span className="hc-story-caret" />
+    </>
+  );
 }
 
-function StudioAd({ frame, title, post }: { frame: Frame; title: string; post: string }) {
-  return <article className="wf-ad" aria-label="Example Facebook property ad">
-    <div className="wf-ad-account"><span className="wf-avatar">{AD.initials}</span><span><strong>{AD.agency}</strong><small>Sponsored · <span aria-hidden="true">◎</span></small></span><MoreHorizontal size={16} /></div>
-    <p className={`wf-post${frame.index === 3 ? " is-editing" : ""}`}>{post}{frame.index === 3 && <i className="wf-caret" />}</p>
-    <div className="wf-ad-art-stack">
-      {WORKFLOW_TEMPLATES.slice(0, 2).map((template, index) => <div key={template.id} className={`wf-ad-art-layer${frame.template === index ? " is-active" : ""}`} aria-hidden={frame.template !== index}>
-        <PropertyCreative template={template} title={index === 1 ? title : undefined} editing={index === 1 && frame.index === 4} />
-      </div>)}
-    </div>
-    <div className="wf-ad-link"><span><small>{AD.domain}</small><strong>Explore the property</strong></span><span>Learn more</span></div>
-  </article>;
+function StoryAd({ phase, review = false }: { phase: number; review?: boolean }) {
+  const copyEdited = phase >= 3;
+  const creativeEdited = phase >= 4;
+
+  return (
+    <motion.article layoutId="story-ad" className={`hc-story-ad${review ? " is-review" : ""}`} transition={STORY_MOVE}>
+      <div className="hc-ad-account">
+        <span className="hc-ad-avatar" aria-hidden="true">{STORY_CREATIVE.avatar}</span>
+        <span><strong>{STORY_CREATIVE.account}</strong><small>Sponsored</small></span>
+        <MoreHorizontal aria-hidden="true" size={18} />
+      </div>
+      <motion.p
+        className={`hc-ad-copy${phase === 3 ? " is-editing" : ""}`}
+        key={copyEdited ? "edited-copy" : "starting-copy"}
+        initial={{ opacity: 0.35, y: 3 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={STORY_ENTER}
+      >
+        {copyEdited ? STORY_CREATIVE.editedCopy : STORY_CREATIVE.startingCopy}{phase === 3 ? <span className="hc-story-caret" /> : null}
+      </motion.p>
+      <motion.div layoutId="story-template-image" className="hc-ad-image-wrap hc-story-ad-image" transition={STORY_MOVE}>
+        <img src={withBasePath(STORY_CREATIVE.image)} alt="" width="1080" height="1350" />
+        <motion.span
+          className={`hc-story-creative-overlay${phase === 4 ? " is-editing" : ""}`}
+          role="textbox"
+          aria-label="Text on creative"
+          aria-readonly="true"
+          data-editing-target="creative"
+          key={creativeEdited ? "edited-creative" : "starting-creative"}
+          initial={{ opacity: 0, y: 8, filter: "blur(4px)" }}
+          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          transition={STORY_ENTER}
+        >
+          <StoryOverlayText editing={phase === 4} edited={creativeEdited} />
+        </motion.span>
+      </motion.div>
+      <div className="hc-ad-link">
+        <span><small>{STORY_CREATIVE.domain}</small><strong>{STORY_CREATIVE.linkTitle}</strong></span>
+        <span className="hc-ad-link-button">Learn more</span>
+      </div>
+    </motion.article>
+  );
 }
 
-function StudioInspector({ frame, post, title }: { frame: Frame; post: string; title: string }) {
-  return <div className="wf-inspector">
-    <div className={`wf-inspector-pane wf-template-info${frame.step === 0 ? " is-current" : ""}`} aria-hidden={frame.step !== 0}>
-      <h3>{WORKFLOW_TEMPLATES[frame.template].label}</h3>
-      <dl><div><dt>Format</dt><dd>Facebook Feed</dd></div><div><dt>Size</dt><dd>1080 × 1350</dd></div></dl>
-      <span className={`wf-selection-state${frame.index === 1 ? " is-selected" : ""}`}><Check size={14} />Template selected</span>
-    </div>
-    <div className={`wf-inspector-pane wf-fields${frame.step === 1 ? " is-current" : ""}`} aria-hidden={frame.step !== 1}>
-      <h3>Customise</h3>
-      <label className={frame.index === 3 ? "is-editing" : ""}><span>Post copy</span><span className="wf-field-value">{post}{frame.index === 3 && <i className="wf-caret" />}</span></label>
-      <label className={frame.index === 4 ? "is-editing" : ""}><span>Ad headline</span><span className="wf-field-value wf-field-value--title">{title}{frame.index === 4 && <i className="wf-caret" />}</span></label>
-      <span className="wf-saved"><Check size={12} />{frame.index < 4 ? "Changes saved" : "Creative updated"}</span>
-    </div>
-    <div className={`wf-inspector-pane wf-review${frame.step === 2 ? " is-current" : ""}`} aria-hidden={frame.step !== 2}>
-      <h3>Review campaign</h3>
-      <dl>{[["Audience", "Subiaco +15 km"], ["Budget", "$20 / day"], ["Duration", "14 days"]].map(([label, value], index) => <div key={label}><dt>{label}</dt><dd><span className={frame.filled ? "is-filled" : ""} style={{ transitionDelay: `${index * 100}ms` }}>{value}</span></dd></div>)}</dl>
-      <div className={`wf-approve${frame.pressing ? " is-pressing" : ""}${frame.approved ? " is-approved" : ""}`}><ShieldCheck size={15} /><span>{frame.approved ? "Campaign approved" : "Approve campaign"}</span></div>
-    </div>
-  </div>;
+function TemplateBrowser({ phase }: { phase: number }) {
+  const activeTemplate = STORY_TEMPLATE_SEQUENCE[Math.min(phase, STORY_TEMPLATE_SEQUENCE.length - 1)];
+  const selected = phase === 1;
+
+  return (
+    <motion.div
+      key="templates"
+      className="hc-story-scene hc-story-browser"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, x: -34, filter: "blur(3px)" }}
+      transition={{ ...STORY_EXIT, opacity: { duration: 0.18 } }}
+    >
+      <div className="hc-story-scene-heading">
+        <span>Ready-made ads</span>
+        <strong>{selected ? "Template selected" : "Choose a starting point"}</strong>
+      </div>
+      <div className="hc-story-template-window">
+        <motion.div
+          className="hc-story-template-track"
+          animate={{ x: `-${[0, 15, 31, 0][Math.min(phase, 3)]}%` }}
+          transition={STORY_MOVE}
+        >
+          {AD_EXAMPLES.slice(0, 3).map((example, index) => {
+            const active = index === activeTemplate;
+            return (
+              <motion.div
+                className={`hc-story-template-card${active ? " is-active" : ""}${selected && active ? " is-selected" : ""}`}
+                key={example.id}
+                animate={{ opacity: active ? 1 : 0.62, scale: active ? 1 : 0.965 }}
+                transition={STORY_MOVE}
+              >
+                <motion.div
+                  layoutId={selected && active ? "story-template-image" : undefined}
+                  className="hc-story-template-image"
+                  transition={STORY_MOVE}
+                >
+                  <img src={withBasePath(index === 1 ? STORY_CREATIVE.image : example.image)} alt="" width="1080" height="1350" />
+                  {selected && active ? <span className="hc-story-selected"><Check aria-hidden="true" size={13} /> Selected</span> : null}
+                </motion.div>
+                <span><strong>{index === 1 ? "Suburb guide" : example.label}</strong><small>Facebook &amp; Instagram</small></span>
+                {active ? <StoryCursor pressed={selected} /> : null}
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+}
+
+function EditorScene({ phase }: { phase: number }) {
+  const copyActive = phase === 3;
+  const creativeActive = phase === 4;
+
+  return (
+    <motion.div
+      key="editor"
+      className="hc-story-scene hc-story-editor"
+      initial={{ opacity: 0, x: 38 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -30, filter: "blur(3px)" }}
+      transition={STORY_ENTER}
+    >
+      <aside className="hc-story-mini-rail">
+        <span>Templates</span>
+        <div className="is-selected">
+          <img src={withBasePath(STORY_CREATIVE.image)} alt="" width="1080" height="1350" />
+        </div>
+      </aside>
+
+      <div className="hc-story-ad-workspace">
+        <StoryAd phase={phase} />
+      </div>
+
+      <div className="hc-story-edit-panel">
+        <span>Customise</span>
+        <h3>Make it yours</h3>
+        <label className={copyActive ? "is-active" : ""}>
+          <span>Post copy</span>
+          <motion.strong
+            key={phase >= 3 ? "new-post-copy" : "old-post-copy"}
+            initial={{ opacity: 0.35 }}
+            animate={{ opacity: 1 }}
+            transition={STORY_ENTER}
+          >
+            {phase >= 3 ? STORY_CREATIVE.editedCopy : STORY_CREATIVE.startingCopy}
+            {copyActive ? <span className="hc-story-caret" /> : null}
+          </motion.strong>
+        </label>
+        <label className={creativeActive ? "is-active" : ""}>
+          <span>Text on creative</span>
+          <motion.strong
+            key={phase >= 4 ? "new-creative-copy" : "old-creative-copy"}
+            initial={{ opacity: 0.35 }}
+            animate={{ opacity: 1 }}
+            transition={STORY_ENTER}
+          >
+            {phase >= 4 ? STORY_CREATIVE.editedOverlay : STORY_CREATIVE.startingOverlay}
+            {creativeActive ? <span className="hc-story-caret" /> : null}
+          </motion.strong>
+        </label>
+      </div>
+    </motion.div>
+  );
+}
+
+function ReviewScene({ phase }: { phase: number }) {
+  const valuesFilled = phase >= 6;
+  const pressing = phase === 7;
+  const approved = phase >= 8;
+
+  return (
+    <motion.div
+      key="review"
+      className="hc-story-scene hc-story-review"
+      initial={{ opacity: 0, x: 38 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0 }}
+      transition={STORY_ENTER}
+    >
+      <div className="hc-story-review-preview">
+        <StoryAd phase={phase} review />
+      </div>
+
+      <motion.div className="hc-story-review-panel" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ ...STORY_ENTER, delay: 0.14 }}>
+        <h3>Review campaign</h3>
+        <dl>
+          {[
+            ["Audience", "Mt Lawley +15 km"],
+            ["Budget", "$20 / day"],
+            ["Duration", "14 days"],
+          ].map(([label, value], index) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span
+                    key={valuesFilled ? value : `${label}-empty`}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ ...STORY_ENTER, delay: valuesFilled ? index * 0.12 : 0 }}
+                  >
+                    {valuesFilled ? value : ""}
+                  </motion.span>
+                </AnimatePresence>
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <motion.strong
+          className={`hc-story-approve${approved ? " is-approved" : ""}`}
+          animate={{ scale: pressing ? 0.97 : 1 }}
+          transition={{ duration: 0.15, ease: "easeInOut" }}
+        >
+          <ShieldCheck aria-hidden="true" size={15} />
+          {approved ? "Campaign approved" : "Approve campaign"}
+          {pressing ? <StoryCursor pressed /> : null}
+        </motion.strong>
+      </motion.div>
+    </motion.div>
+  );
 }
 
 export function WorkflowShowcase() {
-  const stageRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const hasStarted = useRef(false);
+  const reduceMotion = Boolean(useReducedMotion());
   const [phase, setPhase] = useState(0);
-  const [reduced, setReduced] = useState(false);
-  const [visible, setVisible] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [inView, setInView] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
-  const frame = workflowFrame(phase);
+  const activeStep = STORY_PHASE_TO_STEP[phase];
 
   useEffect(() => {
-    const preference = matchMedia("(prefers-reduced-motion: reduce)");
-    const syncMotion = () => { setReduced(preference.matches); setPhase(preference.matches ? WORKFLOW_PHASES.length - 1 : 0); };
-    const syncPage = () => setPageVisible(document.visibilityState === "visible");
-    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { threshold: 0.2 });
-    syncMotion(); syncPage();
-    if (stageRef.current) observer.observe(stageRef.current);
-    preference.addEventListener("change", syncMotion);
-    document.addEventListener("visibilitychange", syncPage);
-    return () => { observer.disconnect(); preference.removeEventListener("change", syncMotion); document.removeEventListener("visibilitychange", syncPage); };
-  }, []);
+    const syncVisibility = () => setPageVisible(document.visibilityState === "visible");
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setInView(entry.isIntersecting);
+        if (entry.isIntersecting && !reduceMotion && !hasStarted.current) {
+          hasStarted.current = true;
+          setPhase(0);
+          setPlaying(true);
+        }
+      },
+      { threshold: 0.3 },
+    );
+
+    syncVisibility();
+    if (sectionRef.current) observer.observe(sectionRef.current);
+    document.addEventListener("visibilitychange", syncVisibility);
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", syncVisibility);
+    };
+  }, [reduceMotion]);
+
   useEffect(() => {
-    if (reduced || !visible || !pageVisible) return;
-    const timer = setTimeout(() => setPhase(nextWorkflowPhase), WORKFLOW_PHASES[phase].duration);
-    return () => clearTimeout(timer);
-  }, [phase, reduced, visible, pageVisible]);
+    if (reduceMotion) {
+      setPhase(STORY_STATUS.length - 1);
+      setPlaying(false);
+    }
+  }, [reduceMotion]);
 
-  const post = useTypedText(AD.startingCopy, AD.editedCopy, phase === 3, frame.postEdited, reduced);
-  const title = useTypedText(AD.startingTitle, AD.editedTitle, phase === 4, frame.titleEdited, reduced);
+  useEffect(() => {
+    if (!playing || !inView || !pageVisible || reduceMotion) return;
 
-  return <div className="hc-process-layout">
-    <div className="hc-process-copy">
-      <h2>Create real estate ads for Facebook &amp; Instagram.</h2>
-      <div className="hc-process-steps" aria-label="How Blockwise works">{WORKFLOW_STEPS.map((step, index) => <button type="button" key={step} aria-pressed={frame.step === index} onClick={() => setPhase(WORKFLOW_STEP_STARTS[index])}><span className="hc-process-step-mark" aria-hidden="true" /><strong>{step}</strong></button>)}</div>
-      <div className="hc-process-actions"><a className="hc-button hc-button--primary" href={TRIAL_SIGNUP_URL}>{TRIAL_CTA_LABEL}<ArrowRight size={17} aria-hidden="true" /></a></div>
-    </div>
-    <div className="wf-studio" ref={stageRef} data-step={frame.step} data-phase={phase} aria-label="Example ad creation workflow">
-      <div className="wf-topbar"><span><i aria-hidden="true" />Blockwise Ad Studio</span><ol aria-hidden="true">{WORKFLOW_STEPS.map((step, index) => <li key={step} className={frame.step === index ? "is-active" : ""}>{step}</li>)}</ol></div>
-      <p className="hc-sr-only">{frame.label}. Example only. No campaign is published.</p>
-      <div className="wf-workspace" aria-hidden="true">
-        <aside className="wf-library"><strong>Templates</strong><div className="wf-template-list">{WORKFLOW_TEMPLATES.map((template, index) => <div key={template.id} className={`wf-template${frame.template === index ? " is-selected" : ""}`}><div className="wf-template-art"><PropertyCreative template={template} /></div><span>{template.label}</span><i><Check size={10} /></i></div>)}</div></aside>
-        <div className="wf-ad-position"><StudioAd frame={frame} post={post} title={title} /></div>
-        <StudioInspector frame={frame} post={post} title={title} />
+    const timer = window.setTimeout(
+      () => setPhase((current) => current >= STORY_STATUS.length - 1 ? 0 : current + 1),
+      STORY_PHASE_DELAYS[phase],
+    );
+    return () => window.clearTimeout(timer);
+  }, [inView, pageVisible, phase, playing, reduceMotion]);
+
+  function selectStep(nextStep: number) {
+    setPhase(STORY_STEP_PHASES[nextStep]);
+    setPlaying(!reduceMotion);
+  }
+
+  const scene = phase <= 1 ? "browse" : phase <= 4 ? "edit" : "review";
+
+  return (
+    <div className="hc-process-layout" ref={sectionRef}>
+      <div className="hc-process-copy">
+        <h2>Create real estate ads for Facebook &amp; Instagram.</h2>
+
+        <div className="hc-process-steps" aria-label="How Blockwise works">
+          {PROCESS_STEPS.map((item, index) => (
+            <button
+              key={item.label}
+              type="button"
+              aria-pressed={activeStep === index}
+              onClick={() => selectStep(index)}
+            >
+              <span className="hc-process-step-mark" aria-hidden="true" />
+              <span><strong>{item.label}</strong></span>
+            </button>
+          ))}
+        </div>
+
+        <div className="hc-process-actions">
+          <a className="hc-button hc-button--primary" href="#trial">
+            Start free trial
+            <ArrowRight aria-hidden="true" size={17} />
+          </a>
+        </div>
+      </div>
+
+      <div className="hc-process-demo" data-scene={scene} aria-label="Animated example of creating and approving an ad">
+        <div className="hc-process-demo-topbar">
+          <span><i aria-hidden="true" /> Blockwise Ad Studio</span>
+          <ol aria-hidden="true">
+            {PROCESS_STEPS.map((item, index) => <li className={activeStep === index ? "is-active" : ""} key={item.label}>{item.label}</li>)}
+          </ol>
+        </div>
+
+        <p className="hc-sr-only" aria-live="polite">{STORY_STATUS[phase]}</p>
+        <LayoutGroup id="blockwise-story">
+          <div className="hc-story-viewport" aria-hidden="true">
+            <AnimatePresence mode="sync" initial={false}>
+              {scene === "browse" ? <TemplateBrowser phase={phase} /> : null}
+              {scene === "edit" ? <EditorScene phase={phase} /> : null}
+              {scene === "review" ? <ReviewScene phase={phase} /> : null}
+            </AnimatePresence>
+          </div>
+        </LayoutGroup>
       </div>
     </div>
-  </div>;
+  );
 }
