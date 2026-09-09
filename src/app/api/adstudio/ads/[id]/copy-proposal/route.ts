@@ -2,9 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import {
   generateAdStudioTemplateCopy,
-  hasConfiguredAdStudioTextProvider,
   normalizeAdStudioAiWritingGuidance,
 } from "@/lib/adstudio/copy-generation";
+import { buildDeterministicCopyProposal } from "@/lib/adstudio/copy-proposal";
+import { toMetaCta } from "@/lib/adstudio/meta-cta";
+import type { AdStudioBrandKit } from "@/lib/adstudio/types";
+import { isExampleBrandKitSourceUrl, rowToBrandKit } from "@/lib/adstudio/persistence";
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { adTemplateSchema } from "@/lib/adstudio/ingest-artifact";

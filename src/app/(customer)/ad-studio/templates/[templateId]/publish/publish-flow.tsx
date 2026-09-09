@@ -644,6 +644,12 @@ export function PublishFlow({
         <PublishSetupFields
           targetMode={targetMode}
           audienceLocations={audienceLocations}
+          budgetMode={budgetMode}
+          setBudgetMode={setBudgetMode}
+          objective={publishRequirements.objective}
+          specialAdCategory={publishRequirements.specialAdCategory}
+          specialAdCategoryCountry={specialAdCategoryCountry}
+          setSpecialAdCategoryCountry={setSpecialAdCategoryCountry}
           dailyBudgetDollars={dailyBudgetDollars}
           setDailyBudgetDollars={setDailyBudgetDollars}
           audienceMode={audienceMode}
@@ -668,10 +674,12 @@ export function PublishFlow({
           setEndIntent={setEndIntent}
           endAt={endAt}
           setEndAt={setEndAt}
+          lastCheckedBudgetMode={parentState?.campaign?.budgetMode}
           setupConfirmed={setupConfirmed}
-          setSetupConfirmed={setSetupConfirmed}
+          setSetupConfirmed={confirmed => setConfirmedSetupFingerprint(confirmed ? setupFingerprint : null)}
           summary={fieldsBuild.summary}
           fieldsReady={Boolean(fieldsBuild.controls)}
+          fieldIssues={fieldsBuild.issues}
         />
 
         <div className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
@@ -1276,247 +1284,6 @@ function SetupIssues({ issues }: { issues: string[] }) {
     </div>
   );
 }
-
-function PublishSetupFields({
-  targetMode,
-  audienceLocations,
-  dailyBudgetDollars,
-  setDailyBudgetDollars,
-  audienceMode,
-  setAudienceMode,
-  selectedLocationKeys,
-  setSelectedLocationKeys,
-  includeSurroundingSuburbs,
-  setIncludeSurroundingSuburbs,
-  latitude,
-  setLatitude,
-  longitude,
-  setLongitude,
-  radiusKm,
-  setRadiusKm,
-  placementChoices,
-  setPlacementChoices,
-  startIntent,
-  setStartIntent,
-  startAt,
-  setStartAt,
-  endIntent,
-  setEndIntent,
-  endAt,
-  setEndAt,
-  setupConfirmed,
-  setSetupConfirmed,
-  summary,
-  fieldsReady,
-}: {
-  targetMode: PublishTargetMode;
-  audienceLocations: PublishAudienceLocation[];
-  dailyBudgetDollars: string;
-  setDailyBudgetDollars: (value: string) => void;
-  audienceMode: AudienceMode;
-  setAudienceMode: (value: AudienceMode) => void;
-  selectedLocationKeys: string[];
-  setSelectedLocationKeys: Dispatch<SetStateAction<string[]>>;
-  includeSurroundingSuburbs: boolean;
-  setIncludeSurroundingSuburbs: (value: boolean) => void;
-  latitude: string;
-  setLatitude: (value: string) => void;
-  longitude: string;
-  setLongitude: (value: string) => void;
-  radiusKm: string;
-  setRadiusKm: (value: string) => void;
-  placementChoices: PlacementChoice[];
-  setPlacementChoices: Dispatch<SetStateAction<PlacementChoice[]>>;
-  startIntent: ScheduleStartIntent;
-  setStartIntent: (value: ScheduleStartIntent) => void;
-  startAt: string;
-  setStartAt: (value: string) => void;
-  endIntent: ScheduleEndIntent;
-  setEndIntent: (value: ScheduleEndIntent) => void;
-  endAt: string;
-  setEndAt: (value: string) => void;
-  setupConfirmed: boolean;
-  setSetupConfirmed: (value: boolean) => void;
-  summary: PublishSetupSummary | null;
-  fieldsReady: boolean;
-}) {
-  if (targetMode === "existing_adset") {
-    return (
-      <div className="mb-6 space-y-4 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
-        <div>
-          <h3 className="text-sm font-semibold">Existing ad set settings</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Blockwise will add ads only. Each selected ad set keeps its live budget, audience, placements and schedule from Meta.
-          </p>
-        </div>
-        <dl className="grid gap-2 rounded-(--r-ctl) bg-muted/50 p-3 text-sm sm:grid-cols-2">
-          {(["Budget", "Audience", "Placements", "Schedule"] as const).map(label => (
-            <div key={label} className="flex items-baseline justify-between gap-3 sm:block">
-              <dt className="text-xs text-muted-foreground">{label}</dt>
-              <dd className="font-medium">Unchanged in Meta</dd>
-            </div>
-          ))}
-        </dl>
-        <label className="flex min-h-11 items-start gap-3 rounded-(--r-ctl) border border-border px-3 py-2.5 text-sm font-medium">
-          <input
-            type="checkbox"
-            checked={setupConfirmed}
-            onChange={event => setSetupConfirmed(event.target.checked)}
-            disabled={!fieldsReady}
-            className="mt-0.5 size-4 shrink-0 accent-primary"
-          />
-          I confirm Blockwise must keep the existing ad sets&apos; live settings unchanged.
-        </label>
-      </div>
-    );
-  }
-
-  const placementOptions: Array<[PlacementChoice, string]> = [
-    ["facebook_feed", "Facebook Feed"],
-    ["facebook_story", "Facebook Stories"],
-    ["instagram_feed", "Instagram Feed"],
-    ["instagram_story", "Instagram Stories"],
-  ];
-
-  return (
-    <div className="mb-6 space-y-5 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
-      <div>
-        <h3 className="text-sm font-semibold">New ad set setup</h3>
-        <p className="mt-1 text-xs text-muted-foreground">Nothing is assumed. Set the spend, audience, placements and timing before Blockwise creates anything.</p>
-      </div>
-
-      <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
-        <div>
-          <Label htmlFor="publish-daily-budget">Daily budget (AUD)</Label>
-          <Input
-            id="publish-daily-budget"
-            type="number"
-            min="0.01"
-            step="0.01"
-            inputMode="decimal"
-            value={dailyBudgetDollars}
-            onChange={event => setDailyBudgetDollars(event.target.value)}
-            placeholder="25.00"
-            className="mt-1 min-h-11 bg-muted/30 tabular-nums"
-          />
-          <p className="mt-1 text-xs text-muted-foreground">Maximum Meta spend for this ad set each day.</p>
-        </div>
-
-        <div>
-          <Label htmlFor="publish-audience-mode">Audience location</Label>
-          <select
-            id="publish-audience-mode"
-            value={audienceMode}
-            onChange={event => setAudienceMode(event.target.value as AudienceMode)}
-            className="mt-1 min-h-11 w-full rounded-md border border-border bg-muted/30 px-3 text-base md:text-sm"
-          >
-            <option value="">Choose a location method</option>
-            {audienceLocations.length > 0 ? <option value="saved_locations">Saved campaign locations</option> : null}
-            <option value="custom_radius">Custom map radius</option>
-          </select>
-          <p className="mt-1 text-xs text-muted-foreground">Blockwise will not target all of Australia by default.</p>
-        </div>
-      </div>
-
-      {audienceMode === "saved_locations" ? (
-        <div className="space-y-2">
-          <p className="text-xs font-medium">Choose saved locations</p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {audienceLocations.map(location => (
-              <label key={location.key} className="flex min-h-11 items-center gap-3 rounded-(--r-ctl) border border-border px-3 py-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={selectedLocationKeys.includes(location.key)}
-                  onChange={event => setSelectedLocationKeys(current => event.target.checked ? [...current, location.key] : current.filter(key => key !== location.key))}
-                  className="size-4 accent-primary"
-                />
-                {location.name}{location.region ? `, ${location.region}` : ""}
-              </label>
-            ))}
-          </div>
-          <label className="flex min-h-11 items-center gap-3 text-sm">
-            <input type="checkbox" checked={includeSurroundingSuburbs} onChange={event => setIncludeSurroundingSuburbs(event.target.checked)} className="size-4 accent-primary" />
-            Include nearby areas (Meta&apos;s minimum radius is {MIN_META_RADIUS_KM} km)
-          </label>
-        </div>
-      ) : null}
-
-      {audienceMode === "custom_radius" ? (
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div><Label htmlFor="publish-latitude">Latitude</Label><Input id="publish-latitude" type="number" step="any" value={latitude} onChange={event => setLatitude(event.target.value)} placeholder="-31.9523" className="mt-1 min-h-11 bg-muted/30" /></div>
-          <div><Label htmlFor="publish-longitude">Longitude</Label><Input id="publish-longitude" type="number" step="any" value={longitude} onChange={event => setLongitude(event.target.value)} placeholder="115.8613" className="mt-1 min-h-11 bg-muted/30" /></div>
-          <div><Label htmlFor="publish-radius">Radius (km)</Label><Input id="publish-radius" type="number" min={MIN_META_RADIUS_KM} step="1" value={radiusKm} onChange={event => setRadiusKm(event.target.value)} placeholder={String(MIN_META_RADIUS_KM)} className="mt-1 min-h-11 bg-muted/30" /></div>
-        </div>
-      ) : null}
-
-      <fieldset className="space-y-2 border-t border-border pt-4">
-        <legend className="text-xs font-medium">Placements</legend>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {placementOptions.map(([value, label]) => (
-            <label key={value} className="flex min-h-11 items-center gap-3 rounded-(--r-ctl) border border-border px-3 py-2 text-sm">
-              <input
-                type="checkbox"
-                checked={placementChoices.includes(value)}
-                onChange={event => setPlacementChoices(current => event.target.checked ? [...current, value] : current.filter(choice => choice !== value))}
-                className="size-4 accent-primary"
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-      </fieldset>
-
-      <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
-        <div>
-          <Label htmlFor="publish-start-intent">Starts</Label>
-          <select id="publish-start-intent" value={startIntent} onChange={event => setStartIntent(event.target.value as ScheduleStartIntent)} className="mt-1 min-h-11 w-full rounded-md border border-border bg-muted/30 px-3 text-base md:text-sm">
-            <option value="">Choose start timing</option>
-            <option value="as_soon_as_activated">As soon as I activate it</option>
-            <option value="scheduled">At a scheduled time</option>
-          </select>
-          {startIntent === "scheduled" ? <Input aria-label="Scheduled start date and time" type="datetime-local" value={startAt} onChange={event => setStartAt(event.target.value)} className="mt-2 min-h-11 bg-muted/30" /> : null}
-        </div>
-        <div>
-          <Label htmlFor="publish-end-intent">Ends</Label>
-          <select id="publish-end-intent" value={endIntent} onChange={event => setEndIntent(event.target.value as ScheduleEndIntent)} className="mt-1 min-h-11 w-full rounded-md border border-border bg-muted/30 px-3 text-base md:text-sm">
-            <option value="">Choose end timing</option>
-            <option value="run_until_paused">Run until I pause it</option>
-            <option value="scheduled">At a scheduled time</option>
-          </select>
-          {endIntent === "scheduled" ? <Input aria-label="Scheduled end date and time" type="datetime-local" value={endAt} onChange={event => setEndAt(event.target.value)} className="mt-2 min-h-11 bg-muted/30" /> : null}
-        </div>
-      </div>
-
-      {summary ? <PublishSetupSummaryCard summary={summary} /> : (
-        <p className="rounded-(--r-ctl) bg-muted px-3 py-2 text-xs text-muted-foreground">Complete the destination and every setup choice to see the exact activation summary.</p>
-      )}
-      <label className="flex min-h-11 items-start gap-3 rounded-(--r-ctl) border border-border px-3 py-2.5 text-sm font-medium">
-        <input type="checkbox" checked={setupConfirmed} onChange={event => setSetupConfirmed(event.target.checked)} disabled={!fieldsReady} className="mt-0.5 size-4 shrink-0 accent-primary" />
-        I confirm this daily budget, audience, placement and schedule setup is correct.
-      </label>
-    </div>
-  );
-}
-
-function PublishSetupSummaryCard({ summary }: { summary: PublishSetupSummary }) {
-  const rows = [
-    ["Target", summary.target],
-    ["Budget", summary.budget],
-    ["Audience", summary.audience],
-    ["Placements", summary.placements],
-    ["Schedule", summary.schedule],
-    ["Destination", summary.destination],
-  ];
-  return (
-    <div className="rounded-(--r-ctl) bg-muted/60 p-3">
-      <p className="text-xs font-semibold">Review the exact setup</p>
-      <dl className="mt-2 grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
-        {rows.map(([label, value]) => <div key={label} className="min-w-0"><dt className="text-xs text-muted-foreground">{label}</dt><dd className="break-words font-medium">{value}</dd></div>)}
-      </dl>
-    </div>
-  );
-}
-
 function CopyRow({ label, value }: { label: string; value: string }) {
   return (
     <div>

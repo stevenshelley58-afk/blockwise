@@ -1,6 +1,7 @@
 import { evaluateRealEstateCompliance } from "../compliance/real-estate-policy.ts";
 
 import { deterministicUuid } from "./id.ts";
+import type { MetaPublishPlan } from "../providers/meta-execution.ts";
 import type {
   AdStudioCampaign,
   AdStudioComplianceReport,
@@ -119,4 +120,75 @@ function dedupeIssues(issues: ComplianceIssue[]): ComplianceIssue[] {
     seen.add(key);
     return true;
   });
+}
+
+function reviewPublishTextValues(values: string[]): ComplianceIssue[] {
+  const text = values.join("\n");
+  const baseResult = evaluateRealEstateCompliance({
+    region: "AU",
+    channel: "meta",
+    copy: text,
+  });
+  const issues: ComplianceIssue[] = baseResult.findings.map((finding) => ({
+    code: finding.code,
+    severity: finding.severity === "high" ? "blocking" : "warning",
+    message: finding.message,
+  }));
+
+  for (const rule of BLOCKED_COPY_PATTERNS) {
+    if (rule.pattern.test(text)) {
+      issues.push({
+        code: rule.code,
+        severity: "blocking",
+        message: rule.message,
+      });
+    }
+  }
+
+  return issues;
+}
+
+function publishComplianceStatus(issues: ComplianceIssue[]): AdStudioComplianceReport["status"] {
+  if (issues.some((issue) => issue.severity === "blocking")) return "blocked";
+  return issues.some((issue) => issue.severity === "warning") ? "needs_review" : "approved";
+}
+
+/**
+ * Exact pre-publish review over the finished Meta plan: finished ad copy,
+ * Instant Form text, and the Housing special-ad-category marker.
+ */
+export function runMetaPublishComplianceReview(
+  plan: Pick<MetaPublishPlan, "adStudioCampaignId" | "campaign" | "creatives" | "leadForms">,
+): Omit<AdStudioComplianceReport, "reportId"> {
+  const issues = reviewPublishTextValues([
+    ...plan.creatives.flatMap((creative) => [
+      creative.primaryText,
+      creative.headline,
+      creative.description,
+    ]),
+    ...plan.leadForms.flatMap((form) => [
+      form.headline,
+      form.intro,
+      ...form.customQuestions,
+      form.thankYouTitle,
+      form.thankYouBody,
+      form.thankYouButtonText,
+    ]),
+  ]);
+
+  if (!plan.campaign.specialAdCategories.includes("HOUSING")) {
+    issues.push({
+      code: "housing_special_category_required",
+      severity: "blocking",
+      message: "Housing-related Meta campaigns must be marked as Special Ad Category: Housing.",
+    });
+  }
+
+  const deduped = dedupeIssues(issues);
+  return {
+    campaignId: plan.adStudioCampaignId ?? "",
+    status: publishComplianceStatus(deduped),
+    issues: deduped,
+    checkedAt: new Date().toISOString(),
+  };
 }

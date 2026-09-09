@@ -11,6 +11,7 @@ import {
   ImageOff,
   MousePointerClick,
   Percent,
+  Megaphone,
   Play,
   UserPlus,
   Wallet,
@@ -750,7 +751,8 @@ function CampaignManagementTable({
           </TableBody>
         </Table>
       </div>
-    </section>
+      </div>
+    </details>
   );
 }
 

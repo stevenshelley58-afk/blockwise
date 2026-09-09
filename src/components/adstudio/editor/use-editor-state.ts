@@ -429,7 +429,7 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
         : colourMap
           ? { ...prev.pack.semanticColours, ...colourMap }
           : { ...prev.resolvedColourMap };
-      const resolvedColourMap = mode === "manual"
+      const resolvedColourMap = mode === "custom"
         ? normaliseManualColourMap(selectedColourMap)
         : selectedColourMap;
       return {
@@ -447,11 +447,11 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
     const colour = normalizeManualHexColour(value);
     if (!colour) return false;
     setState(prev => {
-      if (prev.colourMode === "manual" && prev.resolvedColourMap[role] === colour) return prev;
+      if (prev.colourMode === "custom" && prev.resolvedColourMap[role] === colour) return prev;
       pushUndo(prev);
       return {
         ...prev,
-        colourMode: "manual",
+        colourMode: "custom",
         resolvedColourMap: { ...prev.resolvedColourMap, [role]: colour },
         isDirty: true,
         editVersion: (prev.editVersion ?? 0) + 1,
@@ -464,11 +464,11 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
   const resetColour = useCallback((role: ColourRole) => {
     setState(prev => {
       const value = normalizeManualHexColour(prev.pack.semanticColours[role]) ?? prev.pack.semanticColours[role];
-      if (prev.colourMode === "manual" && prev.resolvedColourMap[role] === value) return prev;
+      if (prev.colourMode === "custom" && prev.resolvedColourMap[role] === value) return prev;
       pushUndo(prev);
       return {
         ...prev,
-        colourMode: "manual",
+        colourMode: "custom",
         resolvedColourMap: { ...prev.resolvedColourMap, [role]: value },
         isDirty: true,
         editVersion: (prev.editVersion ?? 0) + 1,
@@ -672,7 +672,7 @@ export function resolveColourMap(
   brandColourMap?: Partial<Record<ColourRole, string>> | null,
   customColourMap?: Partial<Record<ColourRole, string>> | null,
 ): Record<ColourRole, string> {
-  if ((mode === "brand_pack" || mode === "manual") && brandColourMap) {
+  if (mode === "brand_pack" && brandColourMap) {
     return { ...templateColours, ...brandColourMap };
   }
   if (mode === "custom" && customColourMap) {

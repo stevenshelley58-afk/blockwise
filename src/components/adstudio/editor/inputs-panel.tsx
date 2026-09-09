@@ -58,6 +58,11 @@ export interface InputsPanelProps {
   showImageInputs?: boolean;
   showTemplateControls?: boolean;
   showBusinessName?: boolean;
+  focusRequest?: { inputKey: string; requestId: string | number } | null;
+  /** Logical input selected from either placement's preview. */
+  activeInputKey?: string | null;
+  /** Keeps preview selection in sync with keyboard and pointer focus. */
+  onFieldFocus?: (key: string) => void;
 }
 
 export function InputsPanel({
@@ -83,6 +88,9 @@ export function InputsPanel({
   showImageInputs = true,
   showTemplateControls = true,
   showBusinessName = true,
+  focusRequest = null,
+  activeInputKey = null,
+  onFieldFocus,
 }: InputsPanelProps) {
   const requiredImageInputs = imageInputs.filter(input => input.required !== false);
   const optionalImageInputs = imageInputs.filter(input => input.required === false);

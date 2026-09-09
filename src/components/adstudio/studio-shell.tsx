@@ -16,10 +16,10 @@ import { cn } from "@/lib/utils";
 
 type StudioShellProps = {
   children: ReactNode;
-  workspaceName: string;
+  workspaceName?: string;
   homeHref?: string;
-  account: { email: string; name: string; role: string };
-  metaConnectionStatus: "connected" | "attention" | "not_connected" | "unknown";
+  account?: { email: string; name: string; role: string };
+  metaConnectionStatus?: "connected" | "attention" | "not_connected" | "unknown";
 };
 
 const items = [
@@ -37,10 +37,10 @@ function activePath(pathname: string, href: string, exact?: boolean) {
 
 export function StudioShell({
   children,
-  workspaceName,
-  account,
+  workspaceName = "Workspace",
+  account = { email: "", name: "", role: "" },
   homeHref = "/self-serve",
-  metaConnectionStatus,
+  metaConnectionStatus = "unknown",
 }: StudioShellProps) {
   const pathname = usePathname() ?? "/ad-studio";
   const contextual = pathname.startsWith("/ad-studio/ads/");

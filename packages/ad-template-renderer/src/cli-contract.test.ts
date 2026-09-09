@@ -9,7 +9,7 @@ import test from "node:test";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const cli = join(root, "packages/ad-template-renderer/src/cli.ts");
 const fixture = JSON.parse(await readFile(join(root, "tests/fixtures/ad-template/minimal-feed-story.json"), "utf8"));
-function run(scratch, artifact) { const path=join(scratch,"artifact.json"); return writeFile(path,JSON.stringify(artifact)).then(()=>spawnSync(process.execPath,["--import","tsx",cli,"--input",path,"--assets-dir",scratch,"--out-dir",join(scratch,"out")],{cwd:root,encoding:"utf8"})); }
+function run(scratch: string, artifact: unknown) { const path=join(scratch,"artifact.json"); return writeFile(path,JSON.stringify(artifact)).then(()=>spawnSync(process.execPath,["--import","tsx",cli,"--input",path,"--assets-dir",scratch,"--out-dir",join(scratch,"out")],{cwd:root,encoding:"utf8"})); }
 
 test("CLI rejects invalid contract before asset I/O with bounded issues", async()=>{ const s=await mkdtemp(join(tmpdir(),"cli-contract-")); try { const bad={...fixture,template:{...fixture,templateId:"bad",feedLayout:null}}; const r=await run(s,bad); assert.equal(r.status,1); assert.match(r.stderr,/^invalid_template_artifact /); assert.match(r.stderr,/feedLayout/); } finally { await rm(s,{recursive:true,force:true}); } });
 

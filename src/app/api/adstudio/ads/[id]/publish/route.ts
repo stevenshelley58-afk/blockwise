@@ -121,7 +121,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     // 2. Load the workspace's Meta connection and resolved setup before planning.
     const serviceSupabase = createSupabaseServiceClient();
-    const writesEnabled = providerWritesEnabled();
+    const writesEnabled = metaPublishProviderWritesEnabled(access.access.workspaceId);
     const connection = await loadMetaConnection(serviceSupabase, access.access.workspaceId);
     if (!connection) {
       return NextResponse.json({ error: "meta_not_connected", message: "Connect Meta before publishing." }, { status: 400 });

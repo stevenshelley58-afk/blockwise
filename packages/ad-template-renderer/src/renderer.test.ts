@@ -232,8 +232,8 @@ test("multi-line text below a 1.0 line height is aggregated and single-line text
   assert.match(failure.message, /feed text layer feed-features with maxLines 2 must use lineHeight at least 1/);
   assert.match(failure.message, /story text layer story-features with maxLines 2 must use lineHeight at least 1/);
 
-  template.feedLayout.layers[1]!.lineHeight = 1;
-  template.storyLayout.layers[1]!.lineHeight = 1.1;
+  (template.feedLayout.layers[1] as unknown as { lineHeight: number }).lineHeight = 1;
+  (template.storyLayout.layers[1] as unknown as { lineHeight: number }).lineHeight = 1.1;
   await assert.doesNotReject(renderBoth({
     template,
     imageValues: {},
@@ -300,6 +300,12 @@ test("c15 Story essential text collision is rejected with its signed painted ove
     kind: "essential_text_overlap",
     overlapPx: 100,
     reason: "story essential text layers story-about-copy and story-features-heading overlap by 100px vertically",
+    suggestedGeometry: {
+      height: 46,
+      width: 888,
+      x: 120,
+      y: 1218,
+    },
   });
 
   template.storyLayout.layers[1]!.geometry = { x: 72, y: 1094, width: 936, height: 192 };
@@ -347,6 +353,12 @@ test("c15 Story address is rejected when its exact painted bounds exceed right g
     edge: "right",
     overflowPx: 4,
     reason: "story text layer story-address painted bounds exceed geometry by 4px on right",
+    suggestedGeometry: {
+      height: 86,
+      width: 344,
+      x: 624,
+      y: 706,
+    },
   }]);
 });
 

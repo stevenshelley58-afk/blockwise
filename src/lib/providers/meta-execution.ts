@@ -127,6 +127,10 @@ export type MetaPublishControls = {
   parentState?: MetaParentState;
   /** Explicit article/website destination for the ad and (when applicable) form thank-you button. */
   destinationUrl?: string;
+  adDestinationUrl?: string;
+  formCompletionUrl?: string;
+  creativeFeatures?: Partial<Record<MetaCreativeFeatureKey, "OPT_IN" | "OPT_OUT">>;
+  assetFeedEnabled?: boolean;
   destinationMode?: "website" | "instant_form";
   variantIds?: Array<"feed" | "story">;
   geo?:
@@ -356,6 +360,8 @@ export type MetaReconciledObjects = {
   creativeIds: Record<string, string>;
   adIds: Record<string, string>;
   ownedAdIds?: Record<string, string>;
+  /** Provider image hashes captured at creative upload, never source bytes. */
+  creativeAssetHashes?: Record<string, { feedImageHash: string; storyImageHash: string }>;
   /** Exact-name recovery is adoption, not proof that Blockwise created the object. */
   provenance?: {
     campaign?: MetaReconciledObjectProvenance;
@@ -665,6 +671,13 @@ export function buildMetaPublishPlan(input: {
   const leadForms = buildLeadFormPlans(campaignPack, setup, controls.formCompletionUrl);
   const creatives = buildCreativePlans(campaignPack, setup);
   const ads = buildAdPlans(campaignPack, adSets);
+  const creativeFeatures = controls.creativeFeatures ?? buildDefaultMetaCreativeFeatures();
+  // A placement package must be complete for every creative; otherwise Meta
+  // would silently fall back to a feed asset in story placement.
+  const assetFeedEnabled = controls.assetFeedEnabled
+    ?? (creatives.length > 0 && creatives.every(
+      (creative) => Boolean(creative.formatAssets?.feed && creative.formatAssets?.story),
+    ));
   const tracking: MetaPublishTrackingPlan = {
     utmSource: "meta",
     utmMedium: "paid_social",
@@ -804,7 +817,7 @@ export function validateMetaPublishPlanReadiness(
     blockers.push("Each selected creative needs an exact 4:5 Feed and 9:16 Story asset feed before Meta publish.");
   }
 
-  if (plan.adapter === "marketing_api" && plan.creatives.some((creative) => !hasUsableCreativeMedia(creative))) {
+  if (plan.adapter === "marketing_api" && plan.creatives.some((creative) => !hasUsableCreativeImage(creative))) {
     blockers.push(plan.creatives.some((creative) => creative.asset?.type === "video")
       ? "The finished ad media could not be found or has not been validated for one or more creatives."
       : "The finished ad image could not be found for one or more creatives.");
@@ -1469,45 +1482,9 @@ async function publishWithMarketingApi(
             `/${plan.setup.pageId}/leadgen_forms`,
             buildMetaInstantFormPayload(providerName, leadForm),
             input.pageAccessToken ?? input.accessToken,
-          )
-        : null;
-      if (existingId) {
-        reconciledObjects.leadFormIds[leadForm.localId] = existingId;
-      } else {
-        const response = await postMetaObject(
-          input,
-          requestLog,
-          responseLog,
-          `lead_form.${leadForm.localId}`,
-          `/${plan.setup.pageId}/leadgen_forms`,
-          {
-            name: providerName,
-            follow_up_action_url: leadFormDeliveryUrl(plan, leadForm),
-            privacy_policy: {
-              url: leadForm.privacyPolicyUrl,
-              link_text: "Privacy Policy",
-            },
-            is_optimized_for_quality: true,
-            questions: [
-              { type: "FIRST_NAME", key: "first_name" },
-              { type: "LAST_NAME", key: "last_name" },
-              { type: "EMAIL", key: "email" },
-              { type: "PHONE", key: "phone" },
-              ...leadForm.questions.map((question, qi) => ({ type: "CUSTOM", key: `custom_${qi + 1}`, label: question })),
-            ],
-            thank_you_page: {
-              title: leadForm.thankYouTitle,
-              body: leadForm.thankYouBody,
-              button_text: "Visit website",
-              button_type: "VIEW_WEBSITE",
-              website_url: leadFormDeliveryUrl(plan, leadForm),
-            },
-          },
-          input.pageAccessToken ?? input.accessToken,
-        );
-        const formId = requireMetaId(response, "lead form");
-        await verifyMetaLeadForm(input, requestLog, responseLog, formId, leadForm, input.pageAccessToken ?? input.accessToken);
-        reconciledObjects.leadFormIds[leadForm.localId] = formId;
+          );
+          formId = requireMetaId(response, "lead form");
+        }
       }
       // A deterministic name proves identity, not content. Always verify the
       // exact Instant Form fields before recording either a recovered, newly
@@ -1610,39 +1587,20 @@ async function publishWithMarketingApi(
           ? await resolveStoryCreativeImageHash(plan, creative, input, requestLog, responseLog)
           : null;
         const leadFormId = reconciledObjects.leadFormIds[creative.leadFormLocalId];
-        const utmLink = buildUtmLink(destinationUrl, plan.tracking, creative.localId);
-        const callToAction = {
-          type: creative.cta,
-          value: leadFormId ? { lead_gen_form_id: leadFormId } : { link: utmLink },
-        };
-        const response = await postMetaObject(input, requestLog, responseLog, `creative.${creative.localId}`, `/${plan.setup.metaAdAccountId}/adcreatives`, {
-          name: providerName,
-          object_story_spec: {
-            page_id: creative.pageId,
-            ...(creative.instagramActorId ? { instagram_user_id: creative.instagramActorId } : {}),
-            ...(creative.asset?.type === "video"
-              ? {
-                  video_data: {
-                    video_id: media.videoId,
-                    message: creative.primaryText,
-                    title: creative.headline,
-                    link_description: creative.description,
-                    call_to_action: callToAction,
-                    ...(creative.asset.posterUrl ? { image_url: creative.asset.posterUrl } : {}),
-                  },
-                }
-              : {
-                  link_data: {
-                    message: creative.primaryText,
-                    name: creative.headline,
-                    description: creative.description,
-                    link: utmLink,
-                    ...(media.imageHash ? { image_hash: media.imageHash } : {}),
-                    call_to_action: callToAction,
-                  },
-                }),
-          },
-        });
+        const linkBase = plan.controls.adDestinationUrl?.trim() || plan.setup.privacyPolicyUrl;
+        const utmLink = buildUtmLink(linkBase, plan.tracking, creative.localId);
+        const response = await postMetaObject(input, requestLog, responseLog, `creative.${creative.localId}`, `/${plan.setup.metaAdAccountId}/adcreatives`,
+          buildMetaCreativePayload({
+            name: providerName,
+            creative,
+            link: utmLink,
+            leadFormId,
+            imageHash,
+            storyImageHash,
+            useAssetFeed: plan.assetFeedEnabled,
+            creativeFeatures: plan.creativeFeatures,
+          }),
+        );
         reconciledObjects.creativeIds[creative.localId] = requireMetaId(response, "creative");
         if (!imageHash || !storyImageHash) {
           throw new MetaReconciliationRequiredError("Meta creative upload did not return both immutable Feed and Story image hashes.");
@@ -2344,6 +2302,36 @@ export function buildMetaCreativePayload(input: {
   };
 }
 
+const META_BUILT_IN_QUESTION_LABELS = new Set([
+  "first name",
+  "last name",
+  "full name",
+  "name",
+  "email",
+  "email address",
+  "phone",
+  "phone number",
+]);
+
+export function normalizeMetaLeadFormQuestions(questions: readonly string[] | null | undefined): string[] {
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+
+  for (const raw of questions ?? []) {
+    if (typeof raw !== "string") continue;
+    const question = raw.trim();
+    if (!question) continue;
+    const key = question.toLowerCase().replace(/\s+/g, " ").replace(/[?.!]+$/, "");
+    if (META_BUILT_IN_QUESTION_LABELS.has(key)) continue;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(question);
+  }
+
+  // Meta allows at most 5 custom questions per lead form.
+  return normalized.slice(0, 5);
+}
+
 export function buildMetaInstantFormPayload(name: string, form: MetaPublishLeadFormPlan): Record<string, unknown> {
   return {
     name,
@@ -2704,10 +2692,6 @@ function assertCreativeReadbackMatchesPlan(
   if (!hasImage("feed_image", expectedAssets.feedImageHash) || !hasImage("story_image", expectedAssets.storyImageHash)) {
     throw new MetaReconciliationRequiredError(`Meta creative ${creative.localId} did not read back the exact Feed 4:5 and Story 9:16 image mappings.`);
   }
-}
-
-function recordValue(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
 
 function sameJsonValue(left: unknown, right: unknown): boolean {
@@ -3541,8 +3525,6 @@ function resolveLeadFormLocalIdForIndex(leadForms: MetaPublishLeadFormPlan[], pa
 function buildCreativePlans(
   pack: AdStudioCampaignPack,
   setup: MetaConnectionSetup,
-  leadForms: MetaPublishLeadFormPlan[],
-  destinationUrl?: string,
 ): MetaPublishCreativePlan[] {
   return pack.copyPacks.slice(0, 6).map((copy, index) => {
     const variantCreatives = pack.creatives.filter((item) => item.variantId === copy.variantId);
@@ -3592,8 +3574,54 @@ function buildCreativePlans(
  * publish worker just before upload, so plans stay small in the database.
  */
 function buildCreativeImageAsset(creative: AdStudioCampaignPack["creatives"][number]): MetaCreativeAssetPlan | null {
+  const creativeId = creative.creativeId;
   const imageObject = creative.canvas.objects.find((object) => object.role === "primary_image");
   const reference = imageObject?.content?.trim() || imageObject?.assetId?.trim() || "";
+  const storedSha256 = (imageObject as unknown as { contentSha256?: unknown })?.contentSha256;
+
+  if (!reference) return null;
+
+  const dataUrlMatch = reference.match(/^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i);
+  if (dataUrlMatch) {
+    return {
+      type: "image",
+      source: "inline",
+      mimeType: dataUrlMatch[1],
+      filename: `${creativeId}.${dataUrlMatch[1] === "image/jpeg" ? "jpg" : "png"}`,
+      bytesBase64: dataUrlMatch[2],
+      contentSha256: createHash("sha256").update(Buffer.from(dataUrlMatch[2], "base64")).digest("hex"),
+    };
+  }
+
+  const storagePath = reference.startsWith("/api/adstudio/media?")
+    ? new URL(reference, "https://blockwise.invalid").searchParams.get("path")
+    : reference.startsWith("data:") || isHttpUrl(reference)
+      ? null
+      : reference;
+
+  if (!storagePath) return null;
+
+  return {
+    type: "image",
+    source: "storage",
+    mimeType: "image/png",
+    filename: `${creativeId}.png`,
+    storagePath,
+    ...(typeof storedSha256 === "string" && /^[a-f0-9]{64}$/i.test(storedSha256)
+      ? { contentSha256: storedSha256.toLowerCase() }
+      : {}),
+  };
+}
+
+function buildCreativeImageAssetFromCanvas(creativeId: string, canvas: unknown): MetaCreativeAssetPlan | null {
+  const objects = canvas && typeof canvas === "object" && Array.isArray((canvas as { objects?: unknown }).objects)
+    ? (canvas as { objects: Array<{ objectId?: unknown; role?: unknown; content?: unknown; assetId?: unknown; contentSha256?: unknown }> }).objects
+    : [];
+  const imageObject = objects.find((object) => object.objectId === "template_clone_image")
+    ?? objects.find((object) => object.role === "primary_image");
+  const reference = typeof imageObject?.content === "string" && imageObject.content.trim()
+    ? imageObject.content.trim()
+    : typeof imageObject?.assetId === "string" ? imageObject.assetId.trim() : "";
 
   if (!reference) return null;
 
@@ -3697,6 +3725,10 @@ function isHttpsDestination(value: string): boolean {
   try { return new URL(value).protocol === "https:"; } catch { return false; }
 }
 
+function isHttpsUrl(value: string): boolean {
+  return isHttpsDestination(value);
+}
+
 function buildAdPlans(pack: AdStudioCampaignPack, adSets: MetaPublishAdSetPlan[]): MetaPublishAdPlan[] {
   const copies = pack.copyPacks.slice(0, 6);
   return adSets.flatMap((adSet, adSetIndex) => copies.map((copy, index) => {
@@ -3737,6 +3769,9 @@ function normalizeMetaPublishControls(
   pack: AdStudioCampaignPack,
   input: { existingMetaCampaignId?: string | null; existingMetaCampaignBudgetMode?: "campaign" | "adset" },
 ): MetaPublishControls {
+  const legacyDestinationUrl = controls?.destinationUrl?.trim();
+  const adDestinationUrl = controls?.adDestinationUrl?.trim() ?? legacyDestinationUrl;
+  const formCompletionUrl = controls?.formCompletionUrl?.trim() ?? legacyDestinationUrl;
   const destinationUrl = controls?.destinationUrl?.trim();
   const suppliedTarget = controls?.target;
   const target: MetaPublishTarget = suppliedTarget
@@ -3877,6 +3912,8 @@ type MetaPublishPlanRow = {
     complianceReportId?: string | null;
     complianceSubjectHash?: string;
     complianceCheckedAt?: string | null;
+    creativeFeatures?: MetaPublishPlan["creativeFeatures"];
+    assetFeedEnabled?: MetaPublishPlan["assetFeedEnabled"];
     controls?: MetaPublishControls;
     source?: MetaPublishPlan["source"];
   };
@@ -3963,18 +4000,6 @@ function emptyReconciledObjects(): MetaReconciledObjects {
     adIds: {},
     ownedAdIds: {},
     provenance: { adSets: {}, ads: {} },
-  };
-}
-
-function normalizeMetaLeadFormPlan(form: MetaPublishLeadFormPlan): MetaPublishLeadFormPlan {
-  return {
-    ...form,
-    intro: form.intro ?? form.headline,
-    contactFields: form.contactFields?.length ? form.contactFields : ["FIRST_NAME", "LAST_NAME", "EMAIL", "PHONE"],
-    customQuestions: form.customQuestions ?? form.questions ?? [],
-    questions: form.questions ?? form.customQuestions ?? [],
-    thankYouButtonType: form.thankYouButtonType ?? "VIEW_WEBSITE",
-    thankYouButtonText: form.thankYouButtonText ?? "Visit website",
   };
 }
 

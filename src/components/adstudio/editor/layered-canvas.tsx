@@ -23,6 +23,7 @@ import {
 } from "@blockwise/ad-template-renderer/text-layout";
 import { templateAssetProxyUrl } from "@/lib/adstudio/pack-gallery";
 import { cn } from "@/lib/utils";
+import { editorTargetForLayer, type EditorLayerTarget } from "./editor-target";
 import {
   effectiveTextFontSize,
   fabricCircleGeometry,
@@ -103,6 +104,7 @@ export function LayeredCanvas({
   cropOverrides = {},
   selectedLayerId,
   onSelect,
+  onTargetSelect,
   onCropImage,
   onError,
   canonicalPreview,

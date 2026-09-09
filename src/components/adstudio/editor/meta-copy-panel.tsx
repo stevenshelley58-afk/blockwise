@@ -1,14 +1,14 @@
 "use client";
 
 import type { MetaCopy } from "./use-editor-state";
+import type { MetaEditField } from "./editor-target";
 import { META_COPY_CTA_VALUES, META_COPY_CONSTRAINTS } from "../../../lib/adstudio/meta-copy-contract";
 import { ctaLabelText, truncateForPreview } from "./preview-text";
-import { isMetaCta, toMetaCta } from "../../../lib/adstudio/meta-cta";
+import { isMetaCta, labelForMetaCta, META_CTA_VALUES, toMetaCta } from "@/lib/adstudio/meta-cta";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { labelForMetaCta, META_CTA_VALUES, toMetaCta } from "@/lib/adstudio/meta-cta";
 
 // ---------------------------------------------------------------------------
 // Meta Copy Panel — primary text, headline, description and CTA for the
@@ -29,6 +29,10 @@ export interface MetaCopyPanelProps {
   onChange: (field: keyof MetaCopy, value: string) => void;
   destinationUrl?: string;
   onDestinationChange?: (value: string) => void;
+  onUseTemplateCopy: () => void;
+  activeField?: MetaEditField | null;
+  setFocusTarget?: (field: MetaEditField, node: HTMLElement | null) => void;
+  onFieldFocus?: (field: MetaEditField) => void;
 }
 /** Meta's standard CTAs (the same set the meta lead-ad pack schema allows). */
 export const META_CTA_OPTIONS = META_COPY_CTA_VALUES;
@@ -36,7 +40,7 @@ export const META_CTA_OPTIONS = META_COPY_CTA_VALUES;
 /** Meta truncation limits used for the live preview. */
 const LIMITS = META_COPY_CONSTRAINTS;
 
-export function MetaCopyPanel({ className, values, onChange, destinationUrl = "", onDestinationChange }: MetaCopyPanelProps) {
+export function MetaCopyPanel({ className, values, onChange, destinationUrl = "", onDestinationChange, onUseTemplateCopy, activeField = null, setFocusTarget = () => {}, onFieldFocus }: MetaCopyPanelProps) {
   const selectedCta = isMetaCta(values.cta) ? values.cta : toMetaCta(values.cta || "LEARN_MORE");
 
   return (
