@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 test("approval workflow stays contextual instead of exposing a standalone section", () => {
@@ -74,4 +74,5 @@ test("unified shell keeps operator console out of the customer app", () => {
   assert.doesNotMatch(routeShell, /Hermes Engine/);
   assert.doesNotMatch(appShell, /Operational/);
   assert.doesNotMatch(routeShell, /Operational/);
+  assert.equal(existsSync("src/components/route-aware-legacy-shell.tsx"), false);
 });

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const appShell = readFileSync("src/components/app-shell.tsx", "utf8");
@@ -10,8 +10,10 @@ test("AppShell delegates to one unified route-aware boundary", () => {
   assert.match(appShell, /<StudioRouteShell[\s\S]*workspaceName=\{workspaceName\}/);
   assert.match(appShell, /<StudioRouteShell[\s\S]*metaConnectionStatus=\{metaConnectionStatus\}/);
   assert.match(appShell, /<StudioRouteShell[\s\S]*>\s*\{children\}\s*<\/StudioRouteShell>/);
+  assert.match(appShell, /redirect\("\/login"\)/);
   assert.doesNotMatch(appShell, /RouteAwareLegacyShell/);
   assert.doesNotMatch(appShell, /<SelfServeShell[\s\S]*>\s*\{children\}\s*<\/SelfServeShell>/);
+  assert.equal(existsSync("src/components/route-aware-legacy-shell.tsx"), false);
 });
 
 test("unified boundary selects Studio or SelfServe chrome without overlays", () => {
@@ -22,6 +24,11 @@ test("unified boundary selects Studio or SelfServe chrome without overlays", () 
   assert.doesNotMatch(routeShell, /fixed\s+inset-0|absolute\s+inset-0/);
   assert.equal((routeShell.match(/<StudioShell/g) ?? []).length, 1);
   assert.equal((routeShell.match(/<SelfServeShell/g) ?? []).length, 1);
+});
+
+test("authenticated shell streams trial status behind a skeleton fallback", () => {
+  assert.match(appShell, /<TrialStatusSkeleton \/>/);
+  assert.match(appShell, /<DeferredTrialStatus/);
 });
 
 test("self-serve shell keeps Ads inside the shared customer shell", () => {

@@ -18,9 +18,15 @@ function sentryIngestOrigin(dsn: string | undefined): string | null {
   }
 }
 
+const homepagePreview = process.env.BLOCKWISE_HOMEPAGE_PREVIEW === "true";
+const previewBasePath = homepagePreview ? "/homepage-preview" : "";
+
 const nextConfig: NextConfig = {
+  basePath: previewBasePath,
   // Embedded at build time: a mutable runtime env must not impersonate a release.
   env: {
+    BLOCKWISE_HOMEPAGE_PREVIEW: homepagePreview ? "true" : "false",
+    NEXT_PUBLIC_BASE_PATH: previewBasePath,
     BLOCKWISE_BUILD_REVISION: /^[a-f0-9]{40}$/i.test(process.env.BLOCKWISE_BUILD_REVISION ?? "")
       ? process.env.BLOCKWISE_BUILD_REVISION
       : "",

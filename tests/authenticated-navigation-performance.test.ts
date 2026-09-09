@@ -30,7 +30,7 @@ test("nonessential trial state streams without blocking the authenticated shell"
   const shell = read("src/components/app-shell.tsx");
   const selfServeShell = read("src/components/self-serve-shell.tsx");
 
-  assert.match(shell, /<Suspense fallback=\{<TrialStatusSkeleton \/>/);
+  assert.match(shell, /<Suspense fallback=\{<TrialStatusSkeleton \/>\}>/);
   assert.match(shell, /<DeferredTrialStatus/);
   assert.doesNotMatch(shell, /const initialTrialStatus = await loadInitialTrialStatus/);
   assert.match(selfServeShell, /trialStatus: React\.ReactNode/);
