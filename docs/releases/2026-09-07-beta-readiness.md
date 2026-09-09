@@ -2,10 +2,10 @@
 
 ## Status
 
-Validation is in progress. This record covers the coordinated candidate
-checkout `/projects/blockwise-beta-release-20260907`; it is not deployment
-authorisation. The public app remains on
-`c02b11e452203a2d54bd278b913f410588ce6ff4`. Candidate application checkpoint:
+This record covers the coordinated candidate checkout
+`/projects/blockwise-beta-release-20260907`. The app-only deployment now serves
+revision `f972e44d4ee1a47c1602e1427883835512240fce`; deployment did not restart
+worker or Caddy. Candidate application checkpoint before docs-only evidence:
 `7563960ecbc7ac8eb83f679c310029a09a16da26`.
 
 ## Safety posture
@@ -17,8 +17,9 @@ authorisation. The public app remains on
   data mutations, worker restart, Caddy restart, or deployment occurred during
   this checkpoint.
 - Build and deployment scaffolding is isolated under
-  `/srv/blockwise/beta-release-20260907/`. `rollback-app.sh` must be prepared
-  before any image or app deployment action.
+  `/srv/blockwise/beta-release-20260907/`. The guarded rollback command was
+  prepared before deployment; the retained env backup is
+  `/srv/blockwise/beta-release-20260907/product.env.before-f972e44d4ee1`.
 
 ## Validation evidence
 
@@ -27,14 +28,18 @@ authorisation. The public app remains on
 - Package tests: 124/126 passed, 0 failed, 2 skipped. The skips are the
   lifecycle comparison test and the root-only unwritable-directory typecheck
   test. No package test failed.
-- Typecheck passed after package builds. Final immutable build evidence remains
-  pending.
+- Typecheck passed after package builds. Final immutable image build and
+  app-only deployment passed. `/api/health` reports the exact serving revision.
+- Product canary reported `SAVE_REOPEN_OK` in seeded workspace
+  `00000000-0000-0000-0000-0000000000e2`, with revision-1 save, Feed/Story
+  hashes, and exact edited-text reload. This does not prove fresh signup or
+  external provider actions.
 
 ## Outstanding release gates
 
-- Product E2E acceptance and operations follow-up are still pending.
-- Final immutable image build and app-only deployment are pending explicit
-  coordination.
+- Fresh email signup and external-account onboarding were not exercised.
+- Live Meta OAuth/deauthorize/partner-account, provider publishing, lead
+  delivery, scheduler, and Stripe account evidence remain external gates.
 - Live Meta OAuth, deauthorize/data-deletion, partner-account, publishing,
   lead delivery, scheduler, and Stripe account evidence remains external and
   cannot be inferred from fixture tests.
