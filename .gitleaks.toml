@@ -1,0 +1,10 @@
+# Gitleaks config: the fixture files below carry synthetic placeholder secrets
+# used by tests (e.g. "test-customer-key-secret-001",
+# "proof-page-token-resolution-artifact-001"). They are not real credentials.
+# The exemption is scoped to these two fixture files only.
+[allowlist]
+description = "synthetic placeholder secrets in test fixtures"
+paths = [
+  "tests/ad-radar-customer-interest.test.ts",
+  "scripts/meta/fixtures/proof-receipt-example.json",
+]
