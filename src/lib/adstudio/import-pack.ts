@@ -108,6 +108,9 @@ export async function importTemplatePack(
     throw importError("schema_invalid", "Pack failed schema validation", parsed.error.issues);
   }
   const pack = parsed.data as TemplatePack;
+  if (pack.packId !== input.packId) {
+    throw importError("pack_id_mismatch", "Fetched TemplatePack identity does not match the requested packId");
+  }
 
   // 8. Manifest hash verification (signature binds to this).
   const computedManifestHash = computeManifestHash(manifestJson as Record<string, unknown>);
@@ -148,6 +151,15 @@ function safeParseJson(bytes: Buffer): unknown {
   } catch {
     throw importError("schema_invalid", "manifest.json is not valid JSON");
   }
+}
+
+function decodeEd25519Signature(signature: string): Buffer | null {
+  if (/^[a-f0-9]{128}$/u.test(signature)) return Buffer.from(signature, "hex");
+  if (!/^[A-Za-z0-9+/_-]+={0,2}$/u.test(signature)) return null;
+  const normalized = signature.replace(/-/gu, "+").replace(/_/gu, "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+  const bytes = Buffer.from(padded, "base64");
+  return bytes.length === 64 ? bytes : null;
 }
 
 function validateTimestamp(issuedAt: string): void {
@@ -310,6 +322,7 @@ async function validateNonce(supabase: SupabaseClient, nonce: string): Promise<v
 async function checkIdempotency(
   supabase: SupabaseClient,
   packSha256: string,
+  packId: string,
 ): Promise<ImportReceipt | null> {
   const { data } = await supabase
     .from("ad_import_receipts")
@@ -319,6 +332,9 @@ async function checkIdempotency(
     .maybeSingle();
 
   if (data) {
+    if (data.pack_id !== packId) {
+      throw importError("pack_id_mismatch", "Existing TemplatePack receipt does not match the requested packId");
+    }
     return {
       receiptId: data.id,
       packId: data.pack_id,
