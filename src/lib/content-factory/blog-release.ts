@@ -1,0 +1,391 @@
+import { createHash } from "node:crypto";
+
+import canonicalize from "canonicalize";
+import { z } from "zod";
+
+/** Wire identifiers emitted by Frank's `public_release()` producer. */
+export const CONTENT_FACTORY_RELEASE_SCHEMA = "schema://frank.content-factory-release/v1" as const;
+export const CONTENT_FACTORY_TOOL_ID = "content-factory" as const;
+
+const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const DOMAIN_ID_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u;
+const PUBLIC_FORBIDDEN_KEY_FRAGMENTS = [
+  "prompt", "raw", "private", "internal", "secret", "model", "email", "phone", "address",
+  "dob", "dateofbirth", "ssn", "tax", "passport", "ip", "customer", "person", "reviewer",
+] as const;
+const SANITIZATION_RECEIPT_KEYS = new Set(["piiscan", "secretscan", "status", "receiptid", "scannedat"]);
+const SECRET_VALUE_PATTERN = /(?:-----BEGIN [A-Z ]+-----|\b(?:sk|pk|rk)_(?:live|test)_[A-Za-z0-9]+|\bBearer\s+[A-Za-z0-9._~+/=-]{16,}|\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)/iu;
+const PII_VALUE_PATTERN = /(?:\b[^\s@]+@[^\s@]+\.[^\s@]+\b|0[2-478](?:[\s()\-]?\d){8}|\+61(?:[\s()\-]?\d){9}|\+\d{1,3}(?:[\s()\-]?\d){7,12})/u;
+
+const nonEmptyText = (max: number) => z.string().trim().min(1).max(max);
+const compatibilityIdSchema = nonEmptyText(200).regex(DOMAIN_ID_PATTERN, "must be a safe compatibility identifier");
+const sha256Schema = z.string().regex(SHA256_PATTERN, "must be a lowercase SHA-256 hex digest");
+const publicUrlSchema = z.string().trim().url().max(2_048);
+const timestampSchema = z.string().datetime({ offset: true });
+
+const bodySchema = z
+  .object({ format: z.literal("markdown"), content: nonEmptyText(500_000) })
+  .strict();
+
+const mediaSchema = z
+  .object({
+    id: nonEmptyText(200),
+    url: publicUrlSchema,
+    alt_text: nonEmptyText(500),
+    checksum: sha256Schema,
+  })
+  .strict();
+
+const seoSchema = z
+  .object({
+    title: nonEmptyText(240),
+    description: nonEmptyText(320),
+    canonical_url: publicUrlSchema,
+  })
+  .strict();
+
+const approvalReceiptSchema = z
+  .object({
+    decision: z.literal("approve"),
+    receipt_ref: nonEmptyText(500),
+    decided_at: timestampSchema,
+  })
+  .strict();
+
+const sanitizationReceiptsSchema = z
+  .object({
+    pii_scan: z
+      .object({ status: z.literal("passed"), receipt_id: nonEmptyText(500), scanned_at: timestampSchema })
+      .strict(),
+    secret_scan: z
+      .object({ status: z.literal("passed"), receipt_id: nonEmptyText(500), scanned_at: timestampSchema })
+      .strict(),
+  })
+  .strict();
+
+const qaReceiptSchema = z
+  .object({
+    decision: z.literal("pass"),
+    receipt_ref: nonEmptyText(500),
+    checked_at: timestampSchema,
+  })
+  .strict();
+
+const releaseSchema = z
+  .object({
+    schema: z.literal(CONTENT_FACTORY_RELEASE_SCHEMA),
+    tool_id: z.literal(CONTENT_FACTORY_TOOL_ID),
+    project_id: nonEmptyText(200),
+    workspace_id: nonEmptyText(200),
+    settings_revision: z.number().int().nonnegative(),
+    pipeline_id: z.literal("content-factory-pipeline"),
+    pipeline_version: z.literal("1.0.0"),
+    consumer_compatibility: z.array(compatibilityIdSchema).min(1).refine(
+      (values) => new Set(values).size === values.length,
+      "consumer_compatibility entries must be unique",
+    ),
+    release_id: nonEmptyText(200),
+    content_id: nonEmptyText(200),
+    version: z.number().int().positive(),
+    immutable: z.literal(true),
+    status: z.literal("published"),
+    channel: z.literal("web"),
+    title: nonEmptyText(240),
+    summary: nonEmptyText(1_000).optional(),
+    body: bodySchema,
+    media: z.array(mediaSchema).max(64),
+    seo: seoSchema,
+    approval_receipt: approvalReceiptSchema,
+    provenance: z
+      .object({
+        trace_id: nonEmptyText(500),
+        artifact_checksums: z.record(sha256Schema),
+      })
+      .strict(),
+    sanitization_receipts: sanitizationReceiptsSchema,
+    qa_receipt: qaReceiptSchema,
+    published_at: timestampSchema,
+    release_hash: sha256Schema,
+  })
+  .strict();
+
+export const contentFactoryBlogReleaseSchema = releaseSchema;
+export type ContentFactoryBlogRelease = z.infer<typeof releaseSchema>;
+
+export type BlockwiseBlogRelease = {
+  releaseId: string;
+  contentId: string;
+  version: number;
+  workspaceId: string;
+  projectId: string;
+  channel: "web";
+  title: string;
+  summary: string | null;
+  bodyMarkdown: string;
+  seo: ContentFactoryBlogRelease["seo"];
+  media: ContentFactoryBlogRelease["media"];
+  settingsRevision: number;
+  pipeline: { id: "content-factory-pipeline"; version: "1.0.0" };
+  consumerCompatibility: string[];
+  traceId: string;
+  artifactChecksums: Record<string, string>;
+  qaReceipt: ContentFactoryBlogRelease["qa_receipt"];
+  publishedAt: string;
+};
+
+export type ContentFactoryReleaseErrorCode =
+  | "invalid_payload"
+  | "forbidden_field"
+  | "schema_invalid"
+  | "workspace_mismatch"
+  | "unsafe_url"
+  | "hash_missing"
+  | "hash_mismatch"
+  | "receipt_failed"
+  | "source_not_allowed"
+  | "fetch_failed"
+  | "redirect_not_allowed";
+
+export class ContentFactoryReleaseError extends Error {
+  readonly code: ContentFactoryReleaseErrorCode;
+  readonly detail?: unknown;
+
+  constructor(code: ContentFactoryReleaseErrorCode, message: string, detail?: unknown) {
+    super(message);
+    this.name = "ContentFactoryReleaseError";
+    this.code = code;
+    this.detail = detail;
+  }
+}
+
+/** RFC 8785 JSON Canonicalization Scheme bytes used by the Frank contract. */
+export function canonicalJson(value: unknown): string {
+  const result = canonicalize(value);
+  if (result === undefined) throw new Error("Cannot canonicalize an undefined value.");
+  return result;
+}
+
+export function sha256Hex(value: unknown): string {
+  return createHash("sha256").update(canonicalJson(value), "utf8").digest("hex");
+}
+
+export function parseContentFactoryBlogRelease(input: unknown, workspaceId: string): BlockwiseBlogRelease {
+  if (!isRecord(input)) {
+    throw new ContentFactoryReleaseError("invalid_payload", "Content Factory release must be a JSON object.");
+  }
+  if (!workspaceId.trim()) {
+    throw new ContentFactoryReleaseError("workspace_mismatch", "A target workspace is required.");
+  }
+
+  const forbiddenPath = findForbiddenPublicPath(input);
+  if (forbiddenPath) {
+    throw new ContentFactoryReleaseError("forbidden_field", `Release contains a prohibited field at ${forbiddenPath}.`, forbiddenPath);
+  }
+
+  const foreignWorkspacePath = findForeignWorkspaceField(input, workspaceId);
+  if (foreignWorkspacePath) {
+    throw new ContentFactoryReleaseError("workspace_mismatch", `Release contains a different workspace at ${foreignWorkspacePath}.`, foreignWorkspacePath);
+  }
+
+  const parsed = releaseSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new ContentFactoryReleaseError("schema_invalid", "Release does not match the Frank public_release contract.", parsed.error.issues);
+  }
+
+  const release = parsed.data;
+  if (!UUID_PATTERN.test(release.workspace_id) || release.workspace_id !== workspaceId) {
+    throw new ContentFactoryReleaseError("workspace_mismatch", "Release workspace does not match the requested Blockwise workspace.");
+  }
+  if (!release.consumer_compatibility.includes("article-release-v1")) {
+    throw new ContentFactoryReleaseError("schema_invalid", "Release does not declare article-release-v1 compatibility.");
+  }
+  assertReceipts(release);
+  assertPublicUrl(release.seo.canonical_url, "seo.canonical_url");
+  for (const media of release.media) assertPublicUrl(media.url, `media.${media.id}.url`);
+  assertUniqueMediaIds(release.media);
+  assertArtifactChecksums(release);
+  if (release.release_hash !== hashReleaseWithoutHash(release)) {
+    throw new ContentFactoryReleaseError("hash_mismatch", "Release release_hash does not match the immutable release payload.");
+  }
+
+  return {
+    releaseId: release.release_id,
+    contentId: release.content_id,
+    version: release.version,
+    workspaceId: release.workspace_id,
+    projectId: release.project_id,
+    channel: release.channel,
+    title: release.title,
+    summary: release.summary ?? null,
+    bodyMarkdown: release.body.content,
+    seo: release.seo,
+    media: release.media,
+    settingsRevision: release.settings_revision,
+    pipeline: { id: release.pipeline_id, version: release.pipeline_version },
+    consumerCompatibility: release.consumer_compatibility,
+    traceId: release.provenance.trace_id,
+    artifactChecksums: release.provenance.artifact_checksums,
+    qaReceipt: release.qa_receipt,
+    publishedAt: release.published_at,
+  };
+}
+
+export type FetchRelease = (url: string) => Promise<unknown>;
+export type FetchContentFactoryBlogReleaseOptions = {
+  /** Test/local fixture injection. Production callers must omit this. */
+  fetchRelease?: FetchRelease;
+  allowedOrigins?: readonly string[];
+};
+
+export async function fetchContentFactoryBlogRelease(
+  releaseUrl: string,
+  workspaceId: string,
+  options: FetchContentFactoryBlogReleaseOptions = {},
+): Promise<BlockwiseBlogRelease> {
+  if (options.fetchRelease) {
+    if (process.env.NODE_ENV === "production") {
+      throw new ContentFactoryReleaseError("source_not_allowed", "Injected release fetchers are disabled in production.");
+    }
+    return parseContentFactoryBlogRelease(await options.fetchRelease(releaseUrl), workspaceId);
+  }
+
+  assertPublicUrl(releaseUrl, "release URL");
+  const parsedUrl = new URL(releaseUrl);
+  const allowedOrigins = (options.allowedOrigins ?? ["frank.fail"]).map((origin) => origin.toLowerCase().replace(/\.$/u, ""));
+  if (!allowedOrigins.some((origin) => parsedUrl.hostname === origin || parsedUrl.hostname.endsWith(`.${origin}`))) {
+    throw new ContentFactoryReleaseError("source_not_allowed", "Release URL is not served by an allowed Frank origin.");
+  }
+
+  const response = await fetch(releaseUrl, { redirect: "manual" });
+  if (response.status >= 300 && response.status < 400) {
+    throw new ContentFactoryReleaseError("redirect_not_allowed", "Release URL must not redirect.");
+  }
+  if (!response.ok) {
+    throw new ContentFactoryReleaseError("fetch_failed", `Release fetch failed with HTTP ${response.status}.`);
+  }
+  return parseContentFactoryBlogRelease(await response.json(), workspaceId);
+}
+
+function assertReceipts(release: ContentFactoryBlogRelease): void {
+  if (release.approval_receipt.decision !== "approve") {
+    throw new ContentFactoryReleaseError("receipt_failed", "Release approval receipt is not approved.");
+  }
+  if (release.sanitization_receipts.pii_scan.status !== "passed" || release.sanitization_receipts.secret_scan.status !== "passed") {
+    throw new ContentFactoryReleaseError("receipt_failed", "Release contains a failed sanitization receipt.");
+  }
+  if (release.qa_receipt.decision !== "pass") {
+    throw new ContentFactoryReleaseError("receipt_failed", "Release QA receipt is not passed.");
+  }
+}
+
+function assertArtifactChecksums(release: ContentFactoryBlogRelease): void {
+  const checksums = release.provenance.artifact_checksums;
+  const expectedKeys = new Set(["body", "seo", ...release.media.map((media) => `media:${media.id}`)]);
+  const actualKeys = Object.keys(checksums);
+  if (actualKeys.length !== expectedKeys.size || actualKeys.some((key) => !expectedKeys.has(key))) {
+    throw new ContentFactoryReleaseError("hash_mismatch", "Artifact checksum keys do not match body, seo, and media artifacts.");
+  }
+  if (checksums.body !== sha256Hex(release.body)) {
+    throw new ContentFactoryReleaseError("hash_mismatch", "Body artifact checksum does not match RFC 8785 JCS bytes.");
+  }
+  if (checksums.seo !== sha256Hex(release.seo)) {
+    throw new ContentFactoryReleaseError("hash_mismatch", "SEO artifact checksum does not match RFC 8785 JCS bytes.");
+  }
+  for (const media of release.media) {
+    if (checksums[`media:${media.id}`] !== media.checksum) {
+      throw new ContentFactoryReleaseError("hash_mismatch", `Media artifact ${media.id} checksum does not match its receipt.`);
+    }
+  }
+}
+
+function hashReleaseWithoutHash(release: ContentFactoryBlogRelease): string {
+  const { release_hash: _releaseHash, ...withoutHash } = release;
+  return sha256Hex(withoutHash);
+}
+
+function normalizeKey(key: string): string {
+  return key.replace(/[^a-z0-9]/giu, "").toLowerCase();
+}
+
+function isForbiddenPublicKey(normalizedKey: string): boolean {
+  return PUBLIC_FORBIDDEN_KEY_FRAGMENTS.some((fragment) => (
+    fragment === "ip"
+      ? normalizedKey.startsWith("ip") || normalizedKey.endsWith("ip")
+      : normalizedKey.includes(fragment)
+  ));
+}
+
+function findForbiddenPublicPath(value: unknown, path = "$"): string | null {
+  if (typeof value === "string" && (PII_VALUE_PATTERN.test(value) || SECRET_VALUE_PATTERN.test(value))) {
+    return path;
+  }
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index += 1) {
+      const found = findForbiddenPublicPath(value[index], `${path}[${index}]`);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (!isRecord(value)) return null;
+  for (const [key, entry] of Object.entries(value)) {
+    const currentPath = `${path}.${key}`;
+    const receiptField = path.startsWith("$.sanitization_receipts");
+    const normalizedKey = normalizeKey(key);
+    if ((receiptField && !SANITIZATION_RECEIPT_KEYS.has(normalizedKey)) || (!receiptField && isForbiddenPublicKey(normalizedKey))) {
+      return currentPath;
+    }
+    const found = findForbiddenPublicPath(entry, currentPath);
+    if (found) return found;
+  }
+  return null;
+}
+
+function findForeignWorkspaceField(value: unknown, workspaceId: string, path = "$"): string | null {
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index += 1) {
+      const found = findForeignWorkspaceField(value[index], workspaceId, `${path}[${index}]`);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (!isRecord(value)) return null;
+  for (const [key, entry] of Object.entries(value)) {
+    const currentPath = `${path}.${key}`;
+    if ((key === "workspace_id" || key === "workspaceId") && entry !== workspaceId) return currentPath;
+    const found = findForeignWorkspaceField(entry, workspaceId, currentPath);
+    if (found) return found;
+  }
+  return null;
+}
+
+function assertUniqueMediaIds(media: ContentFactoryBlogRelease["media"]): void {
+  const ids = new Set<string>();
+  for (const entry of media) {
+    if (ids.has(entry.id)) throw new ContentFactoryReleaseError("hash_mismatch", `Media artifact id ${entry.id} is not unique.`);
+    ids.add(entry.id);
+  }
+}
+
+function assertPublicUrl(value: string, label: string): void {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.username || url.password || url.hash || isPrivateHost(url.hostname)) throw new Error("unsafe");
+  } catch {
+    throw new ContentFactoryReleaseError("unsafe_url", `${label} must be a public HTTPS URL.`);
+  }
+}
+
+function isPrivateHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/gu, "").replace(/\.$/u, "");
+  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal")) return true;
+  if (host === "::1" || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80:")) return true;
+  const octets = host.split(".").map(Number);
+  if (octets.length !== 4 || octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)) return false;
+  const [first, second] = octets;
+  return first === 0 || first === 10 || first === 127 || (first === 169 && second === 254) || (first === 172 && second >= 16 && second <= 31) || (first === 192 && second === 168);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
