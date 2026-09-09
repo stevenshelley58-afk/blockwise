@@ -1345,6 +1345,8 @@ async function publishWithMarketingApi(
 
   synchronizeMetaCreationEvidence(plan, requestLog, responseLog, reconciledObjects);
 
+  synchronizeMetaCreationEvidence(plan, requestLog, responseLog, reconciledObjects);
+
   try {
     const destinationUrl = plan.controls.destinationUrl?.trim();
     if (!destinationUrl || !isHttpsDestination(destinationUrl)) {
