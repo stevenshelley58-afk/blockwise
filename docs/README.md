@@ -56,6 +56,7 @@ guides. Third-party licence text is retained unchanged.
 - [7 September postcode outreach release](releases/2026-09-07-postcode-outreach.md)
 - [7 September guides editorial redesign](releases/2026-09-07-guides-editorial.md)
 - [7 September pricing race-recovery release](releases/2026-09-07-pricing-race-recovery.md)
+- [7 September pricing release](releases/2026-09-07-pricing.md)
 - [6 September template-editor release](releases/2026-09-06-template-editor.md)
 - [OSS migration record](runbooks/oss-product-migration.md)
 
