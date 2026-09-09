@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AdDocumentParsed } from "../../../packages/ad-template-contract/src/schema";
 import type { AdTemplate } from "../../../packages/ad-template-contract/src/types";
@@ -6,7 +5,19 @@ import { documentToken, sha256Hex } from "./document-token.ts";
 import { metaCopyLimitIssues } from "./meta-copy-contract.ts";
 
 // ---------------------------------------------------------------------------
-// Types
+// Phase 5 — Save transaction.
+//
+// Contract (release plan §5):
+//  - Client submits the complete layered document + expected revision.
+//  - Server rejects stale revisions and validates against the pinned pack.
+//  - Server canonicalizes + hashes the document.
+//  - Server renders Feed and Story deterministically (per-placement crops).
+//  - Both PNGs upload to workspace-scoped storage and their dimensions,
+//    MIME and hashes are validated.
+//  - ONE transaction creates the immutable revision + render receipts.
+//  - Active revision advances ONLY after both renders succeed.
+//  - Failed attempts are recorded and leave the previous revision active.
+//  - Unchanged saves return the existing revision and PNG hashes.
 // ---------------------------------------------------------------------------
 
 export interface SaveAdInput {
@@ -21,7 +32,7 @@ export interface SaveAdInput {
   expectedRevision: number;
   /** Colour map (template or Brand Pack). */
   colourMap: Record<string, string>;
-  /** Resolved image buffers keyed by input key. */
+  /** Resolved image buffers keyed by shared input key. */
   imageValues: Record<string, Buffer>;
   /**
    * Test-only injection point (mirrors import-pack's fetchPack): skips the
@@ -29,6 +40,13 @@ export interface SaveAdInput {
    * Production callers omit it and get the @blockwise/ad-template-renderer.
    */
   renderPlacement?: (placement: "feed" | "story") => Promise<{ sha256: string; png?: Buffer }>;
+}
+
+export interface SaveDeps {
+  /** Upload a rendered PNG to workspace-scoped storage; returns the path. */
+  uploadRender: (path: string, bytes: Buffer) => Promise<string>;
+  /** Load the pack's font file bytes (hash-checked by the renderer). */
+  loadFonts: (pack: TemplatePack, fontsMap: Record<string, string>) => Promise<Record<string, Buffer>>;
 }
 
 export interface SaveAdOutput {
@@ -98,11 +116,11 @@ export async function saveAd(input: SaveAdInput): Promise<SaveAdOutput> {
   validateRequiredInputs(templatePack, input, effectiveTextValues);
   validateMetaCopyForSave(input.document);
 
-  // 3. Canonicalize and hash the document
+  // 3. Canonicalize and hash the document.
   const documentJson = input.document as unknown as Record<string, unknown>;
   const documentHash = documentToken(documentJson);
 
-  // 4. Check for unchanged save — same hash, same revision
+  // 4. Unchanged save → return existing revision + stored hashes.
   const currentRevision = await getActiveRevision(input.supabase, ad.active_revision_id);
   if (currentRevision && currentRevision.document_hash === documentHash) {
     return {
@@ -115,7 +133,7 @@ export async function saveAd(input: SaveAdInput): Promise<SaveAdOutput> {
     };
   }
 
-  // 5. Reject stale revisions
+  // 5. Reject stale revisions.
   if (currentRevision && input.expectedRevision !== currentRevision.revision_number) {
     throw new SaveError("stale_revision", `Expected revision ${input.expectedRevision}, current is ${currentRevision.revision_number}`);
   }
@@ -293,10 +311,6 @@ async function uploadRender(
 
   throw new SaveError("render_upload_failed", "Could not store the " + placement + " render: " + error.message);
 }
-
-// ---------------------------------------------------------------------------
-// Error
-// ---------------------------------------------------------------------------
 
 export class SaveError extends Error {
   code: string;

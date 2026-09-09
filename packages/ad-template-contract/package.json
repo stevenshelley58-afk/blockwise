@@ -4,16 +4,15 @@
   "private": true,
   "description": "Sole shared layered ad-template contract consumed by Hermes and Blockwise.",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
     }
   },
   "scripts": {
-    "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test src/*.test.ts"
   },
@@ -21,7 +20,6 @@
     "zod": "^3.24.0"
   },
   "devDependencies": {
-    "typescript": "^5.8.0",
-    "tsx": "^4.19.0"
+    "typescript": "^5.8.0"
   }
 }
