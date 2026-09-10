@@ -143,6 +143,37 @@ export async function loadPublicAdRadarCards(
   return publicResponse(searchTerm, locationGuess.label, publicCards.length > 0, publicCards, maybeMore ? String(offset) : null);
 }
 
+export type LoadAllPublicAdRadarInput = Omit<LoadPublicAdRadarInput, "cursor"> & {
+  /** Page cursor is followed at most this many times. */
+  maxPages?: number;
+};
+
+/**
+ * Follow the cursor until it is exhausted so a report covers the whole area
+ * rather than the first page. Shared by the suburb report and the audit funnel,
+ * which both need the full observed set to judge what is missing locally.
+ */
+export async function loadAllPublicAdRadarCards(
+  supabase: SupabaseClient,
+  input: LoadAllPublicAdRadarInput,
+): Promise<PublicAdRadarResponse> {
+  const ads = new Map<string, PublicAdRadarCard>();
+  let cursor: string | null = null;
+  let response: PublicAdRadarResponse | null = null;
+  const maxPages = clampNumber(input.maxPages ?? 4, 1, 8);
+
+  for (let page = 0; page < maxPages; page += 1) {
+    response = await loadPublicAdRadarCards(supabase, { ...input, cursor });
+    for (const ad of response.ads) ads.set(ad.id, ad);
+    cursor = response.nextCursor;
+    if (!cursor) break;
+  }
+
+  return response
+    ? { ...response, ads: [...ads.values()], nextCursor: cursor }
+    : publicResponse(input.location, input.location, false, [], null);
+}
+
 export function toPublicAdRadarCard(
   card: CustomerMetaAdLibraryCard,
   now = Date.now(),

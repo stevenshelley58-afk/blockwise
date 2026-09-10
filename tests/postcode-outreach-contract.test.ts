@@ -47,7 +47,7 @@ test("public projection strips CRM fields and requires both rights and allowed m
   assert.equal(JSON.stringify(parsed).includes("secret"), false);
 });
 
-test("segment-specific email uses the same clock, two peers, Steven and a genuine unsubscribe link", () => {
+test("segment-specific email uses the same clock, three peers, Steven and a genuine unsubscribe link", () => {
   const observed = buildOutreachEmail(input());
   const noAds = buildOutreachEmail({ ...input(), prospect: person("no_ads_found_after_successful_recent_scan") });
   assert.match(observed.subject, /I audited every property ad in 6000/); assert.match(noAds.subject, /I audited every property ad in 6000/);
@@ -55,14 +55,14 @@ test("segment-specific email uses the same clock, two peers, Steven and a genuin
   assert.match(observed.text, /Example City Realty/); assert.match(noAds.text, /Example Local Property/);
   assert.match(observed.text, /See it in the Ad Library/); assert.match(noAds.text, /Steven/);
   assert.doesNotMatch(noAds.text, /not advertising|private report|consent basis|Manage preferences/);
-  assert.equal((observed.text.match(/See all 6 ads/g) ?? []).length, 1);
+  assert.equal((observed.text.match(/See full 6000 audit/g) ?? []).length, 1);
   assert.throws(() => buildOutreachEmail({ ...input(), unsubscribeUrl: input().reportUrl }), /separate/);
-  assert.throws(() => buildOutreachEmail({ ...input(), snapshot: { ...area, adExamples: [] } }), /Two sourced/);
+  assert.throws(() => buildOutreachEmail({ ...input(), snapshot: { ...area, adExamples: [] } }), /Three sourced/);
 });
 
-test("follow-up adds a third sourced example and rejects a second follow-up", () => {
+test("follow-up adds a fourth sourced example and rejects a second follow-up", () => {
   const followUp = buildOutreachFollowUpEmail({ ...input(), followUpCount: 0 });
-  assert.match(followUp.text, /Example West Homes/);
+  assert.match(followUp.text, /Example Park Realty/);
   assert.throws(() => buildOutreachFollowUpEmail({ ...input(), followUpCount: 1 }), /Only one/);
 });
 

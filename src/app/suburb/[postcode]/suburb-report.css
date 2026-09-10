@@ -179,3 +179,10 @@ body:has(.sr-page) { background: var(--sr-bg); }
 @media (prefers-reduced-motion: reduce) {
   .sr-page *, .sr-page *::before, .sr-page *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+.sr-longevity{display:grid;grid-template-columns:minmax(0,240px) minmax(0,1fr);gap:22px;align-items:start;background:#ffffff;border:1px solid #e9ebef;border-radius:18px;padding:18px}
+.sr-longevity-media img{display:block;width:100%;height:auto;border-radius:12px}
+.sr-longevity-body h3{margin:0;font-size:19px;line-height:1.25;letter-spacing:-.01em;color:#16181d}
+.sr-longevity-body p{margin:8px 0 0;font-size:14px;line-height:1.6;color:#545a66}
+.sr-longevity-days{margin:0 0 6px!important;font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:#545a66}
+@media (max-width:700px){.sr-longevity{grid-template-columns:1fr}}

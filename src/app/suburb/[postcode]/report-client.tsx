@@ -55,6 +55,8 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
   }, [ads.length, playScan]);
 
   const reportLabel = coverageLabel ? postcode : suburb;
+  const longest = insights.longestRunningAd;
+  const longestMedia = longest?.media[0]?.url ?? null;
   const trialHref = gateHref(postcode, "trial");
 
   return (
@@ -73,8 +75,7 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
 
       <div className="sr-shell">
         <section className="sr-report-header" aria-labelledby="report-title">
-          <p className="sr-eyebrow">Free suburb report · no account needed</p>
-          <h1 id="report-title">Every live ad {coverageLabel ? `across ${postcode}` : `in ${suburb}`}, in one place.</h1>
+          <h1 id="report-title">Your {coverageLabel ? postcode : suburb} ad audit</h1>
           <p className="sr-meta">{coverageLabel ? `${coverageLabel} · ` : ""}Updated today · Free to browse, all of it</p>
           <div className="sr-stats">
             <Stat value={String(ads.length)} label="live ads observed" />
@@ -83,6 +84,21 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
             <Stat value={insights.longestRunningDays ? `${insights.longestRunningDays} days` : "New"} label="longest-running ad" />
           </div>
         </section>
+
+        {longest ? (
+          <section className="sr-section" aria-labelledby="longevity-title">
+            <SectionHeading id="longevity-title" title="The ad that will not switch off" note={`The strongest signal in this ${postcode} audit`} />
+            <article className="sr-longevity">
+              {longestMedia ? <div className="sr-longevity-media"><img src={longestMedia} alt={`Ad creative from ${longest.pageName}`} loading="lazy" /></div> : null}
+              <div className="sr-longevity-body">
+                <p className="sr-longevity-days">{insights.longestRunningDays} days live</p>
+                <h3>{longest.pageName}</h3>
+                <p>{longest.headline || longest.body || "Observed local ad"}</p>
+                <p>Agencies switch ads off when they stop working. {longest.pageName} has kept this one live for at least {insights.longestRunningDays} days, which usually means it is still producing enquiries. Copy the angle, not the artwork.</p>
+              </div>
+            </article>
+          </section>
+        ) : null}
 
         {ads.length === 0 ? (
           <EmptyState suburb={suburb} postcode={postcode} nearby={nearby} trialHref={trialHref} />
@@ -116,6 +132,15 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
                     <GateLink href={gateHref(postcode, "remix")} intent="remix" postcode={postcode} className="sr-button sr-button-ghost sr-button-wide">Make this yours in AdStudio →</GateLink>
                   </article>
                 ))}
+              </div>
+            </section>
+
+            <section className="sr-section" aria-labelledby="next-title">
+              <SectionHeading id="next-title" title="What to do with this" note="Three practical moves before you spend anything" />
+              <div className="sr-insights">
+                <article><span className="sr-insight-mark" aria-hidden>&#8599;</span><div><h2>One ad, one offer, one CTA</h2><p>Write one clear homeowner problem, one offer and one action per ad. Distinct messages give Meta distinct signals and make your own results readable.</p></div></article>
+                <article><span className="sr-insight-mark" aria-hidden>&#8599;</span><div><h2>Fund learning, not a ratio</h2><p>Give a new angle enough delivery to learn from, then change one decision at a time. Splitting a small budget across many ideas teaches you nothing.</p></div></article>
+                <article><span className="sr-insight-mark" aria-hidden>&#8599;</span><div><h2>Judge contactable homeowners</h2><p>Cheap leads that never answer are not cheaper. Measure cost per valid, contactable homeowner and per appraisal, not cost per form fill.</p></div></article>
               </div>
             </section>
 
@@ -154,7 +179,7 @@ function ReportAdCard({ ad, postcode, suburb, longestId, longestDays }: { ad: Pu
 }
 
 function EmptyState({ suburb, postcode, nearby, trialHref }: { suburb: string; postcode: string; nearby: NearbyArea[]; trialHref: string }) {
-  return <section className="sr-empty"><p className="sr-eyebrow">Coverage is still growing</p><h2>No live ads were observed for {suburb} today.</h2><p>That does not mean nobody is advertising. It means the current public dataset did not return a match for {postcode} or its surrounds.</p>{nearby.length ? <div><h3>Try a nearby report</h3>{nearby.map((area) => <Link key={area.postcode} href={`/suburb/${area.postcode}`}>{area.suburb} {area.postcode}<span>{area.count} ads</span></Link>)}</div> : null}<GateLink href={trialHref} intent="trial" postcode={postcode} className="sr-button sr-button-dark">Create three ads free</GateLink></section>;
+  return <section className="sr-empty"><h2>No live ads were observed for {suburb} today.</h2><p>That does not mean nobody is advertising. It means the current public dataset did not return a match for {postcode} or its surrounds.</p>{nearby.length ? <div><h3>Try a nearby report</h3>{nearby.map((area) => <Link key={area.postcode} href={`/suburb/${area.postcode}`}>{area.suburb} {area.postcode}<span>{area.count} ads</span></Link>)}</div> : null}<GateLink href={trialHref} intent="trial" postcode={postcode} className="sr-button sr-button-dark">Create three ads free</GateLink></section>;
 }
 
 function GateLink({ href, intent, postcode, className, children }: { href: string; intent: string; postcode: string; className?: string; children: React.ReactNode }) {
