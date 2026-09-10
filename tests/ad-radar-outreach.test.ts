@@ -18,10 +18,13 @@ import {
   type CustomerMetaAdLibraryCardRow,
 } from "../src/lib/research/customer-meta-card.ts";
 
-// Read lazily by normaliseMediaUrl when a creative path is resolved.
-process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL ??= "https://hermes.blockwise.sale/research-media";
+// Read lazily when a creative path is resolved.
+process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL ??= "https://blockwise.sale";
 
-const STORAGE_ORIGIN = "https://hermes.blockwise.sale";
+const STORAGE_ORIGIN = "https://blockwise.sale";
+// Every archived creative is addressed by its content hash.
+const ALPHA_HASH = "a".repeat(64);
+const BETA_HASH = "b".repeat(64);
 const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
 
 function card(overrides: Partial<CustomerMetaAdLibraryCardRow>): CustomerMetaAdLibraryCard {
@@ -106,28 +109,45 @@ test("malformed library ids never become source links", () => {
   assert.equal(adRadarSourceUrl("12345"), "https://www.facebook.com/ads/library/?id=12345");
 });
 
-test("real Ad Radar creatives render only from an allowlisted origin", () => {
+test("real Ad Radar creatives render as email derivatives from an allowlisted origin", () => {
   const { snapshot } = buildAdRadarSnapshot(
     [
-      card({ card_id: "a1", library_id: "111", page_name: "Alpha Realty", image_storage_path: "alpha.png", headline: "Open Saturday" }),
-      card({ card_id: "a2", library_id: "222", page_name: "Beta Property", image_storage_path: "beta.png", headline: "What is it worth?" }),
+      card({ card_id: "a1", library_id: "111", page_name: "Alpha Realty", image_storage_path: `sha256/${ALPHA_HASH}`, headline: "Open Saturday" }),
+      card({ card_id: "a2", library_id: "222", page_name: "Beta Property", image_storage_path: `media-blobs/${BETA_HASH}.jpg`, headline: "What is it worth?" }),
     ],
     area(),
   );
   const example = snapshot.adExamples[0]!;
   assert.equal(example.mediaRightsConfirmed, true);
-  assert.match(example.mediaUrl ?? "", /^https:\/\/hermes\.blockwise\.sale\//u);
+  // The resized derivative, never the archive blob, whichever scheme the card recorded.
+  assert.equal(example.mediaUrl, `${STORAGE_ORIGIN}/storage/v1/object/public/research-ad-creatives/email/${ALPHA_HASH}.jpg`);
+  assert.equal(
+    snapshot.adExamples[1]!.mediaUrl,
+    `${STORAGE_ORIGIN}/storage/v1/object/public/research-ad-creatives/email/${BETA_HASH}.jpg`,
+  );
 
   const base = { snapshot, prospect: prospect(), reportUrl: "https://blockwise.sale/6000", businessIdentity: "Blockwise", unsubscribeUrl: "https://blockwise.sale/preferences/unsubscribe", now: new Date() };
-  assert.match(buildOutreachEmail({ ...base, allowedMediaOrigins: [STORAGE_ORIGIN] }).html, /<img src="https:\/\/hermes\.blockwise\.sale\//u);
+  assert.match(buildOutreachEmail({ ...base, allowedMediaOrigins: [STORAGE_ORIGIN] }).html, /<img src="https:\/\/blockwise\.sale\/storage\/v1\/object\/public\/research-ad-creatives\/email\//u);
   assert.doesNotMatch(buildOutreachEmail({ ...base, allowedMediaOrigins: [] }).html, /<img /u);
   assert.doesNotMatch(buildOutreachEmail({ ...base, allowedMediaOrigins: ["https://elsewhere.example"] }).html, /<img /u);
 });
 
+test("a creative with no content hash carries no email media", () => {
+  const { snapshot } = buildAdRadarSnapshot(
+    [
+      card({ card_id: "a1", library_id: "111", page_name: "Alpha Realty", image_storage_path: "legacy/alpha.png", headline: "Open Saturday" }),
+      card({ card_id: "a2", library_id: "222", page_name: "Beta Property", headline: "What is it worth?" }),
+    ],
+    area(),
+  );
+  assert.equal(snapshot.adExamples[0]!.mediaUrl, null);
+  assert.equal(snapshot.adExamples[0]!.mediaRightsConfirmed, false);
+});
+
 test("configured media origins read the env allowlist and drop junk entries", () => {
   assert.deepEqual(
-    configuredMediaOrigins({ OUTREACH_MEDIA_ALLOWED_ORIGINS: " https://hermes.blockwise.sale ,not a url, https://cdn.example/path " } as unknown as NodeJS.ProcessEnv),
-    ["https://hermes.blockwise.sale", "https://cdn.example"],
+    configuredMediaOrigins({ OUTREACH_MEDIA_ALLOWED_ORIGINS: " https://blockwise.sale ,not a url, https://cdn.example/path " } as unknown as NodeJS.ProcessEnv),
+    ["https://blockwise.sale", "https://cdn.example"],
   );
   assert.deepEqual(configuredMediaOrigins({} as unknown as NodeJS.ProcessEnv), []);
 });

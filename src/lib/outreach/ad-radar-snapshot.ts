@@ -57,12 +57,28 @@ export function adRadarAdvertiserName(card: CustomerMetaAdLibraryCard): string {
   return card.agencyName ?? card.pageName;
 }
 
+const CREATIVE_BUCKET = "research-ad-creatives";
+const EMAIL_CREATIVE_PREFIX = "email";
+const CONTENT_HASH = /[0-9a-f]{64}/u;
+
+/**
+ * Email creatives are the resized derivatives, never the archive blob. An
+ * archive still can reach several megabytes, which no cold email should carry,
+ * and every derivative is keyed by the same content hash as its source.
+ */
+export function emailCreativeUrl(sourceUrl: string | null): string | null {
+  const hash = sourceUrl ? CONTENT_HASH.exec(sourceUrl)?.[0] : null;
+  const base = process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL?.replace(/\/$/u, "");
+  if (!hash || !base) return null;
+  return `${base}/storage/v1/object/public/${CREATIVE_BUCKET}/${EMAIL_CREATIVE_PREFIX}/${hash}.jpg`;
+}
+
 /** Still images carry the message in an email; fall back to a video poster. */
 function exampleMediaUrl(card: CustomerMetaAdLibraryCard): string | null {
   const image = card.media.find((media) => media.kind === "image");
-  if (image) return image.url;
+  if (image) return emailCreativeUrl(image.url);
   const video = card.media.find((media) => media.kind === "video");
-  return video?.posterUrl ?? null;
+  return emailCreativeUrl(video?.posterUrl ?? null);
 }
 
 function exampleCategory(card: CustomerMetaAdLibraryCard): OutreachAdExample["category"] {
@@ -196,5 +212,52 @@ export async function loadAdRadarSnapshot(
     return aStart - bStart;
   });
 
-  return buildAdRadarSnapshot(cards, input);
+  const built = buildAdRadarSnapshot(cards, input);
+  return { ...built, snapshot: await withVerifiedCreatives(supabase, built.snapshot) };
+}
+
+let creativeIndex: { names: Set<string>; loadedAt: number } | null = null;
+const CREATIVE_INDEX_TTL_MS = 60_000;
+
+/**
+ * A creative that 404s is worse in an email than no creative at all, and only
+ * the blobs Hermes actually archived have a derivative. Check the published set
+ * once a minute and drop the media from any example that is not in it.
+ */
+async function withVerifiedCreatives(
+  supabase: SupabaseClient,
+  snapshot: OutreachAreaSnapshot,
+): Promise<OutreachAreaSnapshot> {
+  if (!snapshot.adExamples.some((example) => example.mediaUrl)) return snapshot;
+  const names = await publishedCreativeNames(supabase);
+  if (!names) return snapshot;
+  return {
+    ...snapshot,
+    adExamples: snapshot.adExamples.map((example) => {
+      const name = example.mediaUrl?.split(`/${EMAIL_CREATIVE_PREFIX}/`).at(-1);
+      if (name && names.has(name)) return example;
+      return { ...example, mediaUrl: null, mediaRightsConfirmed: false };
+    }),
+  };
+}
+
+async function publishedCreativeNames(supabase: SupabaseClient): Promise<Set<string> | null> {
+  if (creativeIndex && Date.now() - creativeIndex.loadedAt < CREATIVE_INDEX_TTL_MS) return creativeIndex.names;
+  try {
+    const names = new Set<string>();
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await supabase.storage
+        .from(CREATIVE_BUCKET)
+        .list(EMAIL_CREATIVE_PREFIX, { limit: 1000, offset });
+      if (error) throw new Error(error.message);
+      for (const object of data ?? []) names.add(object.name);
+      if (!data || data.length < 1000) break;
+    }
+    creativeIndex = { names, loadedAt: Date.now() };
+    return names;
+  } catch (error) {
+    console.error("published creative listing failed", error);
+    // Without the listing, keep the text-only email rather than risk a broken image.
+    return null;
+  }
 }
