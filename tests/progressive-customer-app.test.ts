@@ -20,10 +20,12 @@ test("authenticated home is driven by the activation resolver and shared credit 
   assert.doesNotMatch(page, /INCLUDED_AD_PACKS|usedAdPacks|remainingAdPacks/);
   assert.doesNotMatch(dashboard, /HomeSetupCard/);
   assert.match(dashboard, /creativeSuggestions/);
-  // Home intentionally re-composes the resolver-driven activation card so a
-  // returning user sees what is outstanding. It must remain the resolver-driven
-  // card, never the hardcoded three-step mockup (banned below).
-  assert.match(dashboard, /<ActivationCard/);
+  // Home is a creative-first workbench (DESIGN.md "Mobile Home direction"):
+  // it leads with the real creative and must not carry identity, setup
+  // progress, or duplicated results telemetry. The resolver-driven card
+  // stays an account-surface concern, and the hardcoded three-step
+  // mockup remains banned above.
+  assert.doesNotMatch(dashboard, /<ActivationCard/);
   assert.match(card, /Enough for up to \$\{packEstimate\} complete Feed \+ Story/);
   assert.match(card, /activation\.resumePath/);
 });
