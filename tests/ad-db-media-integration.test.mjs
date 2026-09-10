@@ -32,3 +32,19 @@ test('upsert preserves a verified captured asset without resetting to pending',a
  const fn=load('upsertMediaAssets','isMediaAssetUniqueConflict',{rest:async()=>[{id:asset,capture_status:'captured',archive_object_id:'object',archive_verified_at:'2026-09-05'}],encode:encodeURIComponent,patchMediaAsset:async()=>{patches++}});
  const count=await fn({creativeId:creative,observedAdId:ad,mediaSources:[{source_url:'https://cdn.example/image',kind:'image'}]});assert.equal(count,1);assert.equal(patches,0);
 });
+
+test('post-ingest only queues media by default, not classifier work',async()=>{
+ const queued=[];
+ const fn=load('enqueuePostIngestJobs','extractLinks',{env:{},enqueueFollowUp:async x=>queued.push(x.job_type)});
+ await fn({media_sources:1,ad_creative_id:creative,observed_ad_id:ad,creative_hash:'hash'},'page','run',{});
+ assert.deepEqual(queued,['blockwise-media-collector']);
+});
+test('collector requires the database page and Meta page identity to agree',async()=>{
+ const queries=[];
+ const fn=load('handleAdCollector','handleMediaCollector',{uuidPattern:/^[0-9a-f-]{36}$/i,encode:encodeURIComponent,rest:async(_s,q)=>{queries.push(q);return[];}});
+ const result=await fn({payload:{advertiserPageId:ad,metaPageId:'42'}});
+ assert.equal(result.status,'blocked');assert.equal(result.result.collection_started,false);
+ assert.ok(queries[0].includes('&id=eq.'+ad+'&page_id=eq.42&'));assert.ok(!queries[0].includes('or='));
+ const invalid=await fn({payload:{advertiserPageId:ad,metaPageId:'slug-not-id'}});
+ assert.equal(invalid.blocked_reason,'collector_invalid_page_identity');assert.equal(queries.length,1);
+});

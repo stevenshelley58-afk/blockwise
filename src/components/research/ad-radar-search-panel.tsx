@@ -6,30 +6,16 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { AdRadarLocationForm } from "@/components/research/ad-radar-location-form";
 import { AdRadarResultsGrid } from "@/components/research/ad-radar-results-grid";
-import { Switch } from "@/components/ui/switch";
+import { mergeCards } from "@/lib/research/ad-radar-pagination";
 import { niche } from "@/config/niche";
 import type { CustomerMetaAdLibraryCard } from "@/lib/research/customer-meta-card";
 
-type ResearchSort = "recent" | "longest";
-
 type Filters = {
-  status: "" | "active" | "inactive";
   agency: string;
   agent: string;
-  adType: string;
-  format: string;
-  hook: string;
 };
 
-const EMPTY_FILTERS: Filters = { status: "", agency: "", agent: "", adType: "", format: "", hook: "" };
-
-const AD_TYPE_OPTIONS = niche.copy.adRadar.filters.adTypes;
-
-const FORMAT_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "image", label: "Image" },
-  { value: "video", label: "Video" },
-  { value: "carousel", label: "Carousel" },
-];
+const EMPTY_FILTERS: Filters = { agency: "", agent: "" };
 
 const fieldLabelClass = "font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase";
 const controlClass =
@@ -39,32 +25,30 @@ const ghostButtonClass =
 
 type Props = {
   initialQuery: string;
-  initialSort: ResearchSort;
-  initialIncludeSurrounding: boolean;
   initialLocationLabel: string;
   initialNote: string;
+  initialAgency?: string;
+  initialAgent?: string;
   /** Search fired on mount when the visitor did not type a query. */
   autoSearchTerm?: string | null;
   autoSearchLabel?: string | null;
   autoSearchSource?: "brand_pack" | "location" | null;
 };
 
-type SearchResponse = { cards?: CustomerMetaAdLibraryCard[]; error?: string };
+type SearchResponse = { cards?: CustomerMetaAdLibraryCard[]; page?: { nextCursor: string | null; limit: number }; error?: string };
 
 export function AdRadarSearchPanel({
   initialQuery,
-  initialSort,
-  initialIncludeSurrounding,
   initialLocationLabel,
   initialNote,
+  initialAgency = "",
+  initialAgent = "",
   autoSearchTerm = null,
   autoSearchLabel = null,
   autoSearchSource = null,
 }: Props) {
   const [query, setQuery] = useState(initialQuery);
-  const [sort, setSort] = useState<ResearchSort>(initialSort);
-  const [includeSurrounding, setIncludeSurrounding] = useState(initialIncludeSurrounding);
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [filters, setFilters] = useState<Filters>({ agency: initialAgency, agent: initialAgent });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [agencyOptions, setAgencyOptions] = useState<string[]>([]);
   const [agentOptions, setAgentOptions] = useState<string[]>([]);
@@ -72,39 +56,42 @@ export function AdRadarSearchPanel({
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestRef = useRef<AbortController | null>(null);
+  const activeSearchTermRef = useRef(initialQuery || autoSearchTerm || "");
 
   function doSearch(
     q: string,
-    activeSort: ResearchSort = sort,
-    activeIncludeSurrounding = includeSurrounding,
     activeFilters: Filters = filters,
+    append = false,
   ) {
     if (timerRef.current) clearTimeout(timerRef.current);
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
+    activeSearchTermRef.current = q;
+    if (!append) {
+      setCards([]);
+      setNextCursor(null);
+    }
     setLoading(true);
     setSearchError(null);
     timerRef.current = setTimeout(async () => {
       try {
         const params = new URLSearchParams({ q });
-        if (activeSort !== "recent") params.set("sort", activeSort);
-        if (activeIncludeSurrounding) params.set("includeSurrounding", "1");
-        if (activeFilters.status) params.set("status", activeFilters.status);
         if (activeFilters.agency) params.set("agency", activeFilters.agency);
         if (activeFilters.agent) params.set("agent", activeFilters.agent);
-        if (activeFilters.adType) params.set("adType", activeFilters.adType);
-        if (activeFilters.format) params.set("format", activeFilters.format);
-        if (activeFilters.hook) params.set("hook", activeFilters.hook);
+        if (append && nextCursor) params.set("cursor", nextCursor);
         const res = await fetch(`/api/research/ads/search?${params.toString()}`, {
           signal: controller.signal,
         });
         const data = (await res.json().catch(() => ({}))) as SearchResponse;
+        if (controller.signal.aborted || requestRef.current !== controller) return;
         if (!res.ok) throw new Error(searchFailureMessage(res.status));
         const nextCards = data.cards ?? [];
-        setCards(nextCards);
+        setCards((previous) => append ? mergeCards(previous, nextCards) : nextCards);
+        setNextCursor(data.page?.nextCursor ?? null);
         setSearched(true);
         setSearchError(null);
         // Accumulate agency/agent options across the query session so picking
@@ -113,7 +100,8 @@ export function AdRadarSearchPanel({
         setAgentOptions((prev) => mergeOptions(prev, nextCards.map((c) => c.agentName)));
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        setCards([]);
+        if (controller.signal.aborted || requestRef.current !== controller) return;
+        if (!append) setCards([]);
         setSearched(true);
         setSearchError(
           error instanceof Error
@@ -129,44 +117,80 @@ export function AdRadarSearchPanel({
     }, 300);
   }
 
+  function syncUrl(q: string, nextFilters: Filters, mode: "push" | "replace" = "replace") {
+    const url = new URL(window.location.href);
+    if (q.trim()) url.searchParams.set("q", q.trim());
+    else url.searchParams.delete("q");
+    if (nextFilters.agency) url.searchParams.set("agency", nextFilters.agency);
+    else url.searchParams.delete("agency");
+    if (nextFilters.agent) url.searchParams.set("agent", nextFilters.agent);
+    else url.searchParams.delete("agent");
+    const href = url.pathname + url.search + url.hash;
+    const state = { ...(window.history.state ?? {}), adRadar: true, scrollY: window.scrollY };
+    if (mode === "push") window.history.pushState(state, "", href);
+    else window.history.replaceState(state, "", href);
+  }
+
   function onSearch(q: string) {
     setQuery(q);
     setAgencyOptions([]);
     setAgentOptions([]);
-    doSearch(q, sort, includeSurrounding, filters);
+    syncUrl(q, filters, "push");
+    doSearch(q, filters, false);
   }
 
-  function onToggleSurrounding(nextValue: boolean) {
-    setIncludeSurrounding(nextValue);
-    if (searched && query.trim()) doSearch(query, sort, nextValue, filters);
+  function loadMore() {
+    if (!nextCursor || loading || !activeSearchTermRef.current) return;
+    doSearch(activeSearchTermRef.current, filters, true);
   }
 
   function onChangeFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
     const next = { ...filters, [key]: value };
     setFilters(next);
-    if (searched && query.trim()) doSearch(query, sort, includeSurrounding, next);
+    syncUrl(activeSearchTermRef.current, next);
+    if (searched && activeSearchTermRef.current.trim()) doSearch(activeSearchTermRef.current, next, false);
   }
 
   function onClearFilters() {
     if (activeFilterCount === 0) return;
     setFilters(EMPTY_FILTERS);
-    if (searched && query.trim()) doSearch(query, sort, includeSurrounding, EMPTY_FILTERS);
-  }
-
-  function onChangeSort(nextSort: ResearchSort) {
-    if (nextSort === sort) return;
-    setSort(nextSort);
-    if (searched && query.trim()) doSearch(query, nextSort, includeSurrounding, filters);
+    syncUrl(activeSearchTermRef.current, EMPTY_FILTERS);
+    if (searched && activeSearchTermRef.current.trim()) doSearch(activeSearchTermRef.current, EMPTY_FILTERS, false);
   }
 
   useEffect(() => {
     if (initialQuery) {
-      doSearch(initialQuery, initialSort, initialIncludeSurrounding);
+      doSearch(initialQuery, filters, false);
     } else if (autoSearchTerm) {
       // Lazy first paint: the panel renders immediately, results stream in.
-      doSearch(autoSearchTerm, initialSort, initialIncludeSurrounding);
+      doSearch(autoSearchTerm, filters, false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    function restoreFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const nextQuery = params.get("q") ?? "";
+      const nextFilters = { agency: params.get("agency") ?? "", agent: params.get("agent") ?? "" };
+      setQuery(nextQuery);
+      setFilters(nextFilters);
+      setAgencyOptions([]);
+      setAgentOptions([]);
+      if (nextQuery.trim()) {
+        doSearch(nextQuery, nextFilters, false);
+      } else {
+        requestRef.current?.abort();
+        setCards([]);
+        setNextCursor(null);
+        setSearched(false);
+        setSearchError(null);
+      }
+      const scrollY = window.history.state?.scrollY;
+      if (typeof scrollY === "number") window.requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: "auto" }));
+    }
+    window.addEventListener("popstate", restoreFromUrl);
+    return () => window.removeEventListener("popstate", restoreFromUrl);
   }, []);
 
   useEffect(() => {
@@ -182,18 +206,11 @@ export function AdRadarSearchPanel({
   );
 
   const advertiserCount = unique(cards.map((c) => c.pageId ?? c.pageName)).length;
-  const mediaReady = cards.filter((c) => c.media.length > 0).length;
-  const allPostcodes = unique(cards.flatMap((c) => c.adAreaPostcodes));
   const newestSeenAt = cards
     .map((c) => c.lastSeenAt)
     .filter((v): v is string => Boolean(v))
     .sort()
     .at(-1);
-
-  const sortChipClass = (active: boolean) =>
-    `cursor-pointer rounded-full px-3 py-1.5 text-xs font-bold transition-[background,color] duration-150 ${
-      active ? "bg-(--ink) text-white" : "text-muted-foreground hover:text-foreground"
-    }`;
 
   return (
     <>
@@ -201,7 +218,7 @@ export function AdRadarSearchPanel({
         <AdRadarLocationForm
           buttonLabel={loading ? "Searching..." : "Search"}
           initialNote={initialNote}
-          initialValue={initialQuery}
+          initialValue={query}
           inputLabel="Search Ad Radar"
           isSubmitting={loading}
           onSearch={onSearch}
@@ -209,13 +226,7 @@ export function AdRadarSearchPanel({
           surface="research"
         />
 
-        <label className="flex w-fit cursor-pointer items-center gap-2.5">
-          <Switch checked={includeSurrounding} onCheckedChange={onToggleSurrounding} />
-          <span className="text-[12.5px] font-bold text-foreground">{niche.copy.adRadar.includeSurrounding}</span>
-        </label>
-
-        {/* Two rows at mobile: actions + freshness, then a full-width sort
-            segment. At >=640px both collapse back onto one line. */}
+        {/* Search actions and current result freshness. */}
         <div className="grid gap-2.5 border-t border-(--line) pt-4 sm:grid-cols-[auto_1fr] sm:items-center">
           <div className="flex min-w-0 items-center gap-2.5">
             <button
@@ -240,7 +251,7 @@ export function AdRadarSearchPanel({
 
             <Link href="/ad-radar/swipe-file" className={ghostButtonClass}>
               <Bookmark size={13} aria-hidden />
-              Swipe file
+              Saved inspiration
             </Link>
 
             <span className="ml-auto flex min-w-0 items-center gap-1.5 text-[11.5px] text-(--faint) sm:hidden">
@@ -250,66 +261,11 @@ export function AdRadarSearchPanel({
               </span>
             </span>
           </div>
-
-          <div
-            role="group"
-            aria-label="Sort ads"
-            className="flex w-full items-center rounded-full border border-(--line) bg-(--surface) p-0.5 sm:ml-auto sm:w-auto"
-          >
-            <button
-              type="button"
-              aria-pressed={sort === "recent"}
-              onClick={() => onChangeSort("recent")}
-              className={`${sortChipClass(sort === "recent")} flex-1 sm:flex-none`}
-            >
-              Most recent
-            </button>
-            <button
-              type="button"
-              aria-pressed={sort === "longest"}
-              onClick={() => onChangeSort("longest")}
-              className={`${sortChipClass(sort === "longest")} flex-1 sm:flex-none`}
-            >
-              Longest running
-            </button>
-          </div>
         </div>
 
         {filtersOpen ? (
           <div className="border-t border-(--line) pt-4">
             <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
-              <label className="grid gap-1.5">
-                <span className={fieldLabelClass}>Status</span>
-                <SelectWrap>
-                  <select className={controlClass} value={filters.status} onChange={(e) => onChangeFilter("status", e.target.value as Filters["status"])}>
-                    <option value="">Any</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </SelectWrap>
-              </label>
-              <label className="grid gap-1.5">
-                <span className={fieldLabelClass}>Ad type</span>
-                <SelectWrap>
-                  <select className={controlClass} value={filters.adType} onChange={(e) => onChangeFilter("adType", e.target.value)}>
-                    <option value="">All</option>
-                    {AD_TYPE_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </SelectWrap>
-              </label>
-              <label className="grid gap-1.5">
-                <span className={fieldLabelClass}>Format</span>
-                <SelectWrap>
-                  <select className={controlClass} value={filters.format} onChange={(e) => onChangeFilter("format", e.target.value)}>
-                    <option value="">All</option>
-                    {FORMAT_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </SelectWrap>
-              </label>
               <label className="grid gap-1.5">
                 <span className={fieldLabelClass}>{niche.copy.adRadar.filters.agency}</span>
                 <SelectWrap>
@@ -332,16 +288,6 @@ export function AdRadarSearchPanel({
                   </select>
                 </SelectWrap>
               </label>
-              <label className="grid gap-1.5">
-                <span className={fieldLabelClass}>Hook contains</span>
-                <input
-                  className="h-9 w-full rounded-(--r-card) border border-(--line) bg-(--surface) px-2.5 text-[12.5px] font-semibold text-foreground outline-none transition-[border-color] duration-150 placeholder:text-(--faint) focus:border-(--ink)"
-                  type="text"
-                  value={filters.hook}
-                  placeholder={niche.copy.adRadar.filters.hookPlaceholder}
-                  onChange={(e) => onChangeFilter("hook", e.target.value)}
-                />
-              </label>
             </div>
             <div className="mt-3 flex justify-end">
               <button
@@ -363,16 +309,8 @@ export function AdRadarSearchPanel({
         </div>
       </section>
 
-      {searched && !searchError ? (
-        <section className="grid grid-cols-2 gap-3.5 xl:grid-cols-4">
-          <StatTile label="Ads in view" value={String(cards.length)} note="Current matching ads" />
-          <StatTile label="Advertisers" value={String(advertiserCount)} note="Pages with visible ads" />
-          <StatTile label="Postcodes" value={String(allPostcodes.length)} note="Matched ad areas" />
-          <StatTile label="Media visible" value={String(mediaReady)} note="Images, videos, or carousel media" />
-        </section>
-      ) : null}
-
       {searchError ? (
+        <>
         <section
           className="grid gap-3 rounded-(--r-card) border border-error/25 bg-error-soft px-5 py-4 text-error"
           role="alert"
@@ -388,13 +326,26 @@ export function AdRadarSearchPanel({
           <button
             type="button"
             className="inline-flex min-h-11 w-fit cursor-pointer items-center gap-2 rounded-full bg-(--ink) px-4 text-[12.5px] font-bold text-white hover:opacity-85"
-            onClick={() => doSearch(query, sort, includeSurrounding, filters)}
+            onClick={() => doSearch(activeSearchTermRef.current, filters, Boolean(cards.length && nextCursor))}
             disabled={loading}
           >
             <RotateCw size={14} aria-hidden />
             {loading ? "Trying again…" : "Try again"}
           </button>
         </section>
+        {cards.length > 0 ? (
+          <section className="grid gap-3.5">
+            <AdRadarResultsGrid cards={cards} />
+            {nextCursor ? (
+              <div className="flex justify-center">
+                <button type="button" className={ghostButtonClass} onClick={loadMore} disabled={loading}>
+                  {loading ? "Loading more..." : "Load more"}
+                </button>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+        </>
       ) : searched ? (
         <section className="grid gap-3.5">
           <div>
@@ -410,7 +361,16 @@ export function AdRadarSearchPanel({
           </div>
 
           {cards.length > 0 ? (
-            <AdRadarResultsGrid cards={cards} />
+            <>
+              <AdRadarResultsGrid cards={cards} />
+              {nextCursor ? (
+                <div className="flex justify-center">
+                  <button type="button" className={ghostButtonClass} onClick={loadMore} disabled={loading}>
+                    {loading ? "Loading more..." : "Load more"}
+                  </button>
+                </div>
+              ) : null}
+            </>
           ) : activeFilterCount > 0 ? (
             <div className="rounded-(--r-card) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 px-6 py-10 text-center">
               <h3 className="font-display text-[15.5px] font-extrabold">No ads matched your filters</h3>
@@ -441,15 +401,7 @@ function SelectWrap({ children }: { children: ReactNode }) {
   );
 }
 
-function StatTile({ label, value, note }: { label: string; value: string; note: string }) {
-  return (
-    <article className="rounded-(--r-card) border border-(--line) bg-(--surface) px-[18px] pt-[17px] pb-[15px] shadow-card">
-      <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">{label}</p>
-      <p className="mt-[6px] font-display text-[24px] font-extrabold tracking-[-0.02em] tabular-nums">{value}</p>
-      <p className="mt-[7px] text-[10.5px]/[11.5px] text-muted-foreground">{note}</p>
-    </article>
-  );
-}
+
 
 function mergeOptions(prev: string[], incoming: Array<string | null>): string[] {
   const next = new Set(prev);

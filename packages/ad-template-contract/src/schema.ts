@@ -1,17 +1,45 @@
 import { z } from "zod";
+import {
+  MINIMUM_MULTILINE_LINE_HEIGHT,
+  MINIMUM_TEXT_SIZE_PX,
+  MINIMUM_VECTOR_LINE_LENGTH_PX,
+  SUPPORTED_ICON_NAMES,
+} from "./types.ts";
 
 const colourRoleSchema = z.enum(["background", "primary", "secondary", "accent", "mainText", "inverseText"]);
 const rectSchema = z.object({ x: z.number().finite(), y: z.number().finite(), width: z.number().positive(), height: z.number().positive() }).strict();
 const fontSchema = z.object({ file: z.string().min(1) }).strict();
+const shadowSchema = z.object({ colourRole: colourRoleSchema, opacity: z.number().min(0).max(1), blur: z.number().min(0).max(100), offsetX: z.number().finite().min(-200).max(200), offsetY: z.number().finite().min(-200).max(200) }).strict();
+const strokeSchema = z.object({ colourRole: colourRoleSchema, opacity: z.number().min(0).max(1), width: z.number().positive().max(100) }).strict();
+const effectsSchema = z.object({ rotationDegrees: z.number().finite().min(-180).max(180).optional(), blendMode: z.enum(["source-over", "multiply", "screen", "overlay", "darken", "lighten"]).optional(), shadow: shadowSchema.optional(), stroke: strokeSchema.optional() }).strict();
+const gradientSchema = z.object({ type: z.literal("linear_gradient"), angleDegrees: z.number().finite(), stops: z.array(z.object({ offset: z.number().min(0).max(1), colourRole: colourRoleSchema, opacity: z.number().min(0).max(1) }).strict()).min(2).max(16) }).strict();
+const appearanceShape = { effects: effectsSchema.optional(), fill: gradientSchema.optional(), cornerRadius: z.number().min(0).max(540).optional() };
+
+function resolveRect(
+  geometry: z.infer<typeof rectSchema>,
+  width: number,
+  height: number,
+): z.infer<typeof rectSchema> {
+  const values = [geometry.x, geometry.y, geometry.width, geometry.height];
+  if (values.every((value) => Math.abs(value) <= 1.001)) {
+    return {
+      x: geometry.x * width,
+      y: geometry.y * height,
+      width: geometry.width * width,
+      height: geometry.height * height,
+    };
+  }
+  return geometry;
+}
 
 const layerSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("plate"), layerId: z.string().min(1), colourRole: colourRoleSchema, assetKey: z.string().min(1).optional(), geometry: rectSchema, protected: z.boolean() }).strict(),
-  z.object({ type: z.literal("image_slot"), layerId: z.string().min(1), inputKey: z.string().min(1), geometry: rectSchema, mask: z.enum(["rounded_rect", "circle", "none"]), minSourceWidth: z.number().int().positive(), minSourceHeight: z.number().int().positive(), defaultCrop: rectSchema, allowedPlacementOverrides: z.array(z.enum(["crop", "position"])) }).strict(),
-  z.object({ type: z.literal("overlay_patch"), layerId: z.string().min(1), geometry: rectSchema, colourRole: colourRoleSchema, opacity: z.number().min(0).max(1), assetKey: z.string().min(1).optional() }).strict(),
-  z.object({ type: z.literal("text"), layerId: z.string().min(1), inputKey: z.string().min(1), font: fontSchema, fontSize: z.number().positive(), sizeRatio: z.number().finite().positive().optional(), lineHeight: z.number().positive(), tracking: z.number(), alignment: z.enum(["left", "center", "right"]), maxCharacters: z.number().int().positive(), maxLines: z.number().int().positive(), colourRole: colourRoleSchema, overflowBehaviour: z.enum(["refuse", "truncate", "scale_down"]), geometry: rectSchema }).strict(),
-  z.object({ type: z.literal("logo"), layerId: z.string().min(1), inputKey: z.string().min(1), geometry: rectSchema }).strict(),
-  z.object({ type: z.literal("vector"), layerId: z.string().min(1), geometry: rectSchema, shape: z.enum(["rect", "rounded", "circle", "line", "pill", "notched", "wave", "ring"]), colourRole: colourRoleSchema, opacity: z.number().min(0).max(1) }).strict(),
-  z.object({ type: z.literal("icon"), layerId: z.string().min(1), geometry: rectSchema, icon: z.string().min(1), colourRole: colourRoleSchema }).strict(),
+  z.object({ type: z.literal("plate"), layerId: z.string().min(1), colourRole: colourRoleSchema, assetKey: z.string().min(1).optional(), geometry: rectSchema, protected: z.boolean(), ...appearanceShape }).strict(),
+  z.object({ type: z.literal("image_slot"), layerId: z.string().min(1), inputKey: z.string().min(1), geometry: rectSchema, mask: z.enum(["rounded_rect", "circle", "none"]), minSourceWidth: z.number().int().positive(), minSourceHeight: z.number().int().positive(), defaultCrop: rectSchema, allowedPlacementOverrides: z.array(z.enum(["crop", "position"])), effects: effectsSchema.optional(), cornerRadius: z.number().min(0).max(540).optional(), opacity: z.number().min(0).max(1).optional() }).strict(),
+  z.object({ type: z.literal("overlay_patch"), layerId: z.string().min(1), geometry: rectSchema, colourRole: colourRoleSchema, opacity: z.number().min(0).max(1), assetKey: z.string().min(1).optional(), ...appearanceShape }).strict(),
+  z.object({ type: z.literal("text"), layerId: z.string().min(1), inputKey: z.string().min(1), font: fontSchema, fontSize: z.number().positive(), sizeRatio: z.number().finite().positive().optional(), fontFamily: z.string().min(1).optional(), fontWeight: z.number().int().min(100).max(900).optional(), italic: z.boolean().optional(), case: z.enum(["upper", "lower", "none"]).optional(), opacity: z.number().min(0).max(1).optional(), effects: effectsSchema.optional(), lineHeight: z.number().positive(), tracking: z.number().finite().min(-4).max(4), alignment: z.enum(["left", "center", "right"]), maxCharacters: z.number().int().positive(), maxLines: z.number().int().positive(), colourRole: colourRoleSchema, overflowBehaviour: z.enum(["refuse", "truncate", "scale_down"]), geometry: rectSchema }).strict(),
+  z.object({ type: z.literal("logo"), layerId: z.string().min(1), inputKey: z.string().min(1), geometry: rectSchema, effects: effectsSchema.optional(), cornerRadius: z.number().min(0).max(540).optional(), opacity: z.number().min(0).max(1).optional() }).strict(),
+  z.object({ type: z.literal("vector"), layerId: z.string().min(1), geometry: rectSchema, shape: z.enum(["rect", "rounded", "circle", "line", "pill", "notched", "wave", "ring"]), colourRole: colourRoleSchema, opacity: z.number().min(0).max(1), ...appearanceShape }).strict(),
+  z.object({ type: z.literal("icon"), layerId: z.string().min(1), geometry: rectSchema, icon: z.enum(SUPPORTED_ICON_NAMES), colourRole: colourRoleSchema, opacity: z.number().min(0).max(1).optional(), effects: effectsSchema.optional() }).strict(),
 ]);
 
 const layoutSchema = z.object({
@@ -21,14 +49,53 @@ const layoutSchema = z.object({
 }).strict().superRefine((layout, ctx) => {
   const width = 1080;
   const height = layout.placement === "feed" ? 1350 : 1920;
+  const minimumTextSize = MINIMUM_TEXT_SIZE_PX[layout.placement];
+  const background = layout.layers[0];
+  const backgroundGeometry = background ? resolveRect(background.geometry, width, height) : null;
+  if (
+    background?.type !== "plate"
+    || !background.protected
+    || !backgroundGeometry
+    || Math.abs(backgroundGeometry.x) > 0.5
+    || Math.abs(backgroundGeometry.y) > 0.5
+    || Math.abs(backgroundGeometry.width - width) > 0.5
+    || Math.abs(backgroundGeometry.height - height) > 0.5
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `${layout.placement} first layer must be a protected full-canvas background plate`,
+    });
+  }
   for (const layer of layout.layers) {
-    const geometry = layer.geometry;
+    const geometry = resolveRect(layer.geometry, width, height);
     if (geometry.x < 0 || geometry.y < 0 || geometry.x + geometry.width > width || geometry.y + geometry.height > height) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "layer geometry is outside placement bounds" });
     }
+    if (layer.type === "text" && layer.fontSize < minimumTextSize) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${layout.placement} text must be at least ${minimumTextSize}px` });
+    }
+    if (layer.type === "text" && layer.maxLines > 1 && layer.lineHeight < MINIMUM_MULTILINE_LINE_HEIGHT) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${layout.placement} text layer ${layer.layerId} with maxLines ${layer.maxLines} must use lineHeight at least ${MINIMUM_MULTILINE_LINE_HEIGHT}`,
+      });
+    }
+    if (layer.type === "vector" && layer.shape === "ring") {
+      const squareTolerance = Math.max(1, Math.min(geometry.width, geometry.height) * 0.01);
+      if (Math.abs(geometry.width - geometry.height) > squareTolerance) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "ring vectors must use square geometry" });
+      }
+    }
+    if (layer.type === "vector" && layer.shape === "line" && Math.max(geometry.width, geometry.height) < MINIMUM_VECTOR_LINE_LENGTH_PX) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${layout.placement} line vector ${layer.layerId} must be at least ${MINIMUM_VECTOR_LINE_LENGTH_PX}px long`,
+      });
+    }
   }
   for (const zone of layout.safeZones) {
-    if (zone.x < 0 || zone.y < 0 || zone.x + zone.width > width || zone.y + zone.height > height) {
+    const geometry = resolveRect(zone, width, height);
+    if (geometry.x < 0 || geometry.y < 0 || geometry.x + geometry.width > width || geometry.y + geometry.height > height) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "safe zone is outside placement bounds" });
     }
   }
@@ -44,6 +111,24 @@ const textInputSchema = z.object({
 const gallerySampleSchema = z.object({
   assetKey: z.string().min(1).optional(), placement: z.enum(["feed", "story"]), purpose: z.string().min(1),
 }).strict();
+const formQuestionSchema = z.object({ key: z.string().min(1), label: z.string().min(1), type: z.enum(["short_answer", "email", "phone", "multiple_choice"]), required: z.boolean(), options: z.array(z.string().min(1)).optional() }).strict();
+const legacyGenerationReviewSchema = z.object({
+  process: z.literal("exact-clone"), sourcePlacement: z.enum(["feed", "story"]), targetPlacement: z.enum(["feed", "story"]),
+  likenessThreshold: z.number().min(9.8).max(10),
+  comparator: z.object({ overall: z.number().min(0).max(10), geometry: z.number().min(0).max(10), colourEffects: z.number().min(0).max(10), compositionCrop: z.number().min(0).max(10), typography: z.number().min(0).max(10), decision: z.enum(["revise", "ready"]) }).strict(),
+  finalReviewers: z.array(z.object({ id: z.string().min(1), route: z.string().min(1), overall: z.number().min(0).max(10), minimum: z.number().min(9.5).max(10), decision: z.enum(["pass", "fail"]) }).strict()).length(2),
+  warnings: z.array(z.string()), fontSubstitution: z.object({ source: z.string().min(1), used: z.string().min(1), reason: z.string().min(1) }).strict().nullable(),
+}).strict();
+const currentGenerationReviewSchema = z.object({
+  policy: z.literal("section-98-font-exempt-no-obvious-errors-v1"),
+  process: z.literal("exact-clone"), sourcePlacement: z.enum(["feed", "story"]), targetPlacement: z.enum(["feed", "story"]),
+  sectionThreshold: z.number().min(9.8).max(10), fontMatchRequired: z.literal(false),
+  comparator: z.object({ geometry: z.number().min(0).max(10), colourEffects: z.number().min(0).max(10), compositionCrop: z.number().min(0).max(10), typography: z.number().min(0).max(10), details: z.number().min(0).max(10), decision: z.enum(["revise", "ready"]) }).strict(),
+  finalReviewers: z.array(z.object({ id: z.string().min(1), route: z.string().min(1), minimum: z.number().min(9.8).max(10), decision: z.enum(["pass", "fail"]) }).strict()).length(2),
+  overallCheck: z.object({ noObviousErrors: z.literal(true) }).strict(),
+  warnings: z.array(z.string()), fontSubstitution: z.object({ source: z.string().min(1), used: z.string().min(1), reason: z.string().min(1) }).strict().nullable(),
+}).strict();
+const generationReviewSchema = z.union([currentGenerationReviewSchema, legacyGenerationReviewSchema]);
 
 const metadataSchema = z.object({
   title: z.string().min(1), description: z.string(),
@@ -52,13 +137,16 @@ const metadataSchema = z.object({
   aiWritingGuidance: z.object({ summary: z.string(), fields: z.record(z.string()) }).strict(),
   publishRequirements: z.object({
     objective: z.string().min(1), specialAdCategory: z.string().nullable(),
-    instantForm: z.object({ required: z.boolean(), dependency: z.string().nullable(), defaults: z.record(z.string()).optional() }).strict(),
+    instantForm: z.object({ required: z.boolean(), dependency: z.string().nullable(), defaults: z.object({ formName: z.string().optional(), introHeadline: z.string().optional(), introBody: z.string().optional(), questions: z.array(formQuestionSchema).optional(), privacyPolicyUrl: z.string().url().optional(), disclaimer: z.string().optional(), thankYouHeadline: z.string().optional(), thankYouBody: z.string().optional(), thankYouAction: z.enum(["visit_website", "download", "call_business", "none"]).optional(), thankYouUrl: z.string().url().optional() }).strict().optional() }).strict(),
     destination: z.object({ required: z.boolean(), kind: z.enum(["website", "instant_form", "none"]), dependency: z.string().nullable() }).strict(),
-    fulfilment: z.object({ required: z.boolean(), dependency: z.string().nullable() }).strict().optional(),
+    fulfilment: z.object({ required: z.boolean(), dependency: z.string().nullable(), deliveryMethod: z.enum(["website", "email", "download", "manual"]).optional(), deliveryUrl: z.string().url().nullable().optional(), owner: z.string().nullable().optional() }).strict().optional(),
+    offer: z.object({ name: z.string().min(1), promise: z.string().nullable(), terms: z.array(z.string()), eligibility: z.string().nullable(), expiresAt: z.string().datetime().nullable() }).strict().nullable().optional(),
+    claims: z.array(z.object({ text: z.string().min(1), kind: z.enum(["factual", "testimonial", "guarantee", "performance"]), evidenceRequired: z.boolean(), evidenceReference: z.string().nullable(), qualifier: z.string().nullable(), disclaimer: z.string().nullable() }).strict()).optional(),
     requiredCtaTypes: z.array(z.string()).default([]),
   }).strict(),
   replacementAssets: z.array(z.object({ inputKey: z.string().min(1), assetKey: z.string().min(1), purpose: z.string().optional() }).strict()),
   realAssetRefs: z.array(z.object({ inputKey: z.string().min(1), kind: z.string().min(1), required: z.boolean() }).strict()),
+  generationReview: generationReviewSchema.optional(),
 }).strict();
 
 export const adTemplateSchema = z.object({
@@ -87,6 +175,11 @@ export const adTemplateSchema = z.object({
     if ("inputKey" in layer && !declaredInputs.has(layer.inputKey)) report("layer input is not declared");
     if ("assetKey" in layer && layer.assetKey && !assetKeys.has(layer.assetKey)) report("layer asset is not declared");
     if (layer.type === "text" && !fontFiles.includes(layer.font.file)) report("text font is not declared");
+    if (layer.type === "text") {
+      const input = template.textInputs.find((candidate) => candidate.key === layer.inputKey);
+      const hardLineCount = input?.placeholder.split(/\r\n?|\n/u).length ?? 0;
+      if (hardLineCount > layer.maxLines) report("text placeholder hard lines exceed the referencing layer maxLines");
+    }
   }
   const feedSample = template.metadata.gallerySamples.feed;
   if (feedSample && feedSample.placement !== "feed") report("feed gallery sample must use feed placement");
@@ -104,6 +197,37 @@ export const adTemplateSchema = z.object({
     if (!declaredInputs.has(ref.inputKey)) report("real asset input is not declared");
     if (!ref.kind.trim()) report("real asset kind is required");
   }
+  const review = template.metadata.generationReview;
+  if (review) {
+    if ("policy" in review) {
+      const scores = [review.comparator.geometry, review.comparator.colourEffects, review.comparator.compositionCrop, review.comparator.typography, review.comparator.details];
+      if (review.comparator.decision !== "ready" || scores.some((score) => score < review.sectionThreshold)) {
+        report("every generation comparator section must meet the threshold and be ready");
+      }
+      if (!review.overallCheck.noObviousErrors) report("generation review contains an obvious error");
+    } else if (review.comparator.decision !== "ready" || review.comparator.overall < review.likenessThreshold) {
+      report("legacy generation comparator must meet the likeness threshold and be ready");
+    }
+    if (new Set(review.finalReviewers.map((reviewer) => reviewer.id)).size !== review.finalReviewers.length) {
+      report("final generation reviewers must be independent");
+    }
+    if (new Set(review.finalReviewers.map((reviewer) => reviewer.route)).size !== review.finalReviewers.length) {
+      report("final generation reviewer routes must be independent");
+    }
+    if ("policy" in review) {
+      for (const reviewer of review.finalReviewers) {
+        if (reviewer.decision !== "pass") report("final generation reviewer did not pass");
+        if (reviewer.minimum < review.sectionThreshold) report("final generation reviewer did not meet every section minimum");
+      }
+    } else {
+      for (const reviewer of review.finalReviewers) {
+        if (reviewer.decision !== "pass") report("legacy final generation reviewer did not pass");
+        if (reviewer.overall < reviewer.minimum) {
+          report("legacy final generation reviewer did not pass its minimum");
+        }
+      }
+    }
+  }
 });
 
 export type AdTemplateParsed = z.infer<typeof adTemplateSchema>;
@@ -114,6 +238,7 @@ export const adDocumentSchema = z.object({
   feedCropOverrides: z.record(rectSchema), storyCropOverrides: z.record(rectSchema),
   colourMode: z.enum(["template", "brand_pack", "custom"]), resolvedColourMap: z.record(z.string().min(1)),
   metaPrimaryText: z.string(), metaHeadline: z.string(), metaDescription: z.string(), metaCta: z.string(),
+  destinationUrl: z.string().url().optional(),
   // Optional customer-facing display-name override (Brand Pack value is the
   // default). Omitted entirely on older documents — backward compatible.
   brandBusinessName: z.string().min(1).optional(),

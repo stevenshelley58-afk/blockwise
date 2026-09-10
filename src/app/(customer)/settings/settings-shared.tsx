@@ -71,6 +71,8 @@ export type SettingsViewProps = {
     stripeCustomerId: string | null;
     subscriptionStatus: string | null;
     billingAccessState: string;
+    trialState: string | null;
+    trialEndsAt: string | null;
     billingPeriodStart: string | null;
     billingPeriodEnd: string | null;
     cancelAtPeriodEnd: boolean;

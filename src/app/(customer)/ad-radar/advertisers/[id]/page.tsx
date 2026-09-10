@@ -15,15 +15,15 @@ const ghostButtonClass =
 export default async function AdvertiserProfilePage({ params }: { params: Promise<{ id: string }> }) {
   if (!niche.features.adRadar) notFound();
   const { id } = await params;
-  const { supabase } = await requirePageSurfaceAccess("monitor");
-  const { ads, error } = await loadCustomerAdvertiserAds(supabase, id);
+  await requirePageSurfaceAccess("monitor");
+  const { ads, error } = await loadCustomerAdvertiserAds(id);
 
   const first = ads[0] ?? null;
   const activeCount = ads.filter((ad) => ad.status.active === "active").length;
   const classifications = unique(ads.map((ad) => ad.creative.adType).filter((value): value is string => Boolean(value)));
 
   return (
-    <main className="mx-auto grid w-full max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
+    <section className="mx-auto grid w-full max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
       <header>
         <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">Advertiser profile</p>
         <h1 className="mt-1 font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">
@@ -40,9 +40,6 @@ export default async function AdvertiserProfilePage({ params }: { params: Promis
         <Link className={ghostButtonClass} href="/ad-radar">
           Back to ads
         </Link>
-        <span className="rounded-lg bg-(--surface-subtle) px-2.5 py-1 font-mono text-[11px] font-medium text-(--faint)">
-          {id}
-        </span>
       </div>
 
       {error ? (
@@ -86,7 +83,7 @@ export default async function AdvertiserProfilePage({ params }: { params: Promis
           ) : null}
         </div>
       </section>
-    </main>
+    </section>
   );
 }
 

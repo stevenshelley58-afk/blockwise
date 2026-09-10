@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { decryptToken, encryptToken } from "../src/lib/providers/token-crypto.ts";
+import { fetchMetaUserIdentity } from "../src/lib/providers/meta-oauth-identity.ts";
 import {
   createOAuthStatePayload,
   sanitizeOAuthCampaignId,
@@ -13,6 +14,23 @@ import {
 
 const encryptionKey = Buffer.alloc(32, 7).toString("base64");
 const stateSecret = Buffer.alloc(32, 9).toString("base64");
+
+test("Meta OAuth identity lookup requires a non-empty app-scoped user id", async () => {
+  const calls: string[] = [];
+  const fetchImpl = async (input: string | URL | Request) => {
+    calls.push(String(input));
+    return new Response(JSON.stringify({ id: "app_user_123" }), { status: 200 });
+  };
+
+  assert.equal(await fetchMetaUserIdentity("test-token", fetchImpl), "app_user_123");
+  assert.match(calls[0], /\/me\?/);
+  assert.match(calls[0], /fields=id/);
+
+  await assert.rejects(
+    fetchMetaUserIdentity("test-token", async () => new Response(JSON.stringify({}), { status: 200 })),
+    /did not return a user identity/,
+  );
+});
 
 test("OAuth state validates provider, workspace, user, and expiry", () => {
   const state = signOAuthState(

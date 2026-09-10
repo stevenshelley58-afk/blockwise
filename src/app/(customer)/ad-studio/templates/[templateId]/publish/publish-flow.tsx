@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import Link from "next/link";
 
 import { InstantFormEditor } from "@/components/adstudio/instant-form-editor";
 import type { InstantForm } from "@/lib/adstudio/instant-form-types";
 import type { PublishRequirements } from "@/lib/adstudio/publish-adapter";
 import type { MetaParentState } from "@/lib/providers/meta-execution";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -48,7 +50,7 @@ export interface PublishFlowProps {
   /** True when the ad has no saved revision yet. */
   notSaved: boolean;
   initialState: {
-    ad: { metaPrimaryText: string; metaHeadline: string; metaDescription: string; metaCta: string };
+    ad: { metaPrimaryText: string; metaHeadline: string; metaDescription: string; metaCta: string; destinationUrl: string };
     revision: { id: string; revisionNumber: number; documentHash: string; feedPngHash: string; feedPngPath: string; storyPngHash: string; storyPngPath: string; createdAt?: string };
     form: {
       name: string;
@@ -167,7 +169,7 @@ export function PublishFlow({
   // edits and pins right here. The editor reports when a pin lands.
   const [formPinned, setFormPinned] = useState(() => Boolean(initialState?.form));
   const [formRevision, setFormRevision] = useState<number | null>(() => initialState?.formRevision ?? null);
-  const [destinationUrl, setDestinationUrl] = useState("");
+  const [destinationUrl, setDestinationUrl] = useState(() => initialState?.ad.destinationUrl ?? "");
   const [targetMode, setTargetMode] = useState<PublishTargetMode>("new_campaign_new_adset");
   const [campaignId, setCampaignId] = useState("");
   const [adSetIds, setAdSetIds] = useState("");
@@ -201,8 +203,8 @@ export function PublishFlow({
   const [receiptRefreshError, setReceiptRefreshError] = useState<string | null>(null);
   const [clientMutationKey, setClientMutationKey] = useState(() => crypto.randomUUID());
   const receiptRequestVersion = useRef(0);
-  const previousStage = useRef<number | null>(null);
   const receiptRegionRef = useRef<HTMLDivElement>(null);
+  const [activeStage, setActiveStage] = useState(1);
 
   useEffect(() => {
     let current = true;
@@ -418,25 +420,31 @@ export function PublishFlow({
   );
   const plannedAds = selectedVariants.length * selectedAdSetCount;
   const ready = issues.length === 0 && formReady && destinationReady && fulfilmentReady && targetReady && plannedAds > 0 && Boolean(publishBuild.controls);
-  const currentStage = !formReady || !destinationReady || !fulfilmentReady || !targetReady
+  const stageCanContinue = activeStage === 1
+    ? true
+    : activeStage === 2
+      ? formReady && destinationReady && fulfilmentReady
+      : activeStage === 3 ? targetReady && Boolean(fieldsBuild.controls) : ready;
+  const nextStageLabel = activeStage === 1 ? "Destination and form" : activeStage === 2 ? "Audience and spend" : "Review and create";
+  const currentStage = !formReady || !destinationReady || !fulfilmentReady
     ? 2
-    : !setupConfirmed
+    : !targetReady || !setupConfirmed
       ? 3
       : 4;
 
+  const [fulfilmentDetailsOpen, setFulfilmentDetailsOpen] = useState(!fulfilmentReady);
+
+  useEffect(() => {
+    if (!fulfilmentReady) setFulfilmentDetailsOpen(true);
+  }, [fulfilmentReady]);
+
   useEffect(() => {
     if (notSaved) return;
-    if (previousStage.current === null) {
-      previousStage.current = currentStage;
-      return;
-    }
-    if (previousStage.current === currentStage) return;
-    previousStage.current = currentStage;
     const frame = requestAnimationFrame(() => {
-      document.getElementById(`publish-stage-${currentStage}`)?.focus({ preventScroll: false });
+      document.getElementById(`publish-stage-${activeStage}`)?.focus({ preventScroll: false });
     });
     return () => cancelAnimationFrame(frame);
-  }, [currentStage, notSaved]);
+  }, [activeStage, notSaved]);
 
   if (notSaved) {
     return (
@@ -458,10 +466,10 @@ export function PublishFlow({
   }
 
   return (
-    <div className="flex h-full flex-col bg-(--canvas)">
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+    <div className="flex h-full min-h-0 flex-col bg-(--canvas)">
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
         <nav aria-label="Publish progress" className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-3">
-          <p className="mb-2 text-xs font-semibold text-muted-foreground">Step {currentStage} of 4</p>
+          <p className="mb-2 text-xs font-semibold text-muted-foreground">Step {activeStage} of 4 · Next required step: {currentStage}</p>
           <ol className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
             {[
               [1, "Creative & copy", "publish-stage-1"],
@@ -469,10 +477,10 @@ export function PublishFlow({
               [3, "Audience & spend", "publish-stage-3"],
               [4, "Review & create", "publish-stage-4"],
             ].map(([step, label, target]) => (
-              <li key={step} aria-current={currentStage === step ? "step" : undefined}>
-                <a href={`#${target}`} className="flex min-h-11 items-center rounded-(--r-ctl) border border-border px-3 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[current=step]:border-primary aria-[current=step]:bg-primary/5">
+              <li key={step} aria-current={activeStage === Number(step) ? "step" : undefined}>
+                <button type="button" onClick={() => { setActiveStage(Number(step)); window.setTimeout(() => document.getElementById(String(target))?.focus({ preventScroll: false }), 0); }} className={`flex min-h-11 w-full items-center rounded-(--r-ctl) border border-border px-3 text-left font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${activeStage === Number(step) ? "border-primary bg-primary/5" : ""}`}>
                   {step}. {label}
-                </a>
+                </button>
               </li>
             ))}
           </ol>
@@ -490,20 +498,17 @@ export function PublishFlow({
           </div>
         )}
 
+        <section hidden={activeStage !== 1} aria-labelledby="publish-stage-1">
         {/* Saved creative */}
-        <h2 id="publish-stage-1" tabIndex={-1} className="mb-3 scroll-mt-4 text-base font-semibold focus:outline-none">1. Creative & copy</h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 id="publish-stage-1" tabIndex={-1} className="scroll-mt-4 text-base font-semibold focus:outline-none">1. Creative & copy</h2><Link href={`/ad-studio/ads/${encodeURIComponent(adId)}`} className="min-h-11 inline-flex items-center rounded-full border border-border px-3 text-xs font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Edit creative and copy</Link></div>
         <div className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
           <h3 className="mb-2 text-sm font-semibold">Saved creative</h3>
           {initialState ? (
              <div className="space-y-3 text-xs text-muted-foreground">
-               <p>
-                 Exact saved revision <span className="font-semibold text-foreground">{initialState.revision.revisionNumber}</span>
-                 {initialState.revision.createdAt ? ` · saved ${formatSavedAt(initialState.revision.createdAt)}` : ""}
-                 {` · Feed ${shortHash(initialState.revision.feedPngHash)} · Story ${shortHash(initialState.revision.storyPngHash)}`}
-               </p>
-               <div className="grid gap-4 sm:grid-cols-2">
-                 <div><p className="mb-2">Feed</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} alt="Saved Feed ad" className="w-full rounded-(--r-card) border border-border" /><a className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4" href={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} download="blockwise-feed.png">Download Feed PNG</a></div>
-                 <div><p className="mb-2">Story</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} alt="Saved Story ad" className="w-full rounded-(--r-card) border border-border" /><a className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4" href={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} download="blockwise-story.png">Download Story PNG</a></div>
+               <div className="flex flex-wrap items-start justify-between gap-2"><details className="min-w-0 rounded-(--r-ctl) border border-border bg-muted/20 px-3 py-2"><summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Saved version {initialState.revision.revisionNumber}</summary><p className="max-w-[68ch] pb-2 text-xs text-muted-foreground">{initialState.revision.createdAt ? `Saved ${formatSavedAt(initialState.revision.createdAt)} · ` : ""}Feed hash {shortHash(initialState.revision.feedPngHash)} · Story hash {shortHash(initialState.revision.storyPngHash)}</p></details><DownloadFormats feedUrl={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} storyUrl={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} /></div>
+               <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                 <div><p className="mb-2">Feed</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} alt="Saved Feed ad" className="max-h-[30dvh] w-full rounded-(--r-card) border border-border object-contain" /><a className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4" href={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.feedPngPath)}`} download="blockwise-feed.png">Download Feed PNG</a></div>
+                 <div><p className="mb-2">Story</p><img src={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} alt="Saved Story ad" className="max-h-[30dvh] w-full rounded-(--r-card) border border-border object-contain" /><a className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4" href={`/api/adstudio/media?path=${encodeURIComponent(initialState.revision.storyPngPath)}`} download="blockwise-story.png">Download Story PNG</a></div>
                </div>
             </div>
           ) : (
@@ -574,34 +579,43 @@ export function PublishFlow({
           ) : null}
         </div> : null}
 
+        </section>
+
+        <section hidden={activeStage !== 2} aria-labelledby="publish-stage-2">
         <h2 id="publish-stage-2" tabIndex={-1} className="mb-3 scroll-mt-4 text-base font-semibold focus:outline-none">2. Destination & form</h2>
         <div className="mb-6 space-y-3 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
-          <h3 className="text-sm font-semibold">Meta destination</h3>
-          <p className="text-xs text-muted-foreground">Choose where the paused objects belong. Existing campaigns and ad sets are never edited.</p>
-          <Label htmlFor="meta-target-mode">Campaign and ad set</Label>
-          <select
-            id="meta-target-mode"
-            value={targetMode}
-            onChange={(event) => setTargetMode(event.target.value as typeof targetMode)}
-            className="min-h-11 w-full rounded-md border border-border bg-muted/30 px-3 text-sm"
-          >
-            <option value="new_campaign_new_adset">New campaign and new ad set</option>
-            <option value="existing_campaign_new_adset">Existing campaign and new ad set</option>
-            <option value="existing_adset">Existing campaign and one or more existing ad sets</option>
-          </select>
-          {targetMode !== "new_campaign_new_adset" ? (
-            <div>
-              <Label htmlFor="meta-campaign-id">Existing campaign ID</Label>
-              <Input id="meta-campaign-id" value={campaignId} onChange={(event) => setCampaignId(event.target.value)} placeholder="Existing campaign ID" className="mt-1 min-h-11 w-full bg-muted/30" />
+          <h3 className="text-sm font-semibold">Set up this ad</h3>
+          <p className="text-xs text-muted-foreground">Blockwise prepares a new ad for you. You choose your daily spend, area, where it appears and timing below.</p>
+          <details className="rounded-(--r-ctl) border border-border bg-muted/20 p-3" open={targetMode !== "new_campaign_new_adset"}>
+            <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold">Use an existing setup (advanced)</summary>
+            <div className="grid gap-3 pt-3">
+              <p className="text-xs text-muted-foreground">Use this only when you already have the campaign details. Existing campaigns and ad sets are never edited.</p>
+              <Label htmlFor="meta-target-mode">Campaign and ad set</Label>
+              <select
+                id="meta-target-mode"
+                value={targetMode}
+                onChange={(event) => setTargetMode(event.target.value as typeof targetMode)}
+                className="min-h-11 w-full rounded-md border border-border bg-muted/30 px-3 text-sm"
+              >
+                <option value="new_campaign_new_adset">New campaign and new ad set</option>
+                <option value="existing_campaign_new_adset">Existing campaign and new ad set</option>
+                <option value="existing_adset">Existing campaign and one or more existing ad sets</option>
+              </select>
+              {targetMode !== "new_campaign_new_adset" ? (
+                <div>
+                  <Label htmlFor="meta-campaign-id">Existing campaign ID</Label>
+                  <Input id="meta-campaign-id" value={campaignId} onChange={(event) => setCampaignId(event.target.value)} placeholder="Existing campaign ID" className="mt-1 min-h-11 w-full bg-muted/30" />
+                </div>
+              ) : null}
+              {targetMode === "existing_adset" ? (
+                <div>
+                  <Label htmlFor="meta-ad-set-ids">Existing ad set IDs</Label>
+                  <Input id="meta-ad-set-ids" value={adSetIds} onChange={(event) => setAdSetIds(event.target.value)} placeholder="Separate multiple IDs with commas" className="mt-1 min-h-11 w-full bg-muted/30" />
+                </div>
+              ) : null}
+              {!targetReady ? <p className="text-xs text-amber-700">Add the existing campaign and ad set details to continue.</p> : null}
             </div>
-          ) : null}
-          {targetMode === "existing_adset" ? (
-            <div>
-              <Label htmlFor="meta-ad-set-ids">Existing ad set IDs</Label>
-              <Input id="meta-ad-set-ids" value={adSetIds} onChange={(event) => setAdSetIds(event.target.value)} placeholder="Separate multiple IDs with commas" className="mt-1 min-h-11 w-full bg-muted/30" />
-            </div>
-          ) : null}
-          {!targetReady ? <p className="text-xs text-amber-700">Add the existing campaign and ad set details to continue.</p> : null}
+          </details>
         </div>
 
         <div className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
@@ -653,7 +667,7 @@ export function PublishFlow({
               ? `This template requires fulfilment${publishRequirements.fulfilmentDependency ? `: ${publishRequirements.fulfilmentDependency}` : "."}`
               : "Turn this on when the ad promises something the customer must receive or a claim that needs evidence."}
           </p>
-          {fulfilmentActive ? <div className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
+          {fulfilmentActive ? <details open={fulfilmentDetailsOpen} onToggle={(event) => setFulfilmentDetailsOpen(event.currentTarget.open)} className="rounded-(--r-ctl) border border-border bg-muted/20"><summary className="flex min-h-11 cursor-pointer items-center px-3 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Offer and compliance details</summary><div className="grid gap-3 border-t border-border p-3 sm:grid-cols-2">
             {([
               ["exactOffer", "Exact offer"], ["eligibility", "Eligibility"], ["conditions", "Conditions"], ["timeframe", "Timeframe"],
               ["evidence", "Evidence"], ["approval", "Evidence approval"], ["disclaimer", "Disclaimer"], ["privacyUrl", "Privacy URL"],
@@ -675,10 +689,13 @@ export function PublishFlow({
             <p className="sm:col-span-2 rounded-(--r-ctl) bg-muted px-3 py-2 text-xs text-muted-foreground">
               The exact fulfilment URL is bound to the Instant Form thank-you action. It can match the ad destination only when you explicitly enter the same URL. A typed file name is not accepted.
             </p>
-          </div> : null}
+          </div></details> : null}
           {fulfilmentActive && !fulfilmentReady ? <p className="text-xs text-amber-700">Complete every promise field and add valid HTTPS privacy and fulfilment delivery URLs.</p> : null}
         </div>
 
+        </section>
+
+        <section hidden={activeStage !== 3} aria-labelledby="publish-stage-3">
         <h2 id="publish-stage-3" tabIndex={-1} className="mb-3 scroll-mt-4 text-base font-semibold focus:outline-none">3. Audience, budget & schedule</h2>
         <PublishSetupFields
           targetMode={targetMode}
@@ -722,6 +739,9 @@ export function PublishFlow({
         />
 
         {/* Provider mode */}
+        </section>
+
+        <section hidden={activeStage !== 4} aria-labelledby="publish-stage-4">
         <h2 id="publish-stage-4" tabIndex={-1} className="mb-3 scroll-mt-4 text-base font-semibold focus:outline-none">4. Review & create paused</h2>
         <div className="mb-4 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
           <h3 className="text-sm font-semibold">Exact setup to create</h3>
@@ -738,7 +758,7 @@ export function PublishFlow({
           <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold">What happens next</summary>
           <p className="mt-1 text-xs text-muted-foreground">
             {automatedPublishAvailable && providerWritesEnabled
-              ? "Create paused on Meta saves this exact setup as PAUSED campaign, ad sets and ads. Nothing can deliver until you explicitly choose Activate."
+              ? "Create paused on Meta saves these ads without running them. Nothing runs or spends until you explicitly choose Activate."
               : providerWritesEnabled
                 ? "Automated publishing is unavailable for this account. Your saved creative and setup can be sent to an authorised Blockwise operator for manual review."
                 : "Preview only is on — nothing will be created automatically. You can review the complete plan or request manual publishing."}
@@ -764,6 +784,7 @@ export function PublishFlow({
             setupSummary={publishedSetupSummary}
           />
         )}
+        </section>
       </div>
 
       <footer className="flex shrink-0 flex-col items-stretch gap-3 border-t border-(--line) bg-(--surface) px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
@@ -778,20 +799,21 @@ export function PublishFlow({
             {requiresForm ? "Add the HTTPS thank-you destination to continue." : "Add the real HTTPS article or website URL to continue."}
           </p>
         ) : !targetReady && issues.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Complete the campaign and ad set destination to continue.</p>
+          <p className="text-sm text-muted-foreground">Add the existing Meta setup details to continue.</p>
         ) : !fulfilmentReady && issues.length === 0 ? (
           <p className="text-sm text-muted-foreground">Complete the offer evidence and delivery details to continue.</p>
         ) : !publishBuild.controls && issues.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             {targetMode === "existing_adset"
               ? "Confirm that the existing ad set settings stay unchanged."
-              : "Complete and confirm the budget, audience, placements and schedule."}
+              : "Choose and confirm the daily spend, area, where the ad appears and timing."}
           </p>
         ) : (
           <span />
         )}
-        <div className="w-full sm:ml-auto sm:w-auto">
-          <Button
+        <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:justify-end">
+          {activeStage > 1 ? <Button type="button" variant="outline" onClick={() => setActiveStage(activeStage - 1)} className="min-h-11 w-full rounded-full px-6 text-sm font-semibold sm:w-auto">Back</Button> : null}
+          {activeStage < 4 ? <Button type="button" disabled={!stageCanContinue} onClick={() => stageCanContinue && setActiveStage(activeStage + 1)} className="min-h-11 w-full rounded-full px-6 text-sm font-semibold sm:w-auto">Continue to {nextStageLabel}</Button> : <Button
             onClick={metaConnectionConnected ? handleAutomatedPublish : handleManualPublish}
             disabled={metaConnectionConnected ? !ready || submitting || Boolean(receipt && !receipt.error) : !canRequestManualPublish || !ready || submitting || manualPublish.status === "requested" || manualPublish.status === "in_review" || manualPublish.status === "published"}
             className="min-h-11 w-full rounded-full px-6 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
@@ -805,9 +827,45 @@ export function PublishFlow({
                 : manualPublish.status === "requested" || manualPublish.status === "in_review"
                   ? "Request sent"
                   : "Request manual publishing"}
-          </Button>
-        </div>
-      </footer>
+          </Button>}
+        </div>      </footer>
+    </div>
+  );
+}
+
+function DownloadFormats({ feedUrl, storyUrl }: { feedUrl: string; storyUrl: string }) {
+  const [downloadError, setDownloadError] = useState(false);
+  const downloadFile = (url: string, filename: string) => {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.rel = "noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+  const downloadBoth = () => {
+    try {
+      downloadFile(feedUrl, "blockwise-feed.png");
+      window.setTimeout(() => downloadFile(storyUrl, "blockwise-story.png"), 150);
+      setDownloadError(false);
+    } catch {
+      setDownloadError(true);
+    }
+  };
+  return (
+    <div className="grid justify-items-end gap-1">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" variant="outline" className="min-h-11 rounded-full px-4 text-xs font-semibold" aria-label="Download both formats">Download both formats</Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem onSelect={(event) => { event.preventDefault(); downloadBoth(); }}>Download both files</DropdownMenuItem>
+          <DropdownMenuItem asChild><a href={feedUrl} download="blockwise-feed.png">Download Feed PNG</a></DropdownMenuItem>
+          <DropdownMenuItem asChild><a href={storyUrl} download="blockwise-story.png">Download Story PNG</a></DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {downloadError ? <span role="alert" className="text-right text-[11px] text-red-700">Could not start both downloads. Use the individual links below.</span> : null}
     </div>
   );
 }
@@ -939,18 +997,14 @@ function PublishSetupFields({
   return (
     <div className="mb-6 space-y-5 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
       <div>
-        <h3 className="text-sm font-semibold">New ad set setup</h3>
-        <p className="mt-1 text-xs text-muted-foreground">Nothing is assumed. Set the spend, audience, placements and timing before Blockwise creates anything.</p>
+        <h3 className="text-sm font-semibold">Choose how your ad runs</h3>
+        <p className="mt-1 text-xs text-muted-foreground">Nothing is assumed. Choose the daily spend, area, where the ad appears and timing before Blockwise creates anything.</p>
       </div>
 
       {targetMode === "new_campaign_new_adset" ? (
         <div className="space-y-4 border-t border-border pt-4">
-          <dl className="grid gap-3 rounded-(--r-ctl) bg-muted/60 p-3 text-sm sm:grid-cols-2">
-            <div><dt className="text-xs text-muted-foreground">Campaign objective</dt><dd className="font-medium">{objective}</dd></div>
-            <div><dt className="text-xs text-muted-foreground">Special ad category</dt><dd className="font-medium">{specialAdCategory ?? "None declared"}</dd></div>
-          </dl>
           <div>
-            <Label htmlFor="publish-special-category-country">Special ad category country</Label>
+            <Label htmlFor="publish-special-category-country">Property ad country</Label>
             <Input
               id="publish-special-category-country"
               value={specialAdCategoryCountry}
@@ -960,14 +1014,14 @@ function PublishSetupFields({
               autoCapitalize="characters"
               className="mt-1 min-h-11 bg-muted/30 uppercase sm:max-w-32"
             />
-            <p className="mt-1 text-xs text-muted-foreground">Enter the two-letter country code. Blockwise will not assume it.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Enter the two-letter country code, such as AU. Blockwise will not assume it.</p>
           </div>
           <fieldset className="space-y-2">
-            <legend className="text-xs font-medium">Where Meta controls the budget</legend>
+            <legend className="text-xs font-medium">How should the daily spend be used?</legend>
             <div className="grid gap-2 sm:grid-cols-2">
             {([
-              ["campaign", "Campaign budget (CBO)", "One campaign daily budget shared across its ad sets."],
-              ["adset", "Ad set budget (ABO)", "This new ad set gets its own daily budget."],
+              ["campaign", "Share one daily amount", "Meta shares this daily amount across the ad groups in this campaign."],
+              ["adset", "Give this group its own daily amount", "The ad versions in this group use their own daily amount."],
             ] as const).map(([value, label, description]) => (
               <label key={value} className="flex min-h-11 items-start gap-3 rounded-(--r-ctl) border border-border px-3 py-2.5 text-sm">
                 <input
@@ -983,6 +1037,14 @@ function PublishSetupFields({
             ))}
             </div>
           </fieldset>
+          <details className="rounded-(--r-ctl) border border-border bg-muted/20 p-3">
+            <summary className="min-h-11 cursor-pointer py-2 text-xs font-semibold">Meta setup details (advanced)</summary>
+            <dl className="grid gap-3 pt-3 text-sm sm:grid-cols-2">
+              <div><dt className="text-xs text-muted-foreground">Campaign objective</dt><dd className="font-medium">{objective}</dd></div>
+              <div><dt className="text-xs text-muted-foreground">Special ad category</dt><dd className="font-medium">{specialAdCategory ?? "None declared"}</dd></div>
+              <div><dt className="text-xs text-muted-foreground">Special ad category country</dt><dd className="font-medium">{specialAdCategoryCountry || "Not entered"}</dd></div>
+            </dl>
+          </details>
           </div>
       ) : (
         <div className="rounded-(--r-ctl) bg-muted/60 px-3 py-2.5">
@@ -1002,7 +1064,7 @@ function PublishSetupFields({
           <Label htmlFor="publish-daily-budget">
             {targetMode === "existing_campaign_new_adset"
               ? "New ad set daily budget if ABO (AUD)"
-              : effectiveBudgetMode === "campaign" ? "Campaign daily budget (AUD)" : "Ad set daily budget (AUD)"}
+              : "Daily spend (AUD)"}
           </Label>
           <Input
             id="publish-daily-budget"
@@ -1019,30 +1081,30 @@ function PublishSetupFields({
             {targetMode === "existing_campaign_new_adset"
               ? "Blockwise re-checks Meta first. This applies only if the campaign is still ABO; live CBO keeps its campaign budget."
               : effectiveBudgetMode === "campaign"
-              ? "Maximum Meta spend for the new campaign each day."
-              : "Maximum Meta spend for this new ad set each day."}
+              ? "Your chosen daily ad budget is shared across the ad groups in this campaign."
+              : "Your chosen daily ad budget applies to this group of ad versions."}
           </p>
         </div>
 
         <div>
-          <Label htmlFor="publish-audience-mode">Audience location</Label>
+          <Label htmlFor="publish-audience-mode">Area</Label>
           <select
             id="publish-audience-mode"
             value={audienceMode}
             onChange={event => setAudienceMode(event.target.value as AudienceMode)}
             className="mt-1 min-h-11 w-full rounded-md border border-border bg-muted/30 px-3 text-base md:text-sm"
           >
-            <option value="">Choose a location method</option>
-            {audienceLocations.length > 0 ? <option value="saved_locations">Saved campaign locations</option> : null}
-            <option value="custom_radius">Custom map radius</option>
+            <option value="">Choose an area</option>
+            {audienceLocations.length > 0 ? <option value="saved_locations">Choose from saved areas</option> : null}
+            <option value="custom_radius">Set a distance around a map point (advanced)</option>
           </select>
-          <p className="mt-1 text-xs text-muted-foreground">Blockwise will not target all of Australia by default.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Blockwise will only use the area you choose. It will not target all of Australia by default.</p>
         </div>
       </div>
 
       {audienceMode === "saved_locations" ? (
         <div className="space-y-2">
-          <p className="text-xs font-medium">Choose saved locations</p>
+          <p className="text-xs font-medium">Choose saved areas</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {audienceLocations.map(location => (
               <label key={location.key} className="flex min-h-11 items-center gap-3 rounded-(--r-ctl) border border-border px-3 py-2 text-sm">
@@ -1072,7 +1134,7 @@ function PublishSetupFields({
       ) : null}
 
       <fieldset className="space-y-2 border-t border-border pt-4">
-        <legend className="text-xs font-medium">Placements</legend>
+        <legend className="text-xs font-medium">Where your ad appears</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {placementOptions.map(([value, label]) => (
             <label key={value} className="flex min-h-11 items-center gap-3 rounded-(--r-ctl) border border-border px-3 py-2 text-sm">
@@ -1114,8 +1176,14 @@ function PublishSetupFields({
       )}
       {!summary && fieldIssues.length > 0 ? <SetupIssues issues={fieldIssues} /> : null}
       <label className="flex min-h-11 items-start gap-3 rounded-(--r-ctl) border border-border px-3 py-2.5 text-sm font-medium">
-        <input type="checkbox" checked={setupConfirmed} onChange={event => setSetupConfirmed(event.target.checked)} disabled={!fieldsReady} className="mt-0.5 size-4 shrink-0 accent-primary" />
-        I confirm this budget mode, spend, audience, placement, schedule, creative matrix and fulfilment setup is correct.
+        <input
+          type="checkbox"
+          checked={setupConfirmed}
+          onChange={event => setSetupConfirmed(event.target.checked)}
+          disabled={!fieldsReady}
+          className="mt-0.5 size-4 shrink-0 accent-primary"
+        />
+        I confirm the daily spend, area, places shown, timing, ad versions and any offer delivery details are correct.
       </label>
     </div>
   );
@@ -1123,15 +1191,15 @@ function PublishSetupFields({
 
 function PublishSetupSummaryCard({ summary }: { summary: PublishSetupSummary }) {
   const rows = [
-    ["Target", summary.target],
-    ["Budget mode", summary.budgetMode],
-    ["Budget", summary.budget],
-    ["Audience", summary.audience],
-    ["Placements", summary.placements],
-    ["Schedule", summary.schedule],
-    ["Destination", summary.destination],
-    ["Creative matrix", summary.variants],
-    ["Offer fulfilment", summary.fulfilment],
+    ["Setup", summary.target],
+    ["How the spend is used", summary.budgetMode],
+    ["Daily spend", summary.budget],
+    ["Area", summary.audience],
+    ["Where shown", summary.placements],
+    ["Timing", summary.schedule],
+    ["Where people go", summary.destination],
+    ["Ad versions", summary.variants],
+    ["Offer delivery", summary.fulfilment],
   ];
   return (
     <div className="rounded-(--r-ctl) bg-muted/60 p-3">
@@ -1187,13 +1255,16 @@ function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
       <div className="mt-6 rounded-(--r-card) border border-amber-200 bg-amber-50 p-4" role="status">
         <h3 className="mb-1 text-sm font-semibold text-amber-900">Preview complete</h3>
         <p className="text-sm text-amber-800">{receipt.message}</p>
-        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-amber-800 sm:grid-cols-5">
-          <ReceiptStat label="Snapshot" value={shortHash(receipt.snapshotId ?? "")} />
-          <ReceiptStat label="Plan" value={shortHash(receipt.planId ?? "")} />
-          <ReceiptStat label="Campaigns" value={String(receipt.plannedObjects?.campaigns ?? 0)} />
-          <ReceiptStat label="Creatives" value={String(receipt.plannedObjects?.creatives ?? 0)} />
-          <ReceiptStat label="Ads" value={String(receipt.plannedObjects?.ads ?? 0)} />
-        </dl>
+        <details className="mt-3 text-xs text-amber-800">
+          <summary className="min-h-11 cursor-pointer py-2 font-semibold">Meta reference details (advanced)</summary>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-5">
+            <ReceiptStat label="Snapshot" value={shortHash(receipt.snapshotId ?? "")} />
+            <ReceiptStat label="Plan" value={shortHash(receipt.planId ?? "")} />
+            <ReceiptStat label="Campaigns" value={String(receipt.plannedObjects?.campaigns ?? 0)} />
+            <ReceiptStat label="Creatives" value={String(receipt.plannedObjects?.creatives ?? 0)} />
+            <ReceiptStat label="Ads" value={String(receipt.plannedObjects?.ads ?? 0)} />
+          </dl>
+        </details>
         <PublishedSourceReceipt receipt={receipt} />
         <p className="mt-3 text-xs font-medium text-amber-800">
           No Meta objects were created.
@@ -1218,12 +1289,7 @@ function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
           <h3 className="mb-1 text-sm font-semibold text-red-900">Created on Meta — state unconfirmed</h3>
           <p className="text-sm text-red-800">{receipt.message} Check Meta Ads Manager before retrying; the state is unconfirmed.</p>
           {receipt.activationError ? <p className="mt-2 text-xs font-medium text-red-900">Activation error: {receipt.activationError}</p> : null}
-          <dl className="mt-3 grid grid-cols-1 gap-1 text-xs text-red-800 sm:grid-cols-2">
-            <ReceiptStat label="Plan" value={shortHash(receipt.planId ?? "")} />
-            <ReceiptStat label="Campaign ID" value={objects?.campaignId ?? "—"} />
-            <ReceiptStat label="Ad set IDs" value={formatIds(objects?.adSetIds)} />
-            <ReceiptStat label="Ad IDs" value={formatIds(objects?.adIds)} />
-          </dl>
+          <MetaReferenceDetails className="text-red-800" receipt={receipt} objects={objects} />
           <PublishedSourceReceipt receipt={receipt} />
         </div>
       );
@@ -1236,15 +1302,10 @@ function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
           <h3 className="mb-1 text-sm font-semibold text-amber-900">Created paused on Meta</h3>
           <p className="text-sm text-amber-800">{receipt.message}</p>
           {receipt.activationError ? <p className="mt-2 text-xs font-medium text-amber-900">Activation error: {receipt.activationError}</p> : null}
-          <dl className="mt-3 grid grid-cols-1 gap-1 text-xs text-amber-800 sm:grid-cols-2">
-            <ReceiptStat label="Plan" value={shortHash(receipt.planId ?? "")} />
-            <ReceiptStat label="Campaign ID" value={objects?.campaignId ?? "—"} />
-            <ReceiptStat label="Ad set IDs" value={formatIds(objects?.adSetIds)} />
-            <ReceiptStat label="Ad IDs" value={formatIds(objects?.adIds)} />
-          </dl>
+          <MetaReferenceDetails className="text-amber-800" receipt={receipt} objects={objects} />
           <PublishedSourceReceipt receipt={receipt} />
           <p className="mt-3 text-xs font-medium text-amber-800">
-            The campaign is paused on Meta — nothing is running or spending. Review the exact setup below, then use the separate Activate action when you are ready.
+            This ad setup is paused on Meta — nothing is running or spending. Review the exact setup below, then use the separate Activate action when you are ready.
           </p>
         </div>
       );
@@ -1254,13 +1315,7 @@ function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
         <h3 className="mb-1 text-sm font-semibold text-green-800">Published — active on Meta</h3>
         <p className="text-sm text-green-700">{receipt.message}</p>
         <a className="mt-3 inline-flex min-h-11 items-center rounded-full border border-green-300 px-4 text-sm font-semibold text-green-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href={`/results?planId=${encodeURIComponent(receipt.planId ?? "")}`}>View results</a>
-        <dl className="mt-3 grid grid-cols-1 gap-1 text-xs text-green-800 sm:grid-cols-2">
-          <ReceiptStat label="Campaign ID" value={objects?.campaignId ?? "—"} />
-          <ReceiptStat label="Ad set IDs" value={formatIds(objects?.adSetIds)} />
-          <ReceiptStat label="Lead form IDs" value={formatIds(objects?.leadFormIds)} />
-          <ReceiptStat label="Creative IDs" value={formatIds(objects?.creativeIds)} />
-          <ReceiptStat label="Ad IDs" value={formatIds(objects?.adIds)} />
-        </dl>
+        <MetaReferenceDetails className="text-green-800" receipt={receipt} objects={objects} />
         <PublishedSourceReceipt receipt={receipt} />
       </div>
     );
@@ -1269,14 +1324,30 @@ function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
   return null;
 }
 
+function MetaReferenceDetails({ receipt, objects, className }: { receipt: PublishReceipt; objects: PublishReceipt["reconciledObjects"]; className: string }) {
+  return (
+    <details className={"mt-3 text-xs " + className}>
+      <summary className="min-h-11 cursor-pointer py-2 font-semibold">Meta reference details (advanced)</summary>
+      <dl className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+        <ReceiptStat label="Plan" value={shortHash(receipt.planId ?? "")} />
+        <ReceiptStat label="Campaign ID" value={objects?.campaignId ?? "—"} />
+        <ReceiptStat label="Ad set IDs" value={formatIds(objects?.adSetIds)} />
+        <ReceiptStat label="Lead form IDs" value={formatIds(objects?.leadFormIds)} />
+        <ReceiptStat label="Creative IDs" value={formatIds(objects?.creativeIds)} />
+        <ReceiptStat label="Ad IDs" value={formatIds(objects?.adIds)} />
+      </dl>
+    </details>
+  );
+}
+
 function PublishedSourceReceipt({ receipt }: { receipt: PublishReceipt }) {
   const source = receipt.source;
   const creative = receipt.publishedCreative;
   if (!source && !creative && !receipt.snapshotId && !receipt.planId) return null;
   return (
-    <div className="mt-4 border-t border-current/15 pt-3">
-      <p className="text-xs font-semibold">Exact saved source</p>
-      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-4">
+    <details className="mt-4 border-t border-current/15 pt-3 text-xs">
+      <summary className="min-h-11 cursor-pointer py-2 font-semibold">Saved source details (advanced)</summary>
+      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
         <ReceiptStat label="Creative revision" value={source?.creativeRevision != null ? `v${source.creativeRevision}` : "—"} />
         <ReceiptStat label="Form revision" value={source?.formRevision != null ? `v${source.formRevision}` : "Not used"} />
         <ReceiptStat label="Snapshot" value={shortHash(receipt.snapshotId ?? source?.snapshotId ?? "")} />
@@ -1298,7 +1369,7 @@ function PublishedSourceReceipt({ receipt }: { receipt: PublishReceipt }) {
           ) : null}
         </div>
       ) : null}
-    </div>
+    </details>
   );
 }
 
@@ -1391,7 +1462,11 @@ function RetryActivationSection({
               <AlertDialogTitle>Activate these paused ads?</AlertDialogTitle>
               <AlertDialogDescription asChild>
                 <div className="space-y-3 text-sm">
-                  <p>This is the explicit approval to make the exact objects from plan <span className="font-mono font-semibold">{shortHash(planId)}</span> ACTIVE on Meta.</p>
+                  <p>This confirms that the reviewed ads can start running on Meta. No new ads are created.</p>
+                  <details className="rounded-(--r-ctl) border border-border px-3 text-xs">
+                    <summary className="min-h-11 cursor-pointer py-3 font-semibold">Meta reference details (advanced)</summary>
+                    <p className="pb-3">Plan {shortHash(planId)} will be made ACTIVE on Meta.</p>
+                  </details>
                   <dl className="grid gap-2 rounded-(--r-ctl) bg-muted/60 p-3 sm:grid-cols-2">
                     <div><dt className="text-xs text-muted-foreground">Budget</dt><dd className="font-medium">{setupSummary?.budget ?? "Reviewed budget"}</dd></div>
                     <div><dt className="text-xs text-muted-foreground">Audience / targeting</dt><dd className="font-medium">{setupSummary?.audience ?? "Reviewed audience"}</dd></div>

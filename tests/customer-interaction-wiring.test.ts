@@ -34,6 +34,14 @@ test("Ad Radar distinguishes request failures from empty results and offers retr
   assert.match(panel, /Trying again…|Try again/);
   assert.match(panel, /new AbortController\(\)/);
   assert.doesNotMatch(panel, /res\.ok \? await res\.json\(\) : \{ cards: \[\] \}/);
+  assert.doesNotMatch(panel, /activeFilters\.(status|adType|format|hook)/);
+  assert.doesNotMatch(panel, /<span[^>]*>Status<\/span>|<span[^>]*>Ad type<\/span>|<span[^>]*>Format<\/span>|Hook contains/);
+  assert.deepEqual(
+    [...panel.matchAll(/params\.set\(\"([^\"]+)\"/g)].map((match) => match[1]),
+    ["agency", "agent", "cursor"],
+    "search filters and pagination must only emit canonical Hermes parameters",
+  );
+  assert.doesNotMatch(panel, /sort=|initialSort|onChangeSort|Longest running/);
 });
 
 test("Ad Radar save failures remain visible and retryable", () => {

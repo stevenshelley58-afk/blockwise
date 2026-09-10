@@ -349,8 +349,8 @@ export function FreeTrial() {
     <div className="hw-band hw-band--wide hw-trial">
       <h2>Create three complete ads free.</h2>
       <p className="hw-sub">
-        Start with only your email. Build and review three Feed + Story ad packs before connecting
-        Meta or adding a card.
+        Start with only your email — no card required. Build and review three Feed + Story ad packs
+        before connecting Meta.
       </p>
       <CtaLink location="free_trial" href="/signup" className="hw-btn hw-btn--dark">
         Continue with email <span className="hw-arr">→</span>

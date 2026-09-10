@@ -1,0 +1,36 @@
+Seller offer ladder campaign brief
+
+Market: [service area]
+Audience: homeowners reachable under the current Special Ad Category: Housing rules
+Primary outcome: [qualified seller definition]
+
+Offer 1 — local evidence
+Hook: What did [property type] homes in [suburb] sell for this quarter?
+Form: full name, email, ownership question, express follow-up consent
+Follow-up: send: “Here is the source-noted sales list you requested. Was there a particular result or property type you were comparing?”
+
+Offer 2 — appraisal
+Hook: Planning to sell [property type] in [suburb]? Request a property conversation.
+Form: full name, email, phone, address, preferred contact time, consent
+Follow-up: send: “We will cover preparation, timing and comparable evidence; there is no obligation to list. Is [time] still suitable?”
+
+Prerequisites
+- Verify every local sale example and permission to publish it.
+- Confirm account country and current markets before choosing geographic settings.
+- Select Special Ad Category: Housing where required.
+- Write the thank-you page, owner assignment and follow-up before launch.
+- Start with a budget you can review for lead quality, not a universal promise.
+
+DELIVERY EMAIL
+Subject: Your Como sales list
+
+Hi [first name],
+Here is the source-noted sales list you requested: [link]. It covers [period and property type], updated [date]. It is market context, not a valuation of your home. Reply if you want help comparing a result. Receiving this list does not sign you up for recurring updates.
+
+[name] | [agency] | [contact details] | [privacy link]
+
+APPOINTMENT CONFIRMATION
+Hi [first name], thanks for requesting a property conversation with [agency]. Is [date/time] suitable for a call from [number]? We will discuss your questions, preparation, timing and comparable evidence. There is no obligation to list. Reply to change the time or cancel. [agent]
+
+OPTIONAL MARKETING CONSENT
+Optional: Yes, email me occasional Como market updates from [Agency]. This is separate from my resource or appointment request. I can unsubscribe at any time.

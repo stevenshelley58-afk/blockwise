@@ -19,7 +19,8 @@ test("authenticated home is driven by the activation resolver and shared credit 
   assert.match(loader, /onboarding_booked_at/);
   assert.doesNotMatch(page, /INCLUDED_AD_PACKS|usedAdPacks|remainingAdPacks/);
   assert.doesNotMatch(dashboard, /HomeSetupCard/);
-  assert.match(dashboard, /<ActivationCard data=\{data\}/);
+  assert.match(dashboard, /creativeSuggestions/);
+  assert.doesNotMatch(dashboard, /<ActivationCard/);
   assert.match(card, /Enough for up to \$\{packEstimate\} complete Feed \+ Story/);
   assert.match(card, /activation\.resumePath/);
 });

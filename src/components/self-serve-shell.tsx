@@ -1,15 +1,15 @@
 "use client";
 
-import { Download, LogOut, MoreHorizontal } from "lucide-react";
+import { Download, LifeBuoy, LogOut, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
-import { StudioShell } from "@/components/adstudio/studio-shell";
+import { MobileBottomNav } from "@/components/app/mobile-bottom-nav";
 import { CommandMenu } from "@/components/command-menu";
 import { SidebarThemeToggle } from "@/components/sidebar-theme-toggle";
-import { isItemActive, navByVariant, selfServeIcons, type NavItem } from "@/components/sidebar-nav";
+import { isItemActive, navByVariant, type NavItem } from "@/components/sidebar-nav";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -19,31 +19,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarRail,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarTrigger } from "@/components/ui/sidebar";
 import { niche } from "@/config/niche";
-import { cssSpring } from "@/lib/motion";
-import { useSmartPrefetch } from "@/lib/navigation/use-smart-prefetch";
 import { purgeLocalReadModels, syncReadModelIdentity } from "@/lib/read-models/browser-store";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
@@ -60,7 +37,6 @@ type SelfServeShellProps = {
     role: string;
   };
   trialStatus: React.ReactNode;
-  metaConnectionStatus: "connected" | "attention" | "not_connected" | "unknown";
 };
 
 type NavGroup = {
@@ -128,7 +104,7 @@ function requestInstallPrompt() {
 
 // Avatar account menu — the mockup's topbar avatar. Desktop and mobile share
 // it; the mobile "More" sheet keeps the large-touch-target equivalents.
-function AccountDropdown({ account }: { account: Account }) {
+function AccountDropdown({ account, homeCompact = false }: { account: Account; homeCompact?: boolean }) {
   const copy = niche.copy.shell;
   const { signOut, isSigningOut } = useSignOut();
 
@@ -138,13 +114,19 @@ function AccountDropdown({ account }: { account: Account }) {
         <button
           type="button"
           aria-label="Account"
-          className="inline-grid size-8 cursor-pointer place-items-center rounded-full border border-border bg-(--accent-tint) font-display text-[11.5px] font-extrabold text-foreground transition-opacity duration-150 hover:opacity-80 md:size-9"
+          className={homeCompact
+            ? "inline-grid size-11 cursor-pointer place-items-center text-foreground transition-opacity duration-150 hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:size-9"
+            : "inline-grid size-8 cursor-pointer place-items-center rounded-full border border-border bg-(--accent-tint) font-display text-[11.5px] font-extrabold text-foreground transition-opacity duration-150 hover:opacity-80 md:size-9"}
         >
-          <Avatar className="size-full">
-            <AvatarFallback className="bg-transparent font-display text-[11.5px] font-extrabold">
-              {initialsFor(account.name)}
-            </AvatarFallback>
-          </Avatar>
+          {homeCompact ? (
+            <UserRound aria-hidden size={22} strokeWidth={1.9} />
+          ) : (
+            <Avatar className="size-full">
+              <AvatarFallback className="bg-transparent font-display text-[11.5px] font-extrabold">
+                {initialsFor(account.name)}
+              </AvatarFallback>
+            </Avatar>
+          )}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-56">
@@ -176,20 +158,15 @@ export function SelfServeShell({
   workspaceRegion,
   account,
   trialStatus,
-  metaConnectionStatus,
 }: SelfServeShellProps) {
   const pathname = usePathname() ?? "";
-  const { prefetchNow } = useSmartPrefetch();
   const groups = useMemo(() => groupNavItems(navByVariant.self_serve), []);
   const pageTitle = pageTitleForPath(pathname);
+  const isSelfServeHome = pathname === "/self-serve";
 
   useEffect(() => {
     void syncReadModelIdentity({ userId, workspaceId });
   }, [userId, workspaceId]);
-
-  if (pathname.startsWith("/ad-studio")) {
-    return <StudioShell workspaceName={workspaceName} accountName={account.name} metaConnectionStatus={metaConnectionStatus}>{children}</StudioShell>;
-  }
 
   return (
     <SidebarProvider
@@ -223,18 +200,11 @@ export function SelfServeShell({
               <SidebarMenu>
                 {group.items.map((item) => {
                   const Icon = item.icon;
-                  const active = isItemActive(pathname, item.href);
+                  const active = isItemActive(pathname, item.href, navByVariant.self_serve);
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
-                        <Link
-                          href={item.href}
-                          prefetch={false}
-                          aria-current={active ? "page" : undefined}
-                          onPointerEnter={() => prefetchNow(item.href)}
-                          onFocus={() => prefetchNow(item.href)}
-                          onTouchStart={() => prefetchNow(item.href)}
-                        >
+                        <Link href={item.href} aria-current={active ? "page" : undefined}>
                           <Icon aria-hidden />
                           <span>{item.label}</span>
                         </Link>
@@ -252,189 +222,67 @@ export function SelfServeShell({
           <div className="group-data-[collapsible=icon]:hidden">
             {trialStatus}
           </div>
+          <a
+            href="mailto:hello@blockwise.sale?subject=Blockwise%20support"
+            className="inline-flex min-h-11 items-center gap-2 rounded-(--r-card) px-2.5 text-sm font-semibold text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:justify-center"
+          >
+            <LifeBuoy aria-hidden size={18} />
+            <span className="group-data-[collapsible=icon]:hidden">Contact support</span>
+          </a>
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>
 
-      <SidebarInset className="pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
-        <header className="sticky top-0 z-20 flex min-h-[54px] items-center gap-2.5 border-b border-border bg-background/85 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:min-h-[60px] md:gap-3.5 md:px-7">
+      <SidebarInset className={cn("pb-[calc(4.75rem+env(safe-area-inset-bottom)+var(--consent-banner-height,0px))] md:pb-0", isSelfServeHome && "self-serve-home-inset bg-(--surface)")}>
+        <header className={cn("sticky top-0 z-20 flex items-center gap-2.5 border-b border-border px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:min-h-[60px] md:gap-3.5 md:px-7", isSelfServeHome ? "self-serve-home-topbar min-h-[56px] bg-(--surface)" : "min-h-[54px] bg-background/85")}>
           <SidebarTrigger className="-ml-1 hidden md:inline-flex" />
 
-          {/* Desktop: workspace / page breadcrumb */}
-          <span className="hidden truncate font-display text-[15.5px] font-extrabold tracking-[-0.01em] md:inline">
-            {workspaceName} <span className="font-normal text-(--faint)">/</span> {pageTitle}
-          </span>
-
-          {/* Mobile: condensed brand topbar */}
-          <Link
-            href="/self-serve"
-            aria-label={niche.product.name}
-            className="inline-flex items-center gap-2 text-foreground md:hidden"
-          >
-            <BlockwiseLogo tokens showWordmark={false} />
-            <span className="font-display text-base font-extrabold tracking-[-0.015em]">
-              {niche.product.name}
+          {/* Desktop: keep the workspace breadcrumb on routes that need it. */}
+          {!isSelfServeHome ? (
+            <span className="hidden truncate font-display text-[15.5px] font-extrabold tracking-[-0.01em] md:inline">
+              {workspaceName} <span className="font-normal text-(--faint)">/</span> {pageTitle}
             </span>
-          </Link>
+          ) : null}
+
+          {/* Home keeps one title across breakpoints; other routes retain the
+              condensed product brand on mobile. */}
+          {isSelfServeHome ? (
+            <h1 className="self-serve-home-title font-sans text-[20px] font-semibold tracking-[-0.02em]">
+              Home
+            </h1>
+          ) : (
+            <Link
+              href="/self-serve"
+              aria-label={niche.product.name}
+              className="inline-flex items-center gap-2 text-foreground md:hidden"
+            >
+              <BlockwiseLogo tokens showWordmark={false} />
+              <span className="font-display text-base font-extrabold tracking-[-0.015em]">
+                {niche.product.name}
+              </span>
+            </Link>
+          )}
 
           {/* Industry chip — config-driven, no legacy class */}
-          <span
-            aria-label={`Workspace: ${workspaceName}`}
-            className="hidden shrink-0 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground lg:inline"
-          >
-            {niche.industry.label} · {workspaceRegion}
-          </span>
+          {!isSelfServeHome ? (
+            <span
+              aria-label={`Workspace: ${workspaceName}`}
+              className="hidden shrink-0 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground lg:inline"
+            >
+              {niche.industry.label} · {workspaceRegion}
+            </span>
+          ) : null}
 
-          <div className="ml-auto inline-flex items-center gap-2.5 md:gap-3">
+          <div className={cn("ml-auto inline-flex items-center gap-2.5 md:gap-3", isSelfServeHome && "self-serve-home-actions max-md:[&>button]:min-h-11 max-md:[&>button]:min-w-11 max-md:[&>button]:rounded-(--r-ctl)")}>
             <CommandMenu />
-            <SidebarThemeToggle tokens />
-            <AccountDropdown account={account} />
+            {!isSelfServeHome ? <SidebarThemeToggle tokens /> : null}
+            <AccountDropdown account={account} homeCompact={isSelfServeHome} />
           </div>
         </header>
         {children}
       </SidebarInset>
 
-      <SelfServeMobileNav account={account} />
+      <MobileBottomNav homeHref="/self-serve" account={account} homePilot={isSelfServeHome} />
     </SidebarProvider>
-  );
-}
-
-// Mobile navigation for the self-serve shell: the five primary tabs from the
-// niche config (bottom tab bar, mockup pattern) plus a "More" sheet for the
-// remaining destinations. Hidden inside Ad Studio, which renders its own
-// studio navigation.
-function SelfServeMobileNav({ account }: { account: Account }) {
-  const pathname = usePathname() ?? "";
-  const [moreOpen, setMoreOpen] = useState(false);
-  const { signOut, isSigningOut } = useSignOut();
-  const { prefetchNow } = useSmartPrefetch();
-
-  const copy = niche.copy.shell;
-
-  const { tabItems, overflowItems } = useMemo(() => {
-    const allItems = navByVariant.self_serve;
-    const tabs = niche.nav.mobileTabs
-      .map((tab) => allItems.find((item) => item.href === tab.href))
-      .filter((item): item is NavItem => Boolean(item));
-    const tabSet = new Set(tabs.map((item) => item.href));
-    return { tabItems: tabs, overflowItems: allItems.filter((item) => !tabSet.has(item.href)) };
-  }, []);
-
-  if (pathname.startsWith("/ad-studio")) {
-    return null;
-  }
-
-  return (
-    <>
-      <nav
-        aria-label="Primary mobile navigation"
-        className={`fixed inset-x-0 bottom-0 z-40 grid ${tabItems.length >= 5 ? "grid-cols-6" : "grid-cols-5"} gap-0.5 border-t border-border bg-card/95 px-1.5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur-2xl md:hidden`}
-      >
-        {tabItems.map((item) => {
-          const Icon = selfServeIcons[item.href];
-          const active = isItemActive(pathname, item.href);
-          const tab = niche.nav.mobileTabs.find((entry) => entry.href === item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              prefetch={false}
-              aria-current={active ? "page" : undefined}
-              onPointerEnter={() => prefetchNow(item.href)}
-              onFocus={() => prefetchNow(item.href)}
-              onTouchStart={() => prefetchNow(item.href)}
-              style={{ transitionTimingFunction: cssSpring }}
-              className={cn(
-                "grid min-h-12 min-w-0 place-items-center gap-[3px] rounded-xl px-0.5 py-1 text-[9.5px] leading-[1.1] font-bold transition-[color,transform,background-color] duration-150 active:scale-[0.94] motion-reduce:transition-none",
-                active ? "bg-(--accent-tint) text-foreground" : "text-(--faint)",
-              )}
-            >
-              {Icon ? <Icon aria-hidden size={19} /> : null}
-              <span className="max-w-full truncate">{tab?.label ?? item.label}</span>
-            </Link>
-          );
-        })}
-        <button
-          type="button"
-          onClick={() => setMoreOpen(true)}
-          aria-expanded={moreOpen}
-          style={{ transitionTimingFunction: cssSpring }}
-          className={cn(
-            "grid min-h-12 min-w-0 cursor-pointer place-items-center gap-[3px] rounded-xl border-0 bg-transparent px-0.5 py-1 text-[9.5px] leading-[1.1] font-bold transition-[color,transform,background-color] duration-150 active:scale-[0.94] motion-reduce:transition-none",
-            moreOpen ? "bg-(--accent-tint) text-foreground" : "text-(--faint)",
-          )}
-        >
-          <MoreHorizontal aria-hidden size={20} />
-          <span>{copy.more}</span>
-        </button>
-      </nav>
-
-      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-        <SheetContent
-          side="bottom"
-          className="max-h-[min(76dvh,640px)] rounded-t-(--r-panel) pb-[calc(1rem+env(safe-area-inset-bottom))]"
-        >
-          <SheetHeader className="px-4 pt-5">
-            <SheetTitle>{account.name}</SheetTitle>
-            <SheetDescription>
-              {account.role} · {account.email}
-            </SheetDescription>
-          </SheetHeader>
-
-          {overflowItems.length > 0 ? (
-            <div className="grid gap-1 px-3">
-              {overflowItems.map((item) => {
-                const Icon = item.icon;
-                const active = isItemActive(pathname, item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    prefetch={false}
-                    aria-current={active ? "page" : undefined}
-                    onPointerEnter={() => prefetchNow(item.href)}
-                    onFocus={() => prefetchNow(item.href)}
-                    onTouchStart={() => prefetchNow(item.href)}
-                    onClick={() => setMoreOpen(false)}
-                    className={cn(
-                      "flex min-h-11 items-center gap-3 rounded-(--r-card) px-3 text-sm font-semibold",
-                      active
-                        ? "bg-(--accent-tint) text-(--accent-strong)"
-                        : "text-foreground hover:bg-muted",
-                    )}
-                  >
-                    <Icon aria-hidden size={18} />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          ) : null}
-
-          <div className="mt-auto grid gap-2 px-4 pt-2">
-            <button
-              type="button"
-              onClick={() => {
-                requestInstallPrompt();
-                setMoreOpen(false);
-              }}
-              className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-(--r-card) border border-border bg-card px-4 text-sm font-semibold text-foreground hover:bg-muted"
-            >
-              <Download aria-hidden size={18} />
-              {copy.installApp}
-            </button>
-            <button
-              type="button"
-              onClick={() => void signOut()}
-              disabled={isSigningOut}
-              className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-(--r-card) border border-border bg-card px-4 text-sm font-semibold text-error hover:bg-muted disabled:opacity-60"
-            >
-              <LogOut aria-hidden size={18} />
-              {isSigningOut ? "…" : copy.signOut}
-            </button>
-          </div>
-        </SheetContent>
-      </Sheet>
-    </>
   );
 }

@@ -41,12 +41,14 @@ export function MetaMonitorHeader(props: {
   lastSyncedAt: string | null;
   isRefreshing: boolean;
   isSample: boolean;
+  isConnected: boolean;
   onRangeChange: (range: MonitorRange) => void;
   onCustomRangeChange: (range: { since: string; until: string }) => void;
   onRefresh: () => void;
 }) {
   const copy = niche.copy.performance;
   const isCustom = props.rangeKey === "custom";
+  const hasLiveControls = props.isConnected && !props.isSample;
 
   return (
     <header className="flex flex-col gap-4">
@@ -66,7 +68,7 @@ export function MetaMonitorHeader(props: {
           <p className="mt-1 text-[13px] text-muted-foreground">{copy.subtitle}</p>
         </div>
 
-        <button
+        {hasLiveControls ? <button
           className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-(--line-heavy) bg-card px-3.5 text-[12.5px] font-bold text-foreground transition-[background,box-shadow] duration-150 hover:bg-(--surface-subtle) hover:shadow-card disabled:cursor-default disabled:opacity-60"
           type="button"
           onClick={props.onRefresh}
@@ -75,9 +77,10 @@ export function MetaMonitorHeader(props: {
         >
           <RefreshCw size={13} className={props.isRefreshing ? "animate-spin" : undefined} aria-hidden />
           <span>{props.isRefreshing ? copy.refreshing : copy.refresh}</span>
-        </button>
+        </button> : null}
       </div>
 
+      {hasLiveControls ? (
       <div className="flex flex-wrap items-center gap-2">
         <div
           className="flex flex-wrap items-center gap-1.5"
@@ -141,9 +144,15 @@ export function MetaMonitorHeader(props: {
             className={`size-[7px] rounded-full ${props.lastSyncedAt ? "bg-success" : "bg-(--faint)"}`}
             aria-hidden
           />
-          {props.lastSyncedAt ? copy.states.staleNotice(timeAgo(props.lastSyncedAt)) : copy.states.notSynced}
+          {props.isSample ? "Example data" : props.lastSyncedAt ? "Last known " + timeAgo(props.lastSyncedAt) : copy.states.notSynced}
         </span>
       </div>
+      ) : (
+        <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-(--faint)">
+          <span className="size-[7px] rounded-full bg-(--faint)" aria-hidden />
+          {props.isSample ? "Example data" : "Not connected"}
+        </span>
+      )}
     </header>
   );
 }

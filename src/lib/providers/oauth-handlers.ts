@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import type { MonitorProvider } from "@/lib/monitor/dashboard-data";
 import { fetchGoogleAccessibleCustomers } from "@/lib/providers/google-reporting";
 import { DEFAULT_META_GRAPH_VERSION } from "@/lib/providers/meta-graph-version";
+import { fetchMetaUserIdentity } from "./meta-oauth-identity.ts";
 import { fetchMetaAdAccounts } from "@/lib/providers/meta-reporting";
 
 export type OAuthTokenExchange = {
@@ -13,6 +14,9 @@ export type OAuthTokenExchange = {
   externalAccountName: string;
   status: "connected" | "needs_attention";
   metadata?: Record<string, unknown>;
+  // Meta returns an app-scoped user id. Persisting it is required so signed
+  // deauthorization/data-deletion callbacks can identify this connection.
+  metaUserId?: string;
   tokenExpiresAt?: string | null;
 };
 
@@ -116,6 +120,10 @@ async function exchangeMetaCode(request: NextRequest, code: string): Promise<OAu
   const longLived = await fetchJson<{ access_token?: string; expires_in?: number; error?: { message?: string } }>(longLivedUrl.toString()).catch(() => shortLived);
   const accessToken = longLived.access_token ?? shortLived.access_token;
   const tokenExpiresAt = expiresInToIso(longLived.expires_in ?? shortLived.expires_in);
+  // Do not persist a Meta token unless its app-scoped owner can be recorded.
+  // Without this identity, a later deauthorization callback cannot safely
+  // match and clear the workspace connection.
+  const metaUserId = await fetchMetaUserIdentity(accessToken);
   const [accounts, pages] = await Promise.all([
     fetchMetaAdAccounts(accessToken).catch(() => []),
     fetchMetaPages(accessToken).catch(() => []),
@@ -134,9 +142,14 @@ async function exchangeMetaCode(request: NextRequest, code: string): Promise<OAu
     externalAccountId: account?.id ?? "meta_account_pending",
     externalAccountName: account?.name ?? "Meta Ads account",
     status: account ? "connected" : "needs_attention",
+    metaUserId,
     tokenExpiresAt,
     metadata: {
+      // Keep the id at the root for the data-deletion matcher and inside the
+      // provider metadata for existing consumers that read metadata.meta.
+      metaUserId,
       meta: {
+        metaUserId,
         metaAdAccountId: account?.id ?? "",
         metaBusinessId: account?.businessId ?? "",
         metaBusinessName: account?.businessName ?? "",
@@ -152,6 +165,8 @@ async function exchangeMetaCode(request: NextRequest, code: string): Promise<OAu
     },
   };
 }
+
+export { fetchMetaUserIdentity } from "./meta-oauth-identity.ts";
 
 async function fetchMetaPages(accessToken: string): Promise<Array<{ id: string; name: string }>> {
   const url = new URL(`https://graph.facebook.com/${DEFAULT_META_GRAPH_VERSION}/me/accounts`);

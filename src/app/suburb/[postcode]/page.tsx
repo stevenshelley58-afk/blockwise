@@ -14,6 +14,9 @@ import "./suburb-report.css";
 
 export const revalidate = 300;
 
+/** A report below this many observed ads is too thin to be worth indexing. */
+const MIN_INDEXABLE_ADS = 8;
+
 type PageProps = {
   params: Promise<{ postcode: string }>;
   searchParams: Promise<{ s?: string; scan?: string }>;
@@ -49,8 +52,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: { absolute: `Every live ad across ${postcode} | Blockwise` },
     description,
-    alternates: { canonical: `/suburb/${postcode}` },
-    openGraph: { title: `Every live ad across ${postcode}`, description, url: `/suburb/${postcode}`, type: "website" },
+    alternates: { canonical: `/${postcode}` },
+    // Every four-digit path resolves to a report, so most postcodes would
+    // otherwise publish a near-empty page. A report earns indexing by holding
+    // enough observed ads to be worth landing on; the rest stay reachable by
+    // direct link only.
+    ...(count >= MIN_INDEXABLE_ADS ? {} : { robots: { index: false, follow: false } }),
+    openGraph: { title: `Every live ad across ${postcode}`, description, url: `/${postcode}`, type: "website" },
   };
 }
 

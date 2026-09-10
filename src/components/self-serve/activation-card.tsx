@@ -1,7 +1,5 @@
-import { ArrowRight, CalendarClock, Check, CircleDot, CreditCard, UsersRound } from "lucide-react";
+import { ArrowRight, Check, ChevronDown } from "lucide-react";
 import Link from "next/link";
-
-import { StatusPill } from "@/components/status-pill";
 
 export type ActivationCardData = {
   activation: {
@@ -45,150 +43,108 @@ const DISPLAY_MILESTONES = [
   ["brand_pack_approved", "Brand Pack approved"],
   ["first_template_selected", "Template selected"],
   ["first_ad_pack_generated", "First ad created"],
-  ["meta_connected", "Meta connected"],
-  ["checkout_completed", "Payment method added"],
-  ["first_campaign_live", "First campaign live"],
+  ["meta_connected", "Connection step completed"],
+  ["checkout_completed", "Checkout completed"],
+  ["first_campaign_live", "First ad live"],
   ["intro_invoice_paid", "First invoice paid"],
 ] as const;
 
 export function ActivationCard({ data }: { data: ActivationCardData }) {
-  const { activation, credits, plan, meta, booking } = data;
+  const { activation } = data;
   const completedMilestones = DISPLAY_MILESTONES.filter(([key]) => activation.milestones[key]);
-  const packEstimate = credits.remaining == null ? null : Math.floor(credits.remaining / 2);
   const isComplete = activation.currentStage === "complete";
+  const ctaLabel = isComplete ? "Create an ad" : activation.nextAction;
+  const ctaHref = isComplete ? "/ad-studio" : activation.resumePath;
 
   return (
-    <section className="h-full rounded-(--r-panel) border border-(--line) bg-(--surface) p-5 shadow-card">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
-            {isComplete ? "Workspace status" : "Next action"}
-          </p>
-          <h2 className="mt-1 font-display text-[20px] font-extrabold tracking-[-0.02em]">
-            {activation.nextAction}
+    <section aria-labelledby="activation-heading" className="border-y border-(--line) py-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 id="activation-heading" className="text-[17px] font-extrabold tracking-[-0.015em]">
+            {isComplete ? "Workspace setup complete" : "Next step"}
           </h2>
           <p className="mt-1 text-[13px] text-muted-foreground">
-            {isComplete
-              ? "Your activation is complete. Create, publish, and manage the workspace from here."
-              : "Continue from the last server-confirmed step. Completed work will not be repeated."}
+            {activation.foundationAvailable ? `${activation.completed} of ${activation.total} setup steps complete` : "Workspace available"}
           </p>
         </div>
-        <StatusPill tone={isComplete ? "green" : "blue"}>
-          {activation.foundationAvailable
-            ? `${activation.completed} of ${activation.total} complete`
-            : "Workspace available"}
-        </StatusPill>
       </div>
 
-      <Link
-        href={activation.resumePath}
-        className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-(--ink) px-5 text-[12.5px] font-bold text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.98]"
-      >
-        {activation.nextAction}
+      {activation.foundationAvailable ? (
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-(--line)" role="progressbar" aria-valuemin={0} aria-valuemax={activation.total} aria-valuenow={activation.completed} aria-label={`${activation.completed} of ${activation.total} setup steps complete`}>
+          <div className="h-full rounded-full bg-(--ink)" style={{ width: `${activation.total > 0 ? Math.min(100, Math.max(0, (activation.completed / activation.total) * 100)) : 0}%` }} />
+        </div>
+      ) : null}
+
+      <Link href={ctaHref} className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-(--r-ctl) bg-primary px-5 text-[15px] font-bold text-primary-foreground md:w-auto md:min-w-[240px] transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        {ctaLabel}
         <ArrowRight size={15} aria-hidden />
       </Link>
 
-      <div className="mt-5 grid gap-px overflow-hidden rounded-(--r-card) border border-(--line) bg-(--line) sm:grid-cols-2">
-        <StatusCell
-          icon={<CreditCard size={16} aria-hidden />}
-          label="Plan and billing"
-          value={planLabel(plan.accessState)}
-          foot={billingTiming(plan)}
-        />
-        <StatusCell
-          icon={<CircleDot size={16} aria-hidden />}
-          label="Meta"
-          value={metaLabel(meta.state)}
-          foot={meta.accountName ?? "Connect only when you are ready to run an ad."}
-        />
-        <StatusCell
-          icon={<CalendarClock size={16} aria-hidden />}
-          label="Onboarding call"
-          value={bookingLabel(booking.state)}
-          foot={
-            booking.state === "not_booked"
-              ? "Booking becomes available with your paid plan."
-              : booking.state === "unavailable"
-                ? "Use the hosted booking link in Settings."
-                : "Manage booking details in Settings."
-          }
-        />
-        <StatusCell
-          icon={<UsersRound size={16} aria-hidden />}
-          label="Render credits"
-          value={credits.remaining == null ? "Not issued yet" : `${credits.remaining} remaining`}
-          foot={
-            packEstimate == null
-              ? "Credits appear here as soon as the entitlement is issued."
-              : `Enough for up to ${packEstimate} complete Feed + Story ${packEstimate === 1 ? "pack" : "packs"}.`
-          }
-        />
-      </div>
-
-      <div className="mt-5 border-t border-(--line) pt-4">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-[12.5px] font-bold">Completed milestones</h3>
-          {completedMilestones.length > 0 ? (
-            <span className="text-[11.5px] text-muted-foreground">{completedMilestones.length} shown</span>
-          ) : null}
-        </div>
+      <details className="group mt-5 border-t border-(--line) pt-2">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-[12.5px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+          <span>Completed milestones</span>
+          {completedMilestones.length > 0 ? <span className="font-normal text-muted-foreground">{completedMilestones.length} complete</span> : null}
+          <ChevronDown aria-hidden className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+        </summary>
         {completedMilestones.length > 0 ? (
-          <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+          <ul className="grid gap-2 pb-2 sm:grid-cols-2">
             {completedMilestones.map(([key, label]) => (
-              <li key={key} className="flex min-h-8 items-center gap-2 text-[12.5px] font-semibold">
-                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-success-soft text-success">
-                  <Check size={12} strokeWidth={2.5} aria-hidden />
-                </span>
+              <li key={key} className="flex min-h-8 items-center gap-2 text-[12px] font-semibold">
+                <Check size={14} className="shrink-0 text-success" aria-hidden />
                 {label}
               </li>
             ))}
           </ul>
-        ) : (
-          <p className="mt-2 text-xs text-muted-foreground">
-            Your server-confirmed milestones will appear here as you complete them.
-          </p>
-        )}
-      </div>
+        ) : <p className="pb-2 text-xs text-muted-foreground">Completed setup steps will appear here.</p>}
+      </details>
     </section>
   );
 }
 
-function StatusCell({
-  icon,
-  label,
-  value,
-  foot,
+export function WorkspaceDetails({
+  credits,
+  plan,
+  meta,
+  booking,
+  packEstimate,
 }: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  foot: string;
+  credits: ActivationCardData["credits"];
+  plan: ActivationCardData["plan"];
+  meta: ActivationCardData["meta"];
+  booking: ActivationCardData["booking"];
+  packEstimate: number | null;
 }) {
   return (
-    <div className="bg-(--surface-subtle) p-4">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        {icon}
-        <span className="font-mono text-[9.5px] font-medium tracking-[0.12em] uppercase">{label}</span>
-      </div>
-      <p className="mt-2 text-[13px] font-bold">{value}</p>
-      <p className="mt-1 text-[11.5px] leading-4 text-muted-foreground">{foot}</p>
-    </div>
+    <details className="group mt-3 border-t border-(--line) pt-2">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-[12.5px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+        <span>Workspace details</span>
+        <ChevronDown aria-hidden className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+      </summary>
+      <dl className="divide-y divide-(--line) text-[12px]">
+        <DetailRow label="Plan and billing" value={planLabel(plan.accessState)} foot={billingTiming(plan)} />
+        <DetailRow label="Direct Meta connection" value={metaLabel(meta.state)} foot={meta.accountName ?? "Direct connection and assisted partner access are tracked separately."} />
+        <DetailRow label="Onboarding call" value={bookingLabel(booking.state)} foot={bookingFoot(booking.state)} />
+        <DetailRow label="Render credits" value={credits.remaining == null ? "Not issued yet" : `${credits.remaining} remaining`} foot={packEstimate == null ? "Credits appear after entitlement setup." : `Enough for up to ${packEstimate} complete Feed + Story ${packEstimate === 1 ? "pack" : "packs"}.`} />
+      </dl>
+    </details>
   );
+}
+
+function DetailRow({ label, value, foot }: { label: string; value: string; foot: string }) {
+  return <div className="grid gap-0.5 py-3 sm:grid-cols-[180px_1fr] sm:gap-3"><dt className="font-semibold">{label}</dt><dd><span className="font-semibold">{value}</span><span className="mt-0.5 block text-muted-foreground">{foot}</span></dd></div>;
 }
 
 function planLabel(state: string): string {
   if (state === "paid") return "Self-serve paid";
-  if (state === "trialing") return "Billing trial";
+  if (state === "trialing") return "Billing trial (legacy)";
   if (state === "payment_recovery") return "Payment needs attention";
   if (state === "canceled") return "Canceled";
   return "Free creation trial";
 }
 
 function billingTiming(plan: ActivationCardData["plan"]): string {
-  if (plan.accessState === "unbilled") {
-    return "Subscribe for A$249 monthly whenever you're ready. Your free trial never requires a card.";
-  }
-  if (!plan.periodEnd) return "Billing timing will appear after Stripe confirms the subscription.";
+  if (plan.accessState === "unbilled") return "Subscribe for A$249 monthly when ready. Your free trial never requires a card.";
+  if (!plan.periodEnd) return "Billing timing appears after Stripe confirms the subscription.";
   const date = formatDate(plan.periodEnd);
   if (plan.cancelAtPeriodEnd) return `Credits and access remain available until ${date}.`;
   return `Next A$249 renewal: ${date}.`;
@@ -205,6 +161,12 @@ function bookingLabel(state: ActivationCardData["booking"]["state"]): string {
   if (state === "booked") return "Booked";
   if (state === "unavailable") return "Hosted booking available";
   return "Not booked";
+}
+
+function bookingFoot(state: ActivationCardData["booking"]["state"]): string {
+  if (state === "not_booked") return "Booking becomes available with your paid plan.";
+  if (state === "unavailable") return "Use the hosted booking link in Settings.";
+  return "Manage booking details in Settings.";
 }
 
 function formatDate(value: string): string {

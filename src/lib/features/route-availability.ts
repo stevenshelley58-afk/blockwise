@@ -5,7 +5,7 @@ const FEATURE_ROUTES: ReadonlyArray<{ prefix: string; features: readonly (keyof 
   { prefix: "/property-check", features: ["propertyCheck"] },
   { prefix: "/suburb", features: ["suburbPages"] },
   { prefix: "/audit", features: ["suburbPages"] },
-  { prefix: "/hero-lab", features: ["suburbPages"] },
+  { prefix: "/hero-lab", features: ["heroLab"] },
   { prefix: "/api/property-checks", features: ["propertyCheck"] },
   { prefix: "/api/research/ad-radar/suggestions", features: ["adRadar"] },
   { prefix: "/api/research/ads/search", features: ["adRadar"] },

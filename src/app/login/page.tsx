@@ -34,9 +34,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <span>Blockwise</span>
         </div>
         <div>
-          <p className="eyebrow">Client sign in</p>
-          <h1 id="login-heading">Access your workspace</h1>
-          <p className="login-copy">Use your Blockwise account to access your workspace.</p>
+          <p className="eyebrow">Welcome back</p>
+          <h1 id="login-heading">Sign in to your workspace</h1>
+          <p className="login-copy">Enter your email and password to pick up where you left off.</p>
         </div>
         {error === "confirm_failed" ? (
           <p className="form-error" role="alert">

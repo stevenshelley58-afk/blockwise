@@ -418,6 +418,7 @@ async function loadMetaConnection(
     .select("id,external_account_id,external_account_name,metadata_json,token_expires_at")
     .eq("workspace_id", workspaceId)
     .eq("provider", "meta")
+    .in("status", ["connected", "needs_attention"])
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();

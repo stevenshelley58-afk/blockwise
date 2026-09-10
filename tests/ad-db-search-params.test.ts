@@ -30,7 +30,7 @@ test("filter-only search accepts and forwards canonical identity and location fi
   await searchAdDbAds(parsed.input, {
     env: {
       AD_DB_API_URL: "http://hermes.internal:9119",
-      AD_DB_READ_TOKEN: "read-token",
+      HERMES_AD_DB_READ_TOKEN: "read-token",
     },
     fetcher: async (input) => {
       called = String(input);
@@ -75,6 +75,21 @@ test("empty search is empty but valid filters permit no-query search", () => {
   assert.deepEqual(
     parseAdDbSearchParams(new URLSearchParams({ state: "WA" })),
     { ok: true, input: { state: "WA" } },
+  );
+});
+
+test("canonical query and identity filter lengths match the Hermes contract", () => {
+  assert.equal(
+    parseAdDbSearchParams(new URLSearchParams({ q: "x".repeat(121) })).ok,
+    false,
+  );
+  assert.equal(
+    parseAdDbSearchParams(new URLSearchParams({ agent: "x".repeat(121) })).ok,
+    false,
+  );
+  assert.equal(
+    parseAdDbSearchParams(new URLSearchParams({ agency: "x".repeat(121) })).ok,
+    false,
   );
 });
 

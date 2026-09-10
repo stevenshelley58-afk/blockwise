@@ -3,6 +3,7 @@
 import type { Layout, AdTemplate, Rect } from "../../../../packages/ad-template-contract/src/types";
 import { ArrowUp, MessageCircle, MoreHorizontal, Share2, ThumbsUp } from "lucide-react";
 import { LayeredCanvas } from "./layered-canvas";
+import type { CanonicalPreviewState } from "./canonical-preview";
 import { businessInitials, ctaLabelText, domainLabel, truncateForPreview } from "./preview-text";
 import type { MetaCopy } from "./use-editor-state";
 import { META_COPY_CONSTRAINTS } from "../../../lib/adstudio/meta-copy-contract";
@@ -26,6 +27,7 @@ import { META_COPY_CONSTRAINTS } from "../../../lib/adstudio/meta-copy-contract"
 export interface MetaPreviewProps {
   templateId: string;
   existingAdId: string;
+  assets: AdTemplate["assets"];
   layout: Layout;
   colours: AdTemplate["semanticColours"];
   textValues: Record<string, string>;
@@ -37,6 +39,7 @@ export interface MetaPreviewProps {
   /** Real destination domain shown under the creative; empty → neutral placeholder. */
   destinationUrl?: string;
   className?: string;
+  canonicalPreview?: CanonicalPreviewState;
 }
 
 /** Circular avatar — the Brand Pack logo, or initials when none exists. */
@@ -78,6 +81,7 @@ export function BusinessAvatar({
 export function FeedPreview({
   templateId,
   existingAdId,
+  assets,
   layout,
   colours,
   textValues,
@@ -88,6 +92,7 @@ export function FeedPreview({
   logoUrl,
   destinationUrl,
   className,
+  canonicalPreview,
 }: MetaPreviewProps) {
   const domain = domainLabel(destinationUrl) || "Destination not set";
   const primaryText = truncateForPreview(copy.primaryText, META_COPY_CONSTRAINTS.primaryText);
@@ -116,11 +121,13 @@ export function FeedPreview({
         <LayeredCanvas
           templateId={templateId}
           existingAdId={existingAdId}
+          assets={assets}
           layout={layout}
           colours={colours}
           imageValues={imageValues}
           textValues={textValues}
           cropOverrides={cropOverrides}
+          canonicalPreview={canonicalPreview}
           className="h-full w-full"
         />
       </div>
@@ -158,6 +165,7 @@ export function FeedPreview({
 export function StoryPreview({
   templateId,
   existingAdId,
+  assets,
   layout,
   colours,
   textValues,
@@ -167,6 +175,7 @@ export function StoryPreview({
   businessName,
   logoUrl,
   className,
+  canonicalPreview,
 }: MetaPreviewProps) {
   return (
     <div
@@ -177,11 +186,13 @@ export function StoryPreview({
       <LayeredCanvas
         templateId={templateId}
         existingAdId={existingAdId}
+        assets={assets}
         layout={layout}
         colours={colours}
         imageValues={imageValues}
         textValues={textValues}
         cropOverrides={cropOverrides}
+        canonicalPreview={canonicalPreview}
         className="absolute inset-0 h-full w-full"
       />
 

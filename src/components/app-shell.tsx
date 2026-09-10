@@ -1,15 +1,10 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
-import { RouteAwareLegacyShell } from "@/components/route-aware-legacy-shell";
-import { SelfServeShell } from "@/components/self-serve-shell";
-import { SidebarNav, type SidebarVariant } from "@/components/sidebar-nav";
-import {
-  TrialStatusCard,
-  TrialStatusPill,
-} from "@/components/trial-status-pill";
+import { StudioRouteShell } from "@/components/adstudio/studio-route-shell";
+import { TrialStatusSkeleton } from "@/components/trial-status-skeleton";
+import { TrialStatusCard } from "@/components/trial-status-pill";
 import { getRequestAuthContext } from "@/lib/auth/request-context";
-import { hasOperatorAccessFromRows } from "@/lib/auth/workspace-access";
 import { loadTrialStatus, type TrialStatus } from "@/lib/trial/trial-status";
 
 type AppShellProps = {
@@ -37,9 +32,8 @@ async function loadInitialTrialStatus(
   supabase: Awaited<ReturnType<typeof getRequestAuthContext>>["supabase"],
   workspaceId: string | undefined,
   workspaceMode: "monitor" | "self_serve",
-  isOperator: boolean,
 ): Promise<TrialStatus | null> {
-  if (!workspaceId || workspaceMode !== "self_serve" || isOperator) return null;
+  if (!workspaceId || workspaceMode !== "self_serve") return null;
 
   return loadTrialStatus(
     (functionName, parameters) => supabase.rpc(functionName, parameters),
@@ -51,27 +45,18 @@ async function DeferredTrialStatus({
   supabase,
   workspaceId,
   workspaceMode,
-  isOperator,
-  presentation,
 }: {
   supabase: Awaited<ReturnType<typeof getRequestAuthContext>>["supabase"];
   workspaceId: string | undefined;
   workspaceMode: "monitor" | "self_serve";
-  isOperator: boolean;
-  presentation: "card" | "pill";
 }) {
   const status = await loadInitialTrialStatus(
     supabase,
     workspaceId,
     workspaceMode,
-    isOperator,
   );
 
-  return presentation === "card" ? (
-    <TrialStatusCard initialStatus={status} />
-  ) : (
-    <TrialStatusPill initialStatus={status} />
-  );
+  return <TrialStatusCard initialStatus={status} />;
 }
 
 export async function AppShell({
@@ -86,35 +71,17 @@ export async function AppShell({
   }
 
   const membershipRows = (memberships ?? []) as MembershipRow[];
-  const isOperator = hasOperatorAccessFromRows(profile, membershipRows);
   const primaryMembership = membershipRows[0];
   const workspace = normalizeWorkspace(primaryMembership?.workspaces ?? null);
   const workspaceMode =
     workspace?.mode === "self_serve" ? "self_serve" : "monitor";
 
-  if (requiredAccess === "operator" && !isOperator) {
-    redirect("/results");
-  }
-
-  const variant: SidebarVariant = isOperator
-    ? "operator"
-    : workspaceMode === "self_serve"
-      ? "self_serve"
-      : "monitor";
-  const homeHref = isOperator
-    ? "/operator"
-    : workspaceMode === "self_serve"
-      ? "/self-serve"
-      : "/results";
-  const workspaceName = isOperator
-    ? "Operator Console"
-    : (workspace?.name ?? "Workspace");
-  const studioWorkspaceName = workspace?.name ?? workspaceName;
+  const homeHref = "/self-serve";
+  const workspaceName = workspace?.name ?? "Workspace";
   const accountEmail = profile?.email ?? claims.email ?? "";
   const accountName = profile?.full_name ?? accountEmail ?? "Signed in";
-  const roleLabel = isOperator
-    ? "operator"
-    : (primaryMembership?.role ?? "member");
+  const roleLabel = primaryMembership?.role ?? "member";
+
   const metaConnectionResult = workspace?.id
     ? await supabase
         .from("provider_connections")
@@ -131,60 +98,30 @@ export async function AppShell({
         ? "attention"
         : "not_connected";
 
-  // Self-serve workspaces render on the shadcn/ui shell; operator and monitor
-  // workspaces keep the existing CSS shell until their own migrations.
-  if (variant === "self_serve") {
-    return (
-      <SelfServeShell
-        userId={claims.sub}
-        workspaceId={workspace?.id ?? ""}
-        workspaceName={workspaceName}
-        workspaceRegion={workspace?.region ?? "AU"}
-        account={{
-          email: accountEmail,
-          name: accountName,
-          role: roleLabel,
-        }}
-        trialStatus={
-          <Suspense fallback={null}>
-            <DeferredTrialStatus
-              supabase={supabase}
-              workspaceId={workspace?.id}
-              workspaceMode={workspaceMode}
-              isOperator={isOperator}
-              presentation="card"
-            />
-          </Suspense>
-        }
-        metaConnectionStatus={metaConnectionStatus}
-      >
-        {children}
-      </SelfServeShell>
-    );
-  }
-
   return (
-    <RouteAwareLegacyShell
-      variant={variant}
-      homeHref={homeHref}
-      studioWorkspaceName={studioWorkspaceName}
-      legacyWorkspaceName={workspaceName}
+    <StudioRouteShell
+      userId={claims.sub}
+      workspaceId={workspace?.id ?? ""}
+      workspaceName={workspaceName}
       workspaceRegion={workspace?.region ?? "AU"}
-      account={{ email: accountEmail, name: accountName, role: roleLabel }}
+      account={{
+        email: accountEmail,
+        name: accountName,
+        role: roleLabel,
+      }}
       trialStatus={
-        <Suspense fallback={null}>
+        <Suspense fallback={<TrialStatusSkeleton />}>
           <DeferredTrialStatus
             supabase={supabase}
             workspaceId={workspace?.id}
             workspaceMode={workspaceMode}
-            isOperator={isOperator}
-            presentation="pill"
           />
         </Suspense>
       }
       metaConnectionStatus={metaConnectionStatus}
+      homeHref={homeHref}
     >
       {children}
-    </RouteAwareLegacyShell>
+    </StudioRouteShell>
   );
 }

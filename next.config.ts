@@ -18,7 +18,19 @@ function sentryIngestOrigin(dsn: string | undefined): string | null {
   }
 }
 
+const homepagePreview = process.env.BLOCKWISE_HOMEPAGE_PREVIEW === "true";
+const previewBasePath = homepagePreview ? "/homepage-preview" : "";
+
 const nextConfig: NextConfig = {
+  basePath: previewBasePath,
+  // Embedded at build time: a mutable runtime env must not impersonate a release.
+  env: {
+    BLOCKWISE_HOMEPAGE_PREVIEW: homepagePreview ? "true" : "false",
+    NEXT_PUBLIC_BASE_PATH: previewBasePath,
+    BLOCKWISE_BUILD_REVISION: /^[a-f0-9]{40}$/i.test(process.env.BLOCKWISE_BUILD_REVISION ?? "")
+      ? process.env.BLOCKWISE_BUILD_REVISION
+      : "",
+  },
   poweredByHeader: false,
   reactStrictMode: true,
   typedRoutes: true,
@@ -67,6 +79,16 @@ const nextConfig: NextConfig = {
       { source: "/campaigns", destination: "/results", permanent: false },
     ];
   },
+
+  // Public suburb reports are linked from outbound email as blockwise.sale/6153.
+  // A plain array is afterFiles: real pages win, and only bare four-digit paths
+  // fall through to the report route. The proxy sees the original "/6153" path,
+  // which matches no feature-gated prefix, so the gate still governs "/suburb".
+  async rewrites() {
+    return [
+      { source: "/:postcode(\\d{4})", destination: "/suburb/:postcode" },
+    ];
+  },
   async headers() {
     // Security headers for the standalone Next server behind Caddy.
     // Directives are composed from the verified browser-loaded provider
@@ -79,7 +101,8 @@ const nextConfig: NextConfig = {
     //   rendered by Ad Radar/creative viewer (*.fbcdn.net,
     //   *.cdninstagram.com), Facebook page images.
     // - connect: self, Supabase REST/auth, Sentry ingest, Vercel analytics,
-    //   Google Analytics/gtag collect endpoints.
+    //   Google Analytics/gtag collect endpoints, including regional collection:
+    //   https://developers.google.com/tag-platform/security/guides/csp
     const supabaseOrigin = safeOrigin(process.env.NEXT_PUBLIC_SUPABASE_URL);
     const researchStorageOrigin = safeOrigin(process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL);
     const sentryOrigin = sentryIngestOrigin(process.env.NEXT_PUBLIC_SENTRY_DSN);
@@ -88,14 +111,19 @@ const nextConfig: NextConfig = {
       supabaseOrigin,
       sentryOrigin,
       "https://va.vercel-scripts.com",
-      "https://www.google-analytics.com",
+      "https://*.google-analytics.com",
+      "https://*.analytics.google.com",
       "https://analytics.google.com",
       "https://www.googletagmanager.com",
+      "https://www.clarity.ms",
+      "https://c.clarity.ms",
     ]
       .filter((value): value is string => Boolean(value))
       .join(" ");
     const imgSrc = [
       "'self'",
+      "https://*.google-analytics.com",
+      "https://www.googletagmanager.com",
       "data:",
       "blob:",
       researchStorageOrigin,
@@ -126,7 +154,7 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://www.googletagmanager.com https://va.vercel-scripts.com",
+              "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://www.googletagmanager.com https://www.clarity.ms https://va.vercel-scripts.com",
               "style-src 'self' 'unsafe-inline'",
               "img-src " + imgSrc,
               "media-src " + mediaSrc,

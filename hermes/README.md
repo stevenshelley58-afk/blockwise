@@ -1,8 +1,10 @@
 # Blockwise Hermes Runtime
 
+This directory holds Blockwise-specific Hermes skill and tool source.
 This directory holds Blockwise-specific Hermes skills and local tool modules
-that are deployed to the Hermes Agent instance on the Hostinger VPS. They are
-not loaded by the Next.js app at runtime.
+The serving configuration determines which pinned components are enabled;
+source presence does not prove deployment. They are not loaded by the Next.js
+app at runtime. The shared rules and current docs index govern operation.
 
 ## Skills
 
@@ -10,7 +12,6 @@ not loaded by the Next.js app at runtime.
 | ----- | ------------ |
 | `blockwise-agent-census` | Owns the real-estate roster for a postcode and is the only skill that can mark an agency real-estate verified |
 | `blockwise-page-resolver` | Resolves a verified agent or agency to its real Meta advertiser page |
-| `blockwise-location-ad-search` | Runs explicit gated postcode/suburb Meta Ad Library searches for public scan coverage |
 | `blockwise-ad-collector` | Collects ads only for resolved, real-estate-gated advertiser pages |
 | `blockwise-ad-classifier` | Tags captured creatives with type, hook, style, audience, and confidence |
 | `blockwise-coverage-auditor` | Audits postcode coverage and opens defects for gaps instead of ingesting sampled ads |
@@ -51,4 +52,13 @@ not loaded by the Next.js app at runtime.
 
 Skills and tools are version-pinned in Hermes config on the VPS. Bumping a
 skill or tool version is a one-line config change followed by the Hermes
-redeploy process.
+redeploy process. Qualify changes and follow its current release procedure; a
+source version change is not deployment or acceptance evidence.
+
+## Location-search boundary (8 September 2026)
+
+Location-based Meta Ad Library discovery is not part of the current Hermes
+runtime. The legacy `blockwise-location-ad-search` source was removed from
+this checkout; normal scheduling is disabled. Historical handler or schema
+references are not permission to enable or enqueue work. Verify the serving
+configuration before making operational claims or changing this boundary.

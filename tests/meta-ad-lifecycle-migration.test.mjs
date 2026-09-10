@@ -13,13 +13,13 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const migrationsDir = join("supabase", "migrations");
+const migrationsDir = join("infra", "research-db", "migrations");
 const migration = (name) => readFileSync(join(migrationsDir, name), "utf8");
 const sha256 = (text) => createHash("sha256").update(text).digest("hex");
 
-const M005 = "202609050005_lifecycle_repair_attempts_credit_budget.sql";
-const M006 = "202609050006_lifecycle_repeat_call_fix.sql";
-const M007 = "202609050007_credit_cap_and_ledger_backfill.sql";
+const M005 = "202609050005_research_lifecycle_repair_attempts_credit_budget.sql";
+const M006 = "202609050006_research_lifecycle_repeat_call_fix.sql";
+const M007 = "202609050007_research_credit_cap_and_ledger_backfill.sql";
 
 // --- Ledger integrity ----------------------------------------------------------
 
@@ -139,9 +139,10 @@ test("ScrapingBee is disabled in the supervisor unless explicitly enabled", () =
   );
 });
 
-test("the monthly credit cap is enforced inside the atomic reservation", () => {
-  assert.match(supervisor, /p_max_credits: scrapingBeeMonthlyCreditCap/);
-  assert.match(supervisor, /positiveInt\("HERMES_SCRAPINGBEE_MONTHLY_CREDIT_CAP"/);
+test("the account and explicit run caps are enforced by the attempt reservation", () => {
+  assert.match(supervisor, /reserve_provider_attempt_credits/);
+  assert.match(supervisor, /p_run_credit_cap: runCreditCap/);
+  assert.match(supervisor, /p_provider_balance_remaining: balance\.remaining/);
 });
 
 test("a failed paid ScrapingBee attempt is never followed by a second paid attempt", () => {
@@ -155,53 +156,54 @@ test("paid failed attempts are recorded, never dropped", () => {
   assert.match(supervisor, /"ad_fetch_attempts"/);
 });
 
-test("/usage is cached and used for reconciliation only, never as the gate", () => {
-  assert.match(supervisor, /Date\.now\(\) - scrapingBeeUsageCache\.at < 20_000/);
-  assert.match(supervisor, /Informational only\./);
+test("/usage is cached for 65 seconds and fresh authenticated evidence gates reservation", () => {
+  assert.match(supervisor, /Date\.now\(\) - scrapingBeeUsageCache\.at < 65_000/);
+  assert.match(supervisor, /balance = await scrapingBeeBalanceEvidence\(\)/);
+  assert.match(supervisor, /p_provider_balance_verified_at: balance\.verifiedAt/);
 });
 
 test("coverage_complete derives only from page_info, never from result-list size", () => {
   assert.match(supervisor, /const paginationExhausted = classified\.pageInfo\.hasNextPage === false;/);
-  assert.match(supervisor, /const coverageComplete = confirmedAbsence \|\| paginationExhausted;/);
+  assert.match(supervisor, /coverageComplete: confirmedAbsence \|\| paginationExhausted,/);
 });
 
 test("supervisor uses the shared deterministic parser", () => {
   assert.match(supervisor, /import \{ classifyMetaAdLibraryPayload \} from "\.\/meta-ad-library-parser\.mjs";/);
 });
 
-// --- Pilot defaults (source-level, offline) ---------------------------------------
-
-const pilot = readFileSync("scripts/research/scrapingbee-pilot.mjs", "utf8");
-
-test("pilot is dry-run by default and never touches the provider before --live", () => {
-  assert.match(pilot, /const live = args\.live === true;/);
-  const dryRunExit = pilot.indexOf("would scan");
-  const firstProviderFetch = pilot.indexOf("app.scrapingbee.com/api/v1/?");
-  const dryRunGuard = pilot.indexOf("if (!live) {");
-  assert.ok(dryRunGuard > 0 && dryRunGuard < firstProviderFetch, "the !live guard must precede any provider call");
-  assert.ok(dryRunExit > 0 && dryRunExit < firstProviderFetch);
+test("per-job ScrapingBee credit caps are propagated to every reservation and request", () => {
+  assert.match(supervisor, /function captureCreditCap\(payload\)/);
+  assert.match(supervisor, /runCreditCap: captureCreditCap\(payload\)/);
+  assert.match(supervisor, /max_cost: String\(runCreditCap\)/);
+  assert.match(supervisor, /p_reserved_credits: runCreditCap/);
+  assert.match(supervisor, /p_run_credit_cap: runCreditCap/);
+  assert.match(supervisor, /assertBudgetWithinConfiguredCap\(runCreditCap, scrapingBeeMaxCostPerCapture\)/);
 });
 
-test("pilot has no automatic stealth retries", () => {
-  assert.match(pilot, /const stealthRetryBudget = Number\(args\["stealth-retry"\] \?\? 0\); \/\/ default: never/);
-  // The stealth path must be gated on the explicit remaining budget.
-  assert.match(pilot, /if \(blocked && stealthRetries < stealthRetryBudget\) \{/);
-  assert.match(pilot, /NO automatic stealth/);
+test("narrow Ad DB worker only selects marked collector/media jobs", () => {
+  assert.match(supervisor, /--ad-db-worker/);
+  assert.match(supervisor, /dedupe_key=like\.ad-radar:%25/);
+  assert.match(supervisor, /job_type=in\.\(blockwise-ad-collector,blockwise-media-collector\)/);
+  assert.match(supervisor, /candidate\.payload\?\.ad_db_child === true/);
+  assert.match(supervisor, /available_at=lte\." \+ encode\(now\(\)/);
+  assert.match(supervisor, /adDbWorkerPollMs/);
+  assert.doesNotMatch(supervisor, /runAdDbWorkerPass[\s\S]*claimJobs\(\)/);
 });
 
-test("pilot caches /usage instead of calling it before every page", () => {
-  assert.match(pilot, /Date\.now\(\) - usageCache\.at < 65_000/);
-  const usageCallCount = (pilot.match(/app\.scrapingbee\.com\/api\/v1\/usage/g) || []).length;
-  assert.equal(usageCallCount, 1, "usage endpoint must be referenced exactly once (inside cachedUsage)");
+test("exact execution is restricted to one canonical queued job", () => {
+  assert.match(supervisor, /EXACT_CANONICAL_JOB_TYPES/);
+  assert.match(supervisor, /max_jobs: 1/);
+  assert.match(supervisor, /canonical job was claimed concurrently/);
+  assert.match(supervisor, /status=eq\.pending&available_at=lte\." \+ encode\(now\(\)/);
+  assert.match(supervisor, /id=eq\." \+ encode\(job\.id\) \+ "&status=eq\.pending/);
+  assert.match(supervisor, /attempts: \(job\.attempts \?\? 0\) \+ 1/);
 });
 
-test("pilot uses the shared parser and the atomic DB budget", () => {
-  assert.match(pilot, /import \{ classifyMetaAdLibraryPayload \} from "\.\.\/\.\.\/hermes\/tools\/research-runtime\/bin\/meta-ad-library-parser\.mjs";/);
-  assert.match(pilot, /reserve_provider_credits\('scrapingbee', \$\{cost\}, \$\{monthlyCap\}\)/);
-  assert.match(pilot, /settle_provider_credits/);
+test("legacy location-search path is removed from the canonical worker", () => {
+  assert.doesNotMatch(supervisor, /LOCATION_AD_SEARCH|locationAdSearch|handleLocationAdSearch|enqueueDueLocationAdSearchJobs|runHermesLocationSearchCapture/u);
+  assert.doesNotMatch(supervisor, /blockwise-location-ad-search/u);
 });
-
-test("pilot reserves credits before each paid request and settles with actual Spb-cost", () => {
-  assert.match(pilot, /budgetId = reserveCredits\(maxCost\);/);
-  assert.match(pilot, /settleCredits\(budgetId, maxCost, attempt\.credits\);/);
+const runtimeTypes = readFileSync("hermes/tools/research-runtime/src/types.ts", "utf8");
+test("legacy location-search job schema is removed", () => {
+  assert.doesNotMatch(runtimeTypes, /blockwise-location-ad-search|locationAdSearchPayloadSchema|locationSearchGateSchema/u);
 });

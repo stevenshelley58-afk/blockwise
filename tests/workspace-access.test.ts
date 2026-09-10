@@ -49,7 +49,7 @@ test("non-operators cannot request arbitrary workspace IDs", () => {
   });
 });
 
-test("self-serve workspaces can view monitor while monitor workspaces cannot use self-serve", () => {
+test("workspace mode does not restrict monitor, self-serve or property-check surfaces", () => {
   assert.equal(
     resolveRequestedWorkspaceAccess({
       isOperator: false,
@@ -76,8 +76,8 @@ test("self-serve workspaces can view monitor while monitor workspaces cannot use
         },
       ],
       surface: "self_serve",
-    }).status,
-    403,
+    }).ok,
+    true,
   );
 
   assert.equal(
@@ -91,7 +91,7 @@ test("self-serve workspaces can view monitor while monitor workspaces cannot use
         },
       ],
       surface: "property_check",
-    }).status,
-    403,
+    }).ok,
+    true,
   );
 });

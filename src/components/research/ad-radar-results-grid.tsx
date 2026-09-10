@@ -19,6 +19,9 @@ const MASONRY_GAP = 16;
 export function AdRadarResultsGrid({ cards }: { cards: CustomerMetaAdLibraryCard[] }) {
   const [visibleCount, setVisibleCount] = useState(Math.min(BATCH_SIZE, cards.length));
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const [savedIds, setSavedIds] = useState<Set<string>>(() => new Set());
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const isDesktop = useIsDesktop();
 
@@ -49,6 +52,25 @@ export function AdRadarResultsGrid({ cards }: { cards: CustomerMetaAdLibraryCard
   const remaining = cards.length - visibleCount;
   const viewerItems = useMemo(() => visibleCards.map(toViewerItem), [visibleCards]);
   const openViewerAt = useCallback((cardIndex: number) => setViewerIndex(cardIndex), []);
+  const activeCard = viewerIndex === null ? null : visibleCards[viewerIndex] ?? null;
+  async function saveActiveCard() {
+    if (savingId !== null || !activeCard || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(activeCard.id)) return;
+    setSavingId(activeCard.id);
+    setSaveError(null);
+    try {
+      const response = await fetch("/api/research/swipe-file", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ observedAdId: activeCard.id }),
+      });
+      if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? "Reload the page, then try again." : "Could not save this ad. Try again.");
+      setSavedIds((current) => new Set(current).add(activeCard.id));
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not save this ad. Try again.");
+    } finally {
+      setSavingId(null);
+    }
+  }
 
   return (
     <>
@@ -75,20 +97,20 @@ export function AdRadarResultsGrid({ cards }: { cards: CustomerMetaAdLibraryCard
         index={viewerIndex ?? 0}
         onIndexChange={setViewerIndex}
         secondaryAction={
-          viewerIndex !== null && visibleCards[viewerIndex]?.libraryId
-            ? {
-                label: "Open in Meta",
-                href: `https://www.facebook.com/ads/library/?id=${encodeURIComponent(
-                  visibleCards[viewerIndex].libraryId as string,
-                )}`,
-              }
+          viewerIndex !== null
+            ? { label: "View details", href: "/ad-radar/ads/" + (visibleCards[viewerIndex]?.id ?? "") }
             : undefined
         }
         primaryAction={
-          viewerIndex !== null
-            ? { label: "View details", href: `/ad-radar/ads/${visibleCards[viewerIndex]?.id ?? ""}` }
+          activeCard
+            ? {
+                label: savingId === activeCard.id ? "Saving…" : savedIds.has(activeCard.id) ? "Saved" : saveError ? "Try again" : "Save",
+                onClick: saveActiveCard,
+                disabled: savingId === activeCard.id || savedIds.has(activeCard.id),
+              }
             : undefined
         }
+        actionMessage={saveError}
       />
       {remaining > 0 ? (
         <div ref={sentinelRef} className="flex justify-center pt-2 pb-1">

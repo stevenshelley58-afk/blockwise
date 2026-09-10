@@ -33,7 +33,7 @@ describe("Ad Studio editor geometry contract", () => {
   });
 
   it("resolves normalized pack rectangles with the same dimensions as the server renderer", async () => {
-    const { resolveGeometry, effectiveTextFontSize, fabricPathPosition } = await import("../../src/components/adstudio/editor/layer-geometry.ts");
+    const { resolveGeometry, effectiveTextFontSize, fabricCharSpacing, fabricPathPosition } = await import("../../src/components/adstudio/editor/layer-geometry.ts");
     const { resolveRenderGeometry, effectiveTextFontSize: serverTextFontSize } = await import("../../packages/ad-template-renderer/src/renderer.ts");
     const geometry = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
     const resolved = resolveGeometry(geometry, { width: 1080, height: 1920 });
@@ -47,6 +47,8 @@ describe("Ad Studio editor geometry contract", () => {
     const textLayer = { fontSize: 96, sizeRatio: 0.05 };
     assert.ok(Math.abs(effectiveTextFontSize(textLayer, resolved) - 38.4) < 1e-9);
     assert.ok(Math.abs(serverTextFontSize(textLayer, resolved) - effectiveTextFontSize(textLayer, resolved)) < 1e-9);
+    assert.ok(Math.abs(fabricCharSpacing(1, 24) - (1000 / 24)) < 1e-9);
+    assert.ok(Math.abs(fabricCharSpacing(1, 24) * 24 / 1000 - 1) < 1e-9, "Fabric must paint one canvas pixel per authored tracking unit");
     // Local line commands are normalized around their path bounds; preserve
     // the line's intended half-height offset when returning to canvas space.
     assert.deepEqual(fabricPathPosition({ width: 540, height: 0, pathOffset: { x: 270, y: 384 } }, { x: 108, y: 384, width: 540, height: 768 }), {
@@ -78,18 +80,17 @@ describe("Ad Studio editor geometry contract", () => {
     assert.deepEqual(check.getBoundingRect(), { left: 136, top: 220, width: 230, height: 62 });
   });
 
-  it("uses the server's circle fallback for unknown icons and keeps it centred", async () => {
-    const { fabricIconCircleGeometry, fabricIconPathData, resolveIconShape } = await import("../../src/components/adstudio/editor/layer-geometry.ts");
-    const geometry = { x: 108, y: 384, width: 540, height: 768 };
-    assert.equal(resolveIconShape("unrecognised-icon"), "circle");
-    assert.equal(fabricIconPathData("unrecognised-icon", geometry.width, geometry.height), null);
-    const circle = fabricIconCircleGeometry(geometry);
-    assert.equal(circle.originX, "center");
-    assert.equal(circle.originY, "center");
-    assert.ok(Math.abs(circle.left - 378) < 1e-9);
-    assert.ok(Math.abs(circle.top - 768) < 1e-9);
-    assert.ok(Math.abs(circle.radius - 183.6) < 1e-9);
+  it("maps every supported semantic icon and both divider orientations", async () => {
+    const { fabricIconPathData, fabricLinePathData, resolveIconShape } = await import("../../src/components/adstudio/editor/layer-geometry.ts");
+    assert.equal(resolveIconShape("unrecognised-icon"), null);
+    assert.equal(fabricIconPathData("unrecognised-icon", 100, 100), null);
     assert.equal(fabricIconPathData("check", 100, 100), "M 18 50 L 42 76 L 84 24");
+    for (const icon of ["phone", "mail", "globe", "location"] as const) {
+      assert.equal(resolveIconShape(icon), icon);
+      assert.ok(fabricIconPathData(icon, 100, 100));
+    }
+    assert.equal(fabricLinePathData(300, 3), "M 0 1.5 L 300 1.5");
+    assert.equal(fabricLinePathData(3, 252), "M 1.5 0 L 1.5 252");
   });
 
   it("keeps rounded image mask corners at the canonical 16px radius", async () => {

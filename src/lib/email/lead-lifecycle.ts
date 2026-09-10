@@ -14,7 +14,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { enqueueEmail } from "./outbox.ts";
 import { escapeHtml } from "./provider.ts";
 import { createSupabaseServiceClient } from "../supabase/service.ts";
-import { enqueueMarketingMessage } from "../ops/provider-adapter.ts";
 
 // ---------------------------------------------------------------------------
 // Lifecycle event helpers
@@ -51,7 +50,6 @@ export type DigestLead = {
 };
 
 export type DigestInput = {
-  workspaceId?: string;
   agentEmail: string;
   agentName: string;
   from: string;
@@ -93,7 +91,6 @@ ${leadRows}
   const idempotencyKey = `digest:${createHash("sha256").update([input.agentEmail, input.date].join("\0")).digest("hex")}`;
 
   const result = await enqueueEmail(input.supabase ?? createSupabaseServiceClient(), {
-    workspaceId: input.workspaceId,
     messageType: "lead_digest", templateId: "lead-digest", templateVersion: 1,
     to: input.agentEmail, from: input.from,
     subject: `${input.leads.length} new lead${input.leads.length === 1 ? "" : "s"} — ${input.date}`,
@@ -115,8 +112,6 @@ export async function sendBatchDigests(digests: DigestInput[]): Promise<{ ids: s
 // ---------------------------------------------------------------------------
 
 export type ScheduledFollowUpInput = {
-  workspaceId: string;
-  topic: string;
   to: string;
   from: string;
   subject: string;
@@ -124,7 +119,20 @@ export type ScheduledFollowUpInput = {
   html?: string;
   scheduledAt: string; // ISO 8601 future timestamp
   leadId?: string;
+  /**
+   * Follow-ups are only for a recipient with an established relationship or
+   * express consent. Cold outreach must use its separately approved provider
+   * and workflow; it is not an outbox use case.
+   */
+  authorization: FollowUpAuthorization;
   supabase?: SupabaseClient;
+};
+
+export type FollowUpAuthorization = {
+  legalBasis: "express_consent" | "existing_customer";
+  approvedRecipientAt: string;
+  approvedContentId: string;
+  approvedAt: string;
 };
 
 /**
@@ -133,22 +141,30 @@ export type ScheduledFollowUpInput = {
  * not-before timestamp.
  */
 export async function scheduleFollowUpEmail(input: ScheduledFollowUpInput): Promise<{ id: string }> {
+  assertFollowUpAuthorization(input.authorization);
   const idempotencyKey = buildFollowupKey(input);
-  const serviceSupabase = input.supabase ?? createSupabaseServiceClient();
-  const result = await enqueueMarketingMessage({
-    workspaceId: input.workspaceId,
-    email: input.to,
-    topic: input.topic,
-    serviceSupabase,
-    message: {
-    workspaceId: input.workspaceId,
+  const result = await enqueueEmail(input.supabase ?? createSupabaseServiceClient(), {
     messageType: "lead_followup", templateId: "lead-followup", templateVersion: 1,
     to: input.to, from: input.from, subject: input.subject,
     html: input.html ?? `<p>${escapeHtml(input.text).replace(/\n/g, "<br>")}</p>`, text: input.text, nextAttemptAt: input.scheduledAt,
-    payload: { scheduledAt: input.scheduledAt, leadId: input.leadId ?? null }, idempotencyKey,
-    },
+    payload: { scheduledAt: input.scheduledAt, leadId: input.leadId ?? null, followUpAuthorization: input.authorization }, idempotencyKey,
   });
   return { id: result.queued ? result.id : (result.duplicateOf ?? "queued") };
+}
+
+function assertFollowUpAuthorization(authorization: FollowUpAuthorization): void {
+  if (
+    (authorization.legalBasis !== "express_consent" && authorization.legalBasis !== "existing_customer") ||
+    !isIsoDate(authorization.approvedRecipientAt) ||
+    !authorization.approvedContentId.trim() ||
+    !isIsoDate(authorization.approvedAt)
+  ) {
+    throw new Error("lead follow-up requires an approved recipient, legal basis, and approved content");
+  }
+}
+
+function isIsoDate(value: string): boolean {
+  return Boolean(value.trim()) && !Number.isNaN(Date.parse(value));
 }
 
 function buildFollowupKey(input: ScheduledFollowUpInput): string {

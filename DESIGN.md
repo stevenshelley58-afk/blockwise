@@ -86,6 +86,16 @@ typography:
     fontWeight: 500
     lineHeight: "1.2"
     letterSpacing: "0.12em"
+  home-creative-name:
+    fontFamily: "Manrope, Inter, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "18px"
+    fontWeight: 800
+    lineHeight: "1.25"
+  home-creative-headline-desktop:
+    fontFamily: "Manrope, Inter, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "30px"
+    fontWeight: 800
+    lineHeight: "1.05"
 rounded:
   control: "10px"
   card: "16px"
@@ -113,6 +123,13 @@ components:
     rounded: "{rounded.pill}"
     padding: "0 16px"
     height: "36px"
+  home-primary-action:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.surface}"
+    typography: "{typography.label}"
+    rounded: "{rounded.control}"
+    padding: "0 16px"
+    height: "48px"
   button-secondary:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
@@ -164,6 +181,74 @@ token and component vocabulary. A surface may be purpose-built, but it may not
 introduce a new accent family, radius scale, typography system, or navigation
 grammar.
 
+## Owner preferences (September 2026)
+
+These preferences are the current authority when older guidance in this file
+conflicts with them. They refine the existing system; they do not authorise a
+parallel visual language or the removal of useful product capability.
+
+- **No decorative eyebrows in customer UI.** The existing eyebrow token remains
+  for legacy surfaces and dense technical metadata only. Do not place one above
+  a page heading or use it as filler.
+- **Use fewer words.** Keep labels, required instructions, prices, terms,
+  validation, status, accessibility text, and other copy that performs a real
+  function. Remove copy that only explains an obvious image, heading, card, or
+  control.
+- **Make the screen self-explanatory through hierarchy.** Improve the headline,
+  preview, grouping, or next action. Never add explainer text to compensate for
+  weak hierarchy.
+- **Keep the established palette and simple typography.** Use the existing
+  shadcn/Tailwind bridge, Manrope/Inter type, neutral surfaces, ink action
+  colour, and shared radii before adding anything route-specific.
+- **Prefer rounded surfaces.** Avoid square cards, sharp image containers, and
+  page-local radius systems. Reuse `--r-ctl`, `--r-card`, `--r-panel`, and the
+  pill radius.
+- **Limit unnecessary scrolling, not information.** A shorter screen must not
+  come from tiny text, clipped content, hidden controls, or invented omissions.
+  Keep long forms, reports, and lists when the task genuinely needs them, but
+  collapse repetition and completed setup.
+- **Make mobile feel like an app.** Use the existing bottom navigation, safe
+  areas, sheets, reachable actions, stable previews, and clear Back behaviour.
+  Do not stack a desktop page into a phone.
+- **Keep customer navigation permanent.** Self-serve customer routes,
+  including Ad Studio templates, editors, and review surfaces, keep the five
+  mobile destinations Home, Ads, Results, Leads, and More. Ads owns the full
+  Ad Studio subtree. More contains remaining tools and account actions.
+  Restricted monitor workspaces retain their permitted reporting navigation.
+  Never expose unavailable tools or invent destinations to fill the menu.
+- **Keep mobile layers deliberate.** Fixed navigation and visible consent
+  reserve layout space. Sheets sit above navigation; consent yields while a
+  modal is open and remains available afterwards. Never cover controls or the
+  device safe area.
+- **Email uses the Quiet card.** Email surfaces reuse the established surface,
+  border, radius, and typography tokens in both light and dark themes. Keep the
+  message and one clear action primary.
+- **Guides are content-first.** Lead with the useful content, use rounded
+  panels only when they improve grouping, and keep promotion subtle and
+  secondary to the guide.
+- **Show the product clearly.** Ads, Feed and Story previews, charts, and
+  editable content must stay readable at phone widths. Never use a tiny desktop
+  screenshot as a substitute for a mobile composition.
+- **Motion explains state.** Use brief, smooth, purposeful transitions for
+  selection, progress, saved state, confirmation, and spatial continuity. Do
+  not delay routine work with choreography. Marketing previews may loop when
+  the loop itself demonstrates the product output; working customer screens do
+  not use ambient loops.
+- **Use truthful states.** Never infer verification, connection, payment,
+  freshness, current metrics, or completion from the presence of a record alone.
+  State what is known, what is pending, and the next safe action.
+- **Keep one obvious next action.** Secondary capabilities remain available,
+  but they should not compete equally with the current task.
+- **Keep trial language direct.** Use “Start your free trial” and “No card
+  required” where appropriate. Show the actual allowance, renewal, charge,
+  cancellation, and ad-spend terms beside the decision that needs them.
+- **No em dash in frontend copy.** Rewrite with a full stop, comma, colon, or
+  parentheses.
+
+When implementing a new screen, review it as a distracted one-handed mobile
+user first, then as a desktop operator. Preserve approved sections and safety
+controls while removing repetition.
+
 **Key Characteristics:**
 
 - quiet, neutral work surfaces with soft layered elevation
@@ -173,6 +258,24 @@ grammar.
 - honest progress, conflict, error, and partial-success feedback
 - complete loading/empty/success states — no dead ends
 - compact information density without crowding
+
+### Mobile Home direction (scoped)
+
+The current `/self-serve` direction supersedes the earlier September 2026
+mobile Home pilot. Home is a creative-first workbench: lead with the
+customer's real ad creative or a truthful preview-unavailable state, then show
+only recommendations backed by existing HomeData/read models and approved
+resolvers. Recommendations must retain known source, freshness, pending, and
+unavailable semantics. Never invent a recommendation, metric, connection, or
+completion state to fill the screen.
+
+Home is not an identity, setup, reporting, billing, or administration surface.
+Do not repeat workspace/account identity in its title area, show setup or
+activation progress, duplicate Results telemetry, or expose operator controls.
+Account details remain behind the accessible account menu. The shared customer
+shell still owns the five-destination mobile bar: Home, Ads, Results, Leads,
+and More. The direction applies only to Home and does not change other
+customer routes, operator surfaces, or the current light-only customer theme.
 
 ## 2. Colors
 
@@ -196,7 +299,7 @@ soft layered shadows.
   quiet grouping.
 - **Body Slate** (`--muted`): supporting text that still meets contrast targets.
 - **Quiet Slate** (`--faint`): nonessential metadata only, never body copy or
-  form placeholders. Also the voice for mono eyebrows and table headers.
+  form placeholders. It also supports mono table headers and dense metadata.
 - **Hairline** (`--line`) and **Control Line** (`--line-heavy`): structural
   borders and input boundaries.
 
@@ -226,16 +329,23 @@ data hue is the only vivid display accent. Do not introduce a third.
 **The Semantic Color Rule.** Green, amber, and red communicate state. They never
 decorate headings, cards, or illustrations.
 
+**Mobile Home surface rule.** Home remains light-only: `--bg`, `--surface`,
+`--surface-subtle`, `--line`, and semantic text tokens come from the existing
+Tailwind bridge. Do not infer a full-page dark mode from sidebar theme support.
+Keep the surface continuous and let the real creative carry visual priority.
+
 ## 3. Typography
 
 **Display Font:** Manrope (with Inter and system sans fallbacks) — `font-display`
 **Body Font:** Inter (with system sans fallbacks) — `font-sans`
-**Metadata Font:** JetBrains Mono — `font-mono`, for eyebrows and table headers
+**Metadata Font:** JetBrains Mono — `font-mono`, for dense metadata and table
+headers. It is not a default page-heading treatment.
 
 **Character:** Manrope gives page and panel headings firm, compact authority at
 extrabold weight with tight tracking. Inter carries controls, copy, and data.
-JetBrains Mono carries tiny uppercase metadata (eyebrows, table column headers,
-step counters) at wide tracking — the signature Premium v2 detail.
+JetBrains Mono carries tiny uppercase metadata (table headers, step counters,
+and technical status) at wide tracking. It is a supporting detail, not a
+decorative introduction to every section.
 
 ### Hierarchy
 
@@ -247,14 +357,21 @@ step counters) at wide tracking — the signature Premium v2 detail.
   numbers. Always tabular-nums so digits align.
 - **Body** (Inter, 13px, 400, 1.5): instructions, descriptions, product copy.
 - **Label** (Inter, 12.5px, 600): controls and fields.
-- **Eyebrow / table header** (JetBrains Mono, 9.5px, 500, `0.12em`, uppercase):
-  section eyebrows and `<th>` cells.
+- **Dense metadata / table header** (JetBrains Mono, 9.5px, 500, `0.12em`,
+  uppercase): `<th>` cells, step counters, and compact technical status.
+  The eyebrow token is legacy-only and never a decorative customer treatment.
 
 **The Product Type Rule.** Display typography stops at headings and stat values.
 Buttons, labels, data, and navigation use the body family.
 
-**The Sentence Case Rule.** Labels and actions use sentence case. Uppercase is
-reserved for the mono eyebrow/table-header voice.
+**The Sentence Case Rule.** Labels, actions, headings, helper text, errors, and
+status messages use sentence case. Uppercase is reserved for compact table or
+technical metadata, never decorative page introductions.
+
+**Mobile Home type rule.** Home uses Inter utility text at 15px for primary
+actions and tool labels, 13px for supporting text and metric labels, and a
+compact Inter 20px Home bar title. Section headings use 15.5px, with the next-step heading at 17px. Numeric results keep tabular figures
+and may use compact notation only when the complete value remains accessible.
 
 ## 4. Elevation
 
@@ -297,7 +414,9 @@ their own timings.
 
 ### The Motion Rules
 
-- Nothing loops. Nothing exceeds the entrance duration (count-up aside).
+- Customer work surfaces do not use ambient or looping motion. Marketing
+  previews may loop when repetition is the product demonstration itself.
+  Nothing else exceeds the entrance duration (count-up aside).
 - Hover lift is reserved for genuinely interactive cards.
 - There is exactly **one confetti moment** — the first-run handoff into Ad
   Studio. It is brief, never loops, and is skipped entirely under reduced motion.
@@ -312,8 +431,9 @@ empty, succeed, or fail must render all four — no dead ends.
 - **Loading:** token skeletons (`animate-pulse` blocks in the panel/card radius)
   that mirror the loaded layout. Route-level `loading.tsx` for first paint.
 - **Empty:** a dashed-border well (`border-dashed border-(--line-heavy)
-  bg-(--surface-subtle)/50`, centered) with a display title, a one-line
-  explanation, and — where there is a next action — a primary button.
+  bg-(--surface-subtle)/50`, centered) with a concise state title and, where
+  needed, one actionable instruction or primary button. Do not add explanatory
+  prose when the title, preview, or control already makes the state clear.
 - **Success:** brief inline confirmation in `text-success` (bold 12.5px). Never
   a toast for something the user must act on.
 - **Error:** inline `text-error` message for recoverable failures; a soft error
@@ -331,15 +451,20 @@ hand-building; use the token utilities below for layout and bespoke surfaces.
 - **Page container:** `mx-auto w-full max-w-[1120px] px-4 pt-6 pb-28 md:px-6
   md:pt-8 md:pb-16` (narrow surfaces use `max-w-[880px]`/`max-w-[720px]`;
   stacked mains add `grid gap-3.5`). The deep mobile bottom padding clears the
-  bottom nav.
+  bottom nav. Keep the first useful action near the top on mobile.
 - **Panel:** `rounded-(--r-panel) border border-(--line) bg-(--surface) p-5
   shadow-card`. Title in the panel-title voice.
 - **Stat tile:** `rounded-(--r-card) border border-(--line) bg-(--surface)
-  px-[18px] pt-[17px] pb-[15px] shadow-card` — mono eyebrow label, display
-  tabular value, muted foot.
+  px-[18px] pt-[17px] pb-[15px] shadow-card` — compact sentence-case label,
+  display tabular value, and muted foot. Do not add a decorative eyebrow.
 
 ### Controls
 
+- **Home primary action (scoped):** semantic primary background and foreground,
+  `--r-ctl` (10px), and a reachable 44px minimum height. **Never make a Home
+  CTA full width.** Keep it bounded by content or a sensible max width at every
+  viewport. It is the one visible next-step action, not a second summary of
+  the creative.
 - **Ink button:** full pill, Operations Ink background, white label, 36px.
   Hover opacity, active scale — no bounce.
 - **Ghost button:** full pill, Clean Surface, Control Line boundary, ink label.
@@ -348,10 +473,25 @@ hand-building; use the token utilities below for layout and bespoke surfaces.
 - **Input / select:** Clean Surface, hairline border, `card` radius, 36px, ink
   border on focus. Selects pair with a faint chevron.
 
+### Mobile Home direction components
+
+- **Creative lead:** use the existing shared image/video/text preview primitives;
+  keep media readable at 320px and branch honestly for failed or unknown media.
+- **Recommendation row:** a minimum 44px reachable row with a meaningful action,
+  concise rationale when supplied by data, and one trailing affordance. Do not
+  render a placeholder recommendation.
+- **Bounded action:** keep the next real route or resolver-backed action near
+  the creative, but never stretch its CTA to the viewport edges.
+- **Flat grouping:** use continuous sections and hairlines before rounded cards.
+  A panel must improve grouping, not decorate an empty Home.
+- **State treatment:** loading, empty, partial, and error states preserve the
+  same creative-first hierarchy and provide a real recovery path.
+
 ### Page head
 
-- Mono eyebrow (`font-mono 9.5px 0.12em uppercase text-(--faint)`), display h1,
-  muted lead. This replaces the legacy `.page-heading` on the customer surface.
+- Display h1 with a short, useful lead only when it adds information. Do not
+  add an eyebrow or explainer paragraph above it. Put freshness, setup state, or
+  the next action beside the relevant content.
 
 ### Tables
 
@@ -363,9 +503,19 @@ hand-building; use the token utilities below for layout and bespoke surfaces.
 
 ### Do:
 
+- **Do** lead Home with the customer's real creative and keep its next action
+  linked to a server-resolved, available route.
+- **Do** keep Home flat by default: use sections, rows, hairlines, and
+  disclosures before rounded cards or chart scaffolds.
+- **Do** preserve actual data semantics. Show unavailable reporting as
+  unavailable with a contextual recovery link; never substitute zero.
+- **Do** make the 390px first viewport useful while preserving a natural scroll
+  at 320px and clearing the shared five-destination bar.
+- **Do** keep recommendations concise, real, and secondary to the creative;
+  expose source and freshness whenever the data provides them.
 - **Do** make one next action or operational read visibly dominant.
 - **Do** use the shared ink accent, neutral layers, radius scale, Manrope/Inter,
-  and the mono eyebrow voice before adding route-local values.
+  and existing primitives before adding route-local values.
 - **Do** reserve the data hue for charts, meters, and sparklines.
 - **Do** provide loading, empty, success, and error states for every data
   surface.
@@ -373,6 +523,14 @@ hand-building; use the token utilities below for layout and bespoke surfaces.
   motion.
 - **Do** keep touch targets at least 44 by 44 pixels even when the visible
   control is compact; no horizontal scroll at 320px.
+- **Do** make the first viewport useful on mobile: show the purpose, current
+  state, and next action without requiring an unnecessary scroll.
+- **Do** preserve useful creative states and safety controls while keeping
+  identity, setup, Results, billing, and admin detail off Home.
+- **Do** keep overlays, consent banners, sheets, and fixed navigation clear of
+  one another and the device safe area.
+- **Do** keep Back, save, retry, cancel, and return paths visible and
+  recoverable in every multi-step flow.
 - **Do** source customer-facing copy from `src/config/niche` — no niche nouns
   (real-estate, suburb, listing) in page components.
 
@@ -383,13 +541,21 @@ hand-building; use the token utilities below for layout and bespoke surfaces.
 - **Don't** use generic AI styling: gradient text, decorative glass, cream SaaS
   palettes, repetitive card grids, or gratuitous motion.
 - **Don't** use the data hue in chrome, buttons, headings, or body text.
-- **Don't** add looping or ambient animation, or more than one confetti moment.
+- **Don't** add looping or ambient animation to working customer surfaces, or
+  more than one confetti moment. A marketing preview may loop only when the
+  loop is the actual demonstration.
 - **Don't** introduce new global CSS classes or a parallel component set on the
   customer surface.
 - **Don't** create parallel component, token, typography, or navigation systems
   across product surfaces.
 - **Don't** use colored side-stripe card accents, gradient text, default
   glassmorphism, decorative hero metrics, or nested cards.
+- **Don't** add eyebrows, filler subheadings, or explanatory paragraphs that
+  repeat what the visual hierarchy already communicates.
+- **Don't** shorten a screen by hiding approved features, shrinking text, or
+  making a required task harder to find. Never use a full-width Home CTA.
+- **Don't** leave a status without its next action: a pending booking,
+  connection, verification, payment, or save state must explain how to proceed.
 
 ## 9. Implementation Governance
 
@@ -412,8 +578,13 @@ variables map onto the palette, radius, and type defined above).
 - Operator and monitor surfaces remain on the existing CSS shell until their
   own migration; the two systems coexist via the scoped, no-preflight Tailwind
   setup (`.tw` wrapper) and must not be mixed within one route.
-- Motion timings come from `src/lib/motion.ts` only; nothing loops, nothing
-  exceeds the entrance duration, and everything honors `prefers-reduced-motion`.
+- Motion timings come from `src/lib/motion.ts` only; working customer surfaces
+  do not loop, nothing exceeds the entrance duration, and everything honors
+  `prefers-reduced-motion`. Marketing previews are the explicit exception when
+  the loop demonstrates the product output.
+- Owner preference precedence is part of implementation governance: no new
+  customer screen uses a decorative eyebrow, filler explanation, em dash, or
+  page-local visual language. Preserve useful information and safety controls.
 - This register remains "the quiet operations desk": shadcn is the delivery
   mechanism, the data hue is the only vivid voice, and restraint still governs
   every component choice.

@@ -39,37 +39,40 @@ export function WorkspaceSection({
     event.preventDefault();
     setBusy(true);
     setMessage(null);
-    const { error } = await supabase
-      .from("workspaces")
-      .update({
-        name: name.trim() || workspace.name,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", workspace.id);
-    if (!error && country !== workspace.country) {
-      const response = await fetch("/api/workspace/onboarding-market", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          workspaceId: workspace.id,
-          country,
-          websiteUrl: workspace.website,
-        }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as { error?: string };
-      if (!response.ok) {
-        setBusy(false);
-        setMessage({ tone: "error", text: payload.error ?? "Couldn't change the workspace country." });
+    let nameSaved = false;
+    try {
+      const { data, error } = await supabase
+        .from("workspaces")
+        .update({ name: name.trim() || workspace.name, updated_at: new Date().toISOString() })
+        .eq("id", workspace.id)
+        .select("id")
+        .maybeSingle();
+      if (error || !data) {
+        setMessage({ tone: "error", text: "Couldn't save workspace settings. Check your access and try again." });
         return;
       }
+      nameSaved = true;
+      if (country !== workspace.country) {
+        const response = await fetch("/api/workspace/onboarding-market", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ workspaceId: workspace.id, country, websiteUrl: workspace.website }),
+        });
+        const payload = await response.json().catch(() => ({})) as { error?: string };
+        if (!response.ok) {
+          setMessage({ tone: "error", text: `Workspace name saved, but country was not changed. ${payload.error ?? "Try again."}` });
+          return;
+        }
+      }
+      setMessage({ tone: "success", text: "Workspace settings saved." });
+      router.refresh();
+    } catch {
+      setMessage({ tone: "error", text: nameSaved
+        ? "Workspace name saved, but country was not changed. Check your connection and try again."
+        : "Couldn't save workspace settings. Check your connection and try again." });
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
-    if (error) {
-      setMessage({ tone: "error", text: "Couldn't save workspace settings." });
-      return;
-    }
-    setMessage({ tone: "success", text: "Workspace settings saved." });
-    router.refresh();
   }
 
   return (
@@ -82,7 +85,7 @@ export function WorkspaceSection({
         <div className="grid gap-2">
           <Label htmlFor="workspace-website">Primary website</Label>
           <div className="flex flex-wrap items-center gap-2">
-            <Input className="min-w-[220px] flex-1" id="workspace-website" value={workspace.website} readOnly />
+            <Input className="min-w-0 flex-1" id="workspace-website" value={workspace.website} readOnly />
             <Button asChild variant="outline">
               <Link href="/ad-studio/brand">Review Brand Pack</Link>
             </Button>

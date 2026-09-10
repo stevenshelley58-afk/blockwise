@@ -11,6 +11,7 @@ import {
   ImageOff,
   MousePointerClick,
   Percent,
+  Megaphone,
   Play,
   UserPlus,
   Wallet,
@@ -34,7 +35,7 @@ import {
 } from "@/lib/read-models/browser-store";
 import { useReportingInvalidation } from "@/lib/read-models/use-reporting-invalidation";
 
-import { AdPerformanceCard, adCardDomId } from "./AdPerformanceCard";
+import { AdPerformanceCard, CreativePreview, StatusPill, adCardDomId } from "./AdPerformanceCard";
 import { AdManagementControls, BudgetManagementControl } from "./AdManagementControls";
 import { DemoModeNotice } from "./DemoModeNotice";
 import { EmptyMetaState } from "./EmptyMetaState";
@@ -52,7 +53,7 @@ const BudgetPacingChart = dynamic(() => import("./BudgetPacingChart").then((m) =
 // for positive deltas in the KPI strip, not used as a series colour.
 const DATA_HUE = "var(--ui-data)";
 
-const panelClass = "rounded-(--r-panel) border border-(--line) bg-(--surface) p-5 shadow-card";
+const panelClass = "min-w-0 rounded-(--r-panel) border border-(--line) bg-(--surface) p-5 shadow-card";
 const panelTitleClass = "font-display text-[15.5px] font-extrabold tracking-[-0.015em]";
 const thClass = "font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase";
 
@@ -77,6 +78,7 @@ export function MetaMonitorDashboard({
   metaConnectHref,
   oauthNotice,
   focusCampaignId,
+  showExample = false,
 }: {
   initialPayload: MetaMonitorPayload;
   initialEtag: string;
@@ -86,6 +88,7 @@ export function MetaMonitorDashboard({
   metaConnectHref?: string;
   oauthNotice?: OAuthNotice | null;
   focusCampaignId?: string | null;
+  showExample?: boolean;
 }) {
   const [payload, setPayload] = useState(initialPayload);
   const [etag, setEtag] = useState(initialEtag);
@@ -117,6 +120,7 @@ export function MetaMonitorDashboard({
     nextCustomRange: { since: string; until: string } = customRange,
     options: { manual?: boolean; cachedEtag?: string | null } = {},
   ) => {
+    if (showExample) return;
     const requestId = refreshRequestRef.current + 1;
     refreshRequestRef.current = requestId;
     refreshControllerRef.current?.abort();
@@ -181,10 +185,15 @@ export function MetaMonitorDashboard({
       setError(refreshError instanceof Error ? refreshError.message : "Refresh failed.");
       setIsRefreshing(false);
     }
-  }, [customRange, etag, rangeKey, surfaceFor, userId, workspaceId]);
+  }, [customRange, etag, rangeKey, showExample, surfaceFor, userId, workspaceId]);
 
   useEffect(() => {
     let cancelled = false;
+    if (showExample) {
+      return () => {
+        cancelled = true;
+      };
+    }
     const surface = surfaceFor(initialPayload.range.key, {
       since: initialPayload.range.since,
       until: initialPayload.range.until,
@@ -214,14 +223,15 @@ export function MetaMonitorDashboard({
     return () => {
       cancelled = true;
     };
-  }, [initialEtag, initialGeneratedAt, initialPayload, surfaceFor, userId, workspaceId]);
+  }, [initialEtag, initialGeneratedAt, initialPayload, showExample, surfaceFor, userId, workspaceId]);
 
   const handleInvalidation = useCallback(() => {
-    void refresh(rangeKey, customRange, { cachedEtag: etag });
-  }, [customRange, etag, rangeKey, refresh]);
+    if (!showExample) void refresh(rangeKey, customRange, { cachedEtag: etag });
+  }, [customRange, etag, rangeKey, refresh, showExample]);
   useReportingInvalidation({ workspaceId, onInvalidate: handleInvalidation });
 
   async function handleRangeChange(nextRange: MonitorRange) {
+    if (showExample) return;
     setRangeKey(nextRange);
     const surface = surfaceFor(nextRange, customRange);
     const cached = await readLocalReadModel<MetaMonitorPayload>({ userId, workspaceId, surface }).catch(
@@ -236,6 +246,7 @@ export function MetaMonitorDashboard({
   }
 
   function handleCustomRangeChange(nextCustomRange: { since: string; until: string }) {
+    if (showExample) return;
     setRangeKey("custom");
     setCustomRange(nextCustomRange);
 
@@ -251,22 +262,29 @@ export function MetaMonitorDashboard({
       return;
     }
 
+    const details = card.closest("details");
+    if (details instanceof HTMLDetailsElement) details.open = true;
     card.scrollIntoView({ behavior: "smooth", block: "center" });
     card.classList.add("ring-2", "ring-(--ink)", "ring-offset-2");
     window.setTimeout(() => card.classList.remove("ring-2", "ring-(--ink)", "ring-offset-2"), 1600);
   }
 
-  const summary = payload.summary;
+  const showDisconnectedState = !showExample && payload.source === "sample" && !payload.connected;
+  const displayPayload = showDisconnectedState
+    ? { ...payload, summary: null, daily: [], suburbPerformance: [], ads: [], anglePerformance: [] }
+    : payload;
+  const summary = displayPayload.summary;
 
   return (
     <div className="mx-auto grid w-full min-w-0 max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
       <MetaMonitorHeader
-        range={payload.range}
+        range={displayPayload.range}
         rangeKey={rangeKey}
         customRange={customRange}
-        lastSyncedAt={summary?.lastSyncedAt ?? generatedAt}
+        lastSyncedAt={summary?.lastSyncedAt ?? null}
         isRefreshing={isRefreshing}
-        isSample={payload.source === "sample"}
+        isSample={showExample && payload.source === "sample"}
+        isConnected={Boolean(displayPayload.connected)}
         onRangeChange={handleRangeChange}
         onCustomRangeChange={handleCustomRangeChange}
         onRefresh={() => void refresh(rangeKey, customRange, { manual: true })}
@@ -300,7 +318,7 @@ export function MetaMonitorDashboard({
         </div>
       ) : null}
 
-      {payload.source === "sample" && !payload.connected && metaConnectHref ? (
+      {showExample && payload.source === "sample" && !payload.connected && metaConnectHref ? (
         <DemoModeNotice metaConnectHref={metaConnectHref} />
       ) : null}
 
@@ -308,12 +326,12 @@ export function MetaMonitorDashboard({
         isRefreshing ? (
           <MonitorDashboardSkeleton />
         ) : (
-          <EmptyMetaState issue={payload.issue} connected={payload.connected} metaConnectHref={metaConnectHref} />
+          <EmptyMetaState issue={displayPayload.issue} connected={displayPayload.connected} metaConnectHref={metaConnectHref} />
         )
       ) : isRefreshing ? (
-        <Dashboard payload={payload} onSelectAd={scrollToAd} focusCampaignId={focusCampaignId} refreshing />
+        <Dashboard payload={displayPayload} onSelectAd={scrollToAd} focusCampaignId={focusCampaignId} refreshing />
       ) : (
-        <Dashboard payload={payload} onSelectAd={scrollToAd} focusCampaignId={focusCampaignId} />
+        <Dashboard payload={displayPayload} onSelectAd={scrollToAd} focusCampaignId={focusCampaignId} />
       )}
     </div>
   );
@@ -338,9 +356,17 @@ function Dashboard({
   const previousCtr = previous ? safeRate(previous.clicks, previous.impressions) : null;
   const compare = previous ? `vs previous ${payload.range.days} day${payload.range.days === 1 ? "" : "s"}` : undefined;
   const focusedCampaignVisible = Boolean(focusCampaignId && hierarchy.some((campaign) => campaign.campaignId === focusCampaignId));
+  const [chartMetric, setChartMetric] = useState<"spend" | "leads" | "cpl">("spend");
+  const chartConfig = {
+    spend: { title: copy.charts.spend, data: payload.daily.map((point) => ({ date: point.date, value: point.spend })), format: (value: number) => formatCurrency(value) },
+    leads: { title: copy.charts.leads, data: payload.daily.map((point) => ({ date: point.date, value: point.validLeads })), format: (value: number) => String(Math.round(value)) },
+    cpl: { title: copy.charts.cpl, data: payload.daily.map((point) => ({ date: point.date, value: point.validCpl })), format: (value: number) => formatCurrency(value) },
+  }[chartMetric];
+  const attentionAds = payload.ads.filter((ad) => ad.fatigued || ad.status === "UNKNOWN").slice(0, 3);
+  const resultAds = attentionAds.length > 0 ? attentionAds : payload.ads.slice(0, 3);
   return (
     <div
-      className={`grid gap-3.5 transition-opacity duration-250 motion-reduce:transition-none ${
+      className={`grid min-w-0 gap-3.5 transition-opacity duration-250 motion-reduce:transition-none ${
         refreshing ? "opacity-55" : ""
       }`}
       // `inert` keeps keyboard focus out of the stale subtree while refreshing,
@@ -351,50 +377,19 @@ function Dashboard({
       {focusCampaignId ? (
         <p className="rounded-(--r-card) border border-(--line) bg-(--surface) px-4 py-3 text-[13px] font-semibold" role="status">
           {focusedCampaignVisible
-            ? "Showing the campaign created by this publish plan."
-            : "This publish is active; its campaign will appear here after Meta reporting refreshes."}
+            ? "Showing the ad created from your publish plan."
+            : "This ad is active. Its details will appear here after reporting refreshes."}
         </p>
       ) : null}
-      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 xl:grid-cols-6">
-        <MetaKpiCard
-          icon={Eye}
-          iconTone="blue"
-          label="Reach"
-          value={summary.reach.toLocaleString("en-AU")}
-          compareText={compare}
-          trend={previous ? calculateTrend(summary.reach, previous.reach) : null}
-        />
-        <MetaKpiCard
-          icon={BarChart3}
-          iconTone="slate"
-          label="Impressions"
-          value={summary.impressions.toLocaleString("en-AU")}
-          compareText={compare}
-          trend={previous ? calculateTrend(summary.impressions, previous.impressions) : null}
-        />
-        <MetaKpiCard
-          icon={MousePointerClick}
-          iconTone="indigo"
-          label="Link clicks"
-          value={summary.clicks.toLocaleString("en-AU")}
-          compareText={compare}
-          trend={previous ? calculateTrend(summary.clicks, previous.clicks) : null}
-        />
-        <MetaKpiCard
-          icon={Percent}
-          iconTone="orange"
-          label="CTR"
-          value={ctr != null ? formatPercent(ctr, 2) : "Unavailable"}
-          compareText={compare}
-          trend={previous ? calculateTrend(ctr, previousCtr) : null}
-        />
+      <div className="grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2.5 sm:gap-3.5">
         <MetaKpiCard
           icon={UserPlus}
           iconTone="green"
-          label="Leads"
+          label="Enquiries"
           value={summary.leads.toLocaleString("en-AU")}
           compareText={compare}
           trend={previous ? calculateTrend(summary.leads, previous.leads) : null}
+          compact
         />
         <MetaKpiCard
           icon={Wallet}
@@ -403,87 +398,183 @@ function Dashboard({
           value={formatCurrency(summary.spend)}
           compareText={compare}
           trend={previous ? calculateTrend(summary.spend, previous.spend) : null}
+          compact
+        />
+        <MetaKpiCard
+          icon={Megaphone}
+          iconTone="slate"
+          label="Running ads"
+          value={String(payload.ads.filter((ad) => ad.status === "ACTIVE").length)}
+          compact
         />
       </div>
 
-      <div className="grid gap-3.5 md:grid-cols-3">
+      {payload.ads.length > 0 ? (
         <section className={panelClass}>
-          <h3 className={panelTitleClass}>{copy.charts.spend}</h3>
-          <div className="mt-3">
-            <SmoothAreaChart
-              id="spend"
-              label={copy.charts.spend}
-              color={DATA_HUE}
-              data={payload.daily.map((point) => ({ date: point.date, value: point.spend }))}
-              valueFormatter={(value) => formatCurrency(value)}
-            />
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className={panelTitleClass}>{copy.leadResults.title}</h2>
+              <p className="mt-0.5 text-[12.5px] text-muted-foreground">{copy.leadResults.subtitle}</p>
+            </div>
+            <span className="text-[11.5px] font-semibold text-(--faint)">{attentionAds.length > 0 ? "Needs attention" : "Recent results"}</span>
           </div>
-        </section>
-        <section className={panelClass}>
-          <h3 className={panelTitleClass}>{copy.charts.leads}</h3>
-          <div className="mt-3">
-            <SmoothAreaChart
-              id="valid-leads"
-              label={copy.charts.leads}
-              color={DATA_HUE}
-              data={payload.daily.map((point) => ({ date: point.date, value: point.validLeads }))}
-              valueFormatter={(value) => String(Math.round(value))}
-            />
+          <div className="mt-3 divide-y divide-(--line)">
+            {resultAds.map((ad) => <AdResultRow key={ad.adId} ad={ad} onSelect={onSelectAd} />)}
           </div>
+          {payload.ads.length > resultAds.length ? <p className="mt-3 text-[11.5px] font-semibold text-(--faint)">View all details below.</p> : null}
         </section>
-        <section className={panelClass}>
-          <h3 className={panelTitleClass}>{copy.charts.cpl}</h3>
-          <p className="mt-0.5 text-[11.5px] text-(--faint)">{copy.cplGapNote}</p>
-          <div className="mt-3">
-            <SmoothAreaChart
-              id="valid-cpl"
-              label={copy.charts.cpl}
-              color={DATA_HUE}
-              data={payload.daily.map((point) => ({ date: point.date, value: point.validCpl }))}
-              valueFormatter={(value) => formatCurrency(value)}
-            />
+      ) : null}
+
+      <section className={panelClass}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className={panelTitleClass}>{chartConfig.title}</h3>
+            {chartMetric === "cpl" ? <p className="mt-0.5 text-[11.5px] text-(--faint)">{copy.cplGapNote}</p> : null}
           </div>
-        </section>
-      </div>
+          <div className="flex min-w-0 max-w-full flex-wrap gap-1.5" role="group" aria-label="Results chart">
+            {(["spend", "leads", "cpl"] as const).map((metric) => (
+              <button
+                key={metric}
+                type="button"
+                aria-pressed={chartMetric === metric}
+
+                onClick={() => setChartMetric(metric)}
+                className={chartMetric === metric ? "inline-flex min-h-8 items-center rounded-full bg-(--ink) px-3 text-[11.5px] font-bold text-white" : "inline-flex min-h-8 items-center rounded-full border border-(--line) px-3 text-[11.5px] font-bold text-muted-foreground hover:border-(--line-heavy) hover:text-foreground"}
+              >
+                {metric === "spend" ? "Spend" : metric === "leads" ? "Leads" : (
+                  <>
+                    <span className="sm:hidden">Cost/lead</span>
+                    <span className="hidden sm:inline">Cost per lead</span>
+                  </>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="mt-3">
+          <SmoothAreaChart id={chartMetric} label={chartConfig.title} color={DATA_HUE} data={chartConfig.data} valueFormatter={chartConfig.format} />
+        </div>
+      </section>
+      <details className={panelClass}>
+        <summary className="cursor-pointer text-[13px] font-bold">More reporting details</summary>
+        <div className="mt-4 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
+          <MetaKpiCard
+            icon={Eye}
+            iconTone="blue"
+            label="Reach"
+            value={summary.reach.toLocaleString("en-AU")}
+            compareText={compare}
+            trend={previous ? calculateTrend(summary.reach, previous.reach) : null}
+          />
+          <MetaKpiCard
+            icon={BarChart3}
+            iconTone="slate"
+            label="Impressions"
+            value={summary.impressions.toLocaleString("en-AU")}
+            compareText={compare}
+            trend={previous ? calculateTrend(summary.impressions, previous.impressions) : null}
+          />
+          <MetaKpiCard
+            icon={MousePointerClick}
+            iconTone="indigo"
+            label="Link clicks"
+            value={summary.clicks.toLocaleString("en-AU")}
+            compareText={compare}
+            trend={previous ? calculateTrend(summary.clicks, previous.clicks) : null}
+          />
+          <MetaKpiCard
+            icon={Percent}
+            iconTone="orange"
+            label="CTR"
+            value={ctr != null ? formatPercent(ctr, 2) : "Unavailable"}
+            compareText={compare}
+            trend={previous ? calculateTrend(ctr, previousCtr) : null}
+          />
+        </div>
+      </details>
 
       {payload.ads.length > 0 ? (
         <>
           <CampaignManagementTable rows={hierarchy} onSelectAd={onSelectAd} focusCampaignId={focusCampaignId} />
-          <SectionHeading
-            title={copy.leadResults.title}
-            subtitle={copy.leadResults.subtitle}
-          />
-          <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
-            {payload.ads.map((ad) => (
-              <AdPerformanceCard key={ad.adId} ad={ad} />
-            ))}
-          </div>
+          <details className={panelClass}>
+            <summary className="cursor-pointer text-[13px] font-bold">Open ad details</summary>
+            <div className="mt-3 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
+              {payload.ads.map((ad) => <AdPerformanceCard key={ad.adId} ad={ad} />)}
+            </div>
+          </details>
         </>
       ) : null}
 
-      <div className="grid gap-3.5 lg:grid-cols-[2fr_3fr]">
-        {payload.suburbPerformance.length > 0 ? (
+      <details className={panelClass}>
+        <summary className="cursor-pointer text-[13px] font-bold">Open pacing and location details</summary>
+        <div className="mt-3 grid gap-3.5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          {payload.suburbPerformance.length > 0 ? (
+            <section className={panelClass}>
+              <h3 className={panelTitleClass}>{copy.areaBreakdown.title}</h3>
+              <div className="mt-4">
+                <SuburbBarChart rows={payload.suburbPerformance} />
+              </div>
+            </section>
+          ) : null}
           <section className={panelClass}>
-            <h3 className={panelTitleClass}>{copy.areaBreakdown.title}</h3>
+            <h3 className={panelTitleClass}>{copy.budgetPacing}</h3>
             <div className="mt-4">
-              <SuburbBarChart rows={payload.suburbPerformance} />
+              <BudgetPacingChart
+                daily={payload.daily}
+                budget={summary.budget}
+                spend={summary.spend}
+                range={payload.range}
+              />
             </div>
           </section>
-        ) : null}
-        <section className={panelClass}>
-          <h3 className={panelTitleClass}>{copy.budgetPacing}</h3>
-          <div className="mt-4">
-            <BudgetPacingChart
-              daily={payload.daily}
-              budget={summary.budget}
-              spend={summary.spend}
-              range={payload.range}
-            />
-          </div>
-        </section>
-      </div>
+        </div>
 
-      {(payload.anglePerformance?.length ?? 0) > 0 ? <AnglePerformanceTable rows={payload.anglePerformance ?? []} /> : null}
+        {(payload.anglePerformance?.length ?? 0) > 0 ? <AnglePerformanceTable rows={payload.anglePerformance ?? []} /> : null}
+      </details>
+    </div>
+  );
+}
+
+
+
+function AdResultRow({
+  ad,
+  onSelect,
+}: {
+  ad: MetaMonitorPayload["ads"][number];
+  onSelect: (adId: string) => void;
+}) {
+  const metrics = ad.metrics;
+  const statusLabel = ad.fatigued
+    ? "Review fatigue"
+    : ad.status === "UNKNOWN"
+      ? "Status unavailable"
+      : ad.status === "ACTIVE"
+        ? "Running"
+        : ad.status === "PAUSED"
+          ? "Paused"
+          : "Recent result";
+  return (
+    <div className="flex min-w-0 items-center gap-2.5 py-3 first:pt-0 last:pb-0 sm:gap-3">
+      <CreativePreview ad={ad} size={44} />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[12.5px] font-bold">{ad.suburb ?? ad.adName}</p>
+        <p className="truncate text-[11.5px] text-muted-foreground">{ad.campaignName || ad.adsetName || "Ad result"}</p>
+        <p className="truncate text-[11px] font-semibold text-(--faint)">{statusLabel}</p>
+      </div>
+      <div className="min-w-[58px] text-right sm:min-w-[76px]">
+        <p className="text-[11.5px] font-bold tabular-nums sm:text-[12.5px]">{metrics.validLeads} leads</p>
+        <p className="text-[10.5px] text-muted-foreground sm:text-[11px]">{formatCurrency(metrics.spend)} spend</p>
+      </div>
+      <StatusPill status={ad.status} />
+      <button
+        type="button"
+        className="min-h-10 shrink-0 rounded-full border border-(--line-heavy) px-2.5 text-[11px] font-bold text-foreground transition-colors hover:bg-(--surface-subtle) sm:px-3"
+        onClick={() => onSelect(ad.adId)}
+      >
+        <span className="sm:hidden">View</span>
+        <span className="hidden sm:inline">View details</span>
+      </button>
     </div>
   );
 }
@@ -506,7 +597,7 @@ function CampaignManagementTable({
   onSelectAd: (adId: string) => void;
   focusCampaignId?: string | null;
 }) {
-  const [openRows, setOpenRows] = useState<Set<string>>(() => new Set(rows.map((row) => row.id)));
+  const [openRows, setOpenRows] = useState<Set<string>>(() => new Set());
   const focusedCampaignRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -535,11 +626,13 @@ function CampaignManagementTable({
   }
 
   return (
-    <section className={panelClass}>
+    <details className={panelClass} open={focusCampaignId ? true : undefined}>
+      <summary className="cursor-pointer text-[13px] font-bold">Manage campaigns and budgets</summary>
+      <div className="mt-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <SectionHeading
           title="Campaigns"
-          subtitle="Expand campaigns to manage ad sets and ads with approval-gated Meta changes."
+          subtitle="Pausing ads or changing daily spend asks for approval and shows the effect before it is sent to Meta."
         />
         <div className="flex flex-wrap items-center gap-1.5 pt-1" aria-label="Row labels">
           <OriginTag managed />
@@ -557,7 +650,7 @@ function CampaignManagementTable({
               <TableHead className={`${thClass} text-right`}>Spend</TableHead>
               <TableHead className={`${thClass} text-right`}>Leads</TableHead>
               <TableHead className={`${thClass} text-right`}>Valid</TableHead>
-              <TableHead className={`${thClass} text-right`}>CPL</TableHead>
+              <TableHead className={`${thClass} text-right`}>Cost per lead</TableHead>
               <TableHead className={thClass}>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -658,7 +751,8 @@ function CampaignManagementTable({
           </TableBody>
         </Table>
       </div>
-    </section>
+      </div>
+    </details>
   );
 }
 
@@ -790,7 +884,7 @@ function AnglePerformanceTable({ rows }: { rows: AnglePerformance[] }) {
     <section className={panelClass}>
       <h3 className={panelTitleClass}>Angle performance</h3>
       <p className="mt-0.5 text-[11.5px] text-(--faint)">
-        Built from Ad Studio variant tags in ad names. Ads published outside Ad Studio group under &quot;Untagged&quot;.
+        Built from Ads variant tags in ad names. Ads published outside Ad Studio group under &quot;Untagged&quot;.
       </p>
       <div className="mt-4 -mx-5 overflow-x-auto px-5">
         <Table className="min-w-[680px]">
@@ -803,7 +897,7 @@ function AnglePerformanceTable({ rows }: { rows: AnglePerformance[] }) {
               <TableHead className={`${thClass} text-right`}>CTR</TableHead>
               <TableHead className={`${thClass} text-right`}>Leads</TableHead>
               <TableHead className={`${thClass} text-right`}>Valid leads</TableHead>
-              <TableHead className={`${thClass} text-right`}>Valid CPL</TableHead>
+              <TableHead className={`${thClass} text-right`}>Valid cost per lead</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

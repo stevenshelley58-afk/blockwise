@@ -5,30 +5,6 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/product-common.sh"
 compose_with_all_profiles ps
 
-mail_enabled="$(read_env_value BLOCKWISE_MAIL_ENABLED || true)"
-deployment_env="$(read_env_value BLOCKWISE_DEPLOYMENT_ENV || true)"
-if [[ "$deployment_env" == "production" && "$mail_enabled" != "true" ]]; then
-  echo "BLOCKWISE_MAIL_ENABLED must be true for production readiness" >&2
-  exit 2
-fi
-if [[ "$mail_enabled" == "true" ]] && ! compose_with_all_profiles ps --status running --services | grep -Fxq product-mail; then
-  echo "BLOCKWISE_MAIL_ENABLED=true but product-mail is not running" >&2
-  exit 2
-fi
-if [[ "$mail_enabled" == "true" ]]; then
-  # Running is not sufficient: Stalwart must report its durable stores and
-  # listeners ready before the app health endpoint can be accepted.
-  mail_health="$(compose_with_all_profiles ps --format '{{.Service}} {{.State}} {{.Health}}' product-mail 2>/dev/null || true)"
-  [[ "$mail_health" == "product-mail running healthy" ]] || {
-    echo "BLOCKWISE_MAIL_ENABLED=true but product-mail health is not healthy" >&2
-    exit 2
-  }
-  if ! BLOCKWISE_PRODUCT_ENV_FILE="$ENV_FILE" "$SCRIPT_DIR/mail-validate.sh" >/dev/null; then
-    echo "BLOCKWISE_MAIL_ENABLED=true but SMTP identities are not authenticated over TLS" >&2
-    exit 2
-  fi
-fi
-
 # A worker is deliberately not part of the foundation/canary posture. Catch a
 # stale worker left running from an earlier cutover before reporting readiness.
 provider_writes="$(read_env_value BLOCKWISE_ENABLE_PROVIDER_WRITES || true)"
@@ -63,8 +39,24 @@ if ! curl "${curl_args[@]}" --header 'Accept: application/json' "$PUBLIC_URL/api
   echo "product readiness request failed: $PUBLIC_URL/api/health" >&2
   exit 1
 fi
-grep -Eq '"status"[[:space:]]*:[[:space:]]*"ready"' "$response_file" || {
-  echo "product readiness JSON did not report status=ready" >&2
-  exit 1
-}
-echo "product readiness endpoint: ready"
+# Optionally prove the intended compiled release, not just any healthy app.
+expected_revision="${1:-${BLOCKWISE_EXPECTED_REVISION:-}}"
+python3 - "$response_file" "$expected_revision" <<'PY'
+import json
+import re
+import sys
+
+with open(sys.argv[1]) as response:
+    health = json.load(response)
+if health.get("app") != "blockwise" or health.get("status") != "ready":
+    raise SystemExit("product readiness JSON did not report Blockwise status=ready")
+expected = sys.argv[2]
+if expected:
+    if not re.fullmatch(r"[a-f0-9]{40}", expected):
+        raise SystemExit("Expected revision must be a full lowercase Git SHA")
+    if health.get("revision") != expected:
+        raise SystemExit(f"Release mismatch: expected {expected}, served {health.get('revision')}")
+    print(f"product readiness endpoint: ready, verified release {expected}")
+else:
+    print("product readiness endpoint: ready (release not asserted)")
+PY

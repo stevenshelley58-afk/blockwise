@@ -7,4 +7,3 @@ export function readScrapingBeeReceipt(headers, maxCredits) {
     ? { chargeKnown: true, credits, requestId }
     : { chargeKnown: false, credits: null, requestId, invalid: true };
 }
-

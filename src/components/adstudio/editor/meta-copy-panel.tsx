@@ -25,6 +25,8 @@ export interface MetaCopyPanelProps {
   className?: string;
   values: MetaCopy;
   onChange: (field: keyof MetaCopy, value: string) => void;
+  destinationUrl?: string;
+  onDestinationChange?: (value: string) => void;
 }
 
 /** Meta's standard CTAs (the same set the meta lead-ad pack schema allows). */
@@ -33,7 +35,7 @@ export const META_CTA_OPTIONS = META_COPY_CTA_VALUES;
 /** Meta truncation limits used for the live preview. */
 const LIMITS = META_COPY_CONSTRAINTS;
 
-export function MetaCopyPanel({ className, values, onChange }: MetaCopyPanelProps) {
+export function MetaCopyPanel({ className, values, onChange, destinationUrl = "", onDestinationChange }: MetaCopyPanelProps) {
   const selectedCta = isMetaCta(values.cta) ? values.cta : toMetaCta(values.cta || "LEARN_MORE");
 
   return (
@@ -87,6 +89,13 @@ export function MetaCopyPanel({ className, values, onChange }: MetaCopyPanelProp
             ))}
           </select>
         </div>
+        {onDestinationChange ? (
+          <div>
+            <Label htmlFor="meta-destination-url" className="mb-1 block text-sm font-medium">Destination URL</Label>
+            <Input id="meta-destination-url" type="url" inputMode="url" value={destinationUrl} onChange={(event) => onDestinationChange(event.target.value)} placeholder="https://your-site.com/property" className="min-h-11 rounded-(--r-card) bg-muted/30" />
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">Shown in the preview now and carried into the publish step.</p>
+          </div>
+        ) : null}
       </div>
 
       <TruncationPreview values={values} />

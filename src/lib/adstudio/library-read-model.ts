@@ -6,6 +6,16 @@ import { isExampleBrandKitSourceUrl } from "./persistence.ts";
 import { adFormatLabel, deriveAdLibraryStatus, type AdLibraryStatus } from "./library-contract.ts";
 export { adFormatLabel, deriveAdLibraryStatus } from "./library-contract.ts";
 
+export function savedAdDownloadPaths(revision: Record<string, unknown> | undefined): {
+  feed: string | null;
+  story: string | null;
+} {
+  return {
+    feed: typeof revision?.feed_png_path === "string" ? revision.feed_png_path : null,
+    story: typeof revision?.story_png_path === "string" ? revision.story_png_path : null,
+  };
+}
+
 // Inlined from deleted asset-roles.ts
 export type AssetRole = "property" | "person" | "logo" | "background";
 
@@ -29,6 +39,8 @@ export type LibraryAdModel = {
   templateId: string;
   name: string;
   src: string | null;
+  feedDownloadPath: string | null;
+  storyDownloadPath: string | null;
   format: string;
   updatedAt: string | null;
   revisionId: string | null;
@@ -164,8 +176,9 @@ export async function loadAdStudioLibraryPage(input: {
     for (const row of pageRows) {
       const revision = revisionByAd.get(String(row.id));
       const metaPlan = metaPlanByAd.get(String(row.id));
-      const feedPath = typeof revision?.feed_png_path === "string" ? revision.feed_png_path : null;
-      const storyPath = typeof revision?.story_png_path === "string" ? revision.story_png_path : null;
+      const downloadPaths = savedAdDownloadPaths(revision);
+      const feedPath = downloadPaths.feed;
+      const storyPath = downloadPaths.story;
       const raw = firstPreviewPath(revision);
       const path = storagePathFromSource(input.workspaceId, raw);
       const src = path ? (signed[path]?.grid ?? null) : null;
@@ -175,6 +188,8 @@ export async function loadAdStudioLibraryPage(input: {
         templateId: String(row.template_id ?? ""),
         name: typeof row.name === "string" && row.name.trim() ? row.name : "Untitled ad",
         src: src ?? (templateId ? gallerySampleProxyUrl(templateId, "feed", String(row.id)) : null),
+        feedDownloadPath: feedPath,
+        storyDownloadPath: storyPath,
         format: adFormatLabel(Boolean(feedPath), Boolean(storyPath)),
         updatedAt: typeof row.updated_at === "string" ? row.updated_at : null,
         revisionId: typeof revision?.id === "string" ? revision.id : null,
@@ -182,6 +197,7 @@ export async function loadAdStudioLibraryPage(input: {
         status: deriveAdLibraryStatus({
           publishStatus: metaPlan?.status,
           mutationActions: metaPlan ? mutationsByPlan.get(String(metaPlan.id)) : [],
+          hasSavedRevision: Boolean(revision),
         }),
       });
     }

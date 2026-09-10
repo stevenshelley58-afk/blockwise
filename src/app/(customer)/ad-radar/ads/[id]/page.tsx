@@ -22,16 +22,13 @@ const mediaClass =
 export default async function ResearchAdDetailPage({ params }: { params: Promise<{ id: string }> }) {
   if (!niche.features.adRadar) notFound();
   const { id } = await params;
-  const { supabase } = await requirePageSurfaceAccess("monitor");
-  const { ad, versions, error } = await loadCustomerResearchAdDetail(supabase, id);
+  await requirePageSurfaceAccess("monitor");
+  const { ad, versions, error } = await loadCustomerResearchAdDetail(id);
 
   if (error || !ad) {
     return (
-      <main className="mx-auto grid w-full max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
+      <section className="mx-auto grid w-full max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
         <header>
-          <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
-            Competitor intelligence
-          </p>
           <h1 className="mt-1 font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">Ad not found</h1>
           <p className="mt-1 text-[13px] text-muted-foreground">
             The selected research ad is no longer available in this workspace view.
@@ -42,12 +39,12 @@ export default async function ResearchAdDetailPage({ params }: { params: Promise
             Back to Ad Radar
           </Link>
         </div>
-      </main>
+      </section>
     );
   }
 
   return (
-    <main className="mx-auto grid w-full max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
+    <section className="mx-auto grid w-full max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
       <header>
         <p className="font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase">
           Competitor intelligence
@@ -56,7 +53,7 @@ export default async function ResearchAdDetailPage({ params }: { params: Promise
           {ad.creative.headline ?? ad.page.name}
         </h1>
         <p className="mt-1 text-[13px] text-muted-foreground">
-          Meta Library {ad.libraryId ?? "ID unavailable"} from {ad.page.name}.
+          Captured from {ad.page.name}. Source details are available in Meta.
         </p>
       </header>
 
@@ -142,7 +139,6 @@ export default async function ResearchAdDetailPage({ params }: { params: Promise
                 <TableHead className={thClass}>Type</TableHead>
                 <TableHead className={thClass}>Intent</TableHead>
                 <TableHead className={thClass}>Display</TableHead>
-                <TableHead className={thClass}>Ad ID</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -154,11 +150,6 @@ export default async function ResearchAdDetailPage({ params }: { params: Promise
                   <TableCell className="text-[12px]">{version.adType ?? "-"}</TableCell>
                   <TableCell className="text-[12px]">{version.primaryIntent ?? "-"}</TableCell>
                   <TableCell className="text-[12px]">{version.displayState ?? "-"}</TableCell>
-                  <TableCell>
-                    <span className="rounded-lg bg-(--surface-subtle) px-2 py-0.5 font-mono text-[11px] text-(--faint)">
-                      {version.creativeHash.slice(0, 16)}
-                    </span>
-                  </TableCell>
                 </TableRow>
               ))}
               {versions.length === 0 ? (
@@ -172,7 +163,7 @@ export default async function ResearchAdDetailPage({ params }: { params: Promise
           </Table>
         </div>
       </section>
-    </main>
+    </section>
   );
 }
 

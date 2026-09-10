@@ -43,7 +43,7 @@ export function MetaAdTile({
           <img src={thumbnail} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
         ) : (
           <span className="grid size-full place-items-center px-3 text-center text-[11.5px] font-bold text-muted-foreground">
-            Text-only ad
+            {card.adType?.toLowerCase().includes("text") ? "Text-only ad" : "Preview unavailable"}
           </span>
         )}
 

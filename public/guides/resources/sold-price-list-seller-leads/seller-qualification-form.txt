@@ -1,0 +1,22 @@
+SOLD-PRICE LIST FORM DRAFT
+
+Required
+- Full name
+- Email address
+
+Optional (only if phone contact is explained and permitted)
+- Mobile number
+
+Qualification
+Do you own a home of this type in [Suburb]?
+[ ] Yes
+[ ] No
+[ ] Prefer not to say
+
+Delivery notice
+We will use your details to send the sold-price list you requested and respond to your request. See [privacy-policy link].
+
+Separate optional marketing consent (do not pre-tick)
+[ ] Yes, send me occasional [Suburb] property updates from [Agency]. This is separate from receiving the sold-price list. I can unsubscribe at any time.
+
+Record: wording shown, source, timestamp, channels consented, privacy link and any later suppression.

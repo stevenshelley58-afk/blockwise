@@ -15,6 +15,8 @@ import {
   ChevronRight,
   ChevronsUpDown,
   Download,
+  Mail,
+  Phone,
   Search,
 } from "lucide-react";
 import {
@@ -102,6 +104,7 @@ const columns: ColumnDef<TableLead>[] = [
         {row.original.email && row.original.phone ? (
           <p className="truncate text-xs leading-[1.4] text-muted-foreground">{row.original.phone}</p>
         ) : null}
+        <LeadContactActions lead={row.original} />
       </div>
     ),
   },
@@ -138,8 +141,13 @@ const columns: ColumnDef<TableLead>[] = [
     id: "delivery",
     header: niche.copy.leads.columns.delivery,
     accessorKey: "delivery",
-    cell: ({ getValue }) => (
-      <span className="text-[12.5px] whitespace-nowrap text-muted-foreground">{getValue<string>()}</span>
+    cell: ({ row }) => (
+      <div>
+        <span className="text-[12.5px] whitespace-nowrap text-muted-foreground">{row.original.delivery}</span>
+        {deliveryHint(row.original.delivery) ? (
+          <p className="mt-1 max-w-56 text-xs leading-5 text-muted-foreground">{deliveryHint(row.original.delivery)}</p>
+        ) : null}
+      </div>
     ),
   },
   {
@@ -156,6 +164,43 @@ function pageWindow(current: number, count: number): number[] {
   if (count <= 5) return Array.from({ length: count }, (_, index) => index);
   const start = Math.max(0, Math.min(current - 2, count - 5));
   return [start, start + 1, start + 2, start + 3, start + 4];
+}
+
+function LeadContactActions({ lead }: { lead: Pick<LeadListItem, "name" | "email" | "phone"> }) {
+  const phone = safeTelephone(lead.phone);
+  const email = safeEmail(lead.email);
+  if (!phone && !email) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-2">
+      {phone ? (
+        <a href={"tel:" + phone} className="inline-flex min-h-11 items-center gap-1 rounded-full border border-(--line-heavy) px-3 text-xs font-bold hover:bg-(--surface-subtle) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={"Call " + lead.name}>
+          <Phone size={13} aria-hidden />Call
+        </a>
+      ) : null}
+      {email ? (
+        <a href={"mailto:" + encodeURIComponent(email)} className="inline-flex min-h-11 items-center gap-1 rounded-full border border-(--line-heavy) px-3 text-xs font-bold hover:bg-(--surface-subtle) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={"Email " + lead.name}>
+          <Mail size={13} aria-hidden />Email
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
+function safeTelephone(value: string) {
+  if (!/^[\d+()\s.-]+$/.test(value)) return null;
+  const normalised = value.replace(/[()\s.-]/g, "");
+  return /^\+?\d{7,15}$/.test(normalised) ? normalised : null;
+}
+
+function safeEmail(value: string) {
+  const email = value.trim();
+  return /^[^\s@?]+@[^\s@?]+\.[^\s@?]+$/.test(email) ? email : null;
+}
+
+function deliveryHint(delivery: string) {
+  if (delivery === "Failed") return "Delivery failed. Ask a workspace owner or Blockwise support to review the saved delivery attempt.";
+  if (delivery === "Manual review") return "This lead is waiting for your team to follow up.";
+  return null;
 }
 
 export function LeadsTable({
@@ -397,6 +442,7 @@ export function LeadsTable({
                     {lead.email && lead.phone ? (
                       <p className="truncate text-xs text-muted-foreground">{lead.phone}</p>
                     ) : null}
+                    <LeadContactActions lead={lead} />
                   </div>
                   <LeadStatusBadge duplicate={lead.duplicateCandidate} compact />
                 </div>
@@ -406,6 +452,7 @@ export function LeadsTable({
                   </span>
                   <span className="min-w-0 truncate text-xs text-muted-foreground">{lead.delivery}</span>
                 </div>
+                {deliveryHint(lead.delivery) ? <p className="mt-2 text-xs leading-5 text-muted-foreground">{deliveryHint(lead.delivery)}</p> : null}
                 <div className="mt-3 flex min-w-0 items-center justify-between gap-2">
                   <SourceAd label={sourceAdLabel(lead)} />
                   <LeadQualitySelect

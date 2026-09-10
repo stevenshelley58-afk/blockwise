@@ -13,6 +13,7 @@ type ClientOptions = {
 
 export type AdDbSearchInput = {
   query?: string;
+  advertiserPageId?: string;
   agentId?: string;
   agentName?: string;
   agencyId?: string;
@@ -23,6 +24,7 @@ export type AdDbSearchInput = {
   locationRelation?:
     "office" | "service_area" | "property" | "copy_mention" | "meta_targeting";
   limit?: number;
+  cursor?: string;
 };
 
 export type AdDbSearchResult = {
@@ -63,6 +65,7 @@ const ALLOWED_PARAMS = new Set([
   "adType",
   "format",
   "hook",
+  "cursor",
 ]);
 const LOCATION_RELATIONS = new Set([
   "office",
@@ -91,7 +94,7 @@ export function parseAdDbSearchParams(
     if (params.has(name)) return unsupported(name);
 
   const q = normaliseAdRadarCardSearchQuery(params.get("q") ?? "");
-  if (q.length > 300) return { ok: false, error: "Search query is too long." };
+  if (q.length > 120) return { ok: false, error: "Search query is too long." };
   const input: AdDbSearchInput = {};
   for (const [source, target] of [
     ["agent", "agentName"],
@@ -102,7 +105,7 @@ export function parseAdDbSearchParams(
     const value = params.get(source)?.trim();
     if (params.has(source) && !value)
       return { ok: false, error: `${source} must not be empty.` };
-    if (value && value.length > 160)
+    if (value && value.length > 120)
       return { ok: false, error: `${source} is too long.` };
     if (value) input[target] = value;
   }
@@ -128,6 +131,12 @@ export function parseAdDbSearchParams(
   if (relation)
     input.locationRelation = relation as AdDbSearchInput["locationRelation"];
 
+  const cursor = params.get("cursor")?.trim();
+  if (params.has("cursor") && !cursor)
+    return { ok: false, error: "cursor must not be empty." };
+  if (cursor && (cursor.length > 512 || !/^[A-Za-z0-9._~+/=-]+$/u.test(cursor)))
+    return { ok: false, error: "cursor is invalid." };
+  if (cursor) input.cursor = cursor;
   const hasExplicitLocation = Boolean(
     input.state || input.suburb || input.postcode,
   );
@@ -153,6 +162,7 @@ export async function searchAdDbAds(
   const url = endpoint(baseUrl, "/v1/ad-db/ads");
   const pairs: Array<[string, string | undefined]> = [
     ["q", input.query],
+    ["advertiserPageId", input.advertiserPageId],
     ["agentId", input.agentId],
     ["agentName", input.agentName],
     ["agencyId", input.agencyId],
@@ -161,6 +171,7 @@ export async function searchAdDbAds(
     ["suburb", input.suburb],
     ["postcode", input.postcode],
     ["locationRelation", input.locationRelation],
+    ["cursor", input.cursor],
   ];
   for (const [name, value] of pairs)
     if (value) url.searchParams.set(name, value);
@@ -178,6 +189,30 @@ export async function searchAdDbAds(
   const payload: unknown = await response.json().catch(() => null);
   if (!isSearchResult(payload)) throw new AdDbUpstreamError(502);
   return payload;
+}
+
+/** Load one canonical ad without exposing the research database to callers. */
+export async function fetchAdDbAd(
+  adId: string,
+  options: ClientOptions = {},
+): Promise<AdDbRow | null> {
+  const { baseUrl, token } = resolveAdDbConfig(options.env);
+  const url = endpoint(
+    baseUrl,
+    "/v1/ad-db/ads/" + encodeURIComponent(adId),
+  );
+  const response = await request(
+    url,
+    token,
+    { method: "GET" },
+    options.fetcher,
+  );
+  if (response.status === 404) return null;
+  if (!response.ok) throw new AdDbUpstreamError(response.status);
+  const payload: unknown = await response.json().catch(() => null);
+  const row = unwrapAdDbRow(payload);
+  if (!row) throw new AdDbUpstreamError(502);
+  return row;
 }
 
 export async function fetchAdDbMedia(
@@ -216,7 +251,7 @@ function resolveAdDbConfig(
   token: string;
 } {
   const rawUrl = env.AD_DB_API_URL?.trim();
-  const token = env.AD_DB_READ_TOKEN?.trim();
+  const token = env.HERMES_AD_DB_READ_TOKEN?.trim() || "";
   if (!rawUrl || !token) throw new AdDbConfigurationError();
   let baseUrl: URL;
   try {
@@ -276,3 +311,26 @@ function isSearchResult(value: unknown): value is AdDbSearchResult {
     Number.isInteger(page.limit)
   );
 }
+
+function unwrapAdDbRow(value: unknown): AdDbRow | null {
+  if (isAdDbRow(value)) return value;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const object = value as Record<string, unknown>;
+  for (const key of ["item", "ad", "data"]) {
+    if (isAdDbRow(object[key])) return object[key];
+  }
+  return null;
+}
+
+function isAdDbRow(value: unknown): value is AdDbRow {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const row = value as Partial<AdDbRow>;
+  return (
+    typeof row.id === "string" &&
+    typeof row.advertiser_page_id === "string" &&
+    typeof row.page_name === "string" &&
+    typeof row.active_status === "string" &&
+    Array.isArray(row.media)
+  );
+}
+>>>>>>> origin/main

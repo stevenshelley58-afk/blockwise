@@ -1,16 +1,18 @@
 "use client";
 
+import { trackMarketingEvent } from "@/lib/analytics/marketing";
+
 import Link from "next/link";
 
 function fireSafe(event: string, properties: Record<string, string | number>) {
-  try { const w = window as Window & { fbq?: (...args: unknown[]) => void; gtag?: (...args: unknown[]) => void }; w.fbq?.("trackCustom", event, properties); w.gtag?.("event", event, properties); } catch {}
+  try { const w = window as Window & { fbq?: (...args: unknown[]) => void; gtag?: (...args: unknown[]) => void }; w.fbq?.("trackCustom", event, properties); trackMarketingEvent(event, properties); } catch {}
 }
 
 import { useActionState, useEffect, useRef, useState } from "react";
 
 import type { PublicAdRadarCard } from "@/lib/research/public-ad-radar";
 import type { SuburbReportInsights } from "@/lib/research/suburb-report-insights";
-import { REPORT_CATEGORIES } from "@/lib/research/suburb-report-insights";
+
 
 import { emailSuburbReport, type ReportEmailState } from "./actions";
 
@@ -90,11 +92,11 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
               <SectionHeading id="snapshot-title" title="Market snapshot" note={`Who's buying attention in ${postcode}, based on the ads observed today`} />
               <div className="sr-snapshot">
                 <div className="sr-chart" aria-label="Observed ads by category">
-                  <h2>Live ads by category</h2>
-                  {REPORT_CATEGORIES.map((category) => {
-                    const count = insights.categoryCounts[category];
-                    const width = ads.length ? Math.max(3, Math.round((count / ads.length) * 100)) : 0;
-                    return <div className="sr-chart-row" key={category}><span>{category}</span><i><b style={{ transform: `scaleX(${width / 100})` }} /></i><strong>{count}</strong></div>;
+                  <h2>{insights.chartTitle}</h2>
+                  {insights.chartRows.map((row) => {
+                    const total = insights.chartRows.reduce((sum, entry) => sum + entry.count, 0);
+                    const width = total ? Math.max(3, Math.round((row.count / total) * 100)) : 0;
+                    return <div className="sr-chart-row" key={row.label}><span>{row.label}</span><i><b style={{ transform: `scaleX(${width / 100})` }} /></i><strong>{row.count}</strong></div>;
                   })}
                 </div>
                 <div className="sr-insights">
@@ -104,10 +106,10 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
             </section>
 
             <section className="sr-section" aria-labelledby="gaps-title">
-              <SectionHeading id="gaps-title" title="Gaps you could own" note={`Three concepts based on categories with lighter representation in ${reportLabel}`} />
+              <SectionHeading id="gaps-title" title="Gaps you could own" note={insights.gapNote} />
               <div className="sr-concepts">
                 {insights.gapConcepts.map((concept) => (
-                  <article className="sr-concept" key={concept.category}>
+                  <article className="sr-concept" key={concept.key}>
                     <span className="sr-concept-label">{concept.label}</span>
                     <div className="sr-concept-preview"><span>Your photo or logo</span><div><h2>{concept.headline}</h2><p>{concept.body}</p><b>{concept.cta}</b></div></div>
                     <p>{concept.rationale}</p>

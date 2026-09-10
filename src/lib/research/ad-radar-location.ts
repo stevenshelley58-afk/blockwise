@@ -1,5 +1,4 @@
-import { createRequire } from "node:module";
-
+import auPostcodeRows from "../../../hermes/data/au-postcodes.json" with { type: "json" };
 import { adRunningMs, type CustomerMetaAdLibraryCard } from "./customer-meta-card.ts";
 
 export type AdRadarLocationGuess = {
@@ -102,7 +101,6 @@ const FALLBACK_LOCATION: AdRadarLocationGuess = {
 };
 
 let postcodeDirectoryCache: PostcodeDirectory | null = null;
-const requireJson = createRequire(import.meta.url);
 
 export function resolveAdRadarLocationGuess(headers: HeaderReader): AdRadarLocationGuess {
   const countryCode = readHeader(headers, "x-vercel-ip-country")?.toUpperCase() ?? null;
@@ -403,7 +401,9 @@ function postcodeDirectory(): PostcodeDirectory {
     if (!Array.isArray(row.suburbs)) continue;
 
     const stateCode = row.state.toUpperCase();
-    const suburbs = uniqueTerms(row.suburbs.map(normalisePostcodeSuburb).filter((value): value is string => Boolean(value)));
+    const suburbs = dropPostalFacilityLocalities(
+      uniqueTerms(row.suburbs.map(normalisePostcodeSuburb).filter((value): value is string => Boolean(value))),
+    );
     if (suburbs.length === 0) continue;
     byPostcode.set(row.postcode, { stateCode, suburbs });
 
@@ -422,15 +422,31 @@ function postcodeDirectory(): PostcodeDirectory {
   return postcodeDirectoryCache;
 }
 
-function readAuPostcodeRows(): AuPostcodeRow[] {
-  try {
-    const parsed = requireJson("../../../hermes/data/au-postcodes.json") as unknown;
-    if (Array.isArray(parsed)) return parsed as AuPostcodeRow[];
-  } catch {
-    return [];
-  }
+const POSTAL_FACILITY_PATTERN = /\b(delivery\s+centre|delivery\s+center|mail\s+centre|mail\s+center|gpo|po\s+box(?:es)?|dc|mc|bc|lpo|business\s+centre)\b/iu;
+const DIRECTIONAL_SUFFIX_PATTERN = /\s+(north|south|east|west|central|dc|mc|bc)$/iu;
 
-  return [];
+/**
+ * The AU postcode dataset lists Australia Post delivery points ("City Delivery
+ * Centre", "Perth Gpo", "Nedlands Dc") and directional variants of a listed
+ * suburb ("Claremont North", "Subiaco East") alongside real suburbs. Those read
+ * as nonsense in a public report. Only those two artefacts are removed, because
+ * a compound name is just as often a real suburb ("Lake Coogee", "Mount
+ * Claremont"); the raw list is kept if nothing survives.
+ */
+function dropPostalFacilityLocalities(suburbs: string[]): string[] {
+  const withoutFacilities = suburbs.filter((suburb) => !POSTAL_FACILITY_PATTERN.test(suburb));
+  const base = new Set(withoutFacilities.map((suburb) => suburb.toLowerCase()));
+  const canonical = withoutFacilities.filter((suburb) => {
+    const lower = suburb.toLowerCase();
+    const withoutDirection = lower.replace(DIRECTIONAL_SUFFIX_PATTERN, "").trim();
+    if (withoutDirection !== lower && base.has(withoutDirection)) return false;
+    return true;
+  });
+  return canonical.length > 0 ? canonical : withoutFacilities.length > 0 ? withoutFacilities : suburbs;
+}
+
+function readAuPostcodeRows(): AuPostcodeRow[] {
+  return Array.isArray(auPostcodeRows) ? (auPostcodeRows as AuPostcodeRow[]) : [];
 }
 
 function normalisePostcodeSuburb(value: unknown): string | null {
