@@ -328,7 +328,13 @@ const CATEGORY_LABELS: Record<NonNullable<OutreachAdExample["category"]>, string
 
 /** One line under an observed creative: what it says, its angle, how long it has held. */
 function exampleLine(example: OutreachAdExample, now: Date): string {
-  const copy = (example.headline || example.body || "").trim().replace(/\s+/gu, " ").slice(0, 90);
+  const raw = (example.headline || example.body || "").trim().replace(/\s+/gu, " ");
+  // Some brand ads carry the page name as their headline. Quoting it under the
+  // advertiser's own name says the same thing twice, so drop it.
+  const advertiser = example.pageName.trim().toLowerCase();
+  const restates = advertiser.length > 0
+    && (raw.toLowerCase().includes(advertiser) || advertiser.includes(raw.toLowerCase()));
+  const copy = restates ? "" : raw.slice(0, 90);
   const angle = example.category ? CATEGORY_LABELS[example.category] : null;
   const started = example.startedAt ? new Date(example.startedAt).getTime() : Number.NaN;
   const days = Number.isFinite(started) ? Math.max(0, Math.floor((now.getTime() - started) / 86_400_000)) : null;
