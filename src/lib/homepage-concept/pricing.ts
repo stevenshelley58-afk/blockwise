@@ -40,7 +40,7 @@ export const HOMEPAGE_PLANS: readonly HomepagePlan[] = [
     id: "self-serve",
     name: "Self-serve",
     price: "A$249",
-    billing: "Plus Meta ad spend",
+    billing: "per month, plus Meta ad spend",
     outcome: "Create and manage your own ads.",
     included: ["100 render credits each month", "Up to 50 Feed + Story ad packs"],
     note: "Cancel anytime. Monthly billing, no lock-in.",
