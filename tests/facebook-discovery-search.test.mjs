@@ -91,6 +91,10 @@ function harness(root, options = {}) {
       events.push({ type: "attempt_patch", patch: JSON.parse(request.body) });
       return [{ id: "attempt-row" }];
     }
+    if (path.startsWith("ad_fetch_attempts?select=")) {
+      events.push({ type: "attempt_history", path });
+      return options.attemptHistory || [];
+    }
     throw new Error(
       "unexpected REST call: " + (request.method || "GET") + " " + path,
     );
@@ -209,6 +213,121 @@ test("parses documented organic results, query echo, and zero-results flag", () 
     ).zeroResultsForOriginalQuery,
     true,
   );
+});
+
+test("unresolved Google redirect results are named as a provider failure", () => {
+  const unresolved = JSON.stringify({
+    meta_data: {
+      url: "https://www.google.com/search?q=Perth+agent",
+      goto_urls: { found: 10, resolved: 0 },
+    },
+    organic_results: [
+      { url: "/goto?url=CAESrAEB6zswFXO1wp9", title: "A", description: "d" },
+      { url: "/goto?url=CAESrAEB7zswFXO2wp9", title: "B", description: "d" },
+    ],
+    zero_results_for_original_query: false,
+  });
+  assert.throws(
+    () => parseGoogleSearchResponse(unresolved, "Perth agent"),
+    /goto_urls_unresolved/,
+  );
+
+  // A partially resolved response is still a per-result problem, not a
+  // provider capability failure.
+  const mixed = JSON.stringify({
+    meta_data: {
+      url: "https://www.google.com/search?q=Perth+agent",
+      goto_urls: { found: 10, resolved: 9 },
+    },
+    organic_results: [{ url: "/goto?url=CAESrAEB6zswFXO1wp9" }],
+  });
+  assert.throws(
+    () => parseGoogleSearchResponse(mixed, "Perth agent"),
+    /result_url_missing/,
+  );
+
+  // Resolved absolute links parse exactly as before.
+  const resolved = parseGoogleSearchResponse(
+    JSON.stringify({
+      meta_data: {
+        url: "https://www.google.com/search?q=Perth+agent",
+        goto_urls: { found: 1, resolved: 1 },
+      },
+      organic_results: [{ url: "https://facebook.com/x", title: "X" }],
+    }),
+    "Perth agent",
+  );
+  assert.equal(resolved.results[0].url, "https://facebook.com/x");
+});
+
+test("repeated provider resolution failures stop paid searches before any request", async () => {
+  const degraded = [
+    { outcome: "blocked", error: "google_search_goto_urls_unresolved" },
+    { outcome: "blocked", error: "google_search_result_url_missing" },
+    { outcome: "blocked", error: "google_search_result_url_missing" },
+  ];
+  await withHarness({ attemptHistory: degraded }, async (h) => {
+    const result = await h.fn({
+      entity: { kind: "agent", id: "a1" },
+      query: "q",
+      job: { id: "job-1" },
+    });
+    assert.equal(result.error, "google_search_provider_degraded");
+    assert.equal(result.actualAttempted, false);
+    assert.equal(h.fetchCalls.length, 0);
+    assert.equal(h.settleCalls.length, 0);
+    assert.equal([...h.runRows.values()][0].provider_request_count, 0);
+    assert.equal([...h.runRows.values()][0].provider_credits, 0);
+  });
+
+  // One success inside the window keeps the paid path open.
+  await withHarness(
+    {
+      attemptHistory: [
+        { outcome: "success", error: null },
+        ...degraded.slice(0, 2),
+      ],
+    },
+    async (h) => {
+      const result = await h.fn({
+        entity: { kind: "agent", id: "a1" },
+        query: "q",
+        job: { id: "job-1" },
+      });
+      assert.notEqual(result.error, "google_search_provider_degraded");
+      assert.equal(h.fetchCalls.length, 1);
+    },
+  );
+
+  // An unrelated failure reason is not provider degradation.
+  await withHarness(
+    {
+      attemptHistory: [
+        { outcome: "blocked", error: "google_search_provider_http_403" },
+        ...degraded.slice(0, 2),
+      ],
+    },
+    async (h) => {
+      const result = await h.fn({
+        entity: { kind: "agent", id: "a1" },
+        query: "q",
+        job: { id: "job-1" },
+      });
+      assert.notEqual(result.error, "google_search_provider_degraded");
+      assert.equal(h.fetchCalls.length, 1);
+    },
+  );
+
+  // Too little history is not proof of degradation.
+  await withHarness({ attemptHistory: degraded.slice(0, 2) }, async (h) => {
+    const result = await h.fn({
+      entity: { kind: "agent", id: "a1" },
+      query: "q",
+      job: { id: "job-1" },
+    });
+    assert.notEqual(result.error, "google_search_provider_degraded");
+    assert.equal(h.fetchCalls.length, 1);
+  });
 });
 
 test("rejects bad JSON, provider errors, missing results, invalid result URLs, and query mismatch", () => {
