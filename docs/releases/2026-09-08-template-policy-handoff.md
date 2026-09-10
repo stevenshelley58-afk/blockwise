@@ -25,3 +25,11 @@ section >=9.8 across comparator and two distinct reviewers; all four reusable
 scenarios and the single no-obvious-errors check passed. No activation/publishing.
 Rollback image 031bf62a76fe2aa44276296e76a9b2e5703f62a3 remains retained;
 protected env backup: /srv/blockwise/backups/template-handoff-20260908-e09a5d6f9/product.env.
+
+## Gate change note, 10 September 2026
+
+The pass gate moved from 9.8 to 9.5: the review policy literal is now
+`section-95-font-exempt-no-obvious-errors-v1` with 9.5 section/reviewer
+minimums. The contract keeps accepting frozen `section-98-...` artifacts and
+legacy 9.5+ likeness thresholds on read; new artifacts must declare the
+section-95 policy. The history above still describes the 9.8 era accurately.
