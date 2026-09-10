@@ -333,4 +333,3 @@ function isAdDbRow(value: unknown): value is AdDbRow {
     Array.isArray(row.media)
   );
 }
->>>>>>> origin/main
