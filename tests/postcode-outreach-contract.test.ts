@@ -73,6 +73,15 @@ test("all three synthetic previews and follow-up render without external data or
   assert.match(buildDemoOutreachPreview({ followUp: true, theme: "dark" }).html, /email-force-dark/);
 });
 
+test("section copy never quotes the advertiser's own name back at them", () => {
+  const first = area.adExamples[0]!;
+  const snapshot = { ...area, adExamples: [{ ...first, headline: first.pageName }, ...area.adExamples.slice(1)] };
+  const text = buildOutreachEmail({ ...input(), snapshot }).text;
+  const escaped = first.pageName.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  // Card heading keeps the name once; the restating headline is dropped, not quoted.
+  assert.equal(text.match(new RegExp(escaped, "gu"))?.length ?? 0, 1);
+});
+
 test("snapshot fingerprints normalize database timestamps and key order", () => {
   assert.equal(snapshotFingerprint(area), snapshotFingerprint({ ...area, evidence: { ...area.evidence, scannedAt: "2026-09-07T00:00:00+00:00" } }));
   assert.notEqual(snapshotFingerprint(area), snapshotFingerprint({ ...area, coverageLabel: "Another area" }));
