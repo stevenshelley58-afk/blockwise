@@ -114,6 +114,7 @@ test("real Ad Radar creatives render as email derivatives from an allowlisted or
     [
       card({ card_id: "a1", library_id: "111", page_name: "Alpha Realty", image_storage_path: `sha256/${ALPHA_HASH}`, headline: "Open Saturday" }),
       card({ card_id: "a2", library_id: "222", page_name: "Beta Property", image_storage_path: `media-blobs/${BETA_HASH}.jpg`, headline: "What is it worth?" }),
+      card({ card_id: "a3", library_id: "333", page_name: "Gamma Homes", headline: "Meet the team" }),
     ],
     area(),
   );
