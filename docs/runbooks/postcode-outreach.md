@@ -100,3 +100,24 @@ The email uses the approved Quiet card, two sourced peer examples, one report CT
 - Add conversion measurement for report views and signups; report routes are currently excluded from general analytics for privacy.
 - Review source/media permissions and confirm the real business identity and unsubscribe destination.
 - Obtain any separate Meta spend and publishing approvals.
+
+## Observed ad creatives
+
+Archived creatives are served from the product storage bucket
+`research-ad-creatives`, published at
+`${NEXT_PUBLIC_RESEARCH_STORAGE_URL}/storage/v1/object/public/research-ad-creatives/<storagePath>`.
+`NEXT_PUBLIC_RESEARCH_STORAGE_URL` and `OUTREACH_MEDIA_ALLOWED_ORIGINS` both
+point at the product origin. They previously pointed at `hermes.blockwise.sale`,
+which resolves but serves nothing, so every creative on a public report was a
+dead link and no outreach email could pass the media allowlist.
+
+The worker archives blobs to `HERMES_AD_DB_ARCHIVE_ROOT`
+(`/srv/hermes/ad-db/assets`) under `sha256/<hash>`. Only that scheme is on disk;
+older `media-blobs/<hash>.<ext>` paths recorded on cards have no archived file,
+so those cards render without media. Publishing the archive into the bucket is
+what makes a creative visible; a card whose blob was never archived stays
+text-only rather than showing a broken image.
+
+Email creatives are resized derivatives under the `email/` prefix in the same
+bucket. Full-size archive blobs reach 15 MB and must not be linked from an
+email.
