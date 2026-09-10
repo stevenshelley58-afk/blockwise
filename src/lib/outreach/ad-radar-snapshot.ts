@@ -52,9 +52,13 @@ export function adRadarSourceUrl(libraryId: string | null): string | null {
   return `https://www.facebook.com/ads/library/?id=${encodeURIComponent(id)}`;
 }
 
-/** Agency name is the business identity; the page name is the fallback. */
+/**
+ * The Meta page name is the identity the reader recognises: it is what they see
+ * on the ad itself, and locally "Daniel Harris - Real Estate Central" lands
+ * where the parent brand "The Agency" does not. Fall back to the agency name.
+ */
 export function adRadarAdvertiserName(card: CustomerMetaAdLibraryCard): string {
-  return card.agencyName ?? card.pageName;
+  return card.pageName ?? card.agencyName;
 }
 
 const CREATIVE_BUCKET = "research-ad-creatives";
