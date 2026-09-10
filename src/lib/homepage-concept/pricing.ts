@@ -43,7 +43,7 @@ export const HOMEPAGE_PLANS: readonly HomepagePlan[] = [
     billing: "per month, plus Meta ad spend",
     outcome: "Create and manage your own ads.",
     included: ["100 render credits each month", "Up to 50 Feed + Story ad packs"],
-    note: "Cancel anytime. Monthly billing, no lock-in.",
+    note: "Choosing this plan is the paid step. Starting free does not auto-charge you.",
     details: ["Five team members, one brand and one Meta ad account", "Help when you need it. Meta ad spend is separate."],
     cta: { label: TRIAL_CTA_LABEL, href: TRIAL_SIGNUP_URL, location: "pricing-self-serve" },
     featured: true,
