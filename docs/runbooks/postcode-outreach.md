@@ -84,13 +84,23 @@ This is an illustrative shape only. The `.example` values must not be treated as
 
 ## Evidence and persistence rules
 
-Prospect-specific page evidence determines the segment. Area evidence is shared context and cannot imply that a particular agent advertised. A failed, stale, incomplete, mismatched, or out-of-scope scan becomes `unknown`; it cannot support an absence claim. A neutral unknown prospect may proceed only when the area snapshot is current and source-verified, contact eligibility passes, and two dated, sourced peer examples are available. Two peer examples are required for every segment.
+Prospect-specific page evidence determines the segment. Area evidence is shared context and cannot imply that a particular agent advertised. A failed, stale, incomplete, mismatched, or out-of-scope scan becomes `unknown`; it cannot support an absence claim. A neutral unknown prospect may proceed only when the area snapshot is current and source-verified, contact eligibility passes, and three dated, sourced peer examples from three distinct advertisers are available. Three peer examples from three distinct advertisers are required for every segment. A postcode with fewer than three distinct peer advertisers is ineligible with `insufficient_peer_examples`; it does not repeat one agency to fill a card.
 
 The import uses a transactional RPC. Area snapshots and generated artifacts are immutable. Repeated imports with the same idempotency key replay the existing draft; conflicting facts are rejected. The public payload and segment are frozen at draft creation, so a valid report remains available after the 72-hour freshness window unless it is explicitly blocked or revoked. This historical availability does not refresh evidence.
 
 Media is included only when source rights are confirmed and the URL origin is in the configured media allowlist. Public reports contain display facts, dated source links, and permitted media only. They do not expose contact details, consent notes, raw CRM/source payloads, or an authenticated session. The opaque token is a bearer link and appears in the protected report URL and email artifact; treat it as confidential.
 
-The email uses the approved Quiet card, two sourced peer examples, one report CTA, and a genuine unsubscribe destination. One follow-up maximum is represented as a draft variant. No provider write, outbox write, or delivery path is implemented.
+The email uses the approved Quiet card, three sourced peer examples from three distinct advertisers, one report CTA, and a genuine unsubscribe destination. One follow-up maximum is represented as a draft variant. No provider write, outbox write, or delivery path is implemented.
+
+## Peer advertiser identity
+
+A peer advertiser is the ad's Meta page name, trimmed and compared
+case-insensitively. Each ad carries its own Ad Library URL, so an ad URL is
+never the identity: two ads from one page are one advertiser, not two.
+
+Selection puts one example per advertiser first and holds repeats back.
+Preferring examples with a confirmed creative reorders within that guarantee, so
+a second ad from an advertiser already shown cannot displace a distinct one.
 
 ## Before a real pilot
 

@@ -189,7 +189,7 @@ export function evaluateOutreachEligibility(
   if (!areaEvidence.usable) reasons.push("stale_or_unusable_scan");
   if (!prospect.scopeVerified || !snapshot.evidence.scopeVerified) reasons.push("scope_unverified");
   if (snapshot.evidence.observedAdCount < snapshot.adExamples.length || snapshot.adExamples.some(ad => !ad.observedAt || !ad.sourceUrl || new Date(ad.observedAt).getTime() > now.getTime())) reasons.push("invalid_area_evidence");
-  if (selectPeerExamples(snapshot, prospect).length < 3) reasons.push("insufficient_peer_examples");
+  if (countPeerAdvertisers(snapshot, prospect) < 3) reasons.push("insufficient_peer_examples");
   if (snapshot.postcode !== prospect.postcode) reasons.push("postcode_mismatch");
 
   return { eligible: reasons.length === 0, reasons: [...new Set(reasons)], segment: evidence.segment };
@@ -357,26 +357,61 @@ function peersSubject(examples: OutreachAdExample[], postcode: string, advertise
   return `${first.pageName}, ${second.pageName} and ${others} others are advertising in ${postcode}`;
 }
 
+function normaliseText(value: string | null): string {
+  return (value ?? "").trim().toLowerCase().replace(/\/$/u, "");
+}
+
+/**
+ * Advertiser identity. The Meta page name is what a reader recognises on the ad
+ * itself. An ad URL is per-ad, so two ads from one page must never read as two
+ * advertisers.
+ */
+function advertiserIdentity(ad: OutreachAdExample): string {
+  return normaliseText(ad.pageName) || normaliseText(ad.pageUrl);
+}
+
+/** Split peers into one example per advertiser, then the repeats. */
+function partitionByAdvertiser(peers: readonly OutreachAdExample[]): { distinct: OutreachAdExample[]; repeats: OutreachAdExample[] } {
+  const seen = new Set<string>();
+  const distinct: OutreachAdExample[] = [];
+  const repeats: OutreachAdExample[] = [];
+  for (const ad of peers) {
+    const advertiser = advertiserIdentity(ad);
+    if (!advertiser || seen.has(advertiser)) repeats.push(ad);
+    else { seen.add(advertiser); distinct.push(ad); }
+  }
+  return { distinct, repeats };
+}
+
+/**
+ * Order peers so the leading cards name different advertisers. Confirmed media
+ * is preferred inside each group, never by promoting a second ad from an
+ * advertiser already shown.
+ */
+export function rankPeerExamples(peers: readonly OutreachAdExample[], options: { preferConfirmedMedia?: boolean } = {}): OutreachAdExample[] {
+  const { distinct, repeats } = partitionByAdvertiser(peers);
+  if (!options.preferConfirmedMedia) return [...distinct, ...repeats];
+  const hasMedia = (ad: OutreachAdExample) => Boolean(ad.mediaUrl && ad.mediaRightsConfirmed);
+  const mediaFirst = (group: OutreachAdExample[]) => [...group.filter(hasMedia), ...group.filter(ad => !hasMedia(ad))];
+  return [...mediaFirst(distinct), ...mediaFirst(repeats)];
+}
+
+/** Distinct peer advertisers, which is what "three from other agencies" promises. */
+export function countPeerAdvertisers(snapshot: OutreachAreaSnapshot, prospect: OutreachProspect): number {
+  return new Set(selectPeerExamples(snapshot, prospect).map(ad => advertiserIdentity(ad))).size;
+}
+
 /** Select external advertiser examples, never label the recipient's own office as a peer. */
 export function selectPeerExamples(snapshot: OutreachAreaSnapshot, prospect: OutreachProspect): OutreachAdExample[] {
-  const normalise = (value: string | null) => (value ?? "").trim().toLowerCase().replace(/\/$/u, "");
-  const ownPages = new Set([prospect.agentPageUrl, prospect.agencyPageUrl].filter(Boolean).map(normalise));
-  const ownNames = new Set([prospect.agentName, prospect.agencyName].filter(Boolean).map(normalise));
+  const ownPages = new Set([prospect.agentPageUrl, prospect.agencyPageUrl].filter(Boolean).map(value => normaliseText(value)));
+  const ownNames = new Set([prospect.agentName, prospect.agencyName].filter(Boolean).map(value => normaliseText(value)));
   const ids = new Set<string>();
   const peers = snapshot.adExamples.filter(ad => {
-    if (ids.has(ad.id) || (ad.pageUrl && ownPages.has(normalise(ad.pageUrl))) || ownNames.has(normalise(ad.pageName))) return false;
+    if (ids.has(ad.id) || (ad.pageUrl && ownPages.has(normaliseText(ad.pageUrl))) || ownNames.has(normaliseText(ad.pageName))) return false;
     ids.add(ad.id);
     return Boolean(ad.sourceUrl);
   });
-  // Prefer different advertisers in the email's first two cards.
-  const names = new Set<string>();
-  const first: OutreachAdExample[] = [], rest: OutreachAdExample[] = [];
-  for (const ad of peers) {
-    const advertiser = normalise(ad.pageUrl || ad.pageName);
-    if (names.has(advertiser)) rest.push(ad);
-    else { names.add(advertiser); first.push(ad); }
-  }
-  return [...first, ...rest];
+  return rankPeerExamples(peers);
 }
 
 function emailFooter(input: OutreachEmailInput): EmailMessage["footer"] {
@@ -396,9 +431,7 @@ export function buildOutreachEmail(input: OutreachEmailInput) {
   const segment = classifyEvidence(input.prospect.advertisingEvidence, input.now ?? new Date()).segment;
   let examples = selectPeerExamples(input.snapshot, input.prospect);
   if ((input.allowedMediaOrigins ?? []).length > 0) {
-    const withMedia = examples.filter((e) => e.mediaUrl && e.mediaRightsConfirmed);
-    const withoutMedia = examples.filter((e) => !e.mediaUrl || !e.mediaRightsConfirmed);
-    examples = [...withMedia, ...withoutMedia];
+    examples = rankPeerExamples(examples, { preferConfirmedMedia: true });
   }
   const limit = input.maxExamples ?? 3;
   const showingAll = limit >= examples.length;

@@ -36,6 +36,30 @@ test("peer selection deduplicates and excludes the recipient agency", () => {
   assert.deepEqual(selected.map(ad => ad.id), ["sample-1", "sample-2"]);
 });
 
+test("one advertiser is one peer even when each ad carries its own URL", () => {
+  const second = area.adExamples[1]!;
+  const sameAdvertiser = { ...second, id: "sample-2b", pageUrl: "https://demo.blockwise.example/pages/other", sourceUrl: "https://demo.blockwise.example/ads/sample-2b" };
+  const snapshot = { ...area, adExamples: [area.adExamples[0]!, second, sameAdvertiser, area.adExamples[2]!] };
+  assert.deepEqual(selectPeerExamples(snapshot, person()).map(ad => ad.id), ["sample-1", "sample-2", "sample-3", "sample-2b"]);
+});
+
+test("confirmed media is preferred without repeating an advertiser in the cards", () => {
+  const first = area.adExamples[0]!;
+  const repeat = { ...first, id: "sample-1b", pageUrl: "https://demo.blockwise.example/pages/other", headline: "Another city address", sourceUrl: "https://demo.blockwise.example/ads/sample-1b", mediaUrl: "https://assets.example.test/b.png", mediaRightsConfirmed: true };
+  const snapshot = { ...area, adExamples: [first, repeat, area.adExamples[1]!, area.adExamples[2]!] };
+  const text = buildOutreachEmail({ ...input(), snapshot, allowedMediaOrigins: ["https://assets.example.test"] }).text;
+  assert.equal(text.includes("ads/sample-1b"), false);
+  for (const id of ["sample-1", "sample-2", "sample-3"]) assert.equal(text.includes(`ads/${id}`), true);
+});
+
+test("eligibility needs three distinct advertisers, not three ads", () => {
+  const first = area.adExamples[0]!;
+  const snapshot = { ...area, adExamples: [first, { ...first, id: "sample-1b", sourceUrl: "https://demo.blockwise.example/ads/sample-1b" }, { ...first, id: "sample-1c", sourceUrl: "https://demo.blockwise.example/ads/sample-1c" }] };
+  const result = evaluateOutreachEligibility(snapshot, person(), now);
+  assert.equal(result.eligible, false);
+  assert.deepEqual(result.reasons, ["insufficient_peer_examples"]);
+});
+
 test("public projection strips CRM fields and requires both rights and allowed media origin", () => {
   const media = { ...area.adExamples[0]!, mediaUrl: "https://assets.example.test/a.png", mediaRightsConfirmed: true };
   const snapshot = { ...area, adExamples: [media, ...area.adExamples.slice(1)] };
