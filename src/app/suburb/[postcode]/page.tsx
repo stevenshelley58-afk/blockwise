@@ -48,9 +48,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!report) return { title: { absolute: "Suburb report | Blockwise" }, robots: { index: false, follow: false } };
   const coverage = formatNaturalList(report.areaSuburbs);
   const count = report.response.ads.length;
-  const description = `Browse ${count} live ads observed across ${postcode}${coverage ? `, including ${coverage}` : ""}, with local advertiser counts, category patterns and practical ad concepts.`;
+  const description = `A free audit of the ${count} live ads observed across ${postcode}${coverage ? `, including ${coverage}` : ""}: who is advertising, how long each ad has run, which angles are crowded and which nobody is using.`;
   return {
-    title: { absolute: `Every live ad across ${postcode} | Blockwise` },
+    title: { absolute: `Ad audit for ${postcode} | Blockwise` },
     description,
     alternates: { canonical: `/${postcode}` },
     // Every four-digit path resolves to a report, so most postcodes would
@@ -58,7 +58,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     // enough observed ads to be worth landing on; the rest stay reachable by
     // direct link only.
     ...(count >= MIN_INDEXABLE_ADS ? {} : { robots: { index: false, follow: false } }),
-    openGraph: { title: `Every live ad across ${postcode}`, description, url: `/${postcode}`, type: "website" },
+    openGraph: { title: `Ad audit for ${postcode}`, description, url: `/${postcode}`, type: "website" },
   };
 }
 

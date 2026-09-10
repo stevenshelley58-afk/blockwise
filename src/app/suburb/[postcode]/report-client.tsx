@@ -67,7 +67,7 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
           <Link className="sr-logo" href="/">blockwise</Link>
           <span className="sr-live-chip"><span />{reportLabel}{coverageLabel ? "" : ` ${postcode}`} · live</span>
           <div className="sr-topbar-actions">
-            <button className="sr-button sr-button-ghost" type="button" onClick={() => setEmailOpen(true)}>Email me this report</button>
+            <button className="sr-button sr-button-ghost" type="button" onClick={() => setEmailOpen(true)}>Email me this audit</button>
             <GateLink href={trialHref} intent="trial" postcode={postcode} className="sr-button sr-button-dark">Create three ads free</GateLink>
           </div>
         </div>
@@ -75,7 +75,8 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
 
       <div className="sr-shell">
         <section className="sr-report-header" aria-labelledby="report-title">
-          <h1 id="report-title">Your {coverageLabel ? postcode : suburb} ad audit</h1>
+          <p className="sr-eyebrow">Free area audit · no account needed</p>
+          <h1 id="report-title">Every live ad {coverageLabel ? `across ${postcode}` : `in ${suburb}`}, audited.</h1>
           <p className="sr-meta">{coverageLabel ? `${coverageLabel} · ` : ""}Updated today · Free to browse, all of it</p>
           <div className="sr-stats">
             <Stat value={String(ads.length)} label="live ads observed" />
@@ -156,7 +157,7 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
 
             <section className="sr-cta-band">
               <div><h2>{reportLabel} changes every week. Keep watching it.</h2><p>This report stays free. A free trial adds tools on top:</p><ul><li>Alerts when a new advertiser appears in {reportLabel}</li><li>Track each advertiser's launches and changes</li><li>Use an observed ad as an AdStudio starting point</li></ul></div>
-              <div className="sr-cta-actions"><GateLink href={trialHref} intent="trial" postcode={postcode} className="sr-button sr-button-light">Start your free trial →</GateLink><button type="button" onClick={() => setEmailOpen(true)}>Or just email me this report</button><small>14 days free · No credit card · Your report stays free either way</small></div>
+              <div className="sr-cta-actions"><GateLink href={trialHref} intent="trial" postcode={postcode} className="sr-button sr-button-light">Start your free trial →</GateLink><button type="button" onClick={() => setEmailOpen(true)}>Or just email me this audit</button><small>14 days free · No credit card · Your audit stays free either way</small></div>
             </section>
           </>
         )}
@@ -168,7 +169,7 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
 
 function ScanOverlay({ suburb, postcode, step, count }: { suburb: string; postcode: string; step: number; count: number }) {
   const steps = [`Finding live ads across ${postcode}`, `Matching ads to ${suburb} and surrounds`, "Profiling advertisers and categories", "Finding gaps you could test"];
-  return <div className="sr-scan" role="status" aria-live="polite"><div className="sr-scan-inner"><p>Free suburb report</p><h1>Scanning {suburb} <span>{postcode}</span></h1><p>Building your report from the ads observed right now.</p><ol>{steps.map((label, index) => <li className={index <= step ? "is-active" : ""} key={label}><span>{index < step ? "✓" : index === step ? "◌" : ""}</span>{label}</li>)}</ol><strong>{count}</strong><small>live ads found so far</small></div><div className="sr-scan-map" aria-hidden><b>{suburb}, WA</b><span>scanning…</span><i /><i /><i /><i /></div></div>;
+  return <div className="sr-scan" role="status" aria-live="polite"><div className="sr-scan-inner"><p>Free area audit</p><h1>Auditing {suburb} <span>{postcode}</span></h1><p>Building your audit from the ads observed right now.</p><ol>{steps.map((label, index) => <li className={index <= step ? "is-active" : ""} key={label}><span>{index < step ? "✓" : index === step ? "◌" : ""}</span>{label}</li>)}</ol><strong>{count}</strong><small>live ads found so far</small></div><div className="sr-scan-map" aria-hidden><b>{suburb}, WA</b><span>scanning…</span><i /><i /><i /><i /></div></div>;
 }
 
 function Stat({ value, label }: { value: string; label: string }) { return <div><strong>{value}</strong><span>{label}</span></div>; }
@@ -193,7 +194,7 @@ function EmailReportDialog({ open, onClose, postcode, suburb }: { open: boolean;
   const [state, action, pending] = useActionState(emailSuburbReport, initialEmailState);
   useEffect(() => { const dialog = ref.current; if (!dialog) return; if (open && !dialog.open) dialog.showModal(); else if (!open && dialog.open) dialog.close(); }, [open]);
   useEffect(() => { if (state.ok) fireSafe("report_email_submitted", { postcode }); }, [postcode, state.ok]);
-  return <dialog className="sr-email-dialog" ref={ref} onCancel={onClose} onClose={onClose}><button className="sr-dialog-close" type="button" onClick={onClose} aria-label="Close">×</button>{state.ok ? <div className="sr-email-success"><span>✓</span><h2>Sent. It's yours.</h2><p>PS: a free account adds alerts and tracking while this report stays free.</p><button className="sr-button sr-button-dark" type="button" onClick={onClose}>Back to report</button></div> : <><h2>Send this report to your inbox</h2><p>One email with a live link to your {suburb} report. No drip sequence.</p><form action={action}><input type="hidden" name="postcode" value={postcode} /><input type="hidden" name="suburb" value={suburb} /><label htmlFor="report-email">Email address</label><div><input id="report-email" name="email" type="email" autoComplete="email" required placeholder="you@business.com.au" /><button className="sr-button sr-button-dark" disabled={pending} type="submit">{pending ? "Sending…" : "Send it"}</button></div>{state.error ? <p className="sr-form-error" role="alert">{state.error}</p> : null}</form><small>The link remains available as the observed ad set changes.</small></>}</dialog>;
+  return <dialog className="sr-email-dialog" ref={ref} onCancel={onClose} onClose={onClose}><button className="sr-dialog-close" type="button" onClick={onClose} aria-label="Close">×</button>{state.ok ? <div className="sr-email-success"><span>✓</span><h2>Sent. It's yours.</h2><p>PS: a free account adds alerts and tracking while this audit stays free.</p><button className="sr-button sr-button-dark" type="button" onClick={onClose}>Back to the audit</button></div> : <><h2>Send this audit to your inbox</h2><p>One email with a live link to your {suburb} audit. No drip sequence.</p><form action={action}><input type="hidden" name="postcode" value={postcode} /><input type="hidden" name="suburb" value={suburb} /><label htmlFor="report-email">Email address</label><div><input id="report-email" name="email" type="email" autoComplete="email" required placeholder="you@business.com.au" /><button className="sr-button sr-button-dark" disabled={pending} type="submit">{pending ? "Sending…" : "Send it"}</button></div>{state.error ? <p className="sr-form-error" role="alert">{state.error}</p> : null}</form><small>The link remains available as the observed ad set changes.</small></>}</dialog>;
 }
 
 function gateHref(postcode: string, intent: "track" | "remix" | "trial") { return `/signup?src=suburb-report&postcode=${postcode}&intent=${intent}`; }
