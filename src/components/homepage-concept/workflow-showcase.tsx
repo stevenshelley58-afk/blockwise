@@ -52,6 +52,14 @@ const STORY_CREATIVE = {
   linkTitle: "Get the suburb property guide",
 } as const;
 
+/** Extra template cards shown in the browser to make the library look deep. */
+const BROWSER_CARDS = [
+  ...AD_EXAMPLES,
+  { id: "open-home", label: "Open home", image: AD_EXAMPLES[2].image },
+  { id: "just-sold", label: "Just sold", image: AD_EXAMPLES[0].image },
+  { id: "market-update", label: "Market update", image: AD_EXAMPLES[3].image },
+] as const;
+
 const STORY_EASE = [0.16, 1, 0.3, 1] as const;
 const STORY_MOVE = { duration: 0.55, ease: STORY_EASE };
 const STORY_ENTER = { duration: 0.45, ease: STORY_EASE };
@@ -180,11 +188,12 @@ function TemplateBrowser({ phase }: { phase: number }) {
       <div className="hc-story-template-window">
         <motion.div
           className="hc-story-template-track"
-          animate={{ x: `-${[0, 15, 31, 0][Math.min(phase, 3)]}%` }}
+          animate={{ x: `-${[0, 34, 0, 0][Math.min(phase, 3)]}%` }}
           transition={STORY_MOVE}
         >
-          {AD_EXAMPLES.slice(0, 3).map((example, index) => {
+          {BROWSER_CARDS.map((example, index) => {
             const active = index === activeTemplate;
+            const isStoryCard = index === 1;
             return (
               <motion.div
                 className={`hc-story-template-card${active ? " is-active" : ""}${selected && active ? " is-selected" : ""}`}
@@ -197,10 +206,10 @@ function TemplateBrowser({ phase }: { phase: number }) {
                   className="hc-story-template-image"
                   transition={STORY_MOVE}
                 >
-                  <img src={withBasePath(index === 1 ? STORY_CREATIVE.image : example.image)} alt="" width="1080" height="1350" />
+                  <img src={withBasePath(isStoryCard ? STORY_CREATIVE.image : example.image)} alt="" width="1080" height="1350" />
                   {selected && active ? <span className="hc-story-selected"><Check aria-hidden="true" size={13} /> Selected</span> : null}
                 </motion.div>
-                <span><strong>{index === 1 ? "Suburb guide" : example.label}</strong><small>Facebook &amp; Instagram</small></span>
+                <span><strong>{isStoryCard ? "Suburb guide" : example.label}</strong><small>Facebook &amp; Instagram</small></span>
               </motion.div>
             );
           })}
