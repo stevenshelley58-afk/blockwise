@@ -20,7 +20,10 @@ test("authenticated home is driven by the activation resolver and shared credit 
   assert.doesNotMatch(page, /INCLUDED_AD_PACKS|usedAdPacks|remainingAdPacks/);
   assert.doesNotMatch(dashboard, /HomeSetupCard/);
   assert.match(dashboard, /creativeSuggestions/);
-  assert.doesNotMatch(dashboard, /<ActivationCard/);
+  // Home intentionally re-composes the resolver-driven activation card so a
+  // returning user sees what is outstanding. It must remain the resolver-driven
+  // card, never the hardcoded three-step mockup (banned below).
+  assert.match(dashboard, /<ActivationCard/);
   assert.match(card, /Enough for up to \$\{packEstimate\} complete Feed \+ Story/);
   assert.match(card, /activation\.resumePath/);
 });

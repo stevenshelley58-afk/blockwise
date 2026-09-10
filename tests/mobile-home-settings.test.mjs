@@ -6,11 +6,15 @@ const home = readFileSync("src/components/self-serve/home-dashboard.tsx", "utf8"
 const activation = readFileSync("src/components/self-serve/activation-card.tsx", "utf8");
 const settings = readFileSync("src/app/(customer)/settings/settings-view.tsx", "utf8");
 
-test("Home recommends a creative instead of duplicating account and setup UI", () => {
+test("Home greets, recommends a creative, and surfaces outstanding setup", () => {
   assert.match(home, /creativeSuggestions/);
   assert.match(home, /Use template/);
-  assert.doesNotMatch(home, /<ActivationCard|<WorkspaceDetails|<MobileSection|data\.workspaceName/);
-  assert.doesNotMatch(home, /Completed milestones|Enquiry reporting unavailable/);
+  // Home now carries the resolver-driven activation card and a workspace greeting.
+  // Account detail and mobile chrome still belong elsewhere: WorkspaceDetails on
+  // home would duplicate Settings, and MobileSection is a settings-only primitive.
+  assert.match(home, /<ActivationCard/);
+  assert.doesNotMatch(home, /<WorkspaceDetails|<MobileSection/);
+  assert.doesNotMatch(home, /Enquiry reporting unavailable/);
 });
 
 test("completed milestones remain accessible without occupying first-run space", () => {
