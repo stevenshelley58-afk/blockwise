@@ -31,5 +31,5 @@ test("settings exposes every permitted section and keeps deep-link query support
   assert.match(settings, /searchParams\.delete\("section"\)/);
   assert.match(settings, /history\.state/);
   assert.doesNotMatch(settings, /id="(?:account|connections|security|billing|notifications|danger)"/);
-  assert.match(settings, /const sectionClass = \(id: string\) => selected === id \? "block" : "hidden"/);
+  assert.match(settings, /const sectionClass = \(id: string\) => \(activeSection === id \? "block" : "hidden"\)/);
 });
