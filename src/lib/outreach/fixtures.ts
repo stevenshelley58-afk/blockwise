@@ -39,7 +39,7 @@ export function buildDemoOutreachReport(segment: EvidenceSegment = "recent_ads_o
   return toPublicOutreachReport(DEMO_OUTREACH_SNAPSHOT, demoProspect(segment), DEMO_OUTREACH_NOW);
 }
 
-export function buildDemoOutreachPreview(options: { segment?: EvidenceSegment; followUp?: boolean; theme?: "light" | "dark" | "system" } = {}) {
-  const input = { snapshot: DEMO_OUTREACH_SNAPSHOT, prospect: demoProspect(options.segment), reportUrl: `https://blockwise.sale/ad-reports/demo?segment=${options.segment ?? "recent_ads_observed"}`, businessIdentity: "Blockwise · Sample email", unsubscribeUrl: "https://blockwise.sale/ad-reports/demo/email#sample-unsubscribe", mode: "demo" as const, now: DEMO_OUTREACH_NOW, theme: options.theme };
+export function buildDemoOutreachPreview(options: { segment?: EvidenceSegment; followUp?: boolean; theme?: "light" | "dark" | "system"; maxExamples?: number } = {}) {
+  const input = { snapshot: DEMO_OUTREACH_SNAPSHOT, prospect: demoProspect(options.segment), reportUrl: `https://blockwise.sale/ad-reports/demo?segment=${options.segment ?? "recent_ads_observed"}`, businessIdentity: "Blockwise · Sample email", unsubscribeUrl: "https://blockwise.sale/ad-reports/demo/email#sample-unsubscribe", mode: "demo" as const, now: DEMO_OUTREACH_NOW, theme: options.theme, maxExamples: options.maxExamples ?? 99 };
   return options.followUp ? buildOutreachFollowUpEmail({ ...input, followUpCount: 0 }) : buildOutreachEmail(input);
 }

@@ -320,6 +320,8 @@ export type OutreachEmailInput = {
   /** Live area counters from the Ad Radar adapter. Falls back to snapshot counts. */
   areaSummary?: Partial<OutreachAreaFacts>;
   subjectStyle?: OutreachSubjectStyle;
+  /** Card ceiling for the first email. Production sends 3; the demo preview raises it so every peer can be culled by eye. Minimum 3 still enforced. */
+  maxExamples?: number;
 };
 
 /** Area counters for the email body, derived from the snapshot when no adapter summary is supplied. */
@@ -334,6 +336,12 @@ export function resolveAreaFacts(snapshot: OutreachAreaSnapshot, summary?: Parti
 
 function plural(count: number, singular: string, pluralForm: string): string {
   return `${count} ${count === 1 ? singular : pluralForm}`;
+}
+
+const PEER_COUNT_WORDS = ["no", "one", "two", "three", "four", "five", "six"] as const;
+/** Scanning copy names the card count in words; production copy ("three") is unchanged. */
+function peerCountWord(count: number): string {
+  return count < PEER_COUNT_WORDS.length ? PEER_COUNT_WORDS[count]! : String(count);
 }
 
 function areaSubject(postcode: string): string {
@@ -392,7 +400,9 @@ export function buildOutreachEmail(input: OutreachEmailInput) {
     const withoutMedia = examples.filter((e) => !e.mediaUrl || !e.mediaRightsConfirmed);
     examples = [...withMedia, ...withoutMedia];
   }
-  examples = examples.slice(0, 3);
+  const limit = input.maxExamples ?? 3;
+  const showingAll = limit >= examples.length;
+  examples = examples.slice(0, limit);
   if (examples.length < 3) throw new Error("Three sourced local ad examples are required for every email segment.");
   const area = input.snapshot.coverageLabel;
   const postcode = input.snapshot.postcode;
@@ -412,8 +422,8 @@ export function buildOutreachEmail(input: OutreachEmailInput) {
     greeting: `Hi ${name},`,
     heading: observed ? `Every property ad in ${postcode}, in one place` : `What local agencies are advertising in ${postcode}`,
     intro: observed
-      ? `Your page has ads running. Across ${area} I found ${ads} live right now, from ${agencies}. Here are three from other agencies.`
-      : `Across ${area} I found ${ads} live right now, from ${agencies}. Here are three of them, with the rest in the report.`,
+      ? `Your page has ads running. Across ${area} I found ${ads} live right now, from ${agencies}. Here are ${peerCountWord(examples.length)} from other agencies.`
+      : `Across ${area} I found ${ads} live right now, from ${agencies}. Here are ${peerCountWord(examples.length)} of them${showingAll ? "." : ", with the rest in the report."}`,
     sections: examples.map(example => ({
       heading: example.pageName,
       body: exampleBodyText(example),
