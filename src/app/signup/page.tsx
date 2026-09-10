@@ -6,11 +6,24 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function SignupPage() {
+const AUDIT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type SignupPageProps = {
+  searchParams: Promise<{ auditId?: string }>;
+};
+
+export default async function SignupPage({ searchParams }: SignupPageProps) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const query = await searchParams;
+  const auditId = typeof query.auditId === "string" && AUDIT_ID.test(query.auditId.trim()) ? query.auditId.trim() : null;
+
+  if (user && auditId) {
+    redirect(`/self-serve?auditId=${encodeURIComponent(auditId)}`);
+  }
 
   if (user) {
     redirect("/home");
@@ -31,7 +44,7 @@ export default async function SignupPage() {
             required.
           </p>
         </div>
-        <SignupForm />
+        <SignupForm auditId={auditId} />
         <p className="auth-alt-link">
           Use an existing password instead? <Link href="/login">Sign in with password</Link>
         </p>

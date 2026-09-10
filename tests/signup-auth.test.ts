@@ -52,7 +52,9 @@ test("signup page redirects authenticated users and renders the signup form", ()
 
   assert.match(source, /supabase\.auth\.getUser\(\)/i);
   assert.match(source, /redirect\("\/home"\)/i);
-  assert.match(source, /<SignupForm \/>/i);
+  assert.match(source, /<SignupForm/i);
+  assert.match(source, /auditId/);
+  assert.match(source, /\/self-serve\?auditId=/);
 });
 
 test("confirm route verifies token hash and only redirects to safe relative next paths", () => {

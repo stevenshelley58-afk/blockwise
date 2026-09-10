@@ -8,7 +8,7 @@ function fireSafe(event: string, properties: Record<string, string | number>) {
   try { const w = window as Window & { fbq?: (...args: unknown[]) => void; gtag?: (...args: unknown[]) => void }; w.fbq?.("trackCustom", event, properties); trackMarketingEvent(event, properties); } catch {}
 }
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
 
 import type { PublicAdRadarCard } from "@/lib/research/public-ad-radar";
 import type { SuburbReportInsights } from "@/lib/research/suburb-report-insights";
@@ -152,6 +152,8 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
               {visibleCount < ads.length ? <div className="sr-load-more"><button className="sr-button sr-button-ghost" type="button" onClick={() => setVisibleCount((count) => Math.min(count + 9, ads.length))}>Show more ads</button><p>Showing {Math.min(visibleCount, ads.length)} of {ads.length}, all free to browse</p></div> : null}
             </section>
 
+            <AuditGenerator postcode={postcode} suburb={suburb} />
+
             <section className="sr-cta-band">
               <div><h2>{reportLabel} changes every week. Keep watching it.</h2><p>This report stays free. A free trial adds tools on top:</p><ul><li>Alerts when a new advertiser appears in {reportLabel}</li><li>Track each advertiser's launches and changes</li><li>Use an observed ad as an AdStudio starting point</li></ul></div>
               <div className="sr-cta-actions"><GateLink href={trialHref} intent="trial" postcode={postcode} className="sr-button sr-button-light">Start your free trial →</GateLink><button type="button" onClick={() => setEmailOpen(true)}>Or just email me this report</button><small>14 days free · No credit card · Your report stays free either way</small></div>
@@ -195,3 +197,117 @@ function EmailReportDialog({ open, onClose, postcode, suburb }: { open: boolean;
 }
 
 function gateHref(postcode: string, intent: "track" | "remix" | "trial") { return `/signup?src=suburb-report&postcode=${postcode}&intent=${intent}`; }
+
+type AuditPreviewAd = {
+  index: number;
+  previewUrl: string;
+  angleLabel: string;
+  rationale: string;
+  headline: string;
+};
+
+type AuditBundle = {
+  auditId: string;
+  businessName: string;
+  ads: AuditPreviewAd[];
+};
+
+function AuditGenerator({ postcode, suburb }: { postcode: string; suburb: string }) {
+  const [website, setWebsite] = useState("");
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [claiming, setClaiming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [bundle, setBundle] = useState<AuditBundle | null>(null);
+
+  async function handleGenerate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy) return;
+    setError(null);
+    const cleanWebsite = website.trim();
+    const cleanName = name.trim();
+    if (!cleanWebsite && !cleanName) {
+      setError("Add your agency website or your agency name.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const response = await fetch("/api/audit/ads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postcode, website: cleanWebsite, name: cleanName, suburb }),
+      });
+      const data = (await response.json().catch(() => ({}))) as Partial<AuditBundle> & { error?: unknown };
+      if (!response.ok || typeof data.auditId !== "string" || !Array.isArray(data.ads)) {
+        setError(typeof data.error === "string" ? data.error : "We could not build your ads. Try again.");
+        return;
+      }
+      setBundle({ auditId: data.auditId, businessName: typeof data.businessName === "string" ? data.businessName : "", ads: data.ads as AuditPreviewAd[] });
+      fireSafe("audit_generated", { postcode });
+    } catch {
+      setError("We could not build your ads. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleClaim() {
+    if (!bundle || claiming) return;
+    setClaiming(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/audit/ads/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auditId: bundle.auditId }),
+      });
+      if (response.status === 401) {
+        window.location.href = `/signup?src=suburb-report&postcode=${encodeURIComponent(postcode)}&intent=trial&auditId=${encodeURIComponent(bundle.auditId)}`;
+        return;
+      }
+      const data = (await response.json().catch(() => ({}))) as { adIds?: unknown; error?: unknown };
+      if (!response.ok || !Array.isArray(data.adIds) || data.adIds.length === 0) {
+        setError(typeof data.error === "string" ? data.error : "We could not save these ads. Try again.");
+        return;
+      }
+      fireSafe("audit_claimed", { postcode });
+      window.location.href = "/ad-studio";
+    } catch {
+      setError("We could not save these ads. Check your connection and try again.");
+    } finally {
+      setClaiming(false);
+    }
+  }
+
+  return (
+    <section className="sr-audit-generator" aria-labelledby="audit-generator-title">
+      <h2 id="audit-generator-title">See how your agency could look</h2>
+      <p>Enter your agency website or name. We will find your brand colours, match them to our templates, and show you 3 ads aimed at the gap in your local market.</p>
+      <form className="sr-audit-form" onSubmit={handleGenerate}>
+        <input type="text" name="website" autoComplete="url" placeholder="https://youragency.com.au" aria-label="Agency website" value={website} onChange={(event) => setWebsite(event.target.value)} />
+        <input type="text" name="name" autoComplete="organization" placeholder="Or your agency name" aria-label="Agency name" value={name} onChange={(event) => setName(event.target.value)} />
+        <button className="sr-button sr-button-dark" type="submit" disabled={busy}>{busy ? "Building your ads…" : "Generate my 3 ads"}</button>
+      </form>
+      {error ? <p className="sr-form-error" role="alert">{error}</p> : null}
+      {bundle ? (
+        <div className="sr-preview-grid">
+          {bundle.ads.map((ad) => (
+            <div className="sr-preview-card" key={ad.index}>
+              <img src={ad.previewUrl} alt={ad.headline} loading="lazy" />
+              <h3>{ad.angleLabel}</h3>
+              <p>{ad.rationale}</p>
+            </div>
+          ))}
+          <div className="sr-cta-block">
+            <button className="sr-button sr-button-light" type="button" onClick={handleClaim} disabled={claiming}>{claiming ? "Saving…" : "Free trial — run these 3 ads today in under 5 mins"}</button>
+            <p className="sr-note">No credit card required. Ads saved to your Ad Studio library.</p>
+          </div>
+          <div className="sr-pricing-block">
+            <h4>Want to run them yourself?</h4>
+            <p>Blockwise Ad Studio starts with a 14-day free trial. <Link href="/pricing">See pricing</Link>.</p>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}

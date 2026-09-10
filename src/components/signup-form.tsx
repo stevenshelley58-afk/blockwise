@@ -13,8 +13,12 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { validateEmail } from "@/lib/auth/form-validation";
 import { adRadarSignupMetadata } from "@/lib/research/ad-radar-signup";
 
-export function SignupForm() {
+export function SignupForm({ auditId }: { auditId?: string | null }) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const nextPath = auditId ? `/self-serve?auditId=${encodeURIComponent(auditId)}` : "/self-serve";
+  const confirmNext = encodeURIComponent(nextPath);
+  // Keep the default confirm path byte-identical so plain signups behave exactly as before.
+  const defaultConfirmPath = "/auth/confirm?next=/self-serve&flow=signup";
   const [mode, setMode] = useState<"magic" | "password">("magic");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
@@ -35,7 +39,7 @@ export function SignupForm() {
       email,
       options: {
         captchaToken: turnstileToken,
-        emailRedirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/confirm?next=/self-serve&flow=signup`,
+        emailRedirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}${auditId ? `/auth/confirm?next=${confirmNext}&flow=signup` : defaultConfirmPath}`,
         shouldCreateUser: true,
         data: {
           signup_flow: "trial_self_serve",
@@ -64,7 +68,7 @@ export function SignupForm() {
       password,
       options: {
         captchaToken: turnstileToken,
-        emailRedirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/confirm?next=/self-serve&flow=signup`,
+        emailRedirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}${auditId ? `/auth/confirm?next=${confirmNext}&flow=signup` : defaultConfirmPath}`,
         data: {
           signup_flow: "trial_self_serve",
           ...adRadarSignupMetadata(location.search),
