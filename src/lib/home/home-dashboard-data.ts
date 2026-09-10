@@ -6,6 +6,8 @@ import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { listTemplates } from "@/lib/adstudio/pack-gallery";
 import { buildHomeCreativeSuggestions, type HomeCreativeSuggestions } from "@/lib/home/creative-suggestions";
+import { leadSourceLabel } from "@/lib/leads/rows";
+import { loadPublicAdRadarCards } from "@/lib/research/public-ad-radar";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
@@ -21,6 +23,8 @@ export type HomeSafeReadModel = Pick<
   | "ads"
   | "performance"
   | "creativeSuggestions"
+  | "leads"
+  | "perthAds"
 >;
 
 export async function loadHomeDashboardData(input: {
@@ -34,7 +38,7 @@ export async function loadHomeDashboardData(input: {
   reportingNeedsRefresh: boolean;
   reportingGeneratedAt: string;
 }> {
-  const [campaigns, customerAds, brandKits, connections, workspace, wallet, activation, reporting, templates] =
+  const [campaigns, customerAds, brandKits, connections, workspace, wallet, activation, reporting, templates, leadsResult, perthAdsResult] =
     await Promise.all([
       input.supabase
         .from("adstudio_campaigns")
@@ -70,6 +74,42 @@ export async function loadHomeDashboardData(input: {
         range: "last_30",
       }).catch(() => null),
       listTemplates(input.supabase).catch(() => null),
+      Promise.resolve(
+        input.supabase
+          .from("leads")
+          .select("id,full_name,suburb,provider,created_at")
+          .eq("workspace_id", input.workspaceId)
+          .order("created_at", { ascending: false })
+          .limit(5),
+      )
+        .then(({ data }) =>
+          (data ?? []).map((row) => ({
+            id: row.id,
+            name: row.full_name ?? "Unknown lead",
+            suburb: row.suburb ?? "Unknown",
+            source: leadSourceLabel(row.provider),
+            createdAt: row.created_at ?? new Date(0).toISOString(),
+          })),
+        )
+        .catch(() => []),
+      Promise.resolve(
+        loadPublicAdRadarCards(input.serviceSupabase, {
+          location: "Perth, WA",
+          limit: 4,
+          sort: "recent",
+        }),
+      )
+        .then((res) =>
+          res.ads.map((ad) => ({
+            id: ad.id,
+            pageName: ad.pageName,
+            headline: ad.headline,
+            suburb: ad.suburb,
+            state: ad.state,
+            imageUrl: ad.media[0]?.url ?? null,
+          })),
+        )
+        .catch(() => []),
     ]);
 
   const results = reporting?.snapshot.payload ?? null;
@@ -146,6 +186,8 @@ export async function loadHomeDashboardData(input: {
     },
     performance: live?.performance ?? null,
     creativeSuggestions,
+    leads: leadsResult,
+    perthAds: perthAdsResult,
   };
   const periodEnd =
     typeof workspaceRow.stripe_current_period_end === "string"
@@ -205,6 +247,8 @@ export function homeSafeReadModelFromData(data: HomeData): HomeSafeReadModel {
     ads: data.ads,
     performance: data.performance,
     creativeSuggestions: data.creativeSuggestions,
+    leads: data.leads,
+    perthAds: data.perthAds,
   };
 }
 

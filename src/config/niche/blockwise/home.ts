@@ -84,4 +84,14 @@ export const home: HomeCopy = {
       subtitle: "Browse your generated Feed and Story creatives.",
     },
   ],
+  leads: {
+    title: "Leads",
+    emptyTitle: "No leads yet",
+    emptyBody: "Leads land here as soon as your first ad is live.",
+    ctaLabel: "Try a new ad today",
+  },
+  perthAds: {
+    title: "Ads in Perth",
+    viewAll: "View all",
+  },
 };

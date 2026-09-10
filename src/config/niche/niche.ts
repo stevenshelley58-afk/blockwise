@@ -114,6 +114,16 @@ export type HomeCopy = {
     subtitle: string;
     feature?: keyof NicheFeatures;
   }[];
+  leads: {
+    title: string;
+    emptyTitle: string;
+    emptyBody: string;
+    ctaLabel: string;
+  };
+  perthAds: {
+    title: string;
+    viewAll: string;
+  };
 };
 
 export type LeadsCopy = {

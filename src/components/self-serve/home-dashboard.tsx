@@ -1,18 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Shuffle } from "lucide-react";
+import { ArrowDownRight, ArrowRight, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
 import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
-import { Button } from "@/components/ui/button";
 import { SafeImage } from "@/components/ui/safe-image";
 import { niche } from "@/config/niche";
 import type { HomeCreativeSuggestions } from "@/lib/home/creative-suggestions";
 import { formatCurrency, formatPercent } from "@/lib/meta-monitor/calculations";
 import { entrance, useReducedMotion } from "@/lib/motion";
-import type { HomeDailyPoint } from "./home-chart";
 import type { ActivationCardData } from "./activation-card";
 
 export type HomeData = ActivationCardData & {
@@ -25,36 +22,34 @@ export type HomeData = ActivationCardData & {
     cpl: number | null;
     previousLeads: number | null;
     previousCpl: number | null;
-    daily: HomeDailyPoint[];
+    daily: Array<{ date: string; leads: number }>;
     lastSyncedAt: string | null;
   } | null;
   creativeSuggestions?: HomeCreativeSuggestions;
+  leads: Array<{
+    id: string;
+    name: string;
+    suburb: string;
+    source: string;
+    createdAt: string;
+  }>;
+  perthAds: Array<{
+    id: string;
+    pageName: string;
+    headline: string | null;
+    suburb: string | null;
+    state: string | null;
+    imageUrl: string | null;
+  }>;
 };
-
-const HEADLINES: Record<HomeCreativeSuggestions["audience"] | "fallback", string> = {
-  first_ad: "Make your first ad",
-  returning: "Try a different look",
-  unknown: "Find your next idea",
-  fallback: "Find your next idea",
-};
-
-function itemsFor(suggestions: HomeCreativeSuggestions | undefined) {
-  return suggestions?.status === "ready" ? suggestions.items.slice(0, 3) : [];
-}
 
 type Stat = {
   label: string;
   value: string;
   foot?: string;
-  /** Fractional change vs the previous period. Null renders no trend. */
   trend?: number | null;
 };
 
-/**
- * Home shows workspace facts and, when a real reporting snapshot exists, its
- * results. It never renders a metric it cannot stand behind: without a
- * snapshot the row reports ads created rather than a fabricated "0 leads".
- */
 function statsFor(data: HomeData): Stat[] {
   const copy = niche.copy.home.kpis;
   const perf = data.performance;
@@ -111,31 +106,11 @@ function TrendChip({ trend }: { trend: number }) {
   );
 }
 
-/** Empty state for the creative lead. Keeps the same hierarchy, offers one way out. */
-function EmptyCreative({ status }: { status: HomeCreativeSuggestions["status"] | "missing" }) {
-  const title =
-    status === "unavailable"
-      ? "Template suggestions are unavailable right now."
-      : status === "exhausted"
-        ? "You have used every template."
-        : "Templates will appear here when available.";
-  return (
-    <div className="mt-7 grid place-items-center rounded-(--r-card) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 px-6 py-12 text-center">
-      <p className="font-display text-[15.5px] font-extrabold tracking-[-0.015em] text-foreground">
-        {title}
-      </p>
-      <ButtonArrow href="/ad-studio/templates" className="mt-5">
-        Browse templates
-      </ButtonArrow>
-    </div>
-  );
-}
-
 function StatRow({ stats, scope }: { stats: Stat[]; scope: string | null }) {
   if (stats.length === 0) return null;
   return (
     <>
-      <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-5 border-t border-(--line) pt-5 sm:grid-cols-3">
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3">
         {stats.map((stat) => (
           <div key={stat.label} className="min-w-0">
             <dt className="text-[12.5px] font-semibold text-muted-foreground">{stat.label}</dt>
@@ -154,24 +129,145 @@ function StatRow({ stats, scope }: { stats: Stat[]; scope: string | null }) {
   );
 }
 
+function relativeTime(iso: string) {
+  const parsed = Date.parse(iso);
+  if (!Number.isFinite(parsed)) return iso.slice(0, 10);
+  const diff = Date.now() - parsed;
+  const days = Math.floor(diff / 86_400_000);
+  if (days < 1) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+}
+
+function LeadsSection({ leads }: { leads: HomeData["leads"] }) {
+  const copy = niche.copy.home.leads;
+  if (leads.length === 0) {
+    return (
+      <section className="mt-9 md:mt-11">
+        <h2 className="font-display text-[17px] font-extrabold tracking-[-0.015em] text-foreground">
+          {copy.title}
+        </h2>
+        <div className="mt-4 grid place-items-center rounded-(--r-card) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 px-6 py-12 text-center">
+          <p className="font-display text-[15.5px] font-extrabold tracking-[-0.015em] text-foreground">
+            {copy.emptyTitle}
+          </p>
+          <p className="mt-1 text-[13px] text-muted-foreground">{copy.emptyBody}</p>
+          <ButtonArrow href="/ad-studio" className="mt-5">
+            {copy.ctaLabel}
+          </ButtonArrow>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="mt-9 md:mt-11">
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-[17px] font-extrabold tracking-[-0.015em] text-foreground">
+          {copy.title}
+        </h2>
+        <Link
+          href="/leads"
+          className="inline-flex items-center gap-1 text-[13px] font-semibold text-muted-foreground hover:text-foreground"
+        >
+          View all
+          <ArrowRight size={14} />
+        </Link>
+      </div>
+      <ul className="mt-3 list-none divide-y divide-(--line) border-y border-(--line)">
+        {leads.map((lead) => (
+          <li key={lead.id}>
+            <Link
+              href="/leads"
+              className="group flex min-h-[60px] items-center gap-3 py-2 transition-colors duration-150 hover:bg-(--surface-subtle) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="text-[13.5px] font-semibold text-foreground">{lead.name}</span>
+                <span className="text-[12px] text-muted-foreground">
+                  {lead.suburb} · {lead.source}
+                </span>
+              </div>
+              <span className="shrink-0 text-[11.5px] text-(--faint) tabular-nums">
+                {relativeTime(lead.createdAt)}
+              </span>
+              <ArrowRight
+                size={16}
+                aria-hidden
+                className="shrink-0 text-(--faint) transition-transform duration-150 group-hover:translate-x-0.5 motion-reduce:group-hover:translate-x-0"
+              />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function PerthAdsSection({ ads }: { ads: HomeData["perthAds"] }) {
+  const copy = niche.copy.home.perthAds;
+  if (ads.length === 0) return null;
+
+  return (
+    <section className="mt-9 md:mt-11">
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-[17px] font-extrabold tracking-[-0.015em] text-foreground">
+          {copy.title}
+        </h2>
+        <Link
+          href="/ad-radar"
+          className="inline-flex items-center gap-1 text-[13px] font-semibold text-muted-foreground hover:text-foreground"
+        >
+          {copy.viewAll}
+          <ArrowRight size={14} />
+        </Link>
+      </div>
+      <ul className="mt-3 list-none divide-y divide-(--line) border-y border-(--line)">
+        {ads.map((ad) => (
+          <li key={ad.id}>
+            <Link
+              href={`/ad-radar/ads/${encodeURIComponent(ad.id)}`}
+              className="group flex min-h-[60px] items-center gap-3 py-2 transition-colors duration-150 hover:bg-(--surface-subtle) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span className="h-[52px] w-[52px] shrink-0 overflow-hidden rounded-(--r-ctl) bg-(--surface-subtle)">
+                {ad.imageUrl ? (
+                  <SafeImage
+                    src={ad.imageUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    compactFallback
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[10px] text-(--faint)">
+                    Ad
+                  </div>
+                )}
+              </span>
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-[13.5px] font-semibold text-foreground">
+                  {ad.pageName}
+                </span>
+                <span className="truncate text-[12px] text-muted-foreground">
+                  {ad.headline ?? "Ad"} · {ad.suburb ? `${ad.suburb}, ${ad.state ?? "WA"}` : "Perth, WA"}
+                </span>
+              </div>
+              <ArrowRight
+                size={16}
+                aria-hidden
+                className="shrink-0 text-(--faint) transition-transform duration-150 group-hover:translate-x-0.5 motion-reduce:group-hover:translate-x-0"
+              />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function HomeDashboard({ data }: { data: HomeData }) {
-  const suggestions = data.creativeSuggestions;
-  const items = itemsFor(suggestions);
-  const [index, setIndex] = useState(0);
   const reduced = useReducedMotion();
   const { container, item: itemVariants } = entrance(reduced);
-
-  useEffect(() => {
-    setIndex((current) => (items.length ? Math.min(current, items.length - 1) : 0));
-  }, [items.length]);
-
-  const audience =
-    suggestions?.audience && suggestions.audience in HEADLINES ? suggestions.audience : "fallback";
-  const heading =
-    suggestions?.status === "exhausted" ? "What will you create next?" : HEADLINES[audience];
-
-  const lead = items[index];
-  const rest = items.filter((_, position) => position !== index);
   const stats = statsFor(data);
   const scope = data.performance ? niche.copy.home.chart.subtitle : null;
 
@@ -183,98 +279,16 @@ export function HomeDashboard({ data }: { data: HomeData }) {
       animate="visible"
       className="mx-auto w-full max-w-[1120px] px-4 pb-28 pt-6 md:px-6 md:pb-16 md:pt-8"
     >
-      <motion.header variants={itemVariants} className="max-w-[700px]">
-        <h1 className="font-display text-[clamp(26px,4vw,34px)] font-extrabold leading-[1.1] tracking-[-0.025em] text-foreground">
-          {heading}
-        </h1>
-      </motion.header>
-
-      {lead ? (
-        <motion.section variants={itemVariants} aria-label="Recommended template" className="mt-7">
-          <div className="grid items-center gap-6 md:grid-cols-[minmax(220px,0.85fr)_minmax(280px,1fr)] md:gap-10">
-            <div className="flex justify-center md:justify-start">
-              <div className="h-[300px] w-[240px] overflow-hidden rounded-(--r-card) bg-(--surface-subtle) md:h-[340px] md:w-[272px]">
-                <SafeImage
-                  src={lead.previewUrl}
-                  alt={`${lead.name} template preview`}
-                  className="h-full w-full object-contain"
-                />
-              </div>
-            </div>
-
-            <div className="min-w-0">
-              <h2 className="font-display text-[20px] font-extrabold leading-tight tracking-[-0.02em] text-foreground md:text-[24px]">
-                {lead.name}
-              </h2>
-
-              <div className="mt-5 flex flex-wrap items-center gap-3">
-                <ButtonArrow href={lead.href}>Use template</ButtonArrow>
-                {items.length > 1 ? (
-                  <Button
-                    type="button"
-                    variant="ghost-pill"
-                    size="pill"
-                    onClick={() => setIndex((current) => (current + 1) % items.length)}
-                    className="min-h-11 px-4 text-[13.5px] transition-transform duration-150 active:scale-[0.97] motion-reduce:active:scale-100"
-                  >
-                    <Shuffle size={14} aria-hidden />
-                    Next idea
-                  </Button>
-                ) : null}
-              </div>
-
-              <Link
-                href="/ad-studio/templates"
-                className="mt-4 inline-flex min-h-11 items-center text-[13.5px] font-semibold text-muted-foreground underline decoration-(--line-heavy) underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                Browse all templates
-              </Link>
-            </div>
-          </div>
-        </motion.section>
-      ) : (
-        <motion.div variants={itemVariants}>
-          <EmptyCreative status={suggestions?.status ?? "missing"} />
-        </motion.div>
-      )}
-
-      {rest.length > 0 ? (
-        <motion.section variants={itemVariants} className="mt-9 md:mt-11">
-          <h2 className="font-display text-[17px] font-extrabold tracking-[-0.015em] text-foreground">
-            More ideas
-          </h2>
-          <ul className="mt-3 list-none divide-y divide-(--line) border-y border-(--line)">
-            {rest.map((suggestion) => (
-              <li key={suggestion.templateId}>
-                <Link
-                  href={suggestion.href}
-                  className="group flex min-h-[60px] items-center gap-3 py-2 transition-colors duration-150 hover:bg-(--surface-subtle) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <span className="h-[52px] w-[40px] shrink-0 overflow-hidden rounded-(--r-ctl) bg-(--surface-subtle)">
-                    <SafeImage
-                      src={suggestion.previewUrl}
-                      alt=""
-                      className="h-full w-full object-cover"
-                      compactFallback
-                    />
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-foreground">
-                    {suggestion.name}
-                  </span>
-                  <ArrowRight
-                    size={16}
-                    aria-hidden
-                    className="shrink-0 text-(--faint) transition-transform duration-150 group-hover:translate-x-0.5 motion-reduce:group-hover:translate-x-0"
-                  />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </motion.section>
-      ) : null}
-
-      <motion.section variants={itemVariants} className="mt-9 md:mt-11">
+      <motion.section variants={itemVariants}>
         <StatRow stats={stats} scope={scope} />
+      </motion.section>
+
+      <motion.section variants={itemVariants}>
+        <LeadsSection leads={data.leads} />
+      </motion.section>
+
+      <motion.section variants={itemVariants}>
+        <PerthAdsSection ads={data.perthAds} />
       </motion.section>
     </motion.div>
   );

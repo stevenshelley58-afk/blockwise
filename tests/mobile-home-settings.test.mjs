@@ -6,13 +6,12 @@ const home = readFileSync("src/components/self-serve/home-dashboard.tsx", "utf8"
 const activation = readFileSync("src/components/self-serve/activation-card.tsx", "utf8");
 const settings = readFileSync("src/app/(customer)/settings/settings-view.tsx", "utf8");
 
-test("Home recommends a creative instead of duplicating account and setup UI", () => {
-  assert.match(home, /creativeSuggestions/);
-  assert.match(home, /Use template/);
-  // Home is a creative-first workbench: no workspace-name greeting and no
-  // setup card. Account detail and mobile chrome still belong elsewhere:
-  // WorkspaceDetails on home would duplicate Settings, and MobileSection is a
-  // settings-only primitive.
+test("Home shows metrics, leads, and Perth ads without duplicating account UI", () => {
+  assert.match(home, /leads/);
+  assert.match(home, /perthAds/);
+  // No workspace-name greeting and no setup card. Account detail and mobile
+  // chrome still belong elsewhere: WorkspaceDetails on home would duplicate
+  // Settings, and MobileSection is a settings-only primitive.
   assert.doesNotMatch(home, /<ActivationCard|<WorkspaceDetails|<MobileSection|data\.workspaceName/);
   assert.doesNotMatch(home, /Enquiry reporting unavailable/);
 });
