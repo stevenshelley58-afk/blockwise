@@ -60,6 +60,16 @@ test("segment-specific email uses the same clock, three peers, Steven and a genu
   assert.throws(() => buildOutreachEmail({ ...input(), snapshot: { ...area, adExamples: [] } }), /Three sourced/);
 });
 
+test("raised card ceiling shows every peer for culling while production stays at three", () => {
+  const all = buildOutreachEmail({ ...input(), maxExamples: 99 });
+  assert.match(all.text, /Here are six from other agencies/);
+  for (const name of ["Example City Realty", "Example Urban Homes"]) assert.match(all.text, new RegExp(name));
+  assert.match(buildOutreachEmail({ ...input(), prospect: person("no_ads_found_after_successful_recent_scan"), maxExamples: 99 }).text, /Here are six of them\./);
+  const def = buildOutreachEmail(input());
+  assert.match(def.text, /Here are three from other agencies/);
+  assert.doesNotMatch(def.text, /Example Urban Homes/);
+});
+
 test("follow-up adds a fourth sourced example and rejects a second follow-up", () => {
   const followUp = buildOutreachFollowUpEmail({ ...input(), followUpCount: 0 });
   assert.match(followUp.text, /Example Park Realty/);
