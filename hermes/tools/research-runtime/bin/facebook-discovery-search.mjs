@@ -11,6 +11,16 @@ const PROVIDER = "scrapingbee_google_search";
 const CAP = 10;
 const ENDPOINT = "https://app.scrapingbee.com/api/v1/google";
 const MAX_RESPONSE_BYTES = 2_000_000;
+// A paid Google search is only worth making while the provider can resolve the
+// result links. On 2026-09-10 every result of every search came back as an
+// unresolved Google /goto?url= redirect and each one was charged 10 credits:
+// 38,445 credits in 100 minutes across a directory sweep. Three consecutive
+// provider-side resolution failures inside an hour is treated as a provider
+// capability problem, and paid searches stop instead of repeating per entity.
+const PROVIDER_RESOLUTION_FAILURE_LIMIT = 3;
+const PROVIDER_RESOLUTION_FAILURE_WINDOW_MS = 60 * 60 * 1000;
+const PROVIDER_RESOLUTION_FAILURE =
+  /^google_search_(?:goto_urls_unresolved|result_url_missing)$/u;
 const UUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/iu;
 const clean = (value) => String(value ?? "").trim();
 const hash = (value) =>
@@ -80,6 +90,40 @@ function responseFailure(status, receipt) {
     : null;
 }
 
+/**
+ * True when recent paid Google searches all failed because the provider could
+ * not resolve result links. Reading the attempt ledger costs nothing, so the
+ * sweep stops spending once the provider's state is proven rather than
+ * discovering it again for every remaining entity.
+ */
+export async function providerResolutionDegraded(
+  rest,
+  now = () => new Date().toISOString(),
+) {
+  try {
+    const since = new Date(
+      Date.parse(now()) - PROVIDER_RESOLUTION_FAILURE_WINDOW_MS,
+    ).toISOString();
+    const rows = await rest(
+      "research",
+      "ad_fetch_attempts?select=outcome,error&tier=eq.google_light"
+        + `&started_at=gte.${encodeURIComponent(since)}`
+        + `&order=started_at.desc&limit=${PROVIDER_RESOLUTION_FAILURE_LIMIT}`,
+    );
+    if (!Array.isArray(rows) || rows.length < PROVIDER_RESOLUTION_FAILURE_LIMIT)
+      return false;
+    return rows.every(
+      (row) =>
+        clean(row?.outcome) !== "success" &&
+        PROVIDER_RESOLUTION_FAILURE.test(clean(row?.error)),
+    );
+  } catch {
+    // A spending guard must never block the search path when history is
+    // unreadable; the per-request accounting still protects the budget.
+    return false;
+  }
+}
+
 export function parseGoogleSearchResponse(body, query) {
   let payload;
   try {
@@ -121,6 +165,23 @@ export function parseGoogleSearchResponse(body, query) {
     throw new Error("google_search_query_mismatch");
   if (!Array.isArray(payload.organic_results))
     throw new Error("google_search_missing_results");
+  // Unresolved Google /goto?url= redirects mean the provider found results but
+  // could not resolve their links. That is a provider-side capability failure
+  // charged in full, not a per-result parse error, so it gets its own name and
+  // the sweep can stop spending instead of repeating it for every entity.
+  const gotoUrls =
+    payload.meta_data?.goto_urls || payload.metadata?.goto_urls || null;
+  const unresolvedRedirects = payload.organic_results.filter((item) =>
+    /^(?:https?:\/\/www\.google\.[^/]+\/|\/)?goto\?url=/iu.test(
+      clean(item?.url || item?.link),
+    ),
+  );
+  if (
+    unresolvedRedirects.length > 0 &&
+    unresolvedRedirects.length === payload.organic_results.length &&
+    Number(gotoUrls?.resolved ?? 0) === 0
+  )
+    throw new Error("google_search_goto_urls_unresolved");
   const results = payload.organic_results.map((item) => {
     const url = clean(item?.url || item?.link);
     if (!/^https?:\/\//iu.test(url))
@@ -262,6 +323,8 @@ export function createFacebookSearchEvidence({
     };
     if (!enabled) return unavailable("google_search_disabled");
     if (!clean(apiKey)) return unavailable("google_search_api_key_missing");
+    if (await providerResolutionDegraded(rest, now))
+      return unavailable("google_search_provider_degraded");
 
     const classify = async ({ body, status, receipt, replayed }) => {
       const sourceDocumentId = await sourceDocument(
