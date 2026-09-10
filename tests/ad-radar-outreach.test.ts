@@ -174,7 +174,8 @@ test("a live ad radar snapshot is eligible for outreach", () => {
     now: new Date(),
   });
   assert.match(email.subject, /I audited every property ad in 6000/u);
-  assert.match(email.text, new RegExp(`See all ${summary.activeAdCount} ads`, "u"));
+  assert.match(email.text, /Open the full audit/u);
+  assert.match(email.text, new RegExp(`${summary.activeAdCount} property ads live right now`, "u"));
   assert.match(email.text, /Meta Ad Library/);
   assert.match(email.text, /not confirmed ad targeting/);
 });

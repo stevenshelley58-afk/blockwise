@@ -53,9 +53,11 @@ test("segment-specific email uses the same clock, two peers, Steven and a genuin
   assert.match(observed.subject, /I audited every property ad in 6000/); assert.match(noAds.subject, /I audited every property ad in 6000/);
   assert.match(buildOutreachEmail({ ...input(), subjectStyle: "peers" }).subject, /Example City Realty/);
   assert.match(observed.text, /Example City Realty/); assert.match(noAds.text, /Example Local Property/);
-  assert.match(observed.text, /See it in the Ad Library/); assert.match(noAds.text, /Steven/);
+  assert.match(observed.text, /Open the full audit/); assert.match(noAds.text, /Steven/);
   assert.doesNotMatch(noAds.text, /not advertising|private report|consent basis|Manage preferences/);
-  assert.equal((observed.text.match(/See all 6 ads/g) ?? []).length, 1);
+  // One destination. The dated source link for every ad lives on the audit page.
+  assert.equal((observed.text.match(/Open the full audit/g) ?? []).length, 1);
+  assert.doesNotMatch(observed.text, /See it in the Ad Library/);
   assert.throws(() => buildOutreachEmail({ ...input(), unsubscribeUrl: input().reportUrl }), /separate/);
   assert.throws(() => buildOutreachEmail({ ...input(), snapshot: { ...area, adExamples: [] } }), /Two sourced/);
 });

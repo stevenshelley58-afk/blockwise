@@ -319,6 +319,24 @@ export function resolveAreaFacts(snapshot: OutreachAreaSnapshot, summary?: Parti
   };
 }
 
+const CATEGORY_LABELS: Record<NonNullable<OutreachAdExample["category"]>, string> = {
+  listing: "listing",
+  appraisal: "appraisal",
+  branding: "brand",
+  other: "ad",
+};
+
+/** One line under an observed creative: what it says, its angle, how long it has held. */
+function exampleLine(example: OutreachAdExample, now: Date): string {
+  const copy = (example.headline || example.body || "").trim().replace(/\s+/gu, " ").slice(0, 90);
+  const angle = example.category ? CATEGORY_LABELS[example.category] : null;
+  const started = example.startedAt ? new Date(example.startedAt).getTime() : Number.NaN;
+  const days = Number.isFinite(started) ? Math.max(0, Math.floor((now.getTime() - started) / 86_400_000)) : null;
+  const meta = [angle, days === null ? null : `running ${days} days`].filter(Boolean).join(" · ");
+  const quoted = copy ? `\u201c${copy}\u201d` : "";
+  return [quoted, meta].filter(Boolean).join("\n");
+}
+
 function plural(count: number, singular: string, pluralForm: string): string {
   return `${count} ${count === 1 ? singular : pluralForm}`;
 }
@@ -362,7 +380,7 @@ function emailFooter(input: OutreachEmailInput): EmailMessage["footer"] {
   const unsubscribe = httpsUrlSchema.parse(input.unsubscribeUrl);
   if (unsubscribe === input.reportUrl) throw new Error("Unsubscribe must use a separate, working destination.");
   return {
-    reason: input.mode === "demo" ? "Sample data. Nothing is sent. Unsubscribe is disabled in this preview." : "A business introduction from Steven at Blockwise. Unsubscribe below to stop these emails.",
+    reason: input.mode === "demo" ? "Sample data. Nothing is sent. Unsubscribe is disabled in this preview." : "I send this to agents advertising in the area. Unsubscribe and I will stop.",
     businessIdentity: input.businessIdentity,
     supportUrl: input.supportUrl ?? undefined,
     unsubscribeUrl: unsubscribe,
@@ -394,23 +412,23 @@ export function buildOutreachEmail(input: OutreachEmailInput) {
     : areaSubject(postcode);
   const message: EmailMessage = {
     kind: "postcode-outreach-preview",
-    eyebrow: input.mode === "demo" ? "SAMPLE EMAIL" : "LOCAL ADVERTISING SNAPSHOT",
+    eyebrow: input.mode === "demo" ? "SAMPLE EMAIL" : `${area.toUpperCase()} · ${postcode}`,
     subject: `${input.mode === "demo" ? "[Sample] " : ""}${subject}`,
-    preheader: `${plural(facts.activeAdCount, "live ad", "live ads")} across ${area}, from ${agencies}.${longest}`,
+    preheader: `Every property ad in ${postcode}, audited. ${plural(facts.activeAdCount, "live ad", "live ads")}, ${agencies}.`,
     greeting: `Hi ${name},`,
-    heading: observed ? `Every property ad in ${postcode}, in one place` : `What local agencies are advertising in ${postcode}`,
+    heading: `I audited every property ad in ${postcode}`,
+    // Short lines beat sentences here: the reader is scanning for names they know.
     intro: observed
-      ? `Your page has ads running. Across ${area} I found ${ads} live right now, from ${agencies}. Here are two from other agencies.`
-      : `Across ${area} I found ${ads} live right now, from ${agencies}. Here are two of them, with the rest in the report.`,
+      ? `${ads} live right now, from ${agencies}. Yours is one of them.${longest} Two you will know:`
+      : `${ads} live right now, from ${agencies}.${longest} Two you will know:`,
     sections: examples.map(example => ({
       heading: example.pageName,
-      body: (example.headline || example.body || "Ad example").slice(0, 180),
+      body: exampleLine(example, input.now ?? new Date()),
       ...emailMedia(example, input.allowedMediaOrigins ?? []),
-      ...(example.sourceUrl ? { link: { label: "See it in the Ad Library", href: example.sourceUrl } } : {}),
     })),
-    action: { label: `See all ${facts.activeAdCount} ads`, href: reportUrl },
-    note: `${input.snapshot.evidence.source}, observed ${input.snapshot.evidence.scannedAt.slice(0, 10)}. Matched on recorded agent postcode ${postcode}, not confirmed ad targeting.`,
-    signOff: "Steven\nBlockwise",
+    action: { label: "Open the full audit", href: reportUrl },
+    note: `${input.snapshot.evidence.source}, observed ${input.snapshot.evidence.scannedAt.slice(0, 10)}. ${postcode} and nearby postcodes, matched on recorded agent location, not confirmed ad targeting. Free, no signup.`,
+    signOff: "Steven\nPerth",
     transactional: false,
     footer: emailFooter(input),
   };
