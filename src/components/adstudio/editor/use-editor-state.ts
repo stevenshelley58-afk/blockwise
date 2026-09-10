@@ -487,8 +487,8 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
 
 /* Brand Pack colour mapping lives in a shared module so the server-side audit
    funnel resolves the same palette as this editor. */
-import type { BrandPackColours } from "@/lib/adstudio/brand-colours";
-import { brandPackColoursToRoleMap } from "@/lib/adstudio/brand-colours";
+import type { BrandPackColours } from "../../../lib/adstudio/brand-colours.ts";
+import { brandPackColoursToRoleMap } from "../../../lib/adstudio/brand-colours.ts";
 
 export type { BrandPackColours };
 export { brandPackColoursToRoleMap };
