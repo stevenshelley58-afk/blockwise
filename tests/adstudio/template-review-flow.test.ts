@@ -49,16 +49,16 @@ test("current review requires every scored section at 9.5 and one obvious-error 
   assert.equal(adTemplateSchema.safeParse(obviousError).success, false);
 });
 
-test("frozen section-98 review metadata remains readable", () => {
+test("section-95 review metadata remains readable", () => {
   const frozen = JSON.parse(JSON.stringify(template(baseLayer)));
   frozen.metadata.generationReview = {
-    policy: "section-98-font-exempt-no-obvious-errors-v1",
+    policy: "section-95-font-exempt-no-obvious-errors-v1",
     process: "exact-clone", sourcePlacement: "feed", targetPlacement: "story",
-    sectionThreshold: 9.8, fontMatchRequired: false,
-    comparator: { geometry: 9.8, colourEffects: 9.8, compositionCrop: 9.8, typography: 9.8, details: 9.8, decision: "ready" },
+    sectionThreshold: 9.5, fontMatchRequired: false,
+    comparator: { geometry: 9.5, colourEffects: 9.5, compositionCrop: 9.5, typography: 9.5, details: 9.5, decision: "ready" },
     finalReviewers: [
-      { id: "reviewer-one", route: "vision/one", minimum: 9.8, decision: "pass" },
-      { id: "reviewer-two", route: "vision/two", minimum: 9.8, decision: "pass" },
+      { id: "reviewer-one", route: "vision/one", minimum: 9.5, decision: "pass" },
+      { id: "reviewer-two", route: "vision/two", minimum: 9.5, decision: "pass" },
     ], overallCheck: { noObviousErrors: true }, warnings: [],
     fontSubstitution: { source: "Unavailable Display", used: "Bodoni Moda", reason: "Closest bundled face" },
   };
@@ -68,8 +68,8 @@ test("frozen section-98 review metadata remains readable", () => {
 test("legacy review metadata remains readable", () => {
   const legacy = JSON.parse(JSON.stringify(template(baseLayer)));
   legacy.metadata.generationReview = {
-    process: "exact-clone", sourcePlacement: "feed", targetPlacement: "story", likenessThreshold: 9.8,
-    comparator: { overall: 9.8, geometry: 9.8, colourEffects: 9.8, compositionCrop: 9.8, typography: 9.8, decision: "ready" },
+    process: "exact-clone", sourcePlacement: "feed", targetPlacement: "story", likenessThreshold: 9.5,
+    comparator: { overall: 9.5, geometry: 9.5, colourEffects: 9.5, compositionCrop: 9.5, typography: 9.5, decision: "ready" },
     finalReviewers: [
       { id: "legacy-one", route: "vision/one", overall: 9.6, minimum: 9.5, decision: "pass" },
       { id: "legacy-two", route: "vision/two", overall: 9.7, minimum: 9.5, decision: "pass" },

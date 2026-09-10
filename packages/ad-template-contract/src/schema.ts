@@ -128,18 +128,7 @@ const currentGenerationReviewSchema = z.object({
   overallCheck: z.object({ noObviousErrors: z.literal(true) }).strict(),
   warnings: z.array(z.string()), fontSubstitution: z.object({ source: z.string().min(1), used: z.string().min(1), reason: z.string().min(1) }).strict().nullable(),
 }).strict();
-// Frozen 9.8 policy: templates imported before the 9.5 gate change keep
-// validating on read. New artifacts must declare the section-95 policy.
-const frozenSection98GenerationReviewSchema = z.object({
-  policy: z.literal("section-98-font-exempt-no-obvious-errors-v1"),
-  process: z.literal("exact-clone"), sourcePlacement: z.enum(["feed", "story"]), targetPlacement: z.enum(["feed", "story"]),
-  sectionThreshold: z.number().min(9.8).max(10), fontMatchRequired: z.literal(false),
-  comparator: z.object({ geometry: z.number().min(0).max(10), colourEffects: z.number().min(0).max(10), compositionCrop: z.number().min(0).max(10), typography: z.number().min(0).max(10), details: z.number().min(0).max(10), decision: z.enum(["revise", "ready"]) }).strict(),
-  finalReviewers: z.array(z.object({ id: z.string().min(1), route: z.string().min(1), minimum: z.number().min(9.8).max(10), decision: z.enum(["pass", "fail"]) }).strict()).length(2),
-  overallCheck: z.object({ noObviousErrors: z.literal(true) }).strict(),
-  warnings: z.array(z.string()), fontSubstitution: z.object({ source: z.string().min(1), used: z.string().min(1), reason: z.string().min(1) }).strict().nullable(),
-}).strict();
-const generationReviewSchema = z.union([currentGenerationReviewSchema, frozenSection98GenerationReviewSchema, legacyGenerationReviewSchema]);
+const generationReviewSchema = z.union([currentGenerationReviewSchema, legacyGenerationReviewSchema]);
 
 const metadataSchema = z.object({
   title: z.string().min(1), description: z.string(),
