@@ -272,6 +272,19 @@ export function configuredMediaOrigins(env: NodeJS.ProcessEnv = process.env): st
   }).filter(Boolean);
 }
 
+/**
+ * Section copy for one example card. Some brand ads carry the page name as
+ * their headline — quoting it under the advertiser's own name says the same
+ * thing twice, so drop the quote and let the card heading carry it.
+ */
+function exampleBodyText(example: OutreachAdExample): string {
+  const raw = (example.headline || example.body || "").trim().replace(/\s+/gu, " ");
+  const advertiser = example.pageName.trim().toLowerCase();
+  if (raw.length > 0 && advertiser.length > 0
+    && (raw.toLowerCase().includes(advertiser) || advertiser.includes(raw.toLowerCase()))) return "";
+  return (raw || "Ad example").slice(0, 180);
+}
+
 function emailMedia(example: OutreachAdExample, allowedOrigins: readonly string[]): { image?: { src: string; alt: string } } {
   if (!example.mediaRightsConfirmed || !example.mediaUrl || allowedOrigins.length === 0) return {};
   try {
@@ -403,7 +416,7 @@ export function buildOutreachEmail(input: OutreachEmailInput) {
       : `Across ${area} I found ${ads} live right now, from ${agencies}. Here are three of them, with the rest in the report.`,
     sections: examples.map(example => ({
       heading: example.pageName,
-      body: (example.headline || example.body || "Ad example").slice(0, 180),
+      body: exampleBodyText(example),
       ...emailMedia(example, input.allowedMediaOrigins ?? []),
       ...(example.sourceUrl ? { link: { label: "See it in the Ad Library", href: example.sourceUrl } } : {}),
     })),
@@ -435,7 +448,7 @@ export function buildOutreachFollowUpEmail(input: OutreachEmailInput & { followU
     intro: `One more from the ${area} snapshot. The report keeps every example with its source link.`,
     sections: [{
       heading: extra.pageName,
-      body: (extra.headline || extra.body || "Ad example").slice(0, 180),
+      body: exampleBodyText(extra),
       ...emailMedia(extra, input.allowedMediaOrigins ?? []),
       ...(extra.sourceUrl ? { link: { label: "See it in the Ad Library", href: extra.sourceUrl } } : {}),
     }],
