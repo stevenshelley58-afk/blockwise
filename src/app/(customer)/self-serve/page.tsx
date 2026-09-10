@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
+import { Suspense } from "react";
 
 import * as Sentry from "@sentry/nextjs";
 import { after } from "next/server";
 
+import { AuditClaimHandler } from "@/components/audit-claim-handler";
 import { ConfirmRegistrationTracker } from "@/components/confirm-registration-tracker";
 import { HomeDashboardReadModel } from "@/components/self-serve/home-dashboard-read-model";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
@@ -43,6 +45,9 @@ export default async function SelfServeHome() {
   return (
     <>
       <ConfirmRegistrationTracker />
+      <Suspense>
+        <AuditClaimHandler workspaceId={access.workspaceId} />
+      </Suspense>
       <HomeDashboardReadModel
         initialData={model.data}
         initialEtag={etag}

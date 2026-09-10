@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { niche } from "@/config/niche";
 import { resolveAdRadarLocationSearch, resolveAdRadarPostcodeSuburbs } from "@/lib/research/ad-radar-location";
-import { loadPublicAdRadarCards } from "@/lib/research/public-ad-radar";
+import { loadAllPublicAdRadarCards, loadPublicAdRadarCards } from "@/lib/research/public-ad-radar";
 import type { PublicAdRadarResponse } from "@/lib/research/public-ad-radar";
 import { buildSuburbReportInsights } from "@/lib/research/suburb-report-insights";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -140,24 +140,10 @@ async function loadAllPublicAds(
   postcode: string,
   includeSurroundingSuburbs: boolean,
 ): Promise<PublicAdRadarResponse> {
-  const ads = new Map<string, PublicAdRadarResponse["ads"][number]>();
-  let cursor: string | null = null;
-  let response: PublicAdRadarResponse | null = null;
-
-  for (let page = 0; page < 4; page += 1) {
-    response = await loadPublicAdRadarCards(supabase, {
-      location: postcode,
-      cursor,
-      includeSurroundingSuburbs,
-      limit: 36,
-      sort: "longest",
-    });
-    for (const ad of response.ads) ads.set(ad.id, ad);
-    cursor = response.nextCursor;
-    if (!cursor) break;
-  }
-
-  return response
-    ? { ...response, ads: [...ads.values()], nextCursor: cursor }
-    : { location: { query: postcode, label: postcode, matched: false }, ads: [], nextCursor: null, source: "scraped" };
+  return loadAllPublicAdRadarCards(supabase, {
+    location: postcode,
+    includeSurroundingSuburbs,
+    limit: 36,
+    sort: "longest",
+  });
 }

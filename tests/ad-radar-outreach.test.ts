@@ -111,6 +111,7 @@ test("real Ad Radar creatives render only from an allowlisted origin", () => {
     [
       card({ card_id: "a1", library_id: "111", page_name: "Alpha Realty", image_storage_path: "alpha.png", headline: "Open Saturday" }),
       card({ card_id: "a2", library_id: "222", page_name: "Beta Property", image_storage_path: "beta.png", headline: "What is it worth?" }),
+      card({ card_id: "a3", library_id: "333", page_name: "Gamma Homes", image_storage_path: "gamma.png", headline: "Meet the team" }),
     ],
     area(),
   );
@@ -154,7 +155,7 @@ test("a live ad radar snapshot is eligible for outreach", () => {
     now: new Date(),
   });
   assert.match(email.subject, /I audited every property ad in 6000/u);
-  assert.match(email.text, new RegExp(`See all ${summary.activeAdCount} ads`, "u"));
+  assert.match(email.text, /See full 6000 audit/u);
   assert.match(email.text, /Meta Ad Library/);
   assert.match(email.text, /not confirmed ad targeting/);
 });

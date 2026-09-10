@@ -189,7 +189,7 @@ export function evaluateOutreachEligibility(
   if (!areaEvidence.usable) reasons.push("stale_or_unusable_scan");
   if (!prospect.scopeVerified || !snapshot.evidence.scopeVerified) reasons.push("scope_unverified");
   if (snapshot.evidence.observedAdCount < snapshot.adExamples.length || snapshot.adExamples.some(ad => !ad.observedAt || !ad.sourceUrl || new Date(ad.observedAt).getTime() > now.getTime())) reasons.push("invalid_area_evidence");
-  if (selectPeerExamples(snapshot, prospect).length < 2) reasons.push("insufficient_peer_examples");
+  if (selectPeerExamples(snapshot, prospect).length < 3) reasons.push("insufficient_peer_examples");
   if (snapshot.postcode !== prospect.postcode) reasons.push("postcode_mismatch");
 
   return { eligible: reasons.length === 0, reasons: [...new Set(reasons)], segment: evidence.segment };
@@ -379,8 +379,8 @@ export function buildOutreachEmail(input: OutreachEmailInput) {
     const withoutMedia = examples.filter((e) => !e.mediaUrl || !e.mediaRightsConfirmed);
     examples = [...withMedia, ...withoutMedia];
   }
-  examples = examples.slice(0, 2);
-  if (examples.length < 2) throw new Error("Two sourced local ad examples are required for every email segment.");
+  examples = examples.slice(0, 3);
+  if (examples.length < 3) throw new Error("Three sourced local ad examples are required for every email segment.");
   const area = input.snapshot.coverageLabel;
   const postcode = input.snapshot.postcode;
   const name = input.prospect.agentName.split(/\s+/u)[0] || "there";
@@ -394,21 +394,21 @@ export function buildOutreachEmail(input: OutreachEmailInput) {
     : areaSubject(postcode);
   const message: EmailMessage = {
     kind: "postcode-outreach-preview",
-    eyebrow: input.mode === "demo" ? "SAMPLE EMAIL" : "LOCAL ADVERTISING SNAPSHOT",
     subject: `${input.mode === "demo" ? "[Sample] " : ""}${subject}`,
     preheader: `${plural(facts.activeAdCount, "live ad", "live ads")} across ${area}, from ${agencies}.${longest}`,
     greeting: `Hi ${name},`,
     heading: observed ? `Every property ad in ${postcode}, in one place` : `What local agencies are advertising in ${postcode}`,
     intro: observed
-      ? `Your page has ads running. Across ${area} I found ${ads} live right now, from ${agencies}. Here are two from other agencies.`
-      : `Across ${area} I found ${ads} live right now, from ${agencies}. Here are two of them, with the rest in the report.`,
+      ? `Your page has ads running. Across ${area} I found ${ads} live right now, from ${agencies}. Here are three from other agencies.`
+      : `Across ${area} I found ${ads} live right now, from ${agencies}. Here are three of them, with the rest in the report.`,
     sections: examples.map(example => ({
       heading: example.pageName,
       body: (example.headline || example.body || "Ad example").slice(0, 180),
       ...emailMedia(example, input.allowedMediaOrigins ?? []),
       ...(example.sourceUrl ? { link: { label: "See it in the Ad Library", href: example.sourceUrl } } : {}),
     })),
-    action: { label: `See all ${facts.activeAdCount} ads`, href: reportUrl },
+    action: { label: `See full ${postcode} audit`, href: reportUrl },
+    actionNote: "no sign up or card required",
     note: `${input.snapshot.evidence.source}, observed ${input.snapshot.evidence.scannedAt.slice(0, 10)}. Matched on recorded agent postcode ${postcode}, not confirmed ad targeting.`,
     signOff: "Steven\nBlockwise",
     transactional: false,
@@ -421,14 +421,13 @@ export function buildOutreachEmail(input: OutreachEmailInput) {
 export function buildOutreachFollowUpEmail(input: OutreachEmailInput & { followUpCount: number }) {
   if (!followUpAllowed(input.followUpCount)) throw new Error("Only one outreach follow-up is permitted.");
   const examples = selectPeerExamples(input.snapshot, input.prospect);
-  const extra = examples[2];
+  const extra = examples[3];
   if (!extra) throw new Error("A follow-up needs an additional sourced example.");
   const area = input.snapshot.coverageLabel;
   const postcode = input.snapshot.postcode;
   const facts = resolveAreaFacts(input.snapshot, input.areaSummary);
   const message: EmailMessage = {
     kind: "postcode-outreach-follow-up-preview",
-    eyebrow: input.mode === "demo" ? "SAMPLE FOLLOW-UP" : "ONE MORE LOCAL EXAMPLE",
     subject: `${input.mode === "demo" ? "[Sample] " : ""}${extra.pageName} is still running ads in ${postcode}`,
     preheader: `One more from the ${area} snapshot, with its source link.`,
     greeting: `Hi ${input.prospect.agentName.split(/\s+/u)[0] || "there"},`,
@@ -440,7 +439,7 @@ export function buildOutreachFollowUpEmail(input: OutreachEmailInput & { followU
       ...emailMedia(extra, input.allowedMediaOrigins ?? []),
       ...(extra.sourceUrl ? { link: { label: "See it in the Ad Library", href: extra.sourceUrl } } : {}),
     }],
-    action: { label: `See all ${facts.activeAdCount} ads`, href: httpsUrlSchema.parse(input.reportUrl) },
+    action: { label: `See full ${postcode} audit`, href: httpsUrlSchema.parse(input.reportUrl) },
     note: `${input.snapshot.evidence.source}, observed ${input.snapshot.evidence.scannedAt.slice(0, 10)}. Matched on recorded agent postcode ${postcode}, not confirmed ad targeting.`,
     signOff: "Steven\nBlockwise",
     transactional: false,

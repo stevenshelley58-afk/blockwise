@@ -485,39 +485,13 @@ export function useEditorState(pack: AdTemplate, initialDocument?: AdDocumentPar
 // (inverseText) stay on the template value — we never invent a palette.
 // ---------------------------------------------------------------------------
 
-/** Brand Pack colour fields that map onto template colour roles. */
-export interface BrandPackColours {
-  primary: string;
-  secondary: string;
-  accent: string;
-  background: string;
-  text: string;
-}
+/* Brand Pack colour mapping lives in a shared module so the server-side audit
+   funnel resolves the same palette as this editor. */
+import type { BrandPackColours } from "../../../lib/adstudio/brand-colours.ts";
+import { brandPackColoursToRoleMap } from "../../../lib/adstudio/brand-colours.ts";
 
-const BRAND_PACK_ROLE_MAP: Record<keyof BrandPackColours, ColourRole> = {
-  background: "background",
-  primary: "primary",
-  secondary: "secondary",
-  accent: "accent",
-  text: "mainText",
-};
-
-const HEX_COLOUR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
-
-/** Map a Brand Pack `colours` block onto template colour roles (partial). */
-export function brandPackColoursToRoleMap(
-  colours: BrandPackColours | null | undefined,
-): Partial<Record<ColourRole, string>> {
-  const map: Partial<Record<ColourRole, string>> = {};
-  if (!colours) return map;
-  for (const [field, role] of Object.entries(BRAND_PACK_ROLE_MAP) as [keyof BrandPackColours, ColourRole][]) {
-    const hex = colours[field];
-    if (typeof hex === "string" && HEX_COLOUR.test(hex.trim())) {
-      map[role] = hex.trim();
-    }
-  }
-  return map;
-}
+export type { BrandPackColours };
+export { brandPackColoursToRoleMap };
 
 /**
  * Resolve the render palette for a colour mode: brand roles override the

@@ -137,7 +137,6 @@ export function parseAdDbSearchParams(
   if (cursor && (cursor.length > 512 || !/^[A-Za-z0-9._~+/=-]+$/u.test(cursor)))
     return { ok: false, error: "cursor is invalid." };
   if (cursor) input.cursor = cursor;
-
   const hasExplicitLocation = Boolean(
     input.state || input.suburb || input.postcode,
   );

@@ -195,8 +195,8 @@ export function buildSuburbReportInsights(
   const longevityInsight: ReportInsight = longestRunningDays >= 60
     ? {
         kind: "longevity",
-        title: `${longestRunningDays} days and still observed`,
-        body: `${longestRunningAd?.pageName ?? "The longest-running advertiser"} has kept one ad visible for at least ${longestRunningDays} days. Longevity is a useful signal, but it does not prove performance.`,
+        title: `${longestRunningDays} days and still running`,
+        body: `${longestRunningAd?.pageName ?? "The longest-running advertiser"} has kept one ad live for at least ${longestRunningDays} days. Ads that stop producing enquiries usually get switched off, so a long run is a strong sign this one is still bringing in leads. It is a signal, not a guarantee.`,
       }
     : {
         kind: "longevity",
