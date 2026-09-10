@@ -11,6 +11,11 @@
   --hc-faint: #8b919d;
   --hc-blue: #2a78d6;
   --hc-blue-bright: #4e9cf5;
+  --hc-blue-soft: #e8f1fc;
+  --hc-amber: #d99a1a;
+  --hc-amber-soft: #fbf1d9;
+  --hc-green: #006d38;
+  --hc-green-soft: #e3f5eb;
   --hc-success: #36c27a;
   --hc-display: var(--font-manrope), Manrope, Inter, ui-sans-serif, system-ui, sans-serif;
   --hc-body: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;

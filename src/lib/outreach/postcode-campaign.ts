@@ -284,6 +284,15 @@ function emailMedia(example: OutreachAdExample, allowedOrigins: readonly string[
   }
 }
 
+export type OutreachAreaFacts = {
+  activeAdCount: number;
+  advertiserCount: number;
+  longestRunningDays: number;
+};
+
+/** "area" names only the postcode. "peers" names two real advertisers from the data. */
+export type OutreachSubjectStyle = "area" | "peers";
+
 export type OutreachEmailInput = {
   snapshot: OutreachAreaSnapshot;
   prospect: OutreachProspect;
@@ -295,7 +304,37 @@ export type OutreachEmailInput = {
   allowedMediaOrigins?: readonly string[];
   now?: Date;
   theme?: "light" | "dark" | "system";
+  /** Live area counters from the Ad Radar adapter. Falls back to snapshot counts. */
+  areaSummary?: Partial<OutreachAreaFacts>;
+  subjectStyle?: OutreachSubjectStyle;
 };
+
+/** Area counters for the email body, derived from the snapshot when no adapter summary is supplied. */
+export function resolveAreaFacts(snapshot: OutreachAreaSnapshot, summary?: Partial<OutreachAreaFacts>): OutreachAreaFacts {
+  const exampleAdvertisers = new Set(snapshot.adExamples.map((ad) => ad.pageName.trim().toLowerCase())).size;
+  return {
+    activeAdCount: summary?.activeAdCount ?? Math.max(snapshot.evidence.observedAdCount, snapshot.adExamples.length),
+    advertiserCount: summary?.advertiserCount ?? exampleAdvertisers,
+    longestRunningDays: summary?.longestRunningDays ?? 0,
+  };
+}
+
+function plural(count: number, singular: string, pluralForm: string): string {
+  return `${count} ${count === 1 ? singular : pluralForm}`;
+}
+
+function areaSubject(postcode: string): string {
+  return `I audited every property ad in ${postcode}`;
+}
+
+function peersSubject(examples: OutreachAdExample[], postcode: string, advertiserCount: number): string {
+  const [first, second] = examples;
+  if (!first) return areaSubject(postcode);
+  const others = Math.max(advertiserCount - 2, 0);
+  if (!second) return `${first.pageName} and ${others} others are advertising in ${postcode}`;
+  if (others <= 0) return `${first.pageName} and ${second.pageName} are advertising in ${postcode}`;
+  return `${first.pageName}, ${second.pageName} and ${others} others are advertising in ${postcode}`;
+}
 
 /** Select external advertiser examples, never label the recipient's own office as a peer. */
 export function selectPeerExamples(snapshot: OutreachAreaSnapshot, prospect: OutreachProspect): OutreachAdExample[] {
@@ -334,29 +373,43 @@ function emailFooter(input: OutreachEmailInput): EmailMessage["footer"] {
 export function buildOutreachEmail(input: OutreachEmailInput) {
   const reportUrl = httpsUrlSchema.parse(input.reportUrl);
   const segment = classifyEvidence(input.prospect.advertisingEvidence, input.now ?? new Date()).segment;
-  const examples = selectPeerExamples(input.snapshot, input.prospect).slice(0, 2);
+  let examples = selectPeerExamples(input.snapshot, input.prospect);
+  if ((input.allowedMediaOrigins ?? []).length > 0) {
+    const withMedia = examples.filter((e) => e.mediaUrl && e.mediaRightsConfirmed);
+    const withoutMedia = examples.filter((e) => !e.mediaUrl || !e.mediaRightsConfirmed);
+    examples = [...withMedia, ...withoutMedia];
+  }
+  examples = examples.slice(0, 2);
   if (examples.length < 2) throw new Error("Two sourced local ad examples are required for every email segment.");
   const area = input.snapshot.coverageLabel;
+  const postcode = input.snapshot.postcode;
   const name = input.prospect.agentName.split(/\s+/u)[0] || "there";
   const observed = segment === "recent_ads_observed";
-  const subject = observed ? `Your ads alongside other agents around ${area}` : `What agents around ${area} are advertising`;
+  const facts = resolveAreaFacts(input.snapshot, input.areaSummary);
+  const ads = plural(facts.activeAdCount, "property ad", "property ads");
+  const agencies = plural(facts.advertiserCount, "agency", "agencies");
+  const longest = facts.longestRunningDays > 0 ? ` Longest running ${facts.longestRunningDays} days.` : "";
+  const subject = input.subjectStyle === "peers"
+    ? peersSubject(examples, postcode, facts.advertiserCount)
+    : areaSubject(postcode);
   const message: EmailMessage = {
     kind: "postcode-outreach-preview",
     eyebrow: input.mode === "demo" ? "SAMPLE EMAIL" : "LOCAL ADVERTISING SNAPSHOT",
     subject: `${input.mode === "demo" ? "[Sample] " : ""}${subject}`,
-    preheader: `Local ad examples, source links and a dated report for ${area}.`,
+    preheader: `${plural(facts.activeAdCount, "live ad", "live ads")} across ${area}, from ${agencies}.${longest}`,
     greeting: `Hi ${name},`,
-    heading: observed ? `A fresh look at local ads` : `See what local agents are advertising`,
+    heading: observed ? `Every property ad in ${postcode}, in one place` : `What local agencies are advertising in ${postcode}`,
     intro: observed
-      ? `I found ads linked to your verified page and put them alongside other agents around ${area}. Here are two local examples. The report compares the visible messages and formats, not campaign results.`
-      : `I put together a small advertising snapshot for agents around ${area}. Here are two examples, with more in the report. You can see the messages other local agents are using before deciding what to create for your own business.`,
+      ? `Your page has ads running. Across ${area} I found ${ads} live right now, from ${agencies}. Here are two from other agencies.`
+      : `Across ${area} I found ${ads} live right now, from ${agencies}. Here are two of them, with the rest in the report.`,
     sections: examples.map(example => ({
       heading: example.pageName,
       body: (example.headline || example.body || "Ad example").slice(0, 180),
       ...emailMedia(example, input.allowedMediaOrigins ?? []),
+      ...(example.sourceUrl ? { link: { label: "See it in the Ad Library", href: example.sourceUrl } } : {}),
     })),
-    action: { label: `View the ${area} ad report`, href: reportUrl },
-    note: `Observed ${input.snapshot.evidence.scannedAt.slice(0, 10)}. Selected using recorded agent postcode ${input.snapshot.postcode}, not confirmed ad targeting.`,
+    action: { label: `See all ${facts.activeAdCount} ads`, href: reportUrl },
+    note: `${input.snapshot.evidence.source}, observed ${input.snapshot.evidence.scannedAt.slice(0, 10)}. Matched on recorded agent postcode ${postcode}, not confirmed ad targeting.`,
     signOff: "Steven\nBlockwise",
     transactional: false,
     footer: emailFooter(input),
@@ -371,17 +424,24 @@ export function buildOutreachFollowUpEmail(input: OutreachEmailInput & { followU
   const extra = examples[2];
   if (!extra) throw new Error("A follow-up needs an additional sourced example.");
   const area = input.snapshot.coverageLabel;
+  const postcode = input.snapshot.postcode;
+  const facts = resolveAreaFacts(input.snapshot, input.areaSummary);
   const message: EmailMessage = {
     kind: "postcode-outreach-follow-up-preview",
     eyebrow: input.mode === "demo" ? "SAMPLE FOLLOW-UP" : "ONE MORE LOCAL EXAMPLE",
-    subject: `${input.mode === "demo" ? "[Sample] " : ""}Another ad example from ${area}`,
-    preheader: "One more example from the same dated local report.",
+    subject: `${input.mode === "demo" ? "[Sample] " : ""}${extra.pageName} is still running ads in ${postcode}`,
+    preheader: `One more from the ${area} snapshot, with its source link.`,
     greeting: `Hi ${input.prospect.agentName.split(/\s+/u)[0] || "there"},`,
-    heading: "One more local ad to look at",
-    intro: `One more example from the ${area} snapshot: ${extra.pageName}. If you are considering your next ad, the report keeps the local examples and their source links together.`,
-    sections: [{ heading: extra.pageName, body: (extra.headline || extra.body || "Ad example").slice(0, 180), ...emailMedia(extra, input.allowedMediaOrigins ?? []) }],
-    action: { label: `View the ${area} ad report`, href: httpsUrlSchema.parse(input.reportUrl) },
-    note: `Snapshot dated ${input.snapshot.evidence.scannedAt.slice(0, 10)}.`,
+    heading: "One more local ad",
+    intro: `One more from the ${area} snapshot. The report keeps every example with its source link.`,
+    sections: [{
+      heading: extra.pageName,
+      body: (extra.headline || extra.body || "Ad example").slice(0, 180),
+      ...emailMedia(extra, input.allowedMediaOrigins ?? []),
+      ...(extra.sourceUrl ? { link: { label: "See it in the Ad Library", href: extra.sourceUrl } } : {}),
+    }],
+    action: { label: `See all ${facts.activeAdCount} ads`, href: httpsUrlSchema.parse(input.reportUrl) },
+    note: `${input.snapshot.evidence.source}, observed ${input.snapshot.evidence.scannedAt.slice(0, 10)}. Matched on recorded agent postcode ${postcode}, not confirmed ad targeting.`,
     signOff: "Steven\nBlockwise",
     transactional: false,
     footer: emailFooter(input),
