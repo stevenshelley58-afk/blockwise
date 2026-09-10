@@ -117,17 +117,23 @@ export default async function SuburbEmailPreviewPage({ params, searchParams }: P
   const style = (query.style as "area" | "peers") ?? "area";
   const theme = (query.theme as "light" | "dark") === "dark" ? "dark" : "light";
 
-  const email = buildOutreachEmail({
-    snapshot: snapshotResult.snapshot,
-    prospect: previewProspect(postcode, segment),
-    reportUrl: `${siteUrl()}/${postcode}`,
-    businessIdentity: "Blockwise",
-    unsubscribeUrl: `${siteUrl()}/preferences/unsubscribe`,
-    areaSummary: snapshotResult.summary,
-    subjectStyle: style,
-    allowedMediaOrigins: configuredMediaOrigins(),
-    theme,
-  });
+  let email: ReturnType<typeof buildOutreachEmail> | null = null;
+  let buildError: string | null = null;
+  try {
+    email = buildOutreachEmail({
+      snapshot: snapshotResult.snapshot,
+      prospect: previewProspect(postcode, segment),
+      reportUrl: `${siteUrl()}/${postcode}`,
+      businessIdentity: "Blockwise",
+      unsubscribeUrl: `${siteUrl()}/preferences/unsubscribe`,
+      areaSummary: snapshotResult.summary,
+      subjectStyle: style,
+      allowedMediaOrigins: configuredMediaOrigins(),
+      theme,
+    });
+  } catch (error) {
+    buildError = error instanceof Error ? error.message : String(error);
+  }
 
   const summary = snapshotResult.summary;
 
@@ -162,34 +168,44 @@ export default async function SuburbEmailPreviewPage({ params, searchParams }: P
           <Link href={`/${postcode}`}>View public report</Link>
         </nav>
 
-        <p className="or-email-subject">
-          <strong>Subject:</strong> {email.subject}
-        </p>
+        {buildError ? (
+          <div className="or-preview-note" style={{ color: "#c0392b" }}>
+            <strong>Cannot build email preview.</strong>
+            <br />
+            {buildError}
+          </div>
+        ) : (
+          <>
+            <p className="or-email-subject">
+              <strong>Subject:</strong> {email!.subject}
+            </p>
 
-        <p className="or-preview-note">
-          Real Ad Radar data. Recipient name and contact are placeholders. No message is sent from this page.
-          {summary.activeAdCount > 0 && (
-            <>
-              {" "}
-              {summary.activeAdCount} live ad{summary.activeAdCount === 1 ? "" : "s"} from{" "}
-              {summary.advertiserCount} agenc{summary.advertiserCount === 1 ? "y" : "ies"}. Longest running{" "}
-              {summary.longestRunningDays} days.
-            </>
-          )}
-        </p>
+            <p className="or-preview-note">
+              Real Ad Radar data. Recipient name and contact are placeholders. No message is sent from this page.
+              {summary.activeAdCount > 0 && (
+                <>
+                  {" "}
+                  {summary.activeAdCount} live ad{summary.activeAdCount === 1 ? "" : "s"} from{" "}
+                  {summary.advertiserCount} agenc{summary.advertiserCount === 1 ? "y" : "ies"}. Longest running{" "}
+                  {summary.longestRunningDays} days.
+                </>
+              )}
+            </p>
 
-        <iframe
-          title="Live cold email draft"
-          className="or-email-frame"
-          sandbox="allow-top-navigation-by-user-activation"
-          referrerPolicy="no-referrer"
-          srcDoc={email.html.replace("<head>", '<head><base target="_top"><meta name="referrer" content="no-referrer">')}
-        />
+            <iframe
+              title="Live cold email draft"
+              className="or-email-frame"
+              sandbox="allow-top-navigation-by-user-activation"
+              referrerPolicy="no-referrer"
+              srcDoc={email!.html.replace("<head>", '<head><base target="_top"><meta name="referrer" content="no-referrer">')}
+            />
 
-        <details className="or-plain-text">
-          <summary>Plain text</summary>
-          <pre>{email.text}</pre>
-        </details>
+            <details className="or-plain-text">
+              <summary>Plain text</summary>
+              <pre>{email!.text}</pre>
+            </details>
+          </>
+        )}
       </div>
     </main>
   );
