@@ -6,17 +6,23 @@ import {
   Globe2,
   MessageCircle,
   MoreHorizontal,
-  MousePointer2,
+  Pause,
+  Play,
+  RotateCcw,
   Share2,
   ShieldCheck,
   ThumbsUp,
 } from "lucide-react";
-import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
 import { AD_EXAMPLES, withBasePath } from "@/lib/homepage-concept/content";
 
 import "./workflow-showcase.css";
+
+/* ------------------------------------------------------------------ *
+ * Story data
+ * ------------------------------------------------------------------ */
 
 const PROCESS_STEPS = [
   { label: "Choose", hint: "Pick a ready-made template" },
@@ -24,49 +30,76 @@ const PROCESS_STEPS = [
   { label: "Review", hint: "Set the budget and go live" },
 ] as const;
 
-const STORY_PHASE_DELAYS = [1100, 1000, 1000, 1100, 1200, 850, 1050, 750, 1400] as const;
-const STORY_STEP_PHASES = [1, 2, 5] as const;
-const STORY_PHASE_TO_STEP = [0, 0, 1, 1, 1, 2, 2, 2, 2] as const;
-const STORY_TEMPLATE_SEQUENCE = [0, 1, 2, 0] as const;
-const STORY_STATUS = [
-  "Choose a template",
-  "Template selected",
-  "Customise the ad",
-  "Editing the post copy",
-  "Editing text on the creative",
-  "Review campaign",
-  "Campaign details filled",
-  "Approve campaign",
-  "Campaign approved",
-] as const;
-
-const STORY_CREATIVE = {
+/** The template the story picks. Declared explicitly so it never depends on
+ *  AD_EXAMPLES ordering. */
+const STORY_TEMPLATE = {
+  id: "suburb-guide",
+  label: "Suburb guide",
   image: "/home/subiaco-townhouse.webp",
-  account: "West Coast Home Co",
-  avatar: "WCH",
-  startingCopy: "A better way to spend summer starts at home.",
-  editedCopy: "A better way to spend summer starts at home. Explore the new guide.",
-  startingOverlay: "YOUR NEXT HOME",
-  editedOverlay: "YOUR SUBIACO HOME",
-  domain: "WESTCOASTHOME.CO",
-  linkTitle: "Get the suburb property guide",
 } as const;
 
-/** Extra template cards shown in the browser to make the library look deep. */
-const BROWSER_CARDS = [
-  ...AD_EXAMPLES,
-  { id: "open-home", label: "Open home", image: AD_EXAMPLES[2].image },
-  { id: "just-sold", label: "Just sold", image: AD_EXAMPLES[0].image },
-  { id: "market-update", label: "Market update", image: AD_EXAMPLES[3].image },
+/** Exactly four cards, each a distinct creative. Index 1 is the story card. */
+const TEMPLATE_CARDS = [
+  { id: AD_EXAMPLES[0].id, label: AD_EXAMPLES[0].label, image: AD_EXAMPLES[0].image },
+  STORY_TEMPLATE,
+  { id: AD_EXAMPLES[2].id, label: AD_EXAMPLES[2].label, image: AD_EXAMPLES[2].image },
+  { id: AD_EXAMPLES[3].id, label: AD_EXAMPLES[3].label, image: AD_EXAMPLES[3].image },
 ] as const;
 
-const STORY_EASE = [0.16, 1, 0.3, 1] as const;
-const STORY_MOVE = { duration: 0.55, ease: STORY_EASE };
-const STORY_ENTER = { duration: 0.45, ease: STORY_EASE };
-const STORY_EXIT = { duration: 0.25, ease: [0.32, 0, 0.67, 0] as const };
+const SELECTED_CARD_INDEX = 1;
 
-/** Entrance choreography: the section rises once, then its children cascade. */
-const SECTION_IN_VIEW = { once: true, margin: "-12%" } as const;
+const STORY_AD = {
+  account: "West Coast Home Co",
+  avatar: "WCH",
+  domain: "WESTCOASTHOME.CO",
+  linkTitle: "Get the suburb property guide",
+  baseCopy: "A better way to spend summer starts at home.",
+  addedCopy: " Explore the new suburb guide.",
+  startingOverlay: "YOUR NEXT HOME",
+  editedOverlay: "YOUR SUBIACO HOME",
+} as const;
+
+const REVIEW_ROWS = [
+  ["Audience", "Mt Lawley +15 km"],
+  ["Budget", "$20 / day"],
+  ["Duration", "14 days"],
+] as const;
+
+/* ------------------------------------------------------------------ *
+ * Timeline
+ *
+ * Six cues, one auto pass, then it stops on cue 5 and the step buttons
+ * take over. Total pass = 7300ms. A visible transport control satisfies
+ * WCAG 2.2 SC 2.2.2 while the pass is running.
+ * ------------------------------------------------------------------ */
+
+const CUE_COUNT = 6;
+const LAST_CUE = CUE_COUNT - 1;
+const CUE_DURATIONS = [1200, 1500, 1600, 1500, 1500] as const;
+const CUE_TO_STEP = [0, 0, 1, 1, 2, 2] as const;
+const STEP_START_CUE = [0, 2, 4] as const;
+const STEP_END_CUE = [1, 3, 5] as const;
+const SCENE_NAME = ["browse", "edit", "review"] as const;
+
+const STEP_STATUS = [
+  "Step 1 of 3. Choose a template.",
+  "Step 2 of 3. Customise the ad.",
+  "Step 3 of 3. Review the campaign and go live.",
+] as const;
+
+const TYPE_SPEED_COPY_MS = 26;
+const TYPE_SPEED_OVERLAY_MS = 46;
+
+const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+const EASE_IN = [0.4, 0, 1, 1] as const;
+
+/** Panels are never unmounted, so there is no AnimatePresence and no key
+ *  contract to get wrong. The outgoing panel holds full opacity until the
+ *  incoming one has covered it, which stops the crossfade dipping to the
+ *  background. */
+const PANEL_ENTER = { duration: 0.3, ease: EASE_OUT } as const;
+const PANEL_EXIT = { duration: 0.22, ease: EASE_IN, delay: 0.12 } as const;
+
 const SECTION_RISE = {
   hidden: { opacity: 0, y: 18 },
   shown: { opacity: 1, y: 0 },
@@ -77,327 +110,330 @@ const COPY_CASCADE = {
 } as const;
 const COPY_ITEM = {
   hidden: { opacity: 0, y: 12 },
-  shown: { opacity: 1, y: 0, transition: { duration: 0.5, ease: STORY_EASE } },
+  shown: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE_OUT } },
 } as const;
 const DEMO_RISE = {
   hidden: { opacity: 0, scale: 0.97, y: 14 },
-  shown: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.7, ease: STORY_EASE, delay: 0.12 } },
+  shown: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.7, ease: EASE_OUT, delay: 0.12 } },
 } as const;
 
-function StoryCursor({ pressed = false }: { pressed?: boolean }) {
-  return (
-    <motion.span
-      className="hc-story-cursor"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0, scale: pressed ? 0.88 : 1 }}
-      exit={{ opacity: 0, y: 4 }}
-      transition={pressed ? { duration: 0.14, ease: "easeInOut" } : STORY_ENTER}
-    >
-      <MousePointer2 aria-hidden="true" size={22} strokeWidth={2.2} />
-    </motion.span>
-  );
+/* ------------------------------------------------------------------ *
+ * Typewriter
+ * ------------------------------------------------------------------ */
+
+/** Returns how many characters of `target` are revealed. The caret is
+ *  rendered after the revealed slice by the caller, so it follows the text
+ *  instead of sitting at the end of the line. */
+function useTypedLength(target: string, typing: boolean, complete: boolean, speedMs: number) {
+  const [revealed, setRevealed] = useState(complete ? target.length : 0);
+
+  useEffect(() => {
+    if (!typing) {
+      setRevealed(complete ? target.length : 0);
+      return;
+    }
+    setRevealed(0);
+    let index = 0;
+    const id = window.setInterval(() => {
+      index += 1;
+      setRevealed(index);
+      if (index >= target.length) window.clearInterval(id);
+    }, speedMs);
+    return () => window.clearInterval(id);
+  }, [target, typing, complete, speedMs]);
+
+  return revealed;
 }
 
-function StoryOverlayText({ editing, edited }: { editing: boolean; edited: boolean }) {
-  if (!editing) return <>{edited ? STORY_CREATIVE.editedOverlay : STORY_CREATIVE.startingOverlay}</>;
-
-  return (
-    <span className="hc-story-replacement" aria-label={STORY_CREATIVE.editedOverlay}>
-      {Array.from(STORY_CREATIVE.editedOverlay).map((character, index) => (
-        <motion.span
-          key={`${character}-${index}`}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: index * 0.045, duration: 0.06, ease: "linear" }}
-        >
-          {character === " " ? "\u00a0" : character}
-        </motion.span>
-      ))}
-      <span className="hc-story-caret" />
-    </span>
-  );
+function Caret() {
+  return <span className="hc-studio-caret" aria-hidden="true" />;
 }
 
-function StoryAd({ phase, review = false }: { phase: number; review?: boolean }) {
-  const copyEdited = phase >= 3;
-  const creativeEdited = phase >= 4;
+/* ------------------------------------------------------------------ *
+ * The ad card. Mounted once for the whole story and never replaced.
+ * ------------------------------------------------------------------ */
+
+function AdCard({
+  cue,
+  copyText,
+  overlayText,
+  typingCopy,
+  typingOverlay,
+}: {
+  cue: number;
+  copyText: string;
+  overlayText: string;
+  typingCopy: boolean;
+  typingOverlay: boolean;
+}) {
+  const hasTemplate = cue >= 1;
+  const isLive = cue >= LAST_CUE;
 
   return (
-    <motion.article layoutId="story-ad" className={`hc-meta-ad hc-meta-feed hc-story-ad${review ? " is-review" : ""}`} transition={STORY_MOVE}>
-      <header className="hc-meta-feed-head">
-        <span className="hc-meta-avatar" aria-hidden="true">{STORY_CREATIVE.avatar}</span>
-        <span><strong>{STORY_CREATIVE.account}</strong><small>Sponsored <Globe2 aria-hidden="true" size={9} /></small></span>
-        <MoreHorizontal aria-hidden="true" size={16} />
-      </header>
-      <motion.p
-        className={`hc-meta-feed-copy${phase === 3 ? " is-editing" : ""}`}
-        key={copyEdited ? "edited-copy" : "starting-copy"}
-        initial={{ opacity: 0.35, y: 3 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={STORY_ENTER}
+    <div className="hc-studio-ad-slot">
+      <motion.div
+        className="hc-studio-ad-empty"
+        animate={{ opacity: hasTemplate ? 0 : 1 }}
+        transition={hasTemplate ? PANEL_EXIT : PANEL_ENTER}
       >
-        {copyEdited ? STORY_CREATIVE.editedCopy : STORY_CREATIVE.startingCopy}{phase === 3 ? <span className="hc-story-caret" /> : null}
-      </motion.p>
-      <motion.div layoutId="story-template-image" className="hc-story-ad-image" transition={STORY_MOVE}>
-        <img src={withBasePath(STORY_CREATIVE.image)} alt="" width="1080" height="1350" />
-        <span className="hc-story-image-shade" aria-hidden="true" />
-        <motion.span
-          className={`hc-story-creative-overlay${phase === 4 ? " is-editing" : ""}`}
-          role="textbox"
-          aria-label="Text on creative"
-          aria-readonly="true"
-          data-editing-target="creative"
-          key={creativeEdited ? "edited-creative" : "starting-creative"}
-          initial={{ opacity: 0, y: 8, filter: "blur(4px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          transition={STORY_ENTER}
-        >
-          <StoryOverlayText editing={phase === 4} edited={creativeEdited} />
-        </motion.span>
+        <span>Your ad previews here</span>
       </motion.div>
-      <div className="hc-meta-link-preview">
-        <span><small>{STORY_CREATIVE.domain}</small><strong>{STORY_CREATIVE.linkTitle}</strong></span>
-        <b>Learn more</b>
-      </div>
-      <div className="hc-meta-actions" aria-hidden="true">
-        <span><ThumbsUp size={12} />Like</span>
-        <span><MessageCircle size={12} />Comment</span>
-        <span><Share2 size={12} />Share</span>
-      </div>
-    </motion.article>
-  );
-}
 
-function TemplateBrowser({ phase }: { phase: number }) {
-  const activeTemplate = STORY_TEMPLATE_SEQUENCE[Math.min(phase, STORY_TEMPLATE_SEQUENCE.length - 1)];
-  const selected = phase === 1;
-
-  return (
-    <motion.div
-      key="templates"
-      className="hc-story-scene hc-story-browser"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ ...STORY_EXIT, opacity: { duration: 0.22 } }}
-    >
-      <div className="hc-story-scene-heading">
-        <span>Ready-made ads</span>
-        <strong>{selected ? "Template selected" : "Choose a starting point"}</strong>
-      </div>
-      <div className="hc-story-template-window">
-        <motion.div
-          className="hc-story-template-track"
-          animate={{ x: `-${[0, 34, 0, 0][Math.min(phase, 3)]}%` }}
-          transition={STORY_MOVE}
-        >
-          {BROWSER_CARDS.map((example, index) => {
-            const active = index === activeTemplate;
-            const isStoryCard = index === 1;
-            return (
-              <motion.div
-                className={`hc-story-template-card${active ? " is-active" : ""}${selected && active ? " is-selected" : ""}`}
-                key={example.id}
-                animate={{ opacity: active ? 1 : 0.62, scale: active ? 1 : 0.965 }}
-                transition={STORY_MOVE}
-              >
-                <motion.div
-                  layoutId={selected && active ? "story-template-image" : undefined}
-                  className="hc-story-template-image"
-                  transition={STORY_MOVE}
-                >
-                  <img src={withBasePath(isStoryCard ? STORY_CREATIVE.image : example.image)} alt="" width="1080" height="1350" />
-                  {selected && active ? <span className="hc-story-selected"><Check aria-hidden="true" size={13} /> Selected</span> : null}
-                </motion.div>
-                <span><strong>{isStoryCard ? "Suburb guide" : example.label}</strong><small>Facebook &amp; Instagram</small></span>
-              </motion.div>
-            );
-          })}
-        </motion.div>
-      </div>
-    </motion.div>
-  );
-}
-
-function EditorScene({ phase }: { phase: number }) {
-  const copyActive = phase === 3;
-  const creativeActive = phase === 4;
-
-  return (
-    <motion.div
-      key="editor"
-      className="hc-story-scene hc-story-editor"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={STORY_ENTER}
-    >
-      <aside className="hc-story-mini-rail">
-        <span>Templates</span>
-        <div className="is-selected">
-          <img src={withBasePath(STORY_CREATIVE.image)} alt="" width="1080" height="1350" />
-        </div>
-      </aside>
-
-      <div className="hc-story-ad-workspace">
-        <StoryAd phase={phase} />
-      </div>
-
-      <div className="hc-story-edit-panel">
-        <span>Customise</span>
-        <h3>Make it yours</h3>
-        <label className={copyActive ? "is-active" : ""}>
-          <span>Post copy</span>
-          <motion.strong
-            key={phase >= 3 ? "new-post-copy" : "old-post-copy"}
-            initial={{ opacity: 0.35 }}
-            animate={{ opacity: 1 }}
-            transition={STORY_ENTER}
-          >
-            {phase >= 3 ? STORY_CREATIVE.editedCopy : STORY_CREATIVE.startingCopy}
-            {copyActive ? <span className="hc-story-caret" /> : null}
-          </motion.strong>
-        </label>
-        <label className={creativeActive ? "is-active" : ""}>
-          <span>Text on creative</span>
-          <motion.strong
-            key={phase >= 4 ? "new-creative-copy" : "old-creative-copy"}
-            initial={{ opacity: 0.35 }}
-            animate={{ opacity: 1 }}
-            transition={STORY_ENTER}
-          >
-            {phase >= 4 ? STORY_CREATIVE.editedOverlay : STORY_CREATIVE.startingOverlay}
-            {creativeActive ? <span className="hc-story-caret" /> : null}
-          </motion.strong>
-        </label>
-      </div>
-    </motion.div>
-  );
-}
-
-function ReviewScene({ phase }: { phase: number }) {
-  const valuesFilled = phase >= 6;
-  const pressing = phase === 7;
-  const approved = phase >= 8;
-
-  return (
-    <motion.div
-      key="review"
-      className="hc-story-scene hc-story-review"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={STORY_ENTER}
-    >
-      <div className="hc-story-review-preview">
-        <StoryAd phase={phase} review />
-      </div>
-
-      <motion.div className="hc-story-review-panel" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ ...STORY_ENTER, delay: 0.14 }}>
-        <h3>Review campaign</h3>
-        <dl>
-          {[
-            ["Audience", "Mt Lawley +15 km"],
-            ["Budget", "$20 / day"],
-            ["Duration", "14 days"],
-          ].map(([label, value], index) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd>
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.span
-                    key={valuesFilled ? value : `${label}-empty`}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ ...STORY_ENTER, delay: valuesFilled ? index * 0.12 : 0 }}
-                  >
-                    {valuesFilled ? value : ""}
-                  </motion.span>
-                </AnimatePresence>
-              </dd>
-            </div>
-          ))}
-        </dl>
-        <motion.strong
-          className={`hc-story-approve${approved ? " is-approved" : ""}`}
-          animate={{ scale: pressing ? 0.97 : approved ? 1 : 1 }}
-          transition={{ duration: 0.15, ease: "easeInOut" }}
-        >
-          <span className="hc-story-approve-mark" aria-hidden="true">
-            <AnimatePresence mode="wait" initial={false}>
-              {approved ? (
-                <motion.span
-                  key="approved-check"
-                  className="hc-story-approve-check"
-                  initial={{ scale: 0.4, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.4, opacity: 0 }}
-                  transition={{ duration: 0.34, ease: STORY_EASE }}
-                >
-                  <Check size={15} strokeWidth={3} />
-                </motion.span>
-              ) : (
-                <motion.span
-                  key="pending-shield"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.18 }}
-                >
-                  <ShieldCheck size={15} />
-                </motion.span>
-              )}
-            </AnimatePresence>
+      <motion.article
+        className="hc-meta-ad hc-meta-feed hc-studio-ad"
+        animate={{ opacity: hasTemplate ? 1 : 0, scale: hasTemplate ? 1 : 0.97 }}
+        transition={hasTemplate ? PANEL_ENTER : PANEL_EXIT}
+      >
+        <header className="hc-meta-feed-head">
+          <span className="hc-meta-avatar" aria-hidden="true">{STORY_AD.avatar}</span>
+          <span>
+            <strong>{STORY_AD.account}</strong>
+            <small>Sponsored <Globe2 aria-hidden="true" size={9} /></small>
           </span>
-          {approved ? "Campaign approved" : "Approve campaign"}
-          {pressing ? <StoryCursor pressed /> : null}
-        </motion.strong>
+          <MoreHorizontal aria-hidden="true" size={16} />
+        </header>
 
-        <AnimatePresence>
-          {approved ? (
-            <motion.span
-              className="hc-story-live-toast"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 6 }}
-              transition={{ duration: 0.4, ease: STORY_EASE, delay: 0.18 }}
-            >
-              Campaign is live
-            </motion.span>
-          ) : null}
-        </AnimatePresence>
-      </motion.div>
+        <p className={`hc-meta-feed-copy${typingCopy ? " is-editing" : ""}`}>
+          {copyText}
+          {typingCopy ? <Caret /> : null}
+        </p>
+
+        <div className="hc-studio-ad-image">
+          <img src={withBasePath(STORY_TEMPLATE.image)} alt="" width="1080" height="1350" />
+          <span className="hc-studio-ad-shade" aria-hidden="true" />
+          <span className={`hc-studio-ad-overlay${typingOverlay ? " is-editing" : ""}`}>
+            {overlayText}
+            {typingOverlay ? <Caret /> : null}
+          </span>
+          <motion.span
+            className="hc-studio-live-pill"
+            animate={{ opacity: isLive ? 1 : 0, y: isLive ? 0 : 6 }}
+            transition={isLive ? { ...PANEL_ENTER, delay: 0.2 } : { duration: 0.15 }}
+          >
+            <i aria-hidden="true" /> Live
+          </motion.span>
+        </div>
+
+        <div className="hc-meta-link-preview">
+          <span><small>{STORY_AD.domain}</small><strong>{STORY_AD.linkTitle}</strong></span>
+          <b>Learn more</b>
+        </div>
+
+        <div className="hc-meta-actions" aria-hidden="true">
+          <span><ThumbsUp size={12} />Like</span>
+          <span><MessageCircle size={12} />Comment</span>
+          <span><Share2 size={12} />Share</span>
+        </div>
+      </motion.article>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * Control panels. All three stay mounted; only opacity changes.
+ * ------------------------------------------------------------------ */
+
+function Panel({
+  name,
+  active,
+  eyebrow,
+  title,
+  children,
+}: {
+  name: string;
+  active: boolean;
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <motion.div
+      className="hc-studio-panel"
+      data-panel={name}
+      animate={{ opacity: active ? 1 : 0 }}
+      transition={active ? PANEL_ENTER : PANEL_EXIT}
+      style={{ pointerEvents: "none", zIndex: active ? 2 : 1 }}
+    >
+      <div className="hc-studio-panel-head">
+        <span>{eyebrow}</span>
+        <strong>{title}</strong>
+      </div>
+      {children}
     </motion.div>
   );
 }
+
+function ChoosePanel({ cue, active }: { cue: number; active: boolean }) {
+  const picked = cue >= 1;
+
+  return (
+    <Panel
+      name="choose"
+      active={active}
+      eyebrow="Ready-made ads"
+      title={picked ? "Template selected" : "Pick a starting point"}
+    >
+      <div className="hc-studio-template-grid">
+        {TEMPLATE_CARDS.map((card, index) => {
+          const selected = picked && index === SELECTED_CARD_INDEX;
+          return (
+            <motion.div
+              className={`hc-studio-template-card${selected ? " is-selected" : ""}`}
+              key={card.id}
+              animate={{ opacity: !picked || selected ? 1 : 0.45 }}
+              transition={{ duration: 0.32, ease: EASE_OUT }}
+            >
+              <span className="hc-studio-template-thumb">
+                <img src={withBasePath(card.image)} alt="" width="1080" height="1350" />
+                <motion.span
+                  className="hc-studio-template-check"
+                  animate={{ opacity: selected ? 1 : 0, scale: selected ? 1 : 0.6 }}
+                  transition={{ duration: 0.28, ease: EASE_OUT }}
+                >
+                  <Check aria-hidden="true" size={12} strokeWidth={3} />
+                </motion.span>
+              </span>
+              <small>{card.label}</small>
+            </motion.div>
+          );
+        })}
+      </div>
+    </Panel>
+  );
+}
+
+function CustomisePanel({
+  cue,
+  active,
+  copyText,
+  overlayText,
+  typingCopy,
+  typingOverlay,
+}: {
+  cue: number;
+  active: boolean;
+  copyText: string;
+  overlayText: string;
+  typingCopy: boolean;
+  typingOverlay: boolean;
+}) {
+  return (
+    <Panel name="customise" active={active} eyebrow="Customise" title="Make it yours">
+      <div className="hc-studio-fields">
+        <label className={typingCopy ? "is-active" : ""}>
+          <span>Post copy</span>
+          <strong>{copyText}{typingCopy ? <Caret /> : null}</strong>
+        </label>
+        <label className={typingOverlay ? "is-active" : ""}>
+          <span>Text on creative</span>
+          <strong>{overlayText}{typingOverlay ? <Caret /> : null}</strong>
+        </label>
+      </div>
+      <p className="hc-studio-panel-note">
+        {cue >= 3 ? "Wording updated on the post and the image." : "Edit the wording, the preview updates as you type."}
+      </p>
+    </Panel>
+  );
+}
+
+function ReviewPanel({ cue, active }: { cue: number; active: boolean }) {
+  const approved = cue >= LAST_CUE;
+
+  return (
+    <Panel name="review" active={active} eyebrow="Review" title="Check and go live">
+      <dl className="hc-studio-review-rows">
+        {REVIEW_ROWS.map(([label, value], index) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>
+              <motion.span
+                animate={{ opacity: active ? 1 : 0, y: active ? 0 : 6 }}
+                transition={{ duration: 0.34, ease: EASE_OUT, delay: active ? 0.1 + index * 0.11 : 0 }}
+              >
+                {value}
+              </motion.span>
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      <motion.div
+        className={`hc-studio-approve${approved ? " is-approved" : ""}`}
+        animate={{ scale: approved ? 1 : 1 }}
+        transition={{ duration: 0.18, ease: "easeInOut" }}
+      >
+        <span className="hc-studio-approve-mark" aria-hidden="true">
+          {approved ? <Check size={14} strokeWidth={3} /> : <ShieldCheck size={14} />}
+        </span>
+        {approved ? "Campaign approved" : "Approve campaign"}
+      </motion.div>
+
+      <motion.p
+        className="hc-studio-live-note"
+        animate={{ opacity: approved ? 1 : 0, y: approved ? 0 : 6 }}
+        transition={approved ? { duration: 0.4, ease: EASE_OUT, delay: 0.24 } : { duration: 0.15 }}
+      >
+        Campaign is live on Facebook and Instagram.
+      </motion.p>
+    </Panel>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * Section
+ * ------------------------------------------------------------------ */
 
 export function WorkflowShowcase() {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const hasStarted = useRef(false);
+  const hasAutoStarted = useRef(false);
   const reduceMotion = Boolean(useReducedMotion());
-  const [phase, setPhase] = useState(0);
+
+  const [cue, setCue] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [inView, setInView] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
-  const activeStep = STORY_PHASE_TO_STEP[phase];
 
+  const step = CUE_TO_STEP[cue];
+  const finished = cue >= LAST_CUE;
+
+  const typingCopy = playing && cue === 2;
+  const typingOverlay = playing && cue === 3;
+
+  const typedCopy = useTypedLength(STORY_AD.addedCopy, typingCopy, cue >= 3, TYPE_SPEED_COPY_MS);
+  const typedOverlay = useTypedLength(STORY_AD.editedOverlay, typingOverlay, cue >= 4, TYPE_SPEED_OVERLAY_MS);
+
+  const copyText =
+    cue < 2
+      ? STORY_AD.baseCopy
+      : cue === 2
+        ? STORY_AD.baseCopy + STORY_AD.addedCopy.slice(0, typedCopy)
+        : STORY_AD.baseCopy + STORY_AD.addedCopy;
+
+  const overlayText =
+    cue < 3
+      ? STORY_AD.startingOverlay
+      : cue === 3
+        ? STORY_AD.editedOverlay.slice(0, typedOverlay)
+        : STORY_AD.editedOverlay;
+
+  /* Start the single pass the first time the section is properly in view. */
   useEffect(() => {
     const syncVisibility = () => setPageVisible(document.visibilityState === "visible");
+    const node = sectionRef.current;
     const observer = new IntersectionObserver(
       ([entry]) => {
         setInView(entry.isIntersecting);
-        if (entry.isIntersecting && !reduceMotion && !hasStarted.current) {
-          hasStarted.current = true;
-          setPhase(0);
+        if (entry.isIntersecting && !reduceMotion && !hasAutoStarted.current) {
+          hasAutoStarted.current = true;
+          setCue(0);
           setPlaying(true);
         }
       },
-      { threshold: 0.3 },
+      { threshold: 0.35 },
     );
 
     syncVisibility();
-    if (sectionRef.current) observer.observe(sectionRef.current);
+    if (node) observer.observe(node);
     document.addEventListener("visibilitychange", syncVisibility);
     return () => {
       observer.disconnect();
@@ -405,29 +441,46 @@ export function WorkflowShowcase() {
     };
   }, [reduceMotion]);
 
+  /* Reduced motion gets the finished state with no timers at all. */
   useEffect(() => {
     if (reduceMotion) {
-      setPhase(STORY_STATUS.length - 1);
       setPlaying(false);
+      setCue(LAST_CUE);
     }
   }, [reduceMotion]);
 
+  /* One cue at a time. Stops for good at LAST_CUE, so nothing loops. */
   useEffect(() => {
     if (!playing || !inView || !pageVisible || reduceMotion) return;
-
-    const timer = window.setTimeout(
-      () => setPhase((current) => current >= STORY_STATUS.length - 1 ? 0 : current + 1),
-      STORY_PHASE_DELAYS[phase],
-    );
+    if (cue >= LAST_CUE) {
+      setPlaying(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setCue((current) => current + 1), CUE_DURATIONS[cue]);
     return () => window.clearTimeout(timer);
-  }, [inView, pageVisible, phase, playing, reduceMotion]);
+  }, [cue, inView, pageVisible, playing, reduceMotion]);
 
   function selectStep(nextStep: number) {
-    setPhase(STORY_STEP_PHASES[nextStep]);
-    setPlaying(!reduceMotion);
+    if (reduceMotion) {
+      setCue(STEP_END_CUE[nextStep]);
+      return;
+    }
+    hasAutoStarted.current = true;
+    setCue(STEP_START_CUE[nextStep]);
+    setPlaying(true);
   }
 
-  const scene = phase <= 1 ? "browse" : phase <= 4 ? "edit" : "review";
+  function toggleTransport() {
+    if (finished) {
+      setCue(0);
+      setPlaying(true);
+      return;
+    }
+    setPlaying((current) => !current);
+  }
+
+  const transportLabel = finished ? "Replay the walkthrough" : playing ? "Pause the walkthrough" : "Play the walkthrough";
+  const TransportIcon = finished ? RotateCcw : playing ? Pause : Play;
 
   return (
     <motion.div
@@ -436,19 +489,19 @@ export function WorkflowShowcase() {
       variants={SECTION_RISE}
       initial="hidden"
       whileInView="shown"
-      viewport={SECTION_IN_VIEW}
-      transition={{ duration: 0.6, ease: STORY_EASE }}
+      viewport={{ once: true, margin: "-12%" }}
+      transition={{ duration: 0.6, ease: EASE_OUT }}
     >
       <motion.div className="hc-process-copy" variants={COPY_CASCADE}>
         <motion.small className="hc-process-eyebrow" variants={COPY_ITEM}>Blockwise Ad Studio</motion.small>
         <motion.h2 variants={COPY_ITEM}>Create real estate ads for Facebook &amp; Instagram.</motion.h2>
 
-        <motion.div className="hc-process-steps" aria-label="How Blockwise works" variants={COPY_ITEM}>
+        <motion.div className="hc-process-steps" role="group" aria-label="How Blockwise works" variants={COPY_ITEM}>
           {PROCESS_STEPS.map((item, index) => (
             <button
               key={item.label}
               type="button"
-              aria-pressed={activeStep === index}
+              aria-pressed={step === index}
               onClick={() => selectStep(index)}
             >
               <span className="hc-process-step-mark" aria-hidden="true" />
@@ -471,30 +524,51 @@ export function WorkflowShowcase() {
 
       <motion.div
         className="hc-process-demo"
-        data-scene={scene}
-        aria-label="Animated example of creating and approving an ad"
+        data-scene={SCENE_NAME[step]}
         variants={DEMO_RISE}
       >
         <div className="hc-process-demo-topbar">
           <span><i aria-hidden="true" /> Blockwise Ad Studio</span>
           <ol aria-hidden="true">
-            {PROCESS_STEPS.map((item, index) => <li className={activeStep === index ? "is-active" : ""} key={item.label}>{item.label}</li>)}
+            {PROCESS_STEPS.map((item, index) => (
+              <li className={step === index ? "is-active" : ""} key={item.label}>{item.label}</li>
+            ))}
           </ol>
         </div>
 
-        <p className="hc-sr-only" aria-live="polite">{STORY_STATUS[phase]}</p>
-        <LayoutGroup id="blockwise-story">
-          <div className="hc-story-viewport" aria-hidden="true">
-            <AnimatePresence mode="sync" initial={false}>
-              {scene === "browse" ? <TemplateBrowser phase={phase} /> : null}
-              {scene === "edit" ? <EditorScene phase={phase} /> : null}
-              {scene === "review" ? <ReviewScene phase={phase} /> : null}
-            </AnimatePresence>
+        <p className="hc-sr-only" aria-live="polite">{STEP_STATUS[step]}</p>
+
+        <div className="hc-studio" aria-hidden="true">
+          <AdCard
+            cue={cue}
+            copyText={copyText}
+            overlayText={overlayText}
+            typingCopy={typingCopy}
+            typingOverlay={typingOverlay}
+          />
+
+          <div className="hc-studio-panels">
+            <ChoosePanel cue={cue} active={step === 0} />
+            <CustomisePanel
+              cue={cue}
+              active={step === 1}
+              copyText={copyText}
+              overlayText={overlayText}
+              typingCopy={typingCopy}
+              typingOverlay={typingOverlay}
+            />
+            <ReviewPanel cue={cue} active={step === 2} />
           </div>
-        </LayoutGroup>
-        <div className="hc-process-demo-caption">
-          <small>Preview · Choose → Customise → Review</small>
         </div>
+
+        {reduceMotion ? null : (
+          <div className="hc-studio-transport">
+            <button type="button" onClick={toggleTransport} aria-label={transportLabel}>
+              <TransportIcon aria-hidden="true" size={13} />
+              {finished ? "Replay" : playing ? "Pause" : "Play"}
+            </button>
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );
