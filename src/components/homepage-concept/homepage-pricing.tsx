@@ -1,4 +1,4 @@
-import { ArrowRight, Check, ExternalLink } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 
 import { HOMEPAGE_PLANS } from "@/lib/homepage-concept/pricing";
 
@@ -9,8 +9,9 @@ export function HomepagePricing() {
     <section className="hp-pricing" id="pricing" aria-labelledby="hp-pricing-heading">
       <div className="hc-shell">
         <div className="hp-pricing-heading">
-          <h2 id="hp-pricing-heading">Start free. Choose more help when you need it.</h2>
-          <p>Every option keeps Meta ad spend separate. Paid plans only start when you choose one.</p>
+          <h2 id="hp-pricing-heading">Start free. Sign up when you&rsquo;re ready.</h2>
+          <p>Three Feed and Story packs published to your Meta ad account. Yours to keep,
+            no card is needed. 7 days of your personal Blockwise dashboard.</p>
         </div>
         <div className="hp-pricing-grid">
           {HOMEPAGE_PLANS.map((plan) => (
@@ -24,28 +25,20 @@ export function HomepagePricing() {
               <ul className="hp-plan-included">
                 {plan.included.map((item) => <li key={item}><Check size={16} aria-hidden="true" /><span>{item}</span></li>)}
               </ul>
+              <a className={`hp-plan-cta${plan.featured ? "" : " hp-plan-cta--quiet"}`} href={plan.cta.href} data-cta-location={plan.cta.location}>
+                {plan.cta.label}
+                <ArrowRight size={17} aria-hidden="true" />
+              </a>
+              {plan.note ? <p className="hp-plan-note">{plan.note}</p> : null}
               <details className="hp-plan-details">
                 <summary>More plan details</summary>
                 <ul>
                   {plan.details.map((item) => <li key={item}><Check size={15} aria-hidden="true" /><span>{item}</span></li>)}
                 </ul>
               </details>
-              <p className="hp-plan-terms">{plan.terms}</p>
-              <a className="hp-plan-cta" href={plan.cta.href} data-cta-location={plan.cta.location}>
-                {plan.cta.label}
-                <ArrowRight size={17} aria-hidden="true" />
-              </a>
-              <a className="hp-plan-details-link" href={plan.detailsHref}>
-                Plan details on the current site <ExternalLink size={13} aria-hidden="true" />
-              </a>
             </article>
           ))}
         </div>
-        <ol className="hp-pricing-sequence" aria-label="Starting with Blockwise">
-          <li><strong>1.</strong><span>Start with the free allowance.</span></li>
-          <li><strong>2.</strong><span>Create your ads and choose a campaign.</span></li>
-          <li><strong>3.</strong><span>Pick a paid plan only when it suits you.</span></li>
-        </ol>
       </div>
     </section>
   );
