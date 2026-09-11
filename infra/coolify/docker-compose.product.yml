@@ -184,12 +184,15 @@ services:
       # Readiness must not call the public/shared edge: product-caddy waits on
       # this app's health, so that would create a startup cycle.
       BLOCKWISE_READINESS_SUPABASE_URL: http://product-rest:3000
-      # Server-side Supabase reads and writes must stay in-network. Pointing
-      # them at the public origin sends every query out to the shared edge and
-      # back over the loopback, which measured ~200ms per request versus ~3ms
-      # to product-caddy. The browser keeps the public NEXT_PUBLIC_ value, and
-      # auth redirect targets are built from the app origin, never this one.
-      BLOCKWISE_SUPABASE_SERVER_URL: http://product-caddy:80
+      # Deliberately NOT set: BLOCKWISE_SUPABASE_SERVER_URL.
+      # Pointing server-side Supabase traffic at product-caddy:80 was measured to
+      # break sessions. That router uses handle_path, which strips the /auth/v1
+      # prefix before proxying to GoTrue, so token verification gets an empty 200
+      # and every signed-in request bounces to /login. The app's own origin is
+      # cheap (the container resolves it locally and the request never leaves the
+      # host), so this stays on the public URL until the internal router can
+      # serve /auth/v1/* without stripping the prefix. lib/supabase/credentials.ts
+      # already supports the variable when that is fixed.
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?SUPABASE_SERVICE_ROLE_KEY is required}
       TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:?TOKEN_ENCRYPTION_KEY is required}
       # AI and Meta are opt-in providers. Core auth, Ad Studio editing and

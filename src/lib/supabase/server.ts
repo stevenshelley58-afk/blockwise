@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import type { CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-import { cleanSupabaseEnv, resolveSupabaseServerUrl } from "./credentials.ts";
+import { cleanSupabaseEnv, resolveSupabaseServerUrl, supabaseAuthCookieName } from "./credentials.ts";
 
 type CookieToSet = {
   name: string;
@@ -12,6 +12,7 @@ type CookieToSet = {
 
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
+  const cookieName = supabaseAuthCookieName();
 
   return createServerClient(
     // Server-side reads and writes go to the internal Supabase router when the
@@ -22,6 +23,9 @@ export async function createSupabaseServerClient() {
     cleanSupabaseEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
     {
       auth: { flowType: "pkce" },
+      // Pin the auth cookie to the public project ref: the client would
+      // otherwise derive it from the internal hostname and lose the session.
+      ...(cookieName ? { cookieOptions: { name: cookieName } } : {}),
       cookies: {
         getAll() {
           return cookieStore.getAll();

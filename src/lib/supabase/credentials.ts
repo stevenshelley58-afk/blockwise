@@ -31,6 +31,31 @@ export function resolveSupabaseServerUrl(env: SupabaseServerEnv = process.env): 
   return cleanSupabaseEnv(env.NEXT_PUBLIC_SUPABASE_URL ?? env.SUPABASE_URL).replace(/\/+$/u, "");
 }
 
+/** The Supabase project slug that names the auth cookie (`sb-<ref>-auth-token`). */
+function supabaseProjectRef(url: string): string {
+  try {
+    return new URL(url).hostname.split(".")[0];
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Auth cookie name for the server client.
+ *
+ * `@supabase/ssr` derives its storage key from the URL it is handed
+ * (`sb-${hostname.split(".")[0]}-auth-token`). That is fine while the server
+ * and the browser share one origin, but the moment the server points at the
+ * internal router the derived name changes to `sb-product-caddy-auth-token`,
+ * the server stops finding the session the browser wrote, and every signed-in
+ * request silently bounces to /login. Pin the name to the public project ref
+ * so only the transport address changes, never the cookie identity.
+ */
+export function supabaseAuthCookieName(env: SupabaseServerEnv = process.env): string | undefined {
+  const ref = supabaseProjectRef(cleanSupabaseEnv(env.NEXT_PUBLIC_SUPABASE_URL ?? env.SUPABASE_URL));
+  return ref ? `sb-${ref}-auth-token` : undefined;
+}
+
 export function isLegacySupabaseJwt(value: string): boolean {
   return /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/u.test(value);
 }
