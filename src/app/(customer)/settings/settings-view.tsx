@@ -2,17 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  AlertTriangle,
-
-  Briefcase,
-  CreditCard,
-
-
-
-  User,
-
-} from "lucide-react";
+import { AlertTriangle, Briefcase, CreditCard, User } from "lucide-react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,6 +16,29 @@ import { NotificationsSection } from "./notifications-section";
 import { TeamSection } from "./team-section";
 import { WorkspaceSection } from "./workspace-section";
 import type { SettingsViewProps } from "./settings-shared";
+
+/**
+ * Deep links predate the tab layout and still use the old section ids
+ * (`/settings#connections`, `/settings#team`, `/settings#billing`). Each maps to
+ * the tab that now owns that section so existing links keep working.
+ */
+const TAB_ALIASES: Record<string, string> = {
+  account: "account",
+  security: "account",
+  notifications: "account",
+  workspace: "workspace",
+  team: "workspace",
+  connections: "workspace",
+  "brand-pack": "workspace",
+  billing: "billing",
+  danger: "danger",
+};
+
+/** Resolve a deep-link value to a tab that exists for this viewer. */
+function resolveTab(value: string | null, canManage: boolean): string {
+  const tab = TAB_ALIASES[(value ?? "").trim().toLowerCase()] ?? "account";
+  return tab === "workspace" && !canManage ? "account" : tab;
+}
 
 function getTabIcon(tab: string) {
   switch (tab) {
@@ -45,14 +58,14 @@ function getTabIcon(tab: string) {
 export function SettingsView(props: SettingsViewProps) {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const { canManage } = props;
   const [activeTab, setActiveTab] = useState("account");
 
   useEffect(() => {
     const readLocation = () => {
       const hash = window.location.hash.slice(1);
       const query = new URLSearchParams(window.location.search).get("section");
-      const next = hash || query || "account";
-      setActiveTab(next);
+      setActiveTab(resolveTab(hash || query, canManage));
     };
     readLocation();
     window.addEventListener("hashchange", readLocation);
@@ -61,14 +74,14 @@ export function SettingsView(props: SettingsViewProps) {
       window.removeEventListener("hashchange", readLocation);
       window.removeEventListener("popstate", readLocation);
     };
-  }, []);
+  }, [canManage]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     window.location.hash = value;
   };
 
-  const showWorkspace = props.canManage;
+  const showWorkspace = canManage;
 
   return (
     <div className="w-full">
