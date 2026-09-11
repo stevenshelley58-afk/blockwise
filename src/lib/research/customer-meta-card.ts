@@ -401,7 +401,21 @@ export function normaliseMediaUrl(value: unknown): string | null {
   const storageUrl = process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL?.replace(/\/$/, "");
   if (!storageUrl) return null;
   const encodedPath = url.split("/").map(encodeURIComponent).join("/");
-  return `${storageUrl}/storage/v1/object/public/research-ad-creatives/${encodedPath}`;
+  // A render URL is for images only. The storage renderer answers 400 for a
+  // video: measured on the live bucket, the 10,382,027 B mp4 sample returns
+  // `400 application/json` through `/render/image/`, so videos keep the object
+  // path and the card falls back to the poster frame it already carries.
+  if (isVideoUrl(url)) {
+    return `${storageUrl}/storage/v1/object/public/research-ad-creatives/${encodedPath}`;
+  }
+  // Images go through the renderer so imgproxy downscales and re-encodes them.
+  // Archive creatives are up to 2048px and several megabytes, and the raw path
+  // shipped every byte into cards that render at up to ~526 px: measured on the
+  // live bucket, a 6,331,196 B PNG comes back as 49,648 B here and an 84,387 B
+  // derivative as 33,910 B. 1024 covers a 2x tile and the creative viewer
+  // without upscaling the smaller derivatives. imgproxy serves WebP whenever the
+  // browser's Accept header allows it, and JPEG when it does not.
+  return `${storageUrl}/storage/v1/render/image/public/research-ad-creatives/${encodedPath}?width=1024&quality=70&resize=contain`;
 }
 
 function cleanString(value: unknown): string | null {

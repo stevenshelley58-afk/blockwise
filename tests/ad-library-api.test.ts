@@ -7,16 +7,42 @@ import {
 } from "../src/lib/research/ad-library-api.ts";
 import { normaliseMediaUrl } from "../src/lib/research/customer-meta-card.ts";
 
-test("normaliseMediaUrl prefixes and segment-encodes storage paths", () => {
+test("normaliseMediaUrl sends images through the renderer, segment-encoded", () => {
   const previousStorageUrl = process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL;
   process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL = "https://hermes.example/";
 
   try {
     assert.equal(
       normaliseMediaUrl("nested folder/creative #1.png"),
-      "https://hermes.example/storage/v1/object/public/research-ad-creatives/nested%20folder/creative%20%231.png",
+      "https://hermes.example/storage/v1/render/image/public/research-ad-creatives/nested%20folder/creative%20%231.png?width=1024&quality=70&resize=contain",
     );
     assert.equal(normaliseMediaUrl("https://cdn.example/creative #1.png"), "https://cdn.example/creative #1.png");
+  } finally {
+    restoreEnv("NEXT_PUBLIC_RESEARCH_STORAGE_URL", previousStorageUrl);
+  }
+});
+
+test("normaliseMediaUrl keeps videos on the object path", () => {
+  // The image renderer answers 400 for an mp4, so a render URL here would leave
+  // every video card with a broken creative. Videos keep the raw object and the
+  // poster frame stays a rendered image.
+  const previousStorageUrl = process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL;
+  process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL = "https://hermes.example";
+
+  try {
+    for (const video of [
+      "media-blobs/creative.mp4",
+      "media-blobs/creative.MOV",
+      "media-blobs/clip.webm",
+      "email/video-294b2970.mp4",
+    ]) {
+      assert.equal(
+        normaliseMediaUrl(video),
+        `https://hermes.example/storage/v1/object/public/research-ad-creatives/${video}`,
+        `${video} must not be sent to the image renderer`,
+      );
+    }
+    assert.match(normaliseMediaUrl("media-blobs/poster.mp4.jpg") ?? "", /\/render\/image\/public\//);
   } finally {
     restoreEnv("NEXT_PUBLIC_RESEARCH_STORAGE_URL", previousStorageUrl);
   }
@@ -60,7 +86,7 @@ test("normaliseResearchAd exposes public media URLs for stored creatives", () =>
       [
         {
           kind: "image",
-          url: "https://hermes.example/storage/v1/object/public/research-ad-creatives/images/hero%20creative.png",
+          url: "https://hermes.example/storage/v1/render/image/public/research-ad-creatives/images/hero%20creative.png?width=1024&quality=70&resize=contain",
           storagePath: "images/hero creative.png",
           sourceUrl: null,
         },
@@ -72,13 +98,13 @@ test("normaliseResearchAd exposes public media URLs for stored creatives", () =>
         },
         {
           kind: "thumbnail",
-          url: "https://hermes.example/storage/v1/object/public/research-ad-creatives/thumbs/listing%20tour%20%232.jpg",
+          url: "https://hermes.example/storage/v1/render/image/public/research-ad-creatives/thumbs/listing%20tour%20%232.jpg?width=1024&quality=70&resize=contain",
           storagePath: "thumbs/listing tour #2.jpg",
           sourceUrl: null,
         },
         {
           kind: "image",
-          url: "https://hermes.example/storage/v1/object/public/research-ad-creatives/gallery/front%20elevation.jpg",
+          url: "https://hermes.example/storage/v1/render/image/public/research-ad-creatives/gallery/front%20elevation.jpg?width=1024&quality=70&resize=contain",
           storagePath: "gallery/front elevation.jpg",
           sourceUrl: "https://cdn.example/front.jpg",
         },
