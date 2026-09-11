@@ -227,10 +227,11 @@ function StoryAd({
           fetchPriority="high"
           decoding="async"
         />
-        {/* The template's link title is written on the creative. This sits on the
-            same line, so what the field writes appears on the ad itself. */}
-        <span className={`hc-story-ad-link${writingLink ? " is-writing" : ""}`}>
-          {linkChars > 0 ? STORY_AD.linkTitle.slice(0, linkChars) : <i>Your link title</i>}
+        {/* The ad's headline is the largest text on the creative, so the field
+            writes there. It replaces the template's own headline block and stays
+            clear of the agent's portrait on the right. */}
+        <span className={`hc-story-ad-headline${writingLink ? " is-writing" : ""}`}>
+          {linkChars > 0 ? STORY_AD.adTitle.slice(0, linkChars) : <i>{STORY_AD.adTitle}</i>}
           {writingLink && linkTyping ? <span className="hc-story-caret" /> : null}
         </span>
         <AnimatePresence>
@@ -756,7 +757,7 @@ export function WorkflowShowcase() {
     >
       <motion.div className="hc-process-copy" variants={COPY_CASCADE}>
         <motion.h2 variants={COPY_ITEM}>
-          <span>Real estate ads for</span>
+          <span>Lead generating ads for</span>
           <span className="hc-process-prompt">Facebook &amp; Instagram</span>
         </motion.h2>
 

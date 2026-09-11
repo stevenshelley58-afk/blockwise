@@ -21,7 +21,7 @@
 
 /* Two lines, each on its own line, with the second in the hero's blue. */
 .hc-process-copy h2 {
-  font-size: clamp(30px, 3.1vw, 45px);
+  font-size: clamp(23px, 2.22vw, 32px);
   font-weight: 800;
   letter-spacing: -.045em;
   line-height: 1;
@@ -127,7 +127,7 @@
 .hc-process-demo {
   position: relative;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   border-radius: 28px;
   background: linear-gradient(180deg, #f6f7f9 0%, #eef1f5 100%);
   box-shadow:
@@ -185,7 +185,7 @@
 .hc-story-viewport {
   position: relative;
   height: var(--hc-demo-height);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .hc-story-scene {
@@ -226,7 +226,7 @@
 }
 
 .hc-library-window {
-  overflow: hidden;
+  overflow: visible;
   /* Soft edges so a part-visible card reads as "more to come", not as a crop. */
   mask: linear-gradient(90deg, transparent 0, #000 34px, #000 calc(100% - 34px), transparent 100%);
 }
@@ -260,14 +260,14 @@
   position: relative;
   z-index: 1;
   flex: 0 0 210px;
-  overflow: hidden;
+  overflow: visible;
   border-radius: 14px;
   background: var(--hc-soft);
   box-shadow: 0 3px 10px rgba(16,18,23,.06);
 }
 
 .hc-library-card-image {
-  overflow: hidden;
+  overflow: visible;
   border-radius: 13px;
 }
 
@@ -342,7 +342,9 @@
 .hc-story-ad .hc-meta-feed-head small { font-size: 11px; }
 
 .hc-story-ad .hc-meta-feed-copy {
-  min-height: 0;
+  /* Tall enough to cover the printed block, which ends at y 65.5%. */
+  /* Grows with the headline, but never reaches her. */
+  max-height: 12%;
   padding: 2px 11px 10px;
   font-size: 11.5px;
   line-height: 1.45;
@@ -358,7 +360,7 @@
   position: relative;
   container-type: inline-size;
   aspect-ratio: 4 / 5;
-  overflow: hidden;
+  overflow: visible;
   border-block: 1px solid #d8dce3;
   background: var(--hc-soft);
 }
@@ -370,39 +372,49 @@
   object-fit: cover;
 }
 
-/* The link title written on the creative, on the template's own link title line.
-   The palette panel behind it is sampled from the creative (#fdfdfd), so the
-   template's own line is replaced rather than double printed. Sized in cqw so it
+/* The ad's headline, written on the creative. The template's own headline is
+   printed on the artwork, so the panel covers that block with the palette's own
+   colour (#fdfdfd) and writes the new headline there. Measured on the creative,
+   her portrait never comes left of x 76% between y 54% and y 70%, so the panel
+   stops at x 65%, an eighth of the width clear of her. Sized in cqw so it
    tracks the creative at every width. */
-.hc-story-ad-link {
+.hc-story-ad-headline {
   position: absolute;
-  top: 65.4%;
-  left: 8.2%;
-  display: block;
-  width: 80%;
-  overflow: hidden;
-  padding: 0.5cqw 0.4cqw;
+  /* The printed headline block is y 57.5-65.5% and her portrait starts at
+     x 76% from y 61%. The panel sits on the block, covers as much of it as it
+     can, and stops an eighth of the width short of her. */
+  top: 55.4%;
+  left: 5.3%;
+  /* The feed-copy rule makes spans inline-block; this one is a fixed block. */
+  display: block !important;
+  width: 64%;
+  /* Tall enough to cover the printed block, which ends at y 65.5%. */
+  /* Grows with the headline, but never reaches her. */
+  max-height: 12%;
+  overflow: visible;
+  padding: 1.1cqw 1cqw;
   border-radius: 1px;
   background: #fdfdfd;
-  color: #b08a4a;
+  color: #1b2a4a;
   font-family: var(--hc-display);
-  font-size: 3cqw;
+  /* Two lines at the template's own headline size. */
+  /* Two lines, sized so the longest headline still fits inside the panel. */
+  font-size: 4.1cqw;
   font-weight: 600;
-  letter-spacing: .1em;
-  line-height: 1.2;
+  letter-spacing: .01em;
+  line-height: 1.12;
   text-transform: uppercase;
-  white-space: nowrap;
   transition: color .3s ease;
 }
 
-.hc-story-ad-link > i {
-  color: rgba(176,138,74,.5);
+.hc-story-ad-headline > i {
+  color: rgba(27,42,74,.5);
   font-style: normal;
 }
 
 /* While it is being written it reads as the field the visitor is typing in. */
-.hc-story-ad-link.is-writing {
-  color: #8a6a2f;
+.hc-story-ad-headline.is-writing {
+  color: #12203c;
   background: #fdfbf7;
 }
 
@@ -670,7 +682,7 @@
 @media (max-width: 1100px) {
   .hc-process-layout { grid-template-columns: 1fr; gap: 38px; }
   .hc-process-copy { max-width: 680px; }
-  .hc-process-copy h2 { font-size: clamp(34px, 5vw, 52px); }
+  .hc-process-copy h2 { font-size: clamp(28px, 4.2vw, 44px); }
   /* Full width and stacked, so the demo needs a little more room than the
      two-column layout it replaces. */
   .hc-process-demo { --hc-demo-height: 660px; }
@@ -679,7 +691,7 @@
 @media (max-width: 600px) {
   .hc-process { padding-block: 64px; }
   .hc-process-layout { gap: 32px; }
-  .hc-process-copy h2 { font-size: clamp(30px, 7.6vw, 40px); }
+  .hc-process-copy h2 { font-size: clamp(22px, 5.9vw, 31px); }
   .hc-process-actions { justify-items: stretch; margin-top: 26px; text-align: center; }
   .hc-process-actions .hc-button { width: 100%; }
   .hc-process-demo { --hc-demo-height: 760px; border-radius: 18px; }
@@ -715,6 +727,6 @@
 }
 
 @media (max-width: 420px) {
-  .hc-process-copy h2 { font-size: clamp(23px, 7.4vw, 27px); }
+  .hc-process-copy h2 { font-size: clamp(18px, 5.8vw, 22px); }
   .hc-process-steps button { font-size: 11px; padding-inline: 3px; }
 }

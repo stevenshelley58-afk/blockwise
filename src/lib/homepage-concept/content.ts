@@ -11,6 +11,9 @@ export const AD_EXAMPLES = [
       "/adstudio-thumbnails/meta/f1eef3fb49b782ab7666cd14a7f793151f5fd439c724085ce68996e9ebb24f78-preview.webp",
     postCopy: "Thinking of selling? Find out what your home could be worth with a free property appraisal.",
     linkTitle: "Find out what your home could be worth",
+    /* The headline printed on the creative. It is the largest text on the ad,
+       so it is the one the link title field writes. */
+    adTitle: "Your home could be worth more",
   },
   {
     id: "consult",
@@ -21,6 +24,7 @@ export const AD_EXAMPLES = [
       "/adstudio-thumbnails/meta/6b49016814ffdb9e64eb33943667efda84f3f55e0020d0fc00cbab4f121754d3-preview.webp",
     postCopy: "Curious what buyers would pay for your home? Get a free, no-obligation consultation.",
     linkTitle: "Free seller consultation",
+    adTitle: "Book a free seller consultation",
   },
   {
     id: "buyers",
@@ -31,6 +35,7 @@ export const AD_EXAMPLES = [
       "/adstudio-thumbnails/meta/fdc9222b4d16c2666d7767372301545b54679819d1beb3359aef4c05170e59b0-preview.webp",
     postCopy: "We have qualified buyers waiting for homes like yours. List with us and meet them.",
     linkTitle: "Meet ready buyers",
+    adTitle: "Buyers are waiting for your home",
   },
   {
     id: "report",
@@ -41,6 +46,7 @@ export const AD_EXAMPLES = [
       "/adstudio-thumbnails/meta/eb4bce514070f6ce1566fc8fd2570755157d99eb50518e210739b276a6a1f370-preview.webp",
     postCopy: "What is your suburb really worth right now? Get the latest market report for your area.",
     linkTitle: "Free suburb market report",
+    adTitle: "What is your suburb worth now?",
   },
 ] as const;
 

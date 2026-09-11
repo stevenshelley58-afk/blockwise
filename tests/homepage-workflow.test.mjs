@@ -61,17 +61,21 @@ test("the text is written a character at a time, in the field and the ad togethe
   assert.match(source, /const linkChars = scene === "browse" \|\| phase < 6 \? 0 : phase > 6 \? STORY_AD\.linkTitle\.length/);
 });
 
-test("the link title is written onto the ad image, not only under it", () => {
+test("the field writes the ad headline onto the image, clear of the portrait", () => {
   // The same counter drives a layer on the creative, so the field writes on the ad.
-  assert.match(source, /className=\{`hc-story-ad-link\$\{writingLink \? " is-writing" : ""\}`\}/);
-  assert.match(source, /STORY_AD\.linkTitle\.slice\(0, linkChars\)[\s\S]{0,140}hc-story-caret/);
+  assert.match(source, /className=\{`hc-story-ad-headline\$\{writingLink \? " is-writing" : ""\}`\}/);
+  assert.match(source, /STORY_AD\.adTitle\.slice\(0, linkChars\)[\s\S]{0,160}hc-story-caret/);
   assert.match(styles, /\.hc-story-ad-image \{[^}]*container-type: inline-size/);
   // It sits on the template's own link title line, sized against the creative.
-  assert.match(styles, /\.hc-story-ad-link \{[^}]*position: absolute/);
-  assert.match(styles, /\.hc-story-ad-link \{[^}]*font-size: 3cqw/);
-  assert.match(styles, /\.hc-story-ad-link \{[^}]*text-transform: uppercase/);
-  // The panel behind it is the creative's own colour, so there is no double print.
-  assert.match(styles, /\.hc-story-ad-link \{[^}]*background: #fdfdfd/);
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*position: absolute/);
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*text-transform: uppercase/);
+  // The panel behind it is the creative's own colour, so the printed line is covered.
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*background: #fdfdfd/);
+  // Measured limits: her portrait never comes left of x 76% above y 70%, so the
+  // panel is anchored on the printed block and stops an eighth of the width short.
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*width: 64%/);
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*top: 55\.4%/);
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*max-height: 12%/);
 });
 
 test("the review step writes its values, presses, and puts the ad live", () => {
@@ -99,7 +103,7 @@ test("the review step writes its values, presses, and puts the ad live", () => {
 
 test("the copy column leads with the offer and nothing else", () => {
   // Two lines, the second in the hero's blue, and no eyebrow above it.
-  assert.match(source, /<span>Real estate ads for<\/span>/);
+  assert.match(source, /<span>Lead generating ads for<\/span>/);
   assert.match(source, /<span className="hc-process-prompt">Facebook &amp; Instagram<\/span>/);
   assert.doesNotMatch(source, /hc-process-eyebrow/);
   assert.doesNotMatch(styles, /hc-process-eyebrow/);
@@ -247,6 +251,7 @@ test("the demo edits a real ad instead of inventing copy", () => {
   assert.match(source, /const SELECTED_AD = \{ \.\.\.AD_EXAMPLES\[0\]/);
   assert.match(source, /STORY_AD\.postCopy/);
   assert.match(source, /STORY_AD\.linkTitle/);
+  assert.match(content, /adTitle: "/);
   // The headline account matches the agent shown inside the creative.
   assert.match(source, /account: "Alex Morgan Property"/);
   assert.match(source, /domain: "ALEXMORGAN\.COM\.AU"/);
