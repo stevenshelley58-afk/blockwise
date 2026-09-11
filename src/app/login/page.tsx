@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 type LoginPageProps = {
-  searchParams?: Promise<{ error?: string | string[] }> | { error?: string | string[] };
+  searchParams?: Promise<{ error?: string | string[]; flow?: string | string[] }> | { error?: string | string[]; flow?: string | string[] };
 };
 
 function firstParam(value: string | string[] | undefined): string | undefined {
@@ -33,6 +33,7 @@ function firstParam(value: string | string[] | undefined): string | undefined {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = searchParams ? await Promise.resolve(searchParams) : {};
   const error = firstParam(params.error);
+  const flow = firstParam(params.flow);
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -55,7 +56,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </div>
         {error === "confirm_failed" ? (
           <p className="form-error" role="alert">
-            That confirmation link is invalid or expired. Use the latest email, or sign in if your account is already confirmed.
+            {flow === "oauth"
+              ? "That sign-in did not finish. Press the provider button again, or use your email and password."
+              : "That confirmation link is invalid or expired. Use the latest email, or sign in if your account is already confirmed."}
           </p>
         ) : null}
         <LoginForm

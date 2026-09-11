@@ -91,6 +91,22 @@ test("confirm route verifies token hash and only redirects to safe relative next
   assert.match(source, /\/login\?error=confirm_failed/);
 });
 
+test("a failed confirm says which mechanism failed, in the redirect and the log", () => {
+  const source = readFileSync(confirmRoutePath, "utf8");
+
+  // The redirect carries the mechanism so the sign-in page can tell a provider
+  // retry apart from an expired email link.
+  assert.match(source, /flow=\$\{failure\}/);
+  assert.match(source, /export type ConfirmFailure = "oauth" \| "email"/);
+  // A silent failure left a provider sign-in with nothing to diagnose.
+  assert.match(source, /console\.error\(/);
+  assert.match(source, /mechanism=\$\{code \? "pkce_code"/);
+
+  const loginSource = readFileSync(loginPagePath, "utf8");
+  assert.match(loginSource, /flow === "oauth"/);
+  assert.match(loginSource, /Press the provider button again/);
+});
+
 test("login page points new clients to signup", () => {
   const source = readFileSync(loginPagePath, "utf8");
 

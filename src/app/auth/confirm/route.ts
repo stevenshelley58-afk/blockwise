@@ -11,6 +11,13 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 const DEFAULT_NEXT_PATH = "/self-serve";
 const SAFE_REDIRECT_ORIGIN = "https://blockwise.local";
 
+/**
+ * Sent back with a failed confirmation so the sign-in page can say what went
+ * wrong. An OAuth hand-off that never started is retryable by pressing the
+ * provider button again; an email link needs a fresh email instead.
+ */
+export type ConfirmFailure = "oauth" | "email";
+
 function sanitizeNextPath(next: string | null) {
   if (!next || !next.startsWith("/") || next.startsWith("//") || next.includes("\\")) {
     return DEFAULT_NEXT_PATH;
@@ -28,8 +35,8 @@ function sanitizeNextPath(next: string | null) {
   }
 }
 
-function confirmFailedRedirect(request: NextRequest) {
-  return NextResponse.redirect(new URL("/login?error=confirm_failed", publicOrigin(request.url)));
+function confirmFailedRedirect(request: NextRequest, failure: ConfirmFailure) {
+  return NextResponse.redirect(new URL(`/login?error=confirm_failed&flow=${failure}`, publicOrigin(request.url)));
 }
 
 function bootstrapFailedRedirect(request: NextRequest) {
@@ -51,8 +58,17 @@ export async function GET(request: NextRequest) {
       ? (await supabase.auth.verifyOtp({ token_hash, type: type as EmailOtpType })).error
       : new Error("Confirmation parameters are missing.");
 
+  // A failed exchange used to redirect in silence, which left a provider
+  // sign-in with no way to tell a missing PKCE verifier from an expired link.
+  // Log the mechanism and the provider's own message so the failure is
+  // diagnosable from the container log alone.
+  const failure: ConfirmFailure = code || flow === "signin" || flow === "signup" ? "oauth" : "email";
+
   if (authError) {
-    return confirmFailedRedirect(request);
+    console.error(
+      `auth/confirm exchange failed (${failure}, mechanism=${code ? "pkce_code" : token_hash ? `otp_${type}` : "no_parameters"}): ${authError.message}`,
+    );
+    return confirmFailedRedirect(request, failure);
   }
 
   const {
@@ -60,7 +76,8 @@ export async function GET(request: NextRequest) {
     error: userError,
   } = await supabase.auth.getUser();
   if (userError || !user) {
-    return confirmFailedRedirect(request);
+    console.error(`auth/confirm found no user after a successful exchange: ${userError?.message ?? "no user returned"}`);
+    return confirmFailedRedirect(request, failure);
   }
 
   const isRecovery = flow === "recovery" || type === "recovery";

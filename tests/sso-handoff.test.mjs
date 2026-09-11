@@ -32,3 +32,13 @@ test("each button carries the provider's own mark, not a letter tile", () => {
 test("a rejected hand-off releases the button for a retry", () => {
   assert.match(source, /catch \{[\s\S]*?setLoadingProvider\(null\)/);
 });
+
+test("only one hand-off is in flight at a time", () => {
+  // A double click fires two authorize requests before React re-renders and
+  // disables the button. The second overwrites the PKCE code verifier that the
+  // first request's callback needs, so the exchange comes back with no session
+  // and the customer lands signed out.
+  assert.match(source, /const handoffInFlight = useRef\(false\)/);
+  assert.match(source, /if \(handoffInFlight\.current\) return;/);
+  assert.match(source, /handoffInFlight\.current = false;[\s\S]*?setLoadingProvider\(null\)/);
+});

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { ButtonSpinner } from "@/components/app/button-spinner";
 
@@ -54,8 +54,15 @@ export function SSOButtons({ mode = "signin" }: { mode?: "signin" | "signup" }) 
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [loadingProvider, setLoadingProvider] = useState<SSOProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // A ref, not the disabled attribute: a double click lands two authorize
+  // requests before React re-renders, and the second one overwrites the PKCE
+  // code verifier in storage that the first request's callback needs.
+  const handoffInFlight = useRef(false);
 
   async function signInWithOAuth(provider: SSOProvider) {
+    if (handoffInFlight.current) return;
+    handoffInFlight.current = true;
+
     setError(null);
     setLoadingProvider(provider);
     try {
@@ -75,6 +82,7 @@ export function SSOButtons({ mode = "signin" }: { mode?: "signin" | "signup" }) 
     }
     // Reaching here means the redirect never started, so say so and offer the
     // retry rather than parking the button in a disabled spinner.
+    handoffInFlight.current = false;
     setLoadingProvider(null);
     setError(`${PROVIDER_CONFIG[provider].label} sign-in is unavailable right now. Use your email and password, or try again.`);
   }
