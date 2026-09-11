@@ -6,11 +6,11 @@ import { withBasePath } from "./content.ts";
  * Every image these feed renders in a card between 150px and 326px wide. Sized
  * for the real slots rather than round numbers: 192 covers the 150px library
  * strip at 1x and 1.25x, 384 covers the 326px Feed card at 1x and the story and
- * strip cards at 2x, and 750 covers the 326px Feed card at 2x. The full-size
- * source stays as the last candidate for 3x and for the sources that are
- * narrower than 750.
+ * strip cards at 2x, 576 covers the 276px story card at 2x, and 750 covers the
+ * 326px Feed card at 2x. The full-size source stays as the last candidate for 3x
+ * and for the sources that are narrower than a step.
  */
-export const CREATIVE_WIDTH_STEPS = [192, 384, 750] as const;
+export const CREATIVE_WIDTH_STEPS = [192, 384, 576, 750] as const;
 
 /**
  * True pixel width of each homepage creative source.
