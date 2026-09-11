@@ -8,7 +8,11 @@ readonly PRODUCTION_SOURCE_ROOT=/projects/blockwise
 readonly PRODUCTION_RELEASE_ROOT=/srv/blockwise/releases/product
 readonly PRODUCTION_ENV_FILE=/srv/blockwise/product/.env
 readonly PRODUCTION_APP_CONTAINER=blockwise-product-product-app-1
-readonly SOURCE_ROOT=$PRODUCTION_SOURCE_ROOT
+# The release tree under test. Defaults to the canonical checkout; an automated
+# release points it at an immutable release worktree so it never depends on
+# uncommitted work in the canonical tree. It must stay a worktree of the same
+# repository, enforced below.
+SOURCE_ROOT="${BLOCKWISE_RELEASE_SOURCE:-$PRODUCTION_SOURCE_ROOT}"
 readonly RELEASE_ROOT=$PRODUCTION_RELEASE_ROOT
 readonly ENV_FILE=$PRODUCTION_ENV_FILE
 readonly APP_CONTAINER=$PRODUCTION_APP_CONTAINER
@@ -112,7 +116,16 @@ while (($# > 0)); do
 done
 
 [[ -d "$SOURCE_ROOT/.git" || -f "$SOURCE_ROOT/.git" ]] || fail "canonical source checkout is unavailable"
-[[ "$(git -C "$SOURCE_ROOT" branch --show-current)" == "main" ]] || fail "canonical source is not on main"
+# A release worktree is detached at the exact commit under release, so it has no
+# branch name. The revision checks below are what pin it.
+SOURCE_BRANCH="$(git -C "$SOURCE_ROOT" branch --show-current)"
+[[ -z "$SOURCE_BRANCH" || "$SOURCE_BRANCH" == "main" ]] || fail "canonical source is not on main"
+if [[ "$SOURCE_ROOT" != "$PRODUCTION_SOURCE_ROOT" ]]; then
+  SOURCE_COMMON="$(readlink -f -- "$(git -C "$SOURCE_ROOT" rev-parse --git-common-dir)")" || fail "release source is not a git repository"
+  [[ "$SOURCE_COMMON" == "$PRODUCTION_SOURCE_ROOT/.git" ]] || fail "release source is not a worktree of $PRODUCTION_SOURCE_ROOT"
+  SOURCE_REAL="$(readlink -f -- "$SOURCE_ROOT")"; RELEASES_REAL="$(readlink -f -- "$RELEASE_ROOT")"
+  [[ "$SOURCE_REAL" == "$RELEASES_REAL"/* ]] || fail "release source override must live under $RELEASE_ROOT"
+fi
 require_same_revision "$(git -C "$SOURCE_ROOT" rev-parse HEAD)" "canonical HEAD"
 require_same_revision "$(git -C "$SOURCE_ROOT" rev-parse origin/main)" "origin/main"
 git -C "$SOURCE_ROOT" diff --quiet HEAD -- || fail "canonical source has tracked changes"

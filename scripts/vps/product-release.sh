@@ -2,11 +2,17 @@
 # Sole release entry. It changes only the two app selectors and product-app.
 set -Eeuo pipefail
 umask 077
-readonly SOURCE=/projects/blockwise
+readonly CANONICAL_SOURCE=/projects/blockwise
 readonly RELEASES=/srv/blockwise/releases/product
 readonly RECEIPTS=/srv/blockwise/releases/receipts
 readonly ENV=/srv/blockwise/product/.env
 readonly LOCK=/srv/blockwise/releases/product/.product-release.lock
+
+# The tree a release is read from. It defaults to the canonical checkout, and
+# may be pointed at an immutable release worktree (`$RELEASES/<sha>`) so an
+# automated release never depends on whatever is uncommitted in the canonical
+# tree. It stays a worktree of the same repository, resolved below.
+SOURCE="${BLOCKWISE_RELEASE_SOURCE:-$CANONICAL_SOURCE}"
 
 usage() {
   cat <<'USAGE'
@@ -53,10 +59,27 @@ refresh_origin_main() {
 }
 canonical() {
   local target="$1"
-  [[ "$("$GIT" -C "$SOURCE" branch --show-current)" == main ]] || fail "canonical source is not on main"
+  # A release worktree is detached at the exact commit being released, so the
+  # branch name is empty there. The revision checks below already pin it.
+  local branch; branch="$("$GIT" -C "$SOURCE" branch --show-current)"
+  [[ -z "$branch" || "$branch" == main ]] || fail "canonical source is not on main"
   [[ "$("$GIT" -C "$SOURCE" rev-parse HEAD)" == "$target" ]] || fail "canonical HEAD does not match candidate"
   [[ "$("$GIT" -C "$SOURCE" rev-parse origin/main)" == "$target" ]] || fail "origin/main does not match candidate"
   "$GIT" -C "$SOURCE" diff --quiet HEAD -- || fail "canonical source has tracked changes"
+}
+# The override may only name a worktree of the canonical repository, so a bad
+# environment variable can never redirect a release at an unrelated checkout.
+assert_source_authority() {
+  readonly SOURCE
+  [[ -d "$SOURCE" ]] || fail "release source is not a directory: $SOURCE"
+  local common releases_real source_real
+  common="$(readlink -f -- "$("$GIT" -C "$SOURCE" rev-parse --git-common-dir)")" || fail "release source is not a git repository"
+  [[ "$common" == "$CANONICAL_SOURCE/.git" ]] || fail "release source is not a worktree of $CANONICAL_SOURCE"
+  if [[ "$SOURCE" != "$CANONICAL_SOURCE" ]]; then
+    releases_real="$(readlink -f -- "$RELEASES")"
+    source_real="$(readlink -f -- "$SOURCE")"
+    [[ "$source_real" == "$releases_real"/* ]] || fail "release source override must live under $RELEASES"
+  fi
 }
 checkout() {
   RELEASE="$RELEASES/$TARGET"
@@ -69,7 +92,7 @@ checkout() {
 }
 guard() {
   [[ -x "$PREFLIGHT" ]] || fail "release preflight is unavailable"
-  "$PREFLIGHT" "$@"
+  BLOCKWISE_RELEASE_SOURCE="$SOURCE" "$PREFLIGHT" "$@"
 }
 compose() {
   local file="$1"; shift
@@ -146,6 +169,7 @@ prepare() {
   fi
 }
 deploy() {
+  assert_source_authority
   checkout; IMAGE="blockwise-app:$TARGET"; guard "$TARGET" --image "$IMAGE"
   [[ "$(read_env BLOCKWISE_ENABLE_PROVIDER_WRITES)" == false ]] || fail "provider writes must remain disabled"
   PREVIOUS_SHA="$(read_env BLOCKWISE_GIT_SHA)" || fail "previous revision selector is missing"
