@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -6,6 +7,20 @@ import { HOME_PATH } from "@/lib/auth/home";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Sign in",
+  description: "Sign in to your Blockwise workspace and pick up where you left off creating and tracking your real estate ads.",
+  alternates: { canonical: "/login" },
+  openGraph: {
+    type: "website",
+    title: "Sign in to your Blockwise workspace",
+    description: "Enter your email and password to pick up where you left off.",
+    url: "/login",
+    locale: "en_AU",
+  },
+  robots: { index: false, follow: false },
+};
 
 type LoginPageProps = {
   searchParams?: Promise<{ error?: string | string[] }> | { error?: string | string[] };
@@ -35,7 +50,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <span>Blockwise</span>
         </div>
         <div>
-          <p className="eyebrow">Welcome back</p>
           <h1 id="login-heading">Sign in to your workspace</h1>
           <p className="login-copy">Enter your email and password to pick up where you left off.</p>
         </div>

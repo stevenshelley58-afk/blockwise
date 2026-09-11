@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -6,6 +7,20 @@ import { HOME_PATH } from "@/lib/auth/home";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Start free",
+  description: "Create your first three real estate ads with Blockwise. Email only, no password and no card required.",
+  alternates: { canonical: "/signup" },
+  openGraph: {
+    type: "website",
+    title: "Create your first three ads",
+    description: "Start with your email and build three complete real estate ads before adding a card.",
+    url: "/signup",
+    locale: "en_AU",
+  },
+  robots: { index: false, follow: false },
+};
 
 const AUDIT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -38,7 +53,6 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
           <span>Blockwise</span>
         </div>
         <div>
-          <p className="eyebrow">Start free</p>
           <h1 id="signup-heading">Create your first three ads</h1>
           <p className="login-copy">
             Enter your email and we&rsquo;ll send a secure sign-in link. No password or card
