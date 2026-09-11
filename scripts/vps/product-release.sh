@@ -64,8 +64,18 @@ canonical() {
   local branch; branch="$("$GIT" -C "$SOURCE" branch --show-current)"
   [[ -z "$branch" || "$branch" == main ]] || fail "canonical source is not on main"
   [[ "$("$GIT" -C "$SOURCE" rev-parse HEAD)" == "$target" ]] || fail "canonical HEAD does not match candidate"
-  [[ "$("$GIT" -C "$SOURCE" rev-parse origin/main)" == "$target" ]] || fail "origin/main does not match candidate"
   "$GIT" -C "$SOURCE" diff --quiet HEAD -- || fail "canonical source has tracked changes"
+}
+# Preparing only needs the candidate to be the fetched main, because the release
+# worktree is created from the object store and never reads the canonical
+# working tree. Requiring the canonical HEAD to equal the candidate here would
+# reject every prepare whose main has moved ahead of the local checkout, which
+# is the normal case for an automated release.
+require_candidate_is_main() {
+  local target="$1"
+  assert_source_authority
+  "$GIT" -C "$SOURCE" cat-file -e "${target}^{commit}" 2>/dev/null || fail "candidate is not a commit in $CANONICAL_SOURCE"
+  [[ "$("$GIT" -C "$SOURCE" rev-parse origin/main)" == "$target" ]] || fail "origin/main does not match candidate"
 }
 # The override may only name a worktree of the canonical repository, so a bad
 # environment variable can never redirect a release at an unrelated checkout.
@@ -155,16 +165,16 @@ rollback() {
   exit "$original"
 }
 prepare() {
-  canonical "$TARGET"; checkout; guard "$TARGET"
+  require_candidate_is_main "$TARGET"; checkout; guard "$TARGET" --candidate-only
   local file="$RELEASE/infra/coolify/docker-compose.product.yml"
   [[ -f "$file" && -f "$ENV" ]] || fail "release compose or protected environment is unavailable"
   IMAGE="blockwise-app:$TARGET"
   if "$DOCKER" image inspect "$IMAGE" >/dev/null 2>&1; then
-    guard "$TARGET" --image "$IMAGE"
+    guard "$TARGET" --image "$IMAGE" --candidate-only
     printf 'reused immutable product image %s for %s\n' "$IMAGE" "$TARGET"
   else
     compose "$file" build product-app
-    guard "$TARGET" --image "$IMAGE"
+    guard "$TARGET" --image "$IMAGE" --candidate-only
     printf 'prepared immutable product image %s for %s\n' "$IMAGE" "$TARGET"
   fi
 }

@@ -85,6 +85,7 @@ health_revision() {
 
 IMAGE=""
 CHECK_LIVE=false
+CHECK_SOURCE_HEAD=true
 
 if (($# == 0)); then
   usage >&2
@@ -107,6 +108,13 @@ while (($# > 0)); do
       CHECK_LIVE=true
       shift
       ;;
+    --candidate-only)
+      # Build-time check. The candidate was already proven to be the fetched
+      # main, and the release worktree comes from the object store, so the
+      # canonical working tree's own HEAD is not part of this claim.
+      CHECK_SOURCE_HEAD=false
+      shift
+      ;;
     --help|-h)
       usage
       exit 0
@@ -126,9 +134,11 @@ if [[ "$SOURCE_ROOT" != "$PRODUCTION_SOURCE_ROOT" ]]; then
   SOURCE_REAL="$(readlink -f -- "$SOURCE_ROOT")"; RELEASES_REAL="$(readlink -f -- "$RELEASE_ROOT")"
   [[ "$SOURCE_REAL" == "$RELEASES_REAL"/* ]] || fail "release source override must live under $RELEASE_ROOT"
 fi
-require_same_revision "$(git -C "$SOURCE_ROOT" rev-parse HEAD)" "canonical HEAD"
-require_same_revision "$(git -C "$SOURCE_ROOT" rev-parse origin/main)" "origin/main"
-git -C "$SOURCE_ROOT" diff --quiet HEAD -- || fail "canonical source has tracked changes"
+if $CHECK_SOURCE_HEAD; then
+  require_same_revision "$(git -C "$SOURCE_ROOT" rev-parse HEAD)" "canonical HEAD"
+  require_same_revision "$(git -C "$SOURCE_ROOT" rev-parse origin/main)" "origin/main"
+  git -C "$SOURCE_ROOT" diff --quiet HEAD -- || fail "canonical source has tracked changes"
+fi
 
 RELEASE_DIR="$RELEASE_ROOT/$CANDIDATE"
 [[ -d "$RELEASE_DIR/.git" || -f "$RELEASE_DIR/.git" ]] || fail "candidate release checkout is unavailable"
