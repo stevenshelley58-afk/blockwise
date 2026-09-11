@@ -50,14 +50,27 @@ test("the text is written a character at a time, in the field and the ad togethe
   // Only the phase that is still current may move the story on.
   assert.match(source, /if \(current !== from\) return current/);
 
-  // A caret that blinks at the write position, and a pace that is human.
-  assert.match(styles, /\.hc-story-caret \{[^}]*animation: hc-story-caret/);
+  // The caret rides at the write position without moving the text: no advance
+  // width, no line box, and it blends rather than strobing.
+  assert.match(styles, /\.hc-story-caret \{[^}]*width: 0/);
+  assert.match(styles, /\.hc-story-caret \{[^}]*margin-left: -1px/);
+  assert.match(styles, /\.hc-story-caret \{[^}]*animation: hc-story-caret 1s ease-in-out/);
+  assert.doesNotMatch(styles, /@keyframes hc-story-caret \{\s*0%, 48%/);
+  // The surfaces it writes into reserve their finished height, so no character
+  // can change the height of the frame mid-write.
+  assert.match(styles, /\.hc-field > strong \{[^}]*box-sizing: border-box/);
+  assert.match(styles, /\.hc-story-ad \.hc-meta-feed-copy \{[^}]*box-sizing: border-box/);
   const speeds = [...source.matchAll(/const TYPE_SPEED_\w+ = (\d+)/g)].map((match) => Number(match[1]));
   assert.equal(speeds.length, 2);
   assert.ok(speeds.every((speed) => speed >= 20 && speed <= 60), `typing speed out of range: ${speeds}`);
   // The two writing fields must be slower than a machine tick.
   assert.match(source, /const TYPE_SPEED_COPY = 24/);
   assert.match(source, /const TYPE_SPEED_LINK = 40/);
+  // Pacing is jittered, never on a fixed period: a stall on every nth character
+  // reads as the animation stuttering.
+  assert.match(source, /const jitter = speed \* 0\.45/);
+  assert.match(source, /const pause = Math\.random\(\) < 0\.18/);
+  assert.doesNotMatch(source, /index % 5 === 0 \? 26 : 0/);
   assert.match(source, /const REVIEW_ITEM_SPEED = 19/);
 
   // A step jumped to ahead of the writing still shows a finished ad.
@@ -126,6 +139,32 @@ test("the copy column leads with the offer and nothing else", () => {
   // The note matches the real offer wording.
   assert.match(source, /Free trial · No card required · Cancel anytime/);
   assert.doesNotMatch(source, /Free 14-day trial/);
+});
+
+test("scenes cross-fade symmetrically and the ad morphs only into the editor", () => {
+  // All three scenes stay mounted and cross-fade on one CSS transition, so the
+  // swap is a single interpolation rather than a mount/unmount race.
+  assert.match(styles, /\.hc-story-scene \{[^}]*opacity: 0/);
+  assert.match(styles, /\.hc-story-scene \{[^}]*transition:\s*opacity 440ms/);
+  assert.match(styles, /\.hc-story-scene\.is-active \{[^}]*opacity: 1/);
+  assert.match(source, /className=\{`hc-story-scene hc-story-library\$\{active \? " is-active" : ""\}`\}/);
+  assert.match(source, /className=\{`hc-story-scene hc-story-editor\$\{active \? " is-active" : ""\}`\}/);
+  assert.match(source, /className=\{`hc-story-scene hc-story-review\$\{active \? " is-active" : ""\}`\}/);
+  assert.doesNotMatch(source, /<AnimatePresence mode="sync" initial=\{false\}>\s*\{scene ===/);
+  assert.match(source, /active=\{scene === "browse"\}/);
+  assert.match(source, /active=\{scene === "edit"\}/);
+  assert.match(source, /active=\{scene === "review"\}/);
+  // The creative morphs library -> editor and nowhere else, so the review
+  // settle is a pure fade rather than a fade plus a slide.
+  assert.match(source, /layoutId=\{morph \? "story-ad" : undefined\}/);
+  assert.match(source, /morph=\{false\}/);
+});
+
+test("reduced motion drops the movement and keeps the fades", () => {
+  assert.match(source, /const REDUCED_FADE_IN = \{ duration: 0\.28, ease: "linear" \}/);
+  assert.match(source, /transition=\{reduceMotion \? REDUCED_FADE_IN :/);
+  // The press still registers, without travelling.
+  assert.match(source, /reduceMotion\s*\? \{ scale: \[1, 0\.99, 1\] \}/);
 });
 
 test("the demo card keeps one size and the scenes change inside it", () => {
@@ -259,9 +298,10 @@ test("screen two hands the chosen ad to the left and writes the fields on the ri
   assert.match(source, /Add a link title/);
   assert.match(styles, /\.hc-field\[data-empty="true"\] > strong/);
 
-  // The chosen creative and the ad share one morph, so it travels across.
-  assert.match(source, /layoutId="story-ad-creative"/);
-  assert.match(source, /layoutId="story-ad"/);
+  // The chosen creative and the ad share one morph, so it travels across. The
+  // ids are conditional so the morph runs only on that journey.
+  assert.match(source, /layoutId=\{morph \? "story-ad-creative" : undefined\}/);
+  assert.match(source, /layoutId=\{morph \? "story-ad" : undefined\}/);
 });
 
 test("the demo edits a real ad instead of inventing copy", () => {

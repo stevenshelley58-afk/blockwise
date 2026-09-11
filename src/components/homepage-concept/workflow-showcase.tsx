@@ -66,8 +66,12 @@ const STORY_AD = {
 
 const STORY_EASE = [0.16, 1, 0.3, 1] as const;
 const STORY_MOVE = { duration: 0.5, ease: STORY_EASE };
-const SCENE_FADE = { duration: 0.52, ease: STORY_EASE };
 const STORY_ENTER = { duration: 0.38, ease: STORY_EASE };
+
+/* Under reduced motion the section still fades in; only the movement is dropped.
+   Fades are explicitly not "motion" under WCAG 2.3.3, so removing them as well
+   would make the page feel broken rather than calm. */
+const REDUCED_FADE_IN = { duration: 0.28, ease: "linear" } as const;
 
 /** Entrance choreography: the section rises once, then its children cascade. */
 const SECTION_IN_VIEW = { once: true, margin: "-12%" } as const;
@@ -135,7 +139,10 @@ function useTypewriter({ run, text, at, past, speed, onComplete }: {
     setChars(0);
     let index = 0;
     const schedule = () => {
-      // Slightly uneven on purpose: a steady tick reads as a machine, not a hand.
+      /* Bounded randomness, never a fixed period: a stall on every nth character
+         reads as the animation stuttering, while uneven gaps read as a hand. */
+      const jitter = speed * 0.45;
+      const pause = Math.random() < 0.18 ? speed * 0.7 : 0;
       timerRef.current = window.setTimeout(() => {
         index += 1;
         setChars(index);
@@ -145,7 +152,7 @@ function useTypewriter({ run, text, at, past, speed, onComplete }: {
           return;
         }
         schedule();
-      }, speed + (index % 5 === 0 ? 26 : 0));
+      }, speed + (Math.random() * 2 - 1) * jitter + pause);
     };
     schedule();
     return () => {
@@ -173,6 +180,7 @@ function StoryAd({
   linkChars,
   copyTyping,
   linkTyping,
+  morph = true,
   approved = false,
   review = false,
 }: {
@@ -181,6 +189,7 @@ function StoryAd({
   linkChars: number;
   copyTyping: boolean;
   linkTyping: boolean;
+  morph?: boolean;
   approved?: boolean;
   review?: boolean;
 }) {
@@ -189,7 +198,7 @@ function StoryAd({
 
   return (
     <motion.article
-      layoutId="story-ad"
+      layoutId={morph ? "story-ad" : undefined}
       className={`hc-meta-ad hc-meta-feed hc-story-ad${review ? " is-review" : ""}`}
       transition={STORY_MOVE}
     >
@@ -202,7 +211,11 @@ function StoryAd({
         {copyChars > 0 ? STORY_AD.postCopy.slice(0, copyChars) : <span className="hc-story-placeholder">Your post copy appears here</span>}
         {writingCopy && copyTyping ? <span className="hc-story-caret" /> : null}
       </p>
-      <motion.div layoutId="story-ad-creative" className="hc-story-ad-image" transition={STORY_MOVE}>
+      <motion.div
+        layoutId={morph ? "story-ad-creative" : undefined}
+        className="hc-story-ad-image"
+        transition={STORY_MOVE}
+      >
         <img
           src={withBasePath(STORY_AD.image)}
           srcSet={creativeImageSrcSet(STORY_AD.image)}
@@ -265,7 +278,7 @@ function StoryAd({
  * row, the row itself slides so the chosen ad stays centred, then the frame
  * locks on it.
  */
-function LibraryScene({ phase, narrow }: { phase: number; narrow: boolean }) {
+function LibraryScene({ phase, narrow, active }: { phase: number; narrow: boolean; active: boolean }) {
   const cards = narrow ? AD_LIBRARY.slice(0, 4) : AD_LIBRARY;
   const position = Math.min(phase, LIBRARY_SEQUENCE.length - 1);
   const activeIndex = LIBRARY_SEQUENCE[position];
@@ -305,13 +318,9 @@ function LibraryScene({ phase, narrow }: { phase: number; narrow: boolean }) {
   }, [activeIndex, cards.length]);
 
   return (
-    <motion.div
-      key="library"
-      className="hc-story-scene hc-story-library"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={SCENE_FADE}
+    <div
+      className={`hc-story-scene hc-story-library${active ? " is-active" : ""}`}
+      aria-hidden={active ? undefined : "true"}
     >
       <div className="hc-story-scene-heading">
         <strong>{selected ? "Ad selected" : "Choose a starting point"}</strong>
@@ -383,7 +392,7 @@ function LibraryScene({ phase, narrow }: { phase: number; narrow: boolean }) {
           })}
         </motion.div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -394,21 +403,19 @@ function EditorScene({
   linkChars,
   copyTyping,
   linkTyping,
+  active,
 }: {
   phase: number;
   copyChars: number;
   linkChars: number;
   copyTyping: boolean;
   linkTyping: boolean;
+  active: boolean;
 }) {
   return (
-    <motion.div
-      key="editor"
-      className="hc-story-scene hc-story-editor"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={SCENE_FADE}
+    <div
+      className={`hc-story-scene hc-story-editor${active ? " is-active" : ""}`}
+      aria-hidden={active ? undefined : "true"}
     >
       <div className="hc-story-ad-workspace">
         <StoryAd
@@ -417,6 +424,7 @@ function EditorScene({
           linkChars={linkChars}
           copyTyping={copyTyping}
           linkTyping={linkTyping}
+          morph
         />
       </div>
 
@@ -440,7 +448,7 @@ function EditorScene({
           </strong>
         </label>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -513,30 +521,39 @@ function ReviewScene({
   linkChars,
   approved,
   reduceMotion,
+  active,
 }: {
   phase: number;
   copyChars: number;
   linkChars: number;
   approved: boolean;
   reduceMotion: boolean;
+  active: boolean;
 }) {
   const pressing = phase === PRESS_PHASE;
   const counts = useTypedReview(phase >= 7, reduceMotion);
 
   return (
-    <motion.div
-      key="review"
-      className="hc-story-scene hc-story-review"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={SCENE_FADE}
+    <div
+      className={`hc-story-scene hc-story-review${active ? " is-active" : ""}`}
+      aria-hidden={active ? undefined : "true"}
     >
       <motion.div
         className="hc-story-review-preview"
-        /* The ad takes the press: one quick lift, then it settles back. */
-        animate={pressing ? { scale: [1, 1.035, 0.995, 1], y: [0, -8, 0, 0] } : { scale: 1, y: 0 }}
-        transition={pressing ? { duration: 0.62, ease: STORY_EASE, times: [0, 0.35, 0.75, 1] } : STORY_ENTER}
+        /* The ad takes the press: one quick lift, then it settles back. Under
+           reduced motion it dips in place instead of travelling. */
+        animate={
+          pressing
+            ? reduceMotion
+              ? { scale: [1, 0.99, 1] }
+              : { scale: [1, 1.035, 0.995, 1], y: [0, -8, 0, 0] }
+            : { scale: 1, y: 0 }
+        }
+        transition={
+          pressing
+            ? { duration: 0.62, ease: STORY_EASE, times: reduceMotion ? [0, 0.4, 1] : [0, 0.35, 0.75, 1] }
+            : STORY_ENTER
+        }
       >
         <StoryAd
           phase={phase}
@@ -544,6 +561,7 @@ function ReviewScene({
           linkChars={linkChars}
           copyTyping={false}
           linkTyping={false}
+          morph={false}
           approved={approved}
           review
         />
@@ -607,7 +625,7 @@ function ReviewScene({
           ) : null}
         </AnimatePresence>
       </motion.div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -745,7 +763,7 @@ export function WorkflowShowcase() {
       initial="hidden"
       whileInView="shown"
       viewport={SECTION_IN_VIEW}
-      transition={{ duration: 0.6, ease: STORY_EASE }}
+      transition={reduceMotion ? REDUCED_FADE_IN : { duration: 0.6, ease: STORY_EASE }}
     >
       <motion.div className="hc-process-copy" variants={COPY_CASCADE}>
         <motion.h2 variants={COPY_ITEM}>
@@ -811,27 +829,25 @@ export function WorkflowShowcase() {
         <p className="hc-sr-only" aria-live="polite">{STORY_STATUS[phase]}</p>
         <LayoutGroup id="blockwise-story">
           <div className="hc-story-viewport" aria-hidden="true">
-            <AnimatePresence mode="sync" initial={false}>
-              {scene === "browse" ? <LibraryScene phase={phase} narrow={narrow} /> : null}
-              {scene === "edit" ? (
-                <EditorScene
-                  phase={phase}
-                  copyChars={copyChars}
-                  linkChars={link.chars}
-                  copyTyping={copy.typing}
-                  linkTyping={link.typing}
-                />
-              ) : null}
-              {scene === "review" ? (
-                <ReviewScene
-                  phase={phase}
-                  copyChars={copyChars}
-                  linkChars={linkChars}
-                  approved={phase >= PRESS_PHASE}
-                  reduceMotion={reduceMotion}
-                />
-              ) : null}
-            </AnimatePresence>
+            {/* Every scene stays mounted and cross-fades on a CSS transition, so
+                the swap is one interpolation rather than a mount/unmount race. */}
+            <LibraryScene phase={phase} narrow={narrow} active={scene === "browse"} />
+            <EditorScene
+              phase={phase}
+              copyChars={copyChars}
+              linkChars={link.chars}
+              copyTyping={copy.typing}
+              linkTyping={link.typing}
+              active={scene === "edit"}
+            />
+            <ReviewScene
+              phase={phase}
+              copyChars={copyChars}
+              linkChars={linkChars}
+              approved={phase >= PRESS_PHASE}
+              reduceMotion={reduceMotion}
+              active={scene === "review"}
+            />
           </div>
         </LayoutGroup>
       </motion.div>
