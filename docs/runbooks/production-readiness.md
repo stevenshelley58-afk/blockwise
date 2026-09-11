@@ -58,13 +58,25 @@ chmod 755 /projects/blockwise/scripts/githooks /projects/blockwise/scripts/githo
 
 `scripts/vps/cleanup-agent-checkouts.sh` lists dated snapshot checkouts and
 removes only those that are fully merged, have no uncommitted work and have been
-idle. Run it without arguments to report and with `--apply` to remove. It ignores
-generated SNAPSHOT banners and untracked build artifacts, so those never keep a
-dead checkout alive, and it never removes a checkout holding unmerged commits or
-uncommitted changes.
+idle. It also deletes merged branches whose worktree is gone, which is the other
+half of the residue. Run it without arguments to report and with `--apply` to
+remove. It ignores generated SNAPSHOT banners and untracked build artifacts, so
+those never keep a dead checkout alive, and it never removes a checkout holding
+unmerged commits or uncommitted changes.
 
-Release worktrees are bounded separately: `scripts/vps/prune-releases.sh` keeps
-the live revision, the rollback revision and the newest five, on a weekly timer.
+This runs on its own, so nobody has to remember it:
+
+- `blockwise-cleanup-checkouts.timer` runs it hourly with `--quiet --apply` and
+  appends to `/srv/blockwise/releases/cleanup.log`. A run that changed nothing
+  logs a single line.
+- `blockwise-autodeploy` prunes release worktrees immediately after every
+  successful release, so releases are bounded as they happen.
+- `blockwise-prune-releases.timer` keeps the live revision, the rollback revision
+  and the newest five releases on a weekly sweep, as a backstop.
+
+To read the history of what was removed, check those logs rather than a session
+transcript. Unmerged checkouts are deliberately never deleted: they are reported
+in `cleanup.log` and are the owner's call.
 
 ## Historical candidate (7 September 2026, beta readiness)
 

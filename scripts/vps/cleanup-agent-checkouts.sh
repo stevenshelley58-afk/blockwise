@@ -23,11 +23,13 @@ ARGS=(
 )
 
 APPLY=false
+QUIET=false
 while (($# > 0)); do
   case "$1" in
     --apply) APPLY=true; shift ;;
+    --quiet) QUIET=true; shift ;;
     --hours) [[ $# -ge 2 && "$2" =~ ^[0-9]+$ ]] || exit 2; STALE_HOURS="$2"; shift 2 ;;
-    --help|-h) printf 'Usage: cleanup-agent-checkouts.sh [--hours <n>] [--apply]\n'; exit 0 ;;
+    --help|-h) printf 'Usage: cleanup-agent-checkouts.sh [--hours <n>] [--quiet] [--apply]\n'; exit 0 ;;
     *) printf 'unknown option: %s\n' "$1" >&2; exit 2 ;;
   esac
 done
@@ -101,10 +103,30 @@ done
 
 if $APPLY; then git -C "$CANONICAL" worktree prune 2>/dev/null || true; fi
 
-printf '\n%s %s checkout(s), %s reclaimable\n' \
-  "$($APPLY && echo removed || echo 'would remove')" "${#removable[@]}" "$(numfmt --to=iec "$freed")"
-if ((${#kept[@]} > 0)); then
-  printf '\nkept:\n'
-  for entry in "${kept[@]}"; do printf '  %-50s %s\n' "${entry%%|*}" "${entry##*|}"; done
+# Merged branches whose worktree no longer exists are the other half of the
+# residue: the worktree goes, the branch stays forever. Only delete a branch that
+# is provably contained in main and has no live worktree.
+branches=0
+while IFS= read -r ref; do
+  [[ -n "$ref" ]] || continue
+  short="${ref#refs/heads/}"
+  git -C "$CANONICAL" merge-base --is-ancestor "$ref" "$MAIN_SHA" 2>/dev/null || continue
+  if git -C "$CANONICAL" worktree list --porcelain | grep -qxF "branch $ref"; then continue; fi
+  if $APPLY; then
+    git -C "$CANONICAL" branch -D "$short" >/dev/null 2>&1 && { printf 'removed merged branch %s\n' "$short"; branches=$((branches + 1)); }
+  else
+    printf 'would remove merged branch %s\n' "$short"; branches=$((branches + 1))
+  fi
+done < <(git -C "$CANONICAL" for-each-ref --format='%(refname)' refs/heads/)
+
+printf '\n%s %s checkout(s), %s merged branch(es), %s reclaimable\n' \
+  "$($APPLY && echo removed || echo 'would remove')" "${#removable[@]}" "$branches" "$(numfmt --to=iec "$freed")"
+# The hourly run stays quiet when it changed nothing, so its log shows only the
+# events worth looking at, plus anything unmerged that needs a decision.
+if ! $QUIET || ((${#removable[@]} > 0 || branches > 0)); then
+  if ((${#kept[@]} > 0)); then
+    printf '\nkept:\n'
+    for entry in "${kept[@]}"; do printf '  %-50s %s\n' "${entry%%|*}" "${entry##*|}"; done
+  fi
 fi
 $APPLY || printf '\nrun again with --apply to remove the merged, clean, idle ones\n'
