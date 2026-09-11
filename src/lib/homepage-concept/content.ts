@@ -7,8 +7,9 @@ export const AD_EXAMPLES = [
     label: "Free appraisal",
     title: "Start appraisal conversations.",
     body: "A clear homeowner offer, a polished feed creative, and a simple next step.",
-    image:
-      "/adstudio-thumbnails/meta/f1eef3fb49b782ab7666cd14a7f793151f5fd439c724085ce68996e9ebb24f78-preview.webp",
+    /* A clean pack render, with no text printed on the artwork, so the headline
+       the visitor writes is the only headline on the creative. */
+    image: "/adstudio-fixtures/meta-agent-intro-feed-037/property-photo.webp",
     postCopy: "Thinking of selling? Find out what your home could be worth with a free property appraisal.",
     linkTitle: "Find out what your home could be worth",
     /* The headline printed on the creative. It is the largest text on the ad,

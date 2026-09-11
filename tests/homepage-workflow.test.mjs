@@ -65,7 +65,7 @@ test("the text is written a character at a time, in the field and the ad togethe
   assert.match(source, /const linkChars = scene === "browse" \|\| phase < 6 \? 0 : phase > 6 \? STORY_AD\.linkTitle\.length/);
 });
 
-test("the field writes the ad headline onto the image, clear of the portrait", () => {
+test("the field writes the ad headline onto the image", () => {
   // The same counter drives a layer on the creative, so the field writes on the ad.
   assert.match(source, /className=\{`hc-story-ad-headline\$\{writingLink \? " is-writing" : ""\}`\}/);
   assert.match(source, /STORY_AD\.adTitle\.slice\(0, linkChars\)[\s\S]{0,160}hc-story-caret/);
@@ -73,15 +73,13 @@ test("the field writes the ad headline onto the image, clear of the portrait", (
   // It sits on the template's own link title line, sized against the creative.
   assert.match(styles, /\.hc-story-ad-headline \{[^}]*position: absolute/);
   assert.match(styles, /\.hc-story-ad-headline \{[^}]*text-transform: uppercase/);
-  // It replaces the headline the template prints, rather than adding an element.
-  assert.match(styles, /\.hc-story-ad-headline \{[^}]*background: #fefefe/);
-  assert.match(styles, /\.hc-story-ad-headline \{[^}]*color: #1b2a4a/);
+  // The demo creative is a pack render with no text on the artwork, so the
+  // headline the visitor writes is the only headline on the ad.
+  assert.match(content, /image: "\/adstudio-fixtures\/meta-agent-intro-feed-037\/property-photo\.webp"/);
+  assert.doesNotMatch(content, /f1eef3fb49b782ab7666cd14a7f793151f5fd439c724085ce68996e9ebb24f78/);
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*background: linear-gradient/);
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*color: #fff/);
   assert.match(styles, /\.hc-story-ad-headline \{[^}]*text-transform: uppercase/);
-  // Measured on the creative: the printed headline runs y 51-61.5% and reaches
-  // x 67%, her portrait starts at x 76%, the description sits below y 69.5%.
-  assert.match(styles, /\.hc-story-ad-headline \{[^}]*top: 50\.6%/);
-  assert.match(styles, /\.hc-story-ad-headline \{[^}]*height: 11\.6%/);
-  assert.match(styles, /\.hc-story-ad-headline \{[^}]*width: 66%/);
 });
 
 test("the review step writes its values, presses, and puts the ad live", () => {

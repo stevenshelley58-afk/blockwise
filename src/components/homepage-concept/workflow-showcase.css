@@ -372,47 +372,43 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* The pack render is landscape; keep the house centred in the 4:5 crop. */
+  object-position: center;
 }
 
-/* The ad's headline, written on the creative. It replaces the line the template
-   prints there rather than adding a second element.
-
-   Measured on the creative with a labelled grid: the printed headline occupies
-   two lines, y 51-55% and y 56.8-61.5%, reaching x 67%; her portrait starts at
-   x 76%, and the description below the headline starts at y 64.5%. The panel is
-   pinned to that exact block, filled with the palette's own colour (#fefefe),
-   and the new headline is centred inside it in the template's own navy. Sized in
-   cqw so it tracks the creative at every width. */
+/* The ad's headline, written on the creative. The pack render carries no text of
+   its own, so this is the only headline on the artwork: no cover, no fragment of
+   a printed line, and nothing near the frame's own branding. Sized in cqw so it
+   tracks the creative at every width. */
 .hc-story-ad-headline {
   position: absolute;
-  top: 50.6%;
   left: 5%;
+  bottom: 6%;
   display: flex !important;
-  height: 11.6%;
-  width: 66%;
+  width: 90%;
   align-items: center;
-  padding: 0 0.6cqw;
-  overflow: hidden;
-  background: #fefefe;
-  color: #1b2a4a;
+  padding: 2.4cqw 2.8cqw;
+  border-radius: 1.4cqw;
+  background: linear-gradient(180deg, rgba(11,19,36,.82), rgba(11,19,36,.92));
+  box-shadow: 0 1.2cqw 3cqw rgba(8,14,28,.28);
+  color: #fff;
   font-family: var(--hc-display);
-  /* Two lines at the printed headline's scale, ~47px on a 1080px creative. */
-  font-size: 4cqw;
-  font-weight: 600;
-  letter-spacing: .03em;
-  line-height: 1.14;
+  font-size: 4.6cqw;
+  font-weight: 650;
+  letter-spacing: .01em;
+  line-height: 1.16;
   text-transform: uppercase;
-  transition: color .3s ease;
+  transition: background-color .3s ease;
 }
 
 .hc-story-ad-headline > i {
-  color: rgba(27,42,74,.45);
+  color: rgba(255,255,255,.6);
   font-style: normal;
 }
 
 /* While it is being written it reads as the field the visitor is typing in. */
 .hc-story-ad-headline.is-writing {
-  color: #101d38;
+  background: linear-gradient(180deg, rgba(9,16,32,.9), rgba(9,16,32,.96));
 }
 
 /* The live tag lands on the creative once the campaign is approved. */
