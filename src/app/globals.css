@@ -8232,11 +8232,26 @@ a.operator-file-row {
   justify-self: center;
 }
 
-/* Google renders its own button in an iframe inside this slot. */
+/* Google renders its own button in an iframe inside this slot, and renders
+   it 20px wider and 4px taller than the width it is given (measured: a
+   400px request yields a 420x44 frame). Clip it to the row so it lines up
+   with the button beside it; the 20px radius matches Google's own pill. */
 .sso-google {
   display: grid;
   height: 40px;
   place-items: center;
+}
+
+.sso-google > div {
+  width: 100% !important;
+  height: 40px !important;
+  overflow: hidden !important;
+  border-radius: 20px !important;
+}
+
+.sso-google iframe {
+  width: 100% !important;
+  height: 40px !important;
 }
 
 /* Mirrors the geometry and type of Google's own button so the two provider
