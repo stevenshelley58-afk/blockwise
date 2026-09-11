@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/nextjs";
+
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import {
@@ -119,8 +121,17 @@ export async function requireWorkspaceAccess(
   supabase: SupabaseServerClient,
   input: { surface: ProductSurface; requestedWorkspaceId?: string | null },
 ): Promise<{ ok: true; access: WorkspaceAccess } | { ok: false; status: 401 | 403 | 404; error: string }> {
-  const { data } = await supabase.auth.getClaims();
-  const claims = data?.claims?.sub ? { sub: data.claims.sub } : null;
+  // getClaims() throws on an expired or malformed token instead of returning an
+  // error result, so an expired session reached this guard as a 500 rather than
+  // the 401 it already knows how to return. Any failure to confirm the session
+  // is exactly the 401 case below.
+  let claims: { sub: string } | null = null;
+  try {
+    const { data } = await supabase.auth.getClaims();
+    claims = data?.claims?.sub ? { sub: data.claims.sub } : null;
+  } catch (error) {
+    Sentry.captureException(error, { tags: { area: "auth.claims" } });
+  }
 
   if (!claims) {
     return { ok: false, status: 401, error: "Authentication is required." };

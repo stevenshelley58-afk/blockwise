@@ -51,14 +51,25 @@ export async function loadRequestAuthContext(supabase: SupabaseServerClient): Pr
       op: "auth.resolve",
     },
     async (span) => {
-      const claimsResult = await Sentry.startSpan(
-        {
-          name: "Verify Supabase JWT claims",
-          op: "auth.claims",
-        },
-        () => supabase.auth.getClaims(),
-      );
-      const claims = (claimsResult.data?.claims ?? null) as RequestAuthClaims | null;
+      // getClaims() throws on an expired or malformed token rather than
+      // returning an error result, so an expired session used to surface as a
+      // 500 instead of a trip back to /login. Every throw here means "the
+      // session could not be confirmed", and callers already redirect on null
+      // claims. It is reported rather than swallowed so a real fault (auth
+      // server unreachable) is still visible.
+      let claimsResult: Awaited<ReturnType<typeof supabase.auth.getClaims>> | null = null;
+      try {
+        claimsResult = await Sentry.startSpan(
+          {
+            name: "Verify Supabase JWT claims",
+            op: "auth.claims",
+          },
+          () => supabase.auth.getClaims(),
+        );
+      } catch (error) {
+        Sentry.captureException(error, { tags: { area: "auth.claims" } });
+      }
+      const claims = (claimsResult?.data?.claims ?? null) as RequestAuthClaims | null;
 
       span.setAttribute("auth.authenticated", Boolean(claims?.sub));
 
