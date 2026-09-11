@@ -8242,7 +8242,13 @@ a.operator-file-row {
   place-items: center;
 }
 
+/* Google's wrapper is positioned inline and its frame is 4px taller than the
+   row, which left it overlapping the next button and stealing its clicks
+   (measured: frame top 242, next button top 252). Pin the wrapper to the row
+   so the two controls cannot overlap. */
 .sso-google > div {
+  position: static !important;
+  inset: auto !important;
   width: 100% !important;
   height: 40px !important;
   overflow: hidden !important;
