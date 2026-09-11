@@ -116,6 +116,6 @@ Verified by tooling or an explicit pre-release check, never by good intentions. 
 - 2026-09-11: added the system map after the Hermes runtime was found running
   uncommitted code three files behind its own merged branch.
 - 2026-09-11: compressed from 17,357 to 12,928 characters by removing explanatory
-  prose. Every one of the 61 rules survives; the reasoning moved to the review
+  prose. Every rule survives; the reasoning moved to the review
   record. The budget is now a character count, because characters are what cost
   context.
