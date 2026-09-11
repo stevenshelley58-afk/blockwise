@@ -40,6 +40,20 @@ const nextConfig: NextConfig = {
   // ESM chunks; it is only used server-side (ad-deterministic-renderer), so
   // externalize it and let the server require() the binding at runtime.
   serverExternalPackages: ["@napi-rs/canvas"],
+  images: {
+    // sharp is a direct dependency and is what the standalone server uses.
+    // AVIF first: measured ~20% under WebP for the same visual result, and the
+    // optimizer falls back automatically for browsers without support.
+    formats: ["image/avif", "image/webp"],
+    // The default ladder tops out at 3840 and starts at 640, so a 345px card
+    // was being offered a 640px+ file. These are the widths the customer
+    // surfaces actually render at (ad cards, gallery cards, hero deck).
+    deviceSizes: [345, 420, 640, 828, 1080],
+    imageSizes: [96, 160, 220, 320],
+    // Content is served from the same origin and from Supabase storage; the
+    // optimizer caches by URL, so a long minimum keeps repeat views free.
+    minimumCacheTTL: 2_592_000,
+  },
   // Tree-shake heavy barrel-export libs so only used modules ship to the client.
   // lucide-react is already optimized by Next's defaults; recharts is not.
   // Sharp resolves its native implementation at runtime. Vercel's trace can
@@ -57,7 +71,10 @@ const nextConfig: NextConfig = {
     ],
   },
   experimental: {
-    optimizePackageImports: ["recharts"],
+    // Barrel-export packages that ship far more than the routes import.
+    // recharts and radix-ui are the two heaviest barrels in this app;
+    // lucide-react and motion are covered by Next's built-in default list.
+    optimizePackageImports: ["recharts", "radix-ui"],
     staleTimes: {
       dynamic: 30,
       static: 180,
@@ -179,6 +196,21 @@ const nextConfig: NextConfig = {
           {
             key: "Cache-Control",
             value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      // Files under public/ are served with `max-age=0` by default, so every
+      // visit revalidated ~2.9 MB of hero imagery and the Ad Studio webfonts
+      // even though they change only at release. These filenames are not
+      // content-hashed, so a day of freshness plus a week of background
+      // revalidation keeps repeat views free without ever pinning a stale
+      // asset for long. (adstudio-thumbnails above IS content-hashed.)
+      {
+        source: "/:dir(hero|home|ads|brand|icons|fonts|adstudio-samples|adstudio-fixtures)/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=86400, stale-while-revalidate=604800",
           },
         ],
       },

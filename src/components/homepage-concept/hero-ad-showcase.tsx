@@ -20,13 +20,13 @@ type ShowcaseAd = {
 
 const SHOWCASE_ADS: readonly ShowcaseAd[] = [
   { id: "just-listed-feed", format: "feed", page: "Blockwise Realty", initials: "BR", tone: "navy", image: "/home/home-dusk.webp", copy: "Just listed in Mount Lawley. View the photos, floorplan and inspection times.", headline: "A new address worth seeing", domain: "BLOCKWISEREALTY.COM.AU" },
-  { id: "buyers-story", format: "story", page: "West & Co Property", initials: "W&C", tone: "blue", image: "/hero/hero-tall.jpg", copy: "Qualified buyers are looking now.", headline: "See buyer demand", domain: "WESTANDCO.COM.AU" },
+  { id: "buyers-story", format: "story", page: "West & Co Property", initials: "W&C", tone: "blue", image: "/hero/hero-tall.webp", copy: "Qualified buyers are looking now.", headline: "See buyer demand", domain: "WESTANDCO.COM.AU" },
   { id: "local-advice-feed", format: "feed", page: "Jordan Lee Property", initials: "JL", tone: "charcoal", image: "/home/open-home-living.webp", copy: "Local advice. Clear next steps. Talk with Jordan about your property plans.", headline: "Book a property call", domain: "JORDANLEE.COM.AU" },
-  { id: "appraisal-story", format: "story", page: "Mia Calloway Real Estate", initials: "MC", tone: "gold", image: "/ads/ad-coastline.jpg", copy: "Find out what your home could be worth.", headline: "Request an appraisal", domain: "MIACALLOWAY.COM.AU" },
+  { id: "appraisal-story", format: "story", page: "Mia Calloway Real Estate", initials: "MC", tone: "gold", image: "/ads/ad-coastline.webp", copy: "Find out what your home could be worth.", headline: "Request an appraisal", domain: "MIACALLOWAY.COM.AU" },
   { id: "first-home-feed", format: "feed", page: "Northside Property", initials: "NP", tone: "navy", image: "/home/mt-lawley-federation.webp", copy: "Buying your first home? Start with the questions that make every inspection easier.", headline: "A smarter first-home checklist", domain: "NORTHSIDEPROPERTY.COM.AU" },
-  { id: "mobile-appraisal-story", format: "story", page: "Alex Morgan Property", initials: "AM", tone: "blue", image: "/home/workspace-hero/agent-ad.png", copy: "Your local property appraisal, made simple.", headline: "Book an appraisal", domain: "ALEXMORGAN.COM.AU" },
+  { id: "mobile-appraisal-story", format: "story", page: "Alex Morgan Property", initials: "AM", tone: "blue", image: "/home/workspace-hero/agent-ad.webp", copy: "Your local property appraisal, made simple.", headline: "Book an appraisal", domain: "ALEXMORGAN.COM.AU" },
   { id: "market-report-feed", format: "feed", page: "Harbourline Realty", initials: "HR", tone: "charcoal", image: "/home/home-pool.webp", copy: "Prices, recent sales and buyer activity. See what changed in your local market.", headline: "Your suburb market report", domain: "HARBOURLINE.COM.AU" },
-  { id: "planning-story", format: "story", page: "Oak & Key Property", initials: "O&K", tone: "gold", image: "/ads/ad-hillview.jpg", copy: "Plan your next move with a clearer property checklist.", headline: "Get the checklist", domain: "OAKANDKEY.COM.AU" },
+  { id: "planning-story", format: "story", page: "Oak & Key Property", initials: "O&K", tone: "gold", image: "/ads/ad-hillview.webp", copy: "Plan your next move with a clearer property checklist.", headline: "Get the checklist", domain: "OAKANDKEY.COM.AU" },
 ] as const;
 
 type DeckPose = { x: string; y: number; scale: number; rotate: number; opacity: number };
@@ -48,7 +48,7 @@ function Avatar({ ad }: { ad: ShowcaseAd }) {
   return <span className={`hc-meta-avatar hc-meta-avatar--${ad.tone}`}>{ad.initials}</span>;
 }
 
-function FeedAd({ ad }: { ad: ShowcaseAd }) {
+function FeedAd({ ad, eager = false }: { ad: ShowcaseAd; eager?: boolean }) {
   return (
     <article className="hc-meta-ad hc-meta-feed" aria-label={`${ad.page} example Facebook Feed ad`}>
       <header className="hc-meta-feed-head">
@@ -57,7 +57,17 @@ function FeedAd({ ad }: { ad: ShowcaseAd }) {
         <MoreHorizontal aria-hidden="true" size={19} />
       </header>
       <p className="hc-meta-feed-copy">{ad.copy}</p>
-      <img className="hc-meta-feed-image" src={withBasePath(ad.image)} alt="" width="1080" height="1350" />
+      <img
+        className="hc-meta-feed-image"
+        src={withBasePath(ad.image)}
+        alt=""
+        width="1080"
+        height="1350"
+        sizes="(min-width: 1024px) 324px, (min-width: 601px) 310px, min(296px, 78vw)"
+        loading={eager ? "eager" : "lazy"}
+        fetchPriority={eager ? "high" : "auto"}
+        decoding="async"
+      />
       <div className="hc-meta-link-preview">
         <span><small>{ad.domain}</small><strong>{ad.headline}</strong></span>
         <b>Learn more</b>
@@ -71,10 +81,20 @@ function FeedAd({ ad }: { ad: ShowcaseAd }) {
   );
 }
 
-function StoryAd({ ad }: { ad: ShowcaseAd }) {
+function StoryAd({ ad, eager = false }: { ad: ShowcaseAd; eager?: boolean }) {
   return (
     <article className="hc-meta-ad hc-meta-story" aria-label={`${ad.page} example Instagram Story ad`}>
-      <img className="hc-meta-story-image" src={withBasePath(ad.image)} alt="" width="1080" height="1920" />
+      <img
+        className="hc-meta-story-image"
+        src={withBasePath(ad.image)}
+        alt=""
+        width="1080"
+        height="1920"
+        sizes="(min-width: 1024px) 274px, (min-width: 601px) 260px, min(240px, 64vw)"
+        loading={eager ? "eager" : "lazy"}
+        fetchPriority={eager ? "high" : "auto"}
+        decoding="async"
+      />
       <div className="hc-meta-story-shade" />
       <div className="hc-meta-story-progress"><i /><i /><i /></div>
       <header className="hc-meta-story-head">
@@ -145,7 +165,9 @@ export function HeroAdShowcase() {
                   animate={{ transform: transformFor(pose), opacity: pose.opacity }}
                   transition={reduceMotion ? { duration: 0 } : { duration: 0.72, ease: [0.16, 1, 0.3, 1] as const }}
                 >
-                  {ad.format === "feed" ? <FeedAd ad={ad} /> : <StoryAd ad={ad} />}
+                  {ad.format === "feed"
+                    ? <FeedAd ad={ad} eager={position <= 1} />
+                    : <StoryAd ad={ad} eager={position <= 1} />}
                 </motion.div>
               </div>
             );

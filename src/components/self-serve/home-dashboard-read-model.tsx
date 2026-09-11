@@ -7,13 +7,26 @@ import {
   homeSafeReadModelFromData,
   mergeHomeSafeReadModel,
   type HomeSafeReadModel,
-} from "@/lib/home/home-dashboard-data";
+} from "@/lib/home/home-safe-read-model";
 import {
   READ_MODEL_SCHEMA_VERSION,
   readLocalReadModel,
   writeLocalReadModel,
 } from "@/lib/read-models/browser-store";
 import { useReportingInvalidation } from "@/lib/read-models/use-reporting-invalidation";
+
+/**
+ * Runs `task` once the browser is idle, falling back to a short timer where
+ * `requestIdleCallback` is unavailable (Safari). Returns the matching cancel.
+ */
+function scheduleIdle(task: () => void): () => void {
+  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+    const handle = window.requestIdleCallback(task, { timeout: 2000 });
+    return () => window.cancelIdleCallback(handle);
+  }
+  const handle = setTimeout(task, 1200);
+  return () => clearTimeout(handle);
+}
 
 export function HomeDashboardReadModel(input: {
   initialData: HomeData;
@@ -51,6 +64,7 @@ export function HomeDashboardReadModel(input: {
 
   useEffect(() => {
     let cancelled = false;
+    let cancelIdle: () => void = () => {};
     void (async () => {
       const cached = await readLocalReadModel<HomeSafeReadModel>({
         userId: input.userId,
@@ -75,10 +89,17 @@ export function HomeDashboardReadModel(input: {
           data: homeSafeReadModelFromData(input.initialData),
         });
       }
-      void refresh();
+      // The server already rendered this dashboard from the same read model, so
+      // the revalidation is a background nicety, not first-paint work. Kicking
+      // it off immediately put a ~1s request on the wire while the page was
+      // still loading its own assets; wait for the browser to go idle instead.
+      cancelIdle = scheduleIdle(() => {
+        if (!cancelled) void refresh();
+      });
     })().catch(() => undefined);
     return () => {
       cancelled = true;
+      cancelIdle();
     };
   }, [
     input.initialEtag,

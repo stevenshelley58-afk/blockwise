@@ -1,31 +1,20 @@
 import type { HomeData } from "@/components/self-serve/home-dashboard";
 import { resolveCustomerActivation } from "@/lib/activation/customer-activation";
 import { loadReportingSnapshot } from "@/lib/meta-monitor/reporting-snapshots";
-import type { MetaMonitorPayload } from "@/lib/meta-monitor/types";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { listTemplates } from "@/lib/adstudio/pack-gallery";
 import { buildHomeCreativeSuggestions, type HomeCreativeSuggestions } from "@/lib/home/creative-suggestions";
+import { homePerformanceFromReporting, mergeHomeSafeReadModel, type HomeSafeReadModel } from "@/lib/home/home-safe-read-model";
 import { leadSourceLabel } from "@/lib/leads/rows";
 import { loadPublicAdRadarCards } from "@/lib/research/public-ad-radar";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 
-export type HomeSafeReadModel = Pick<
-  HomeData,
-  | "workspaceName"
-  | "hasBrand"
-  | "hasProvider"
-  | "activation"
-  | "meta"
-  | "booking"
-  | "ads"
-  | "performance"
-  | "creativeSuggestions"
-  | "leads"
-  | "perthAds"
->;
+// The read-model contract lives in a client-safe module; re-exported here so
+// existing server-side importers keep one import site.
+export { mergeHomeSafeReadModel, homePerformanceFromReporting, homeSafeReadModelFromData, type HomeSafeReadModel } from "@/lib/home/home-safe-read-model";
 
 export async function loadHomeDashboardData(input: {
   supabase: SupabaseServerClient;
@@ -229,69 +218,3 @@ export async function loadHomeDashboardData(input: {
   };
 }
 
-export function mergeHomeSafeReadModel(
-  current: HomeData,
-  safe: HomeSafeReadModel,
-): HomeData {
-  return { ...current, ...safe };
-}
-
-export function homeSafeReadModelFromData(data: HomeData): HomeSafeReadModel {
-  return {
-    workspaceName: data.workspaceName,
-    hasBrand: data.hasBrand,
-    hasProvider: data.hasProvider,
-    activation: data.activation,
-    meta: data.meta,
-    booking: data.booking,
-    ads: data.ads,
-    performance: data.performance,
-    creativeSuggestions: data.creativeSuggestions,
-    leads: data.leads,
-    perthAds: data.perthAds,
-  };
-}
-
-export function homePerformanceFromReporting(
-  results: MetaMonitorPayload | null,
-): { adsLive: number; performance: NonNullable<HomeData["performance"]> } | null {
-  const summary = results?.summary;
-  if (
-    !results ||
-    results.source !== "live" ||
-    !results.connected ||
-    !summary ||
-    results.range.key !== "last_30" ||
-    summary.dateRange.start !== results.range.since ||
-    summary.dateRange.end !== results.range.until
-  ) {
-    return null;
-  }
-
-  const providerLeads = results.ads.reduce(
-    (total, ad) => total + ad.metrics.leads,
-    0,
-  );
-  const providerSpend = results.ads.reduce(
-    (total, ad) => total + ad.metrics.spend,
-    0,
-  );
-  const totalsMatch =
-    providerLeads === summary.leads &&
-    Math.abs(providerSpend - summary.spend) < 0.01;
-
-  return {
-    adsLive: results.ads.filter((ad) => ad.status === "ACTIVE").length,
-    performance: {
-      leads: summary.leads,
-      cpl: totalsMatch && providerLeads > 0 ? summary.spend / providerLeads : null,
-      previousLeads: summary.previousPeriod?.leads ?? null,
-      previousCpl: null,
-      daily: results.daily.map((point) => ({
-        date: point.date,
-        leads: point.leads,
-      })),
-      lastSyncedAt: summary.lastSyncedAt,
-    },
-  };
-}

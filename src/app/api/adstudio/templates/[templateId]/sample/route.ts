@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { renderPlacement } from "../../../../../../../packages/ad-template-renderer/src/renderer.ts";
 import type { AdTemplate } from "../../../../../../../packages/ad-template-contract/src/types.ts";
@@ -10,6 +11,13 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/**
+ * Renders are workspace-scoped, so they stay `private` (never in a shared
+ * proxy cache), but a revalidating browser and Next's image optimizer can both
+ * hold one for an hour and re-confirm it with the ETag.
+ */
+const SAMPLE_CACHE_CONTROL = "private, max-age=3600, stale-while-revalidate=86400";
+
 type AssetRow = { asset_key: string; file_name: string; mime_type: string; storage_path: string };
 
 export async function GET(
@@ -20,7 +28,11 @@ export async function GET(
   if (!context.ok) return context.response;
   const rateLimit = await checkRateLimit(context.access.workspaceId, context.access.userId, {
     windowSeconds: 300,
-    maxRequests: 30,
+    // The gallery renders one sample per reviewed template. A 30/5min bucket
+    // was tripped by a single page view (61 templates), so 31 cards came back
+    // 429 and rendered as broken images. Renders are now browser-cached, so the
+    // bucket only has to stop scripted abuse, not normal browsing.
+    maxRequests: 240,
     bucket: "adstudio-render",
   });
   if (!rateLimit.ok) {
@@ -62,10 +74,26 @@ export async function GET(
       textValues,
       colourMap: template.semanticColours,
     }, placement);
+    // A sample is a pure function of the template definition, the declared
+    // assets and the placement, so it is safe to cache hard. The ETag lets a
+    // revalidating browser skip the PNG body (304) and lets Next's image
+    // optimizer reuse one resize per width instead of re-rendering the canvas.
+    const etag = `"${createHash("sha256")
+      .update(template.templateId)
+      .update("\0")
+      .update(placement)
+      .update("\0")
+      .update(JSON.stringify(template))
+      .digest("hex")
+      .slice(0, 32)}"`;
+    if (request.headers.get("if-none-match") === etag) {
+      return new NextResponse(null, { status: 304, headers: { etag, "cache-control": SAMPLE_CACHE_CONTROL } });
+    }
     return new NextResponse(new Uint8Array(rendered.png), {
       headers: {
         "content-type": "image/png",
-        "cache-control": "private, max-age=300",
+        etag,
+        "cache-control": SAMPLE_CACHE_CONTROL,
       },
     });
   } catch (error) {
