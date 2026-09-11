@@ -140,6 +140,36 @@ describe("customer Ad Studio workbench contract", () => {
     assert.doesNotMatch(shell, /Safe deterministic draft|AI draft/);
   });
 
+  it("links the clicked ad area and the field that edits it", () => {
+    const canvas = readFileSync("src/components/adstudio/editor/layered-canvas.tsx", "utf8");
+    const inputs = readFileSync("src/components/adstudio/editor/inputs-panel.tsx", "utf8");
+    const shell = readFileSync("src/components/adstudio/editor/editor-shell.tsx", "utf8");
+
+    // The clicked area is marked from the resolved pack geometry, above the
+    // canonical server preview (z-10) and below Fabric's pointer layer (z-20).
+    assert.match(canvas, /resolveGeometry\(selectedLayer\.geometry, selectionDimensions\)/);
+    assert.match(canvas, /data-editor-selection=\{selectedLayer\?\.layerId\}/);
+    assert.match(canvas, /border-2 border-success bg-success\/15/);
+    assert.match(canvas, /selectionGeometry\.x \/ selectionDimensions\.width/);
+    assert.match(canvas, /z-\[15\]/);
+    // Fabric's own active-object border is off so one outline is drawn.
+    assert.match(canvas, /hasBorders: false/);
+    assert.doesNotMatch(canvas, /borderColor: "#16181d"/);
+
+    // The matching control carries the same mark, in colour and in weight.
+    assert.match(inputs, /highlightedKey\?: string \| null/);
+    assert.match(inputs, /highlighted && "border-success bg-success-soft\/60 ring-2 ring-success\/40"/);
+    assert.match(inputs, /font-semibold text-success/);
+    assert.match(inputs, /aria-current=\{highlighted \? "true" : undefined\}/);
+    // Layers with no input (plate, shape, icon) highlight no field.
+    assert.match(shell, /selectedLayer && "inputKey" in selectedLayer \? selectedLayer\.inputKey : null/);
+    assert.match(shell, /highlightedKey=\{selectedInputKey\}/);
+    // Focusing a field is the reverse link that selects its area.
+    assert.match(inputs, /onFocus=\{\(\) => onFieldFocus\?\.\(input\.key\)\}/);
+    assert.match(shell, /if \(layer && layer\.layerId !== state\.selectedLayerId\) selectLayer\(layer\.layerId\)/);
+    assert.match(shell, /onFieldFocus=\{focusLayerForInput\}/);
+  });
+
   it("shows template defaults, recovers stale saves, and keeps publishing choices explicit", () => {
     const shell = readFileSync("src/components/adstudio/editor/editor-shell.tsx", "utf8");
     const state = readFileSync("src/components/adstudio/editor/use-editor-state.ts", "utf8");

@@ -56,6 +56,13 @@ export interface InputsPanelProps {
   showImageInputs?: boolean;
   showTemplateControls?: boolean;
   showBusinessName?: boolean;
+  /**
+   * Input key of the layer selected on the ad canvas. Its control is marked so
+   * the clicked area and the field that edits it read as one thing.
+   */
+  highlightedKey?: string | null;
+  /** Focusing a control selects its layer on the ad canvas. */
+  onFieldFocus?: (key: string) => void;
 }
 
 export function InputsPanel({
@@ -80,6 +87,8 @@ export function InputsPanel({
   showImageInputs = true,
   showTemplateControls = true,
   showBusinessName = true,
+  highlightedKey = null,
+  onFieldFocus,
 }: InputsPanelProps) {
   const requiredImageInputs = imageInputs.filter(input => input.required !== false);
   const optionalImageInputs = imageInputs.filter(input => input.required === false);
@@ -146,9 +155,10 @@ export function InputsPanel({
           <div className="mb-5 space-y-4">
             {textInputs.map(input => {
               const value = textValues[input.key] ?? "";
+              const highlighted = highlightedKey === input.key;
               return (
                 <div key={input.key} className="block">
-                  <Label htmlFor={`creative-${input.key}`} className="mb-1 block text-sm font-medium">{input.label}</Label>
+                  <Label htmlFor={`creative-${input.key}`} className={cn("mb-1 block text-sm", highlighted ? "font-semibold text-success" : "font-medium")}>{input.label}</Label>
                   <Input
                     id={`creative-${input.key}`}
                     type="text"
@@ -156,7 +166,12 @@ export function InputsPanel({
                     placeholder={input.placeholder || undefined}
                     maxLength={input.maxLength}
                     onChange={e => onTextChange(input.key, e.target.value)}
-                    className="min-h-11 rounded-(--r-card) bg-muted/30"
+                    onFocus={() => onFieldFocus?.(input.key)}
+                    aria-current={highlighted ? "true" : undefined}
+                    className={cn(
+                      "min-h-11 rounded-(--r-card) bg-muted/30 transition-[border-color,box-shadow,background-color] duration-150 motion-reduce:transition-none",
+                      highlighted && "border-success bg-success-soft/60 ring-2 ring-success/40",
+                    )}
                     aria-describedby={`creative-${input.key}-count`}
                   />
                   <span id={`creative-${input.key}-count`} className="mt-1 block text-right text-[11px] tabular-nums text-muted-foreground">
@@ -190,6 +205,8 @@ export function InputsPanel({
                 onCropClick={() => onCropClick(input.key)}
                 libraryAssets={libraryAssets}
                 onLibraryPick={onLibraryPick}
+                highlighted={highlightedKey === input.key}
+                onFieldFocus={onFieldFocus}
               />
             ))}
             {optionalImageInputs.length > 0 ? (
@@ -208,6 +225,8 @@ export function InputsPanel({
                       onCropClick={() => onCropClick(input.key)}
                       libraryAssets={libraryAssets}
                       onLibraryPick={onLibraryPick}
+                      highlighted={highlightedKey === input.key}
+                      onFieldFocus={onFieldFocus}
                     />
                   ))}
                 </div>
@@ -236,6 +255,8 @@ function ImageSlotControl({
   onCropClick,
   libraryAssets,
   onLibraryPick,
+  highlighted = false,
+  onFieldFocus,
 }: {
   input: ImageInput;
   dataUrl: string | null;
@@ -244,6 +265,8 @@ function ImageSlotControl({
   onCropClick: () => void;
   libraryAssets?: Array<{ id?: string; url: string; label: string }>;
   onLibraryPick?: (key: string, sourceAssetId: string) => void | Promise<void>;
+  highlighted?: boolean;
+  onFieldFocus?: (key: string) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const libraryRef = useRef<HTMLDetailsElement>(null);
@@ -294,9 +317,18 @@ function ImageSlotControl({
   ) : null;
 
   return (
-    <div id={`creative-${input.key}`} tabIndex={-1}>
+    <div
+      id={`creative-${input.key}`}
+      tabIndex={-1}
+      onFocus={() => onFieldFocus?.(input.key)}
+      aria-current={highlighted ? "true" : undefined}
+      className={cn(
+        "rounded-(--r-card) transition-[box-shadow,background-color] duration-150 motion-reduce:transition-none",
+        highlighted && "bg-success-soft/50 ring-2 ring-success/40 ring-offset-2 ring-offset-card",
+      )}
+    >
       <span className="mb-1 flex items-center justify-between gap-2 text-sm font-medium text-foreground">
-        <span>{input.label}</span>
+        <span className={cn(highlighted && "font-semibold text-success")}>{input.label}</span>
         <span className="text-[11px] font-normal text-muted-foreground">{input.required === false ? "Optional" : "Required"}</span>
       </span>
       <input

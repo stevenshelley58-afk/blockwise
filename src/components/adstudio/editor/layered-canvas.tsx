@@ -224,15 +224,37 @@ export function LayeredCanvas({
     canvas.requestRenderAll();
   }, [ready, selectedLayerId]);
 
+  // The clicked area is marked with a green wash drawn over the pack geometry —
+  // the same rect the server renderer uses. It sits above the canonical server
+  // preview (z-10) and below Fabric's pointer layer (z-20), so a click still
+  // selects and the mark stays visible in every preview mode.
+  const selectionDimensions = PLACEMENT_DIMENSIONS[layout.placement];
+  const selectedLayer = selectedLayerId ? layout.layers.find(layer => layer.layerId === selectedLayerId) ?? null : null;
+  const selectionGeometry = selectedLayer ? resolveGeometry(selectedLayer.geometry, selectionDimensions) : null;
+
   return (
     <div ref={hostRef} className={cn("relative isolate h-full w-full overflow-hidden bg-white [&_.upper-canvas]:z-20", className)}>
-      <div className="sr-only" aria-live="polite">{selectedLayerId ? `Selected layer: ${layout.layers.find(layer => layer.layerId === selectedLayerId)?.layerId ?? selectedLayerId}` : "No layer selected"}</div>
+      <div className="sr-only" aria-live="polite">{selectedLayer ? `Editing layer: ${selectedLayer.layerId}` : "No layer selected"}</div>
       {!ready && <div className="absolute inset-0 animate-pulse bg-muted" aria-hidden="true" />}
       <canvas
         ref={elementRef}
         role="img"
         aria-label={`${layout.placement === "feed" ? "Feed" : "Story"} layered ad preview`}
       />
+      {selectionGeometry ? (
+        <div
+          aria-hidden="true"
+          data-editor-selection={selectedLayer?.layerId}
+          className="pointer-events-none absolute z-[15] rounded-[3px] border-2 border-success bg-success/15 transition-[left,top,width,height] duration-150 ease-out motion-reduce:transition-none"
+          style={{
+            left: `${(selectionGeometry.x / selectionDimensions.width) * 100}%`,
+            top: `${(selectionGeometry.y / selectionDimensions.height) * 100}%`,
+            width: `${(selectionGeometry.width / selectionDimensions.width) * 100}%`,
+            height: `${(selectionGeometry.height / selectionDimensions.height) * 100}%`,
+            transform: selectedLayer?.effects?.rotationDegrees ? `rotate(${selectedLayer.effects.rotationDegrees}deg)` : undefined,
+          }}
+        />
+      ) : null}
       {canonicalPreview?.status === "ready" && canonicalPreview.url ? (
         <img
           src={canonicalPreview.url}
@@ -291,8 +313,10 @@ async function createLayerObject({
     lockScalingX: true,
     lockScalingY: true,
     hasControls: false,
-    borderColor: "#16181d",
-    borderScaleFactor: 2,
+    // LayeredCanvas paints the green selection wash over the pack geometry, so
+    // Fabric's own active-object border stays off rather than drawing a second,
+    // competing outline.
+    hasBorders: false,
     padding: 2,
     hoverCursor: "pointer",
     moveCursor: "pointer",
