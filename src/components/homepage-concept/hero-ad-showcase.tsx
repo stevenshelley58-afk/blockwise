@@ -44,6 +44,19 @@ const DECK_POSES: readonly DeckPose[] = [
 
 const COMPACT_DECK_POSES: readonly DeckPose[] = DECK_POSES.map((pose) => ({ ...pose, x: "0%", rotate: 0 }));
 
+/**
+ * Width variants for a deck image, generated alongside each source.
+ *
+ * Every card is 326px (feed) or 276px (story) wide, but the sources are 1080px,
+ * and `sizes` alone cannot help without a `srcset` to choose from: the browser
+ * always took the full-size file. At DPR 2 the widest real need is ~652px, so
+ * 320 and 640 cover 1x and 2x. Measured on one story image, the 320w variant is
+ * 12,842 B against 49,276 B for the original.
+ */
+function deckImageSrcSet(image: string): string {
+  return `${withBasePath(image)} 1080w, ${withBasePath(image.replace(/\.webp$/, "-640.webp"))} 640w, ${withBasePath(image.replace(/\.webp$/, "-320.webp"))} 320w`;
+}
+
 function Avatar({ ad }: { ad: ShowcaseAd }) {
   return <span className={`hc-meta-avatar hc-meta-avatar--${ad.tone}`}>{ad.initials}</span>;
 }
@@ -63,7 +76,8 @@ function FeedAd({ ad, eager = false }: { ad: ShowcaseAd; eager?: boolean }) {
         alt=""
         width="1080"
         height="1350"
-        sizes="(min-width: 1024px) 324px, (min-width: 601px) 310px, min(296px, 78vw)"
+        sizes="(min-width: 1024px) 326px, (min-width: 601px) 316px, min(296px, 78vw)"
+        srcSet={deckImageSrcSet(ad.image)}
         loading={eager ? "eager" : "lazy"}
         fetchPriority={eager ? "high" : "auto"}
         decoding="async"
@@ -90,7 +104,8 @@ function StoryAd({ ad, eager = false }: { ad: ShowcaseAd; eager?: boolean }) {
         alt=""
         width="1080"
         height="1920"
-        sizes="(min-width: 1024px) 274px, (min-width: 601px) 260px, min(240px, 64vw)"
+        sizes="(min-width: 1024px) 276px, (min-width: 601px) 266px, min(240px, 64vw)"
+        srcSet={deckImageSrcSet(ad.image)}
         loading={eager ? "eager" : "lazy"}
         fetchPriority={eager ? "high" : "auto"}
         decoding="async"
