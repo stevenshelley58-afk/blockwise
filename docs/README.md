@@ -19,6 +19,7 @@ alternate production versions.
 - [VPS access](runbooks/vps-ssh.md)
 - [Rollback](runbooks/rollback.md)
 - [Product worker deployment](runbooks/vps-worker-deploy.md)
+- [Moving to an Australian region](runbooks/sydney-region-move.md)
 - [Client-data isolation](security/client-data-isolation.md)
 - [Product-agent safety](security/agent-safety.md)
 
