@@ -6,7 +6,6 @@ import {
   Globe2,
   MessageCircle,
   MoreHorizontal,
-  MousePointer2,
   Share2,
   ShieldCheck,
   ThumbsUp,
@@ -164,20 +163,6 @@ function useTypewriter({ run, text, at, past, speed, onComplete }: {
   const typing = run && at === past && chars < text.length;
 
   return { chars, typing, reset };
-}
-
-function StoryCursor({ pressed = false }: { pressed?: boolean }) {
-  return (
-    <motion.span
-      className="hc-story-cursor"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0, scale: pressed ? 0.88 : 1 }}
-      exit={{ opacity: 0, y: 4 }}
-      transition={pressed ? { duration: 0.14, ease: "easeInOut" } : STORY_ENTER}
-    >
-      <MousePointer2 aria-hidden="true" size={22} strokeWidth={2.2} />
-    </motion.span>
-  );
 }
 
 /** The Meta feed frame, reused by the editor and the review scene. */
@@ -598,7 +583,6 @@ function ReviewScene({
             )}
           </span>
           {approved ? "Campaign approved" : "Approve campaign"}
-          {pressing ? <StoryCursor pressed /> : null}
         </motion.strong>
 
         <AnimatePresence>

@@ -226,9 +226,11 @@
 }
 
 .hc-library-window {
-  overflow: visible;
+  /* The row is wider than the card; this box must clip it, both so the row
+     cannot paint outside the card and so the soft edge has something to mask. */
+  overflow: hidden;
   /* Soft edges so a part-visible card reads as "more to come", not as a crop. */
-  mask: linear-gradient(90deg, transparent 0, #000 34px, #000 calc(100% - 34px), transparent 100%);
+  mask: linear-gradient(90deg, transparent 0, #000 44px, #000 calc(100% - 44px), transparent 100%);
 }
 
 .hc-library-track {
@@ -372,50 +374,41 @@
   object-fit: cover;
 }
 
-/* The ad's headline, written on the creative. The template's own headline is
-   printed on the artwork, so the panel covers that block with the palette's own
-   colour (#fdfdfd) and writes the new headline there. Measured on the creative,
-   her portrait never comes left of x 76% between y 54% and y 70%, so the panel
-   stops at x 65%, an eighth of the width clear of her. Sized in cqw so it
-   tracks the creative at every width. */
+/* The ad's headline, written on the creative. The template prints its own
+   headline on the artwork and it cannot be covered without reaching the agent's
+   portrait, so the new headline reads as its own plate over the photo instead,
+   which is a normal ad shape and needs no cover-up. Sized in cqw so it tracks
+   the creative at every width. */
 .hc-story-ad-headline {
   position: absolute;
-  /* The printed headline block is y 57.5-65.5% and her portrait starts at
-     x 76% from y 61%. The panel sits on the block, covers as much of it as it
-     can, and stops an eighth of the width short of her. */
-  top: 55.4%;
-  left: 5.3%;
-  /* The feed-copy rule makes spans inline-block; this one is a fixed block. */
+  /* Inside the photo, below the Live tag, so it covers neither the model's
+     printed headline nor the brand strip at the foot of the creative. */
+  top: 11%;
+  left: 5%;
   display: block !important;
-  width: 64%;
-  /* Tall enough to cover the printed block, which ends at y 65.5%. */
-  /* Grows with the headline, but never reaches her. */
-  max-height: 12%;
-  overflow: visible;
-  padding: 1.1cqw 1cqw;
-  border-radius: 1px;
-  background: #fdfdfd;
-  color: #1b2a4a;
+  width: 70%;
+  padding: 2.2cqw 2.6cqw;
+  border-radius: 1.6cqw;
+  background: linear-gradient(180deg, rgba(12,20,38,.86), rgba(12,20,38,.94));
+  box-shadow: 0 1.2cqw 3cqw rgba(10,16,30,.3);
+  color: #fff;
   font-family: var(--hc-display);
-  /* Two lines at the template's own headline size. */
-  /* Two lines, sized so the longest headline still fits inside the panel. */
-  font-size: 4.1cqw;
-  font-weight: 600;
+  font-size: 4.3cqw;
+  font-weight: 650;
   letter-spacing: .01em;
-  line-height: 1.12;
+  line-height: 1.16;
   text-transform: uppercase;
-  transition: color .3s ease;
+  transition: background-color .3s ease;
 }
 
 .hc-story-ad-headline > i {
-  color: rgba(27,42,74,.5);
+  color: rgba(255,255,255,.62);
   font-style: normal;
 }
 
 /* While it is being written it reads as the field the visitor is typing in. */
 .hc-story-ad-headline.is-writing {
-  color: #12203c;
-  background: #fdfbf7;
+  background: linear-gradient(180deg, rgba(10,18,36,.92), rgba(10,18,36,.97));
 }
 
 /* The live tag lands on the creative once the campaign is approved. */
@@ -527,22 +520,6 @@
   background: var(--scene-accent);
   vertical-align: -.12em;
   animation: hc-story-caret 700ms steps(1, end) infinite;
-}
-
-.hc-story-cursor {
-  position: absolute;
-  z-index: 12;
-  right: -9px;
-  bottom: 42px;
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 1px solid rgba(255,255,255,.8);
-  border-radius: 50%;
-  background: var(--hc-ink);
-  color: #fff;
-  box-shadow: 0 5px 10px rgba(16,18,23,.18), 0 16px 28px rgba(16,18,23,.18);
 }
 
 /* ------------------------------------------------------------------ *
@@ -658,11 +635,6 @@
   letter-spacing: .01em;
 }
 
-.hc-story-approve .hc-story-cursor {
-  right: -10px;
-  bottom: -12px;
-}
-
 
 @keyframes hc-story-caret {
   0%, 48% { opacity: 1; }
@@ -707,7 +679,7 @@
 
   .hc-story-library { gap: 14px; padding: 18px 0 20px; }
   .hc-story-library .hc-story-scene-heading { padding-inline: 18px; }
-  .hc-library-window { mask: linear-gradient(90deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%); }
+  .hc-library-window { mask: linear-gradient(90deg, transparent 0, #000 26px, #000 calc(100% - 26px), transparent 100%); }
   .hc-library-track { gap: 10px; padding-inline: 18px; }
   .hc-library-card { flex: 0 0 150px; }
   .hc-story-scene-heading > strong { font-size: 18px; }

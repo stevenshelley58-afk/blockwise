@@ -69,13 +69,14 @@ test("the field writes the ad headline onto the image, clear of the portrait", (
   // It sits on the template's own link title line, sized against the creative.
   assert.match(styles, /\.hc-story-ad-headline \{[^}]*position: absolute/);
   assert.match(styles, /\.hc-story-ad-headline \{[^}]*text-transform: uppercase/);
-  // The panel behind it is the creative's own colour, so the printed line is covered.
-  assert.match(styles, /\.hc-story-ad-headline \{[^}]*background: #fdfdfd/);
-  // Measured limits: her portrait never comes left of x 76% above y 70%, so the
-  // panel is anchored on the printed block and stops an eighth of the width short.
-  assert.match(styles, /\.hc-story-ad-headline \{[^}]*width: 64%/);
-  assert.match(styles, /\.hc-story-ad-headline \{[^}]*top: 55\.4%/);
-  assert.match(styles, /\.hc-story-ad-headline \{[^}]*max-height: 12%/);
+  // The template prints its own headline and it cannot be covered without
+  // reaching the portrait, so the new headline is its own plate over the photo.
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*background: linear-gradient/);
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*color: #fff/);
+  // Measured limits: inside the photo band, above the printed headline block
+  // (which starts at y 57.5%) and clear of the portrait on the right.
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*top: 11%/);
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*width: 70%/);
 });
 
 test("the review step writes its values, presses, and puts the ad live", () => {
@@ -89,7 +90,9 @@ test("the review step writes its values, presses, and puts the ad live", () => {
   assert.match(source, /const pressing = phase === PRESS_PHASE/);
   assert.match(source, /scale: \[1, 1\.035, 0\.995, 1\], y: \[0, -8, 0, 0\]/);
   assert.match(source, /animate=\{pressing \? \{ scale: \[1, 0\.94, 1\] \}/);
-  assert.match(source, /<StoryCursor pressed \/>/);
+  // The press reads from the button and the ad, with no fake pointing hand.
+  assert.doesNotMatch(source, /StoryCursor|hc-story-cursor/);
+  assert.doesNotMatch(styles, /hc-story-cursor/);
 
   // Approved: green button, live tag on the ad, live toast.
   assert.match(source, /hc-story-approve\$\{approved \? " is-approved" : ""\}/);
@@ -179,6 +182,9 @@ test("screen one is a single row carousel of real ready-made ads", () => {
   assert.match(source, /Math\.min\(Math\.max\(centred, 0\), limit\)/);
   assert.match(styles, /\.hc-library-track \{[^}]*display: flex/);
   assert.match(styles, /\.hc-library-card \{[^}]*flex: 0 0/);
+  // The window clips the row: without it the row paints outside the card.
+  assert.match(styles, /\.hc-library-window \{[^}]*overflow: hidden/);
+  assert.doesNotMatch(styles, /\.hc-library-window \{[^}]*overflow: visible/);
   // A soft edge, because a hard crop reads as a mistake.
   assert.match(styles, /\.hc-library-window \{[^}]*mask: linear-gradient\(90deg/);
 
