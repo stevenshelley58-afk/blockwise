@@ -34,7 +34,9 @@ const SELECTED_PHASE = 3;
  * How long each phase holds. `null` means the phase waits for the visitor to
  * watch the text being written, so typing sets the pace rather than a timer.
  */
-const STORY_HOLDS: ReadonlyArray<number | null> = [760, 700, 700, 1000, 620, null, null, 1150, 1800];
+const STORY_HOLDS: ReadonlyArray<number | null> = [760, 700, 700, 1000, 620, null, null, 1750, 2100];
+/* The button is pressed here, and the ad is live by the time it lands. */
+const PRESS_PHASE = STORY_HOLDS.length - 1;
 const STORY_STEP_PHASES = [0, 4, 7] as const;
 const STORY_PHASE_TO_STEP = [0, 0, 0, 0, 1, 1, 1, 2, 2] as const;
 const STORY_STATUS = [
@@ -45,8 +47,8 @@ const STORY_STATUS = [
   "Customising the ad. Write the post copy.",
   "Writing the post copy.",
   "Adding a link title.",
-  "Review campaign.",
-  "Campaign approved.",
+  "Review campaign. Approving it makes the ad live.",
+  "Campaign approved. The ad is live.",
 ] as const;
 
 /** Milliseconds per character. The field and the ad advance on the same count. */
@@ -185,6 +187,7 @@ function StoryAd({
   linkChars,
   copyTyping,
   linkTyping,
+  approved = false,
   review = false,
 }: {
   phase: number;
@@ -192,6 +195,7 @@ function StoryAd({
   linkChars: number;
   copyTyping: boolean;
   linkTyping: boolean;
+  approved?: boolean;
   review?: boolean;
 }) {
   const writingCopy = phase === 5;
@@ -229,6 +233,20 @@ function StoryAd({
           {linkChars > 0 ? STORY_AD.linkTitle.slice(0, linkChars) : <i>Your link title</i>}
           {writingLink && linkTyping ? <span className="hc-story-caret" /> : null}
         </span>
+        <AnimatePresence>
+          {approved ? (
+            <motion.span
+              className="hc-story-ad-live"
+              initial={{ opacity: 0, scale: 0.82, y: -5 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.36, ease: STORY_EASE, delay: 0.1 }}
+            >
+              <i aria-hidden="true" />
+              Live
+            </motion.span>
+          ) : null}
+        </AnimatePresence>
       </motion.div>
       <div className="hc-meta-link-preview">
         <span>
@@ -432,18 +450,84 @@ function EditorScene({
   );
 }
 
+/** The three things the review screen confirms, written a character at a time. */
+const REVIEW_FIELDS = [
+  ["Audience", "Mt Lawley +15 km"],
+  ["Budget", "$20 / day"],
+  ["Duration", "14 days"],
+] as const;
+
+const REVIEW_ITEM_DELAY = 320;
+const REVIEW_ITEM_SPEED = 11;
+
+/**
+ * Writes the review values in one after another. Each value keeps its own
+ * counter, so the panel fills left to right like the fields on screen two.
+ */
+function useTypedReview(start: boolean, reduceMotion: boolean) {
+  const [counts, setCounts] = useState<number[]>(() => REVIEW_FIELDS.map(() => 0));
+  const doneRef = useRef(false);
+
+  useEffect(() => {
+    if (!start) {
+      setCounts(REVIEW_FIELDS.map(() => 0));
+      doneRef.current = false;
+      return;
+    }
+    if (reduceMotion) {
+      setCounts(REVIEW_FIELDS.map(([, value]) => value.length));
+      doneRef.current = true;
+      return;
+    }
+    const timers: number[] = [];
+    const next = REVIEW_FIELDS.map(() => 0);
+    setCounts([...next]);
+    doneRef.current = false;
+    let index = 0;
+    const step = () => {
+      if (index >= REVIEW_FIELDS.length) return;
+      const [label, value] = REVIEW_FIELDS[index];
+      let char = 0;
+      const tick = () => {
+        char += 1;
+        next[index] = char;
+        setCounts([...next]);
+        if (char < value.length) {
+          timers.push(window.setTimeout(tick, REVIEW_ITEM_SPEED));
+          return;
+        }
+        index += 1;
+        if (index >= REVIEW_FIELDS.length) {
+          doneRef.current = true;
+          return;
+        }
+        timers.push(window.setTimeout(step, REVIEW_ITEM_DELAY));
+      };
+      void label;
+      tick();
+    };
+    timers.push(window.setTimeout(step, 120));
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [start, reduceMotion]);
+
+  return counts;
+}
+
 function ReviewScene({
   phase,
   copyChars,
   linkChars,
+  approved,
+  reduceMotion,
 }: {
   phase: number;
   copyChars: number;
   linkChars: number;
+  approved: boolean;
+  reduceMotion: boolean;
 }) {
-  const valuesFilled = phase >= 7;
-  const pressing = phase === 7;
-  const approved = phase >= 8;
+  const pressing = phase === PRESS_PHASE;
+  const counts = useTypedReview(phase >= 7, reduceMotion);
 
   return (
     <motion.div
@@ -454,16 +538,22 @@ function ReviewScene({
       exit={{ opacity: 0 }}
       transition={SCENE_FADE}
     >
-      <div className="hc-story-review-preview">
+      <motion.div
+        className="hc-story-review-preview"
+        /* The ad takes the press: one quick lift, then it settles back. */
+        animate={pressing ? { scale: [1, 1.035, 0.995, 1], y: [0, -8, 0, 0] } : { scale: 1, y: 0 }}
+        transition={pressing ? { duration: 0.62, ease: STORY_EASE, times: [0, 0.35, 0.75, 1] } : STORY_ENTER}
+      >
         <StoryAd
           phase={phase}
           copyChars={copyChars}
           linkChars={linkChars}
           copyTyping={false}
           linkTyping={false}
+          approved={approved}
           review
         />
-      </div>
+      </motion.div>
 
       <motion.div
         className="hc-story-review-panel"
@@ -473,59 +563,38 @@ function ReviewScene({
       >
         <h3>Review campaign</h3>
         <dl>
-          {[
-            ["Audience", "Mt Lawley +15 km"],
-            ["Budget", "$20 / day"],
-            ["Duration", "14 days"],
-          ].map(([label, value], index) => (
+          {REVIEW_FIELDS.map(([label, value], index) => (
             <div key={label}>
               <dt>{label}</dt>
               <dd>
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.span
-                    key={valuesFilled ? value : `${label}-empty`}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ ...STORY_ENTER, delay: valuesFilled ? index * 0.12 : 0 }}
-                  >
-                    {valuesFilled ? value : ""}
-                  </motion.span>
-                </AnimatePresence>
+                <span>
+                  {value.slice(0, counts[index])}
+                  {counts[index] > 0 && counts[index] < value.length ? <span className="hc-story-caret" /> : null}
+                </span>
               </dd>
             </div>
           ))}
         </dl>
         <motion.strong
           className={`hc-story-approve${approved ? " is-approved" : ""}`}
-          animate={{ scale: pressing ? 0.97 : 1 }}
-          transition={{ duration: 0.15, ease: "easeInOut" }}
+          animate={pressing ? { scale: [1, 0.94, 1] } : { scale: 1 }}
+          transition={{ duration: 0.42, ease: STORY_EASE }}
         >
           <span className="hc-story-approve-mark" aria-hidden="true">
-            <AnimatePresence mode="wait" initial={false}>
-              {approved ? (
-                <motion.span
-                  key="approved-check"
-                  className="hc-story-approve-check"
-                  initial={{ scale: 0.4, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.4, opacity: 0 }}
-                  transition={{ duration: 0.34, ease: STORY_EASE }}
-                >
-                  <Check size={15} strokeWidth={3} />
-                </motion.span>
-              ) : (
-                <motion.span
-                  key="pending-shield"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.18 }}
-                >
-                  <ShieldCheck size={15} />
-                </motion.span>
-              )}
-            </AnimatePresence>
+            {approved ? (
+              <motion.span
+                className="hc-story-approve-check"
+                initial={{ scale: 0.4, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.34, ease: STORY_EASE }}
+              >
+                <Check size={15} strokeWidth={3} />
+              </motion.span>
+            ) : (
+              <motion.span key="pending-shield" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.18 }}>
+                <ShieldCheck size={15} />
+              </motion.span>
+            )}
           </span>
           {approved ? "Campaign approved" : "Approve campaign"}
           {pressing ? <StoryCursor pressed /> : null}
@@ -627,18 +696,19 @@ export function WorkflowShowcase() {
 
   /**
    * One phase at a time. A phase that writes text waits for the typing to
-   * finish, so the copy is always read at a human pace. Stops for good on the
-   * approved frame, so nothing loops.
+   * finish, so the copy is always read at a human pace. Reduced motion only
+   * shortens the run, so the story still ends on the live frame. Stops for good
+   * on the approved frame, so nothing loops.
    */
   useEffect(() => {
-    if (!playing || !inView || !pageVisible || reduceMotion) return;
+    if (!playing || !inView || !pageVisible) return;
     if (phase >= STORY_STATUS.length - 1) {
       setPlaying(false);
       return;
     }
     const hold = STORY_HOLDS[phase];
     if (hold === null) return;
-    const timer = window.setTimeout(() => nextPhase(phase), hold);
+    const timer = window.setTimeout(() => nextPhase(phase), reduceMotion ? 260 : hold);
     return () => window.clearTimeout(timer);
   }, [inView, pageVisible, phase, playing, reduceMotion, nextPhase]);
 
@@ -662,7 +732,7 @@ export function WorkflowShowcase() {
     resetLink();
     hasStarted.current = true;
     setPhase(STORY_STEP_PHASES[nextStep]);
-    setPlaying(!reduceMotion && nextStep < PROCESS_STEPS.length - 1);
+    setPlaying(true);
   }
 
   const scene = phase <= SELECTED_PHASE ? "browse" : phase <= 6 ? "edit" : "review";
@@ -683,15 +753,17 @@ export function WorkflowShowcase() {
       transition={{ duration: 0.6, ease: STORY_EASE }}
     >
       <motion.div className="hc-process-copy" variants={COPY_CASCADE}>
-        <motion.small className="hc-process-eyebrow" variants={COPY_ITEM}>Blockwise Ad Studio</motion.small>
-        <motion.h2 variants={COPY_ITEM}>Create real estate ads for Facebook &amp; Instagram.</motion.h2>
+        <motion.h2 variants={COPY_ITEM}>
+          <span>Real estate ads for</span>
+          <span className="hc-process-prompt">Facebook &amp; Instagram</span>
+        </motion.h2>
 
         <motion.div className="hc-process-actions" variants={COPY_ITEM}>
           <a className="hc-button hc-button--primary" href="#trial">
             Start free trial
             <ArrowRight aria-hidden="true" size={17} />
           </a>
-          <small className="hc-process-note">Free 14-day trial · No card required · Cancel anytime</small>
+          <small className="hc-process-note">Free trial · No card required · Cancel anytime</small>
         </motion.div>
       </motion.div>
 
@@ -756,7 +828,13 @@ export function WorkflowShowcase() {
                 />
               ) : null}
               {scene === "review" ? (
-                <ReviewScene phase={phase} copyChars={copyChars} linkChars={linkChars} />
+                <ReviewScene
+                  phase={phase}
+                  copyChars={copyChars}
+                  linkChars={linkChars}
+                  approved={phase >= PRESS_PHASE}
+                  reduceMotion={reduceMotion}
+                />
               ) : null}
             </AnimatePresence>
           </div>

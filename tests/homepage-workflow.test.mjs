@@ -6,12 +6,12 @@ const source = await readFile(new URL("../src/components/homepage-concept/workfl
 const content = await readFile(new URL("../src/lib/homepage-concept/content.ts", import.meta.url), "utf8");
 const styles = await readFile(new URL("../src/components/homepage-concept/workflow-showcase.css", import.meta.url), "utf8");
 
-test("workflow runs a fixed nine-phase sequence that stops on the approved frame", () => {
+test("workflow runs a fixed phase sequence that stops on the live frame", () => {
   const statuses = [...source.match(/const STORY_STATUS = \[([\s\S]*?)\] as const/)[1].matchAll(/"([^"]+)"/g)].map((match) => match[1]);
   assert.equal(statuses.length, 9);
+  assert.equal(statuses.at(-1), "Campaign approved. The ad is live.");
   assert.equal(statuses[0], "Choosing an ad. Browsing ready-made ads.");
   assert.equal(statuses[3], "Ad selected.");
-  assert.equal(statuses.at(-1), "Campaign approved.");
 
   // A hold of null means the phase waits for the text to finish being written.
   const holds = source.match(/const STORY_HOLDS[^=]*= \[([^\]]+)\]/)[1].split(",").map((value) => value.trim());
@@ -19,6 +19,9 @@ test("workflow runs a fixed nine-phase sequence that stops on the approved frame
   assert.ok(holds.every((hold) => hold === "null" || Number(hold) > 0), `bad hold: ${holds}`);
   assert.equal(holds[5], "null", "the post copy phase is paced by the typing");
   assert.equal(holds[6], "null", "the link title phase is paced by the typing");
+  // The button is pressed on the last phase, which is also where the ad goes live.
+  assert.match(source, /const PRESS_PHASE = STORY_HOLDS\.length - 1/);
+  assert.match(source, /approved=\{phase >= PRESS_PHASE\}/);
 
   // The three visitor steps still map onto the nine phases.
   const stepPhases = source.match(/const STORY_STEP_PHASES = \[([^\]]+)\]/)[1].split(",").map(Number);
@@ -71,6 +74,42 @@ test("the link title is written onto the ad image, not only under it", () => {
   assert.match(styles, /\.hc-story-ad-link \{[^}]*background: #fdfdfd/);
 });
 
+test("the review step writes its values, presses, and puts the ad live", () => {
+  // The three confirmed values are written one character at a time.
+  assert.match(source, /const REVIEW_FIELDS = \[/);
+  assert.match(source, /function useTypedReview\(start: boolean, reduceMotion: boolean\)/);
+  assert.match(source, /value\.slice\(0, counts\[index\]\)/);
+  assert.match(source, /useTypedReview\(phase >= 7, reduceMotion\)/);
+
+  // The press is a real press: the button dips and the ad takes the motion.
+  assert.match(source, /const pressing = phase === PRESS_PHASE/);
+  assert.match(source, /scale: \[1, 1\.035, 0\.995, 1\], y: \[0, -8, 0, 0\]/);
+  assert.match(source, /animate=\{pressing \? \{ scale: \[1, 0\.94, 1\] \}/);
+  assert.match(source, /<StoryCursor pressed \/>/);
+
+  // Approved: green button, live tag on the ad, live toast.
+  assert.match(source, /hc-story-approve\$\{approved \? " is-approved" : ""\}/);
+  assert.match(source, /hc-story-ad-live/);
+  assert.match(source, /Campaign is live/);
+  assert.match(styles, /\.hc-story-ad-live \{[^}]*background: var\(--hc-green\)/);
+  assert.match(styles, /\.hc-story-approve\.is-approved \{[^}]*background: var\(--hc-green\)/);
+  // The live tag pulses, and the pulse can be found.
+  assert.match(styles, /@keyframes hc-story-live-pulse/);
+});
+
+test("the copy column leads with the offer and nothing else", () => {
+  // Two lines, the second in the hero's blue, and no eyebrow above it.
+  assert.match(source, /<span>Real estate ads for<\/span>/);
+  assert.match(source, /<span className="hc-process-prompt">Facebook &amp; Instagram<\/span>/);
+  assert.doesNotMatch(source, /hc-process-eyebrow/);
+  assert.doesNotMatch(styles, /hc-process-eyebrow/);
+  assert.match(styles, /\.hc-process-copy h2 > span \{\s*display: block/);
+  assert.match(styles, /\.hc-process-prompt \{\s*color: var\(--hc-blue-bright\)/);
+  // The note matches the real offer wording.
+  assert.match(source, /Free trial · No card required · Cancel anytime/);
+  assert.doesNotMatch(source, /Free 14-day trial/);
+});
+
 test("the demo card keeps one size and the scenes change inside it", () => {
   // One height token, no per-scene viewport height and no height animation.
   assert.match(styles, /--hc-demo-height: 600px/);
@@ -105,7 +144,9 @@ test("the story starts once when scrolled into view and then stops", () => {
   assert.match(source, /if \(entry\.isIntersecting && !reduceMotion && !hasStarted\.current\)/);
   assert.match(source, /hasStarted\.current = true/);
   assert.match(source, /visibilitychange/);
-  assert.match(source, /if \(!playing \|\| !inView \|\| !pageVisible \|\| reduceMotion\) return/);
+  assert.match(source, /if \(!playing \|\| !inView \|\| !pageVisible\) return/);
+  // Reduced motion shortens the run instead of stranding the story mid-way.
+  assert.match(source, /reduceMotion \? 260 : hold/);
   assert.match(source, /setPhase\(STORY_STATUS\.length - 1\)/);
   // Nothing can restart it: the transport control is gone.
   assert.doesNotMatch(source, /hc-process-demo-transport|toggleTransport|Replay|Pause the demo/);
