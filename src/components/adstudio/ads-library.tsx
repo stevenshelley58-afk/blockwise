@@ -111,7 +111,7 @@ function AdCard({ ad }: { ad: LibraryAdModel }) {
       <Card className="group relative gap-0 overflow-hidden rounded-(--r-card) border-(--line) bg-(--surface) py-0 shadow-card transition motion-reduce:transition-none hover:-translate-y-0.5 hover:shadow-float">
         <Link href={href} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset" aria-label={`${ad.revisionId ? "Edit" : "Resume"} ${ad.name}`}>
           <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden bg-(--surface-subtle)">
-            {ad.src ? <SafeImage src={ad.src} alt={`${ad.name} preview`} width={640} height={800} className="size-full object-cover" /> : <p className="px-6 text-center text-xs text-muted-foreground">Preview available after you save</p>}
+            {ad.src ? <SafeImage src={ad.src} alt={`${ad.name} preview`} width={640} height={800} loading="lazy" decoding="async" className="size-full object-cover" /> : <p className="px-6 text-center text-xs text-muted-foreground">Preview available after you save</p>}
             <StatusBadge status={ad.status} />
           </div>
         </Link>

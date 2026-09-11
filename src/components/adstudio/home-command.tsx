@@ -94,7 +94,7 @@ function RecentAd({ ad, timeZone, dateLocale }: { ad: LibraryAdModel; timeZone: 
   return (
     <article className="flex min-w-0 items-center gap-3 p-3 sm:gap-4 sm:p-4">
       <Link href={editorHref} className="size-14 shrink-0 overflow-hidden rounded-lg bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:size-16">
-        {ad.src ? <SafeImage src={ad.src} alt={`${ad.name} preview`} compactFallback className="h-full w-full object-cover" /> : <span className="grid h-full place-items-center"><ImageIcon className="size-4 text-muted-foreground" aria-hidden /></span>}
+        {ad.src ? <SafeImage src={ad.src} alt={`${ad.name} preview`} compactFallback loading="lazy" decoding="async" className="h-full w-full object-cover" /> : <span className="grid h-full place-items-center"><ImageIcon className="size-4 text-muted-foreground" aria-hidden /></span>}
       </Link>
       <div className="min-w-0 flex-1">
         <Link href={editorHref} className="block truncate font-display text-[14px] font-extrabold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{ad.name}</Link>
