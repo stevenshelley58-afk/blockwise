@@ -30,6 +30,12 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-jetbrains",
   display: "swap",
+  // Preloading emits a <link rel="preload"> into every page, and this face is
+  // only used inside the app (leads tables, radar panels, charts, brand studio):
+  // it never appears on the homepage, /pricing or any other public page. Those
+  // pages were fetching a font they cannot render with, ahead of the images that
+  // decide LCP. It still loads on demand wherever `font-mono` is used.
+  preload: false,
 });
 
 const META_PIXEL_ID = "1699948581050851";
