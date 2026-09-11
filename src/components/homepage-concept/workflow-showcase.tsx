@@ -7,9 +7,6 @@ import {
   MessageCircle,
   MoreHorizontal,
   MousePointer2,
-  Pause,
-  Play,
-  RotateCcw,
   Share2,
   ShieldCheck,
   ThumbsUp,
@@ -153,8 +150,9 @@ function StoryAd({ phase, review = false }: { phase: number; review?: boolean })
 }
 
 /**
- * Screen 1. The ready-made ad library with one selector frame that glides
- * between ads, then settles on the chosen one.
+ * Screen 1. One row of ready-made ads. A single selector frame glides along the
+ * row, the row itself slides so the chosen ad stays centred, then the frame
+ * locks on it.
  */
 function LibraryScene({ phase, narrow }: { phase: number; narrow: boolean }) {
   const cards = narrow ? AD_LIBRARY.slice(0, 4) : AD_LIBRARY;
@@ -162,25 +160,36 @@ function LibraryScene({ phase, narrow }: { phase: number; narrow: boolean }) {
   const activeIndex = LIBRARY_SEQUENCE[position];
   const selected = phase >= SELECTED_PHASE;
 
-  const gridRef = useRef<HTMLDivElement>(null);
+  const windowRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Array<HTMLDivElement | null>>([]);
   const [frame, setFrame] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [shift, setShift] = useState(0);
 
   useEffect(() => {
-    const grid = gridRef.current;
+    const view = windowRef.current;
+    const track = trackRef.current;
     const card = cardRefs.current[activeIndex];
-    if (!grid || !card) return;
+    if (!view || !track || !card) return;
+
     const measure = () => {
+      // The selector hugs the active card, inside the track so the two move together.
       setFrame({
         x: card.offsetLeft - 5,
         y: card.offsetTop - 5,
         width: card.offsetWidth + 10,
         height: card.offsetHeight + 10,
       });
+      // Centre the active card, and never scroll past either end of the row.
+      const centred = card.offsetLeft + card.offsetWidth / 2 - view.clientWidth / 2;
+      const limit = Math.max(0, track.scrollWidth - view.clientWidth);
+      setShift(Math.min(Math.max(centred, 0), limit));
     };
+
     measure();
     const observer = new ResizeObserver(measure);
-    observer.observe(grid);
+    observer.observe(view);
+    observer.observe(track);
     return () => observer.disconnect();
   }, [activeIndex, cards.length]);
 
@@ -197,54 +206,62 @@ function LibraryScene({ phase, narrow }: { phase: number; narrow: boolean }) {
         <strong>{selected ? "Ad selected" : "Choose a starting point"}</strong>
       </div>
 
-      <div className="hc-library-grid" ref={gridRef}>
-        {frame ? (
-          <motion.span
-            className={`hc-library-selector${selected ? " is-selected" : ""}`}
-            aria-hidden="true"
-            initial={false}
-            animate={{ x: frame.x, y: frame.y, width: frame.width, height: frame.height }}
-            transition={STORY_MOVE}
-          />
-        ) : null}
-
-        {cards.map((ad, index) => {
-          const active = index === activeIndex;
-          const chosen = selected && active;
-          return (
-            <motion.div
-              key={ad.id}
-              ref={(node) => {
-                cardRefs.current[index] = node;
-              }}
-              className={`hc-library-card${active ? " is-active" : ""}${chosen ? " is-selected" : ""}`}
-              animate={{ opacity: active ? 1 : 0.62 }}
+      <div className="hc-library-window" ref={windowRef}>
+        <motion.div
+          className="hc-library-track"
+          ref={trackRef}
+          initial={false}
+          animate={{ x: -shift }}
+          transition={STORY_MOVE}
+        >
+          {frame ? (
+            <motion.span
+              className={`hc-library-selector${selected ? " is-selected" : ""}`}
+              aria-hidden="true"
+              initial={false}
+              animate={{ x: frame.x, y: frame.y, width: frame.width, height: frame.height }}
               transition={STORY_MOVE}
-            >
+            />
+          ) : null}
+
+          {cards.map((ad, index) => {
+            const active = index === activeIndex;
+            const chosen = selected && active;
+            return (
               <motion.div
-                layoutId={chosen ? "story-ad-creative" : undefined}
-                className="hc-library-card-image"
+                key={ad.id}
+                ref={(node) => {
+                  cardRefs.current[index] = node;
+                }}
+                className={`hc-library-card${active ? " is-active" : ""}${chosen ? " is-selected" : ""}`}
+                animate={{ opacity: active ? 1 : 0.6 }}
                 transition={STORY_MOVE}
               >
-                <img src={withBasePath(ad.image)} alt="" width="1080" height="1350" />
+                <motion.div
+                  layoutId={chosen ? "story-ad-creative" : undefined}
+                  className="hc-library-card-image"
+                  transition={STORY_MOVE}
+                >
+                  <img src={withBasePath(ad.image)} alt="" width="1080" height="1350" />
+                </motion.div>
+                <AnimatePresence>
+                  {chosen ? (
+                    <motion.span
+                      className="hc-library-check"
+                      initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={STORY_ENTER}
+                    >
+                      <Check aria-hidden="true" size={13} strokeWidth={3} />
+                      Selected
+                    </motion.span>
+                  ) : null}
+                </AnimatePresence>
               </motion.div>
-              <AnimatePresence>
-                {chosen ? (
-                  <motion.span
-                    className="hc-library-check"
-                    initial={{ opacity: 0, y: 6, scale: 0.9 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={STORY_ENTER}
-                  >
-                    <Check aria-hidden="true" size={13} strokeWidth={3} />
-                    Selected
-                  </motion.span>
-                ) : null}
-              </AnimatePresence>
-            </motion.div>
-          );
-        })}
+            );
+          })}
+        </motion.div>
       </div>
     </motion.div>
   );
@@ -424,7 +441,8 @@ export function WorkflowShowcase() {
   const [inView, setInView] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
   const activeStep = STORY_PHASE_TO_STEP[phase];
-  const finished = phase >= STORY_STATUS.length - 1;
+  const stepsRef = useRef<HTMLDivElement>(null);
+  const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
 
   useEffect(() => {
     const syncVisibility = () => setPageVisible(document.visibilityState === "visible");
@@ -471,20 +489,25 @@ export function WorkflowShowcase() {
     return () => window.clearTimeout(timer);
   }, [inView, pageVisible, phase, playing, reduceMotion]);
 
+  /* Slide the pill behind whichever step the story is on. */
+  useEffect(() => {
+    const wrap = stepsRef.current;
+    if (!wrap) return;
+    const measure = () => {
+      const button = wrap.querySelectorAll("button")[activeStep] as HTMLElement | undefined;
+      if (!button) return;
+      setIndicator({ left: button.offsetLeft, width: button.offsetWidth });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(wrap);
+    return () => observer.disconnect();
+  }, [activeStep]);
+
   function selectStep(nextStep: number) {
     hasStarted.current = true;
     setPhase(STORY_STEP_PHASES[nextStep]);
     setPlaying(!reduceMotion && nextStep < PROCESS_STEPS.length - 1);
-  }
-
-  function toggleTransport() {
-    hasStarted.current = true;
-    if (finished) {
-      setPhase(0);
-      setPlaying(true);
-      return;
-    }
-    setPlaying((current) => !current);
   }
 
   const scene = phase <= SELECTED_PHASE ? "browse" : phase <= 6 ? "edit" : "review";
@@ -503,7 +526,14 @@ export function WorkflowShowcase() {
         <motion.small className="hc-process-eyebrow" variants={COPY_ITEM}>Blockwise Ad Studio</motion.small>
         <motion.h2 variants={COPY_ITEM}>Create real estate ads for Facebook &amp; Instagram.</motion.h2>
 
-        <motion.div className="hc-process-steps" aria-label="How Blockwise works" variants={COPY_ITEM}>
+        <motion.div className="hc-process-steps" ref={stepsRef} role="group" aria-label="How Blockwise works" variants={COPY_ITEM}>
+          {indicator ? (
+            <span
+              className="hc-process-step-indicator"
+              style={{ transform: `translateX(${indicator.left}px)`, width: `${indicator.width}px` }}
+              aria-hidden="true"
+            />
+          ) : null}
           {PROCESS_STEPS.map((item, index) => (
             <button
               key={item.label}
@@ -511,14 +541,14 @@ export function WorkflowShowcase() {
               aria-pressed={activeStep === index}
               onClick={() => selectStep(index)}
             >
-              <span className="hc-process-step-mark" aria-hidden="true" />
-              <span>
-                <strong>{item.label}</strong>
-                <small>{item.hint}</small>
-              </span>
+              {item.label}
             </button>
           ))}
         </motion.div>
+
+        <motion.p className="hc-process-hint" key={activeStep} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={STORY_ENTER}>
+          {PROCESS_STEPS[activeStep].hint}
+        </motion.p>
 
         <motion.div className="hc-process-actions" variants={COPY_ITEM}>
           <a className="hc-button hc-button--primary" href="#trial">
@@ -552,17 +582,6 @@ export function WorkflowShowcase() {
             </AnimatePresence>
           </div>
         </LayoutGroup>
-
-        <div className="hc-process-demo-transport">
-          {reduceMotion ? (
-            <small>Animation off. Your device prefers reduced motion.</small>
-          ) : (
-            <button type="button" onClick={toggleTransport} aria-label={finished ? "Replay the demo" : playing ? "Pause the demo" : "Play the demo"}>
-              {finished ? <RotateCcw aria-hidden="true" size={14} /> : playing ? <Pause aria-hidden="true" size={14} /> : <Play aria-hidden="true" size={14} />}
-              {finished ? "Replay" : playing ? "Pause" : "Play"}
-            </button>
-          )}
-        </div>
       </motion.div>
     </motion.div>
   );

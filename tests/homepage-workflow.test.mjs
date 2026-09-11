@@ -22,13 +22,24 @@ test("workflow runs a fixed nine-phase sequence that stops on the approved frame
   assert.deepEqual(stepPhases, [0, 4, 7]);
   assert.match(source, /const activeStep = STORY_PHASE_TO_STEP\[phase\]/);
 
-  // The story ends on the final frame instead of wrapping, so nothing animates
-  // forever and the live region stops announcing.
+  // One pass that ends, so nothing animates forever.
   assert.match(source, /Math\.min\(current \+ 1, STORY_STATUS\.length - 1\)/);
   assert.doesNotMatch(source, /current >= STORY_STATUS\.length - 1 \? 0 : current \+ 1/);
 });
 
-test("screen one shows real ready-made ads behind one travelling selector", () => {
+test("the story starts once when scrolled into view and then stops", () => {
+  assert.match(source, /IntersectionObserver/);
+  assert.match(source, /if \(entry\.isIntersecting && !reduceMotion && !hasStarted\.current\)/);
+  assert.match(source, /hasStarted\.current = true/);
+  assert.match(source, /visibilitychange/);
+  assert.match(source, /if \(!playing \|\| !inView \|\| !pageVisible \|\| reduceMotion\) return/);
+  assert.match(source, /setPhase\(STORY_STATUS\.length - 1\)/);
+  // Nothing can restart it: the transport control is gone.
+  assert.doesNotMatch(source, /hc-process-demo-transport|toggleTransport|Replay|Pause the demo/);
+  assert.doesNotMatch(styles, /hc-process-demo-transport/);
+});
+
+test("screen one is a single row carousel of real ready-made ads", () => {
   // The library is real product output, declared once in the content module.
   assert.match(content, /export const AD_LIBRARY = \[/);
   const library = content.match(/export const AD_LIBRARY = \[([\s\S]*?)\] as const;/)[1];
@@ -38,17 +49,47 @@ test("screen one shows real ready-made ads behind one travelling selector", () =
   assert.ok(ads.includes("appraisal"), "the selected ad is part of the library");
   assert.match(source, /withBasePath\(ad\.image\)/);
 
-  // One selector frame visits the sequence, then settles on the chosen ad.
+  // One row, with the track sliding so the active card stays centred.
+  assert.match(source, /className="hc-library-window"/);
+  assert.match(source, /className="hc-library-track"/);
+  assert.match(source, /animate=\{\{ x: -shift \}\}/);
+  assert.match(source, /const centred = card\.offsetLeft \+ card\.offsetWidth \/ 2 - view\.clientWidth \/ 2/);
+  assert.match(source, /Math\.min\(Math\.max\(centred, 0\), limit\)/);
+  assert.match(styles, /\.hc-library-track \{[^}]*display: flex/);
+  assert.match(styles, /\.hc-library-card \{[^}]*flex: 0 0/);
+  // A soft edge, because a hard crop reads as a mistake.
+  assert.match(styles, /\.hc-library-window \{[^}]*mask: linear-gradient\(90deg/);
+
+  // The selector lives inside the track, so it always travels with its card.
+  assert.match(source, /className="hc-library-track"[\s\S]*?hc-library-selector/);
+
+  // One frame visits the sequence, then settles on the chosen ad.
   assert.match(source, /const LIBRARY_SEQUENCE = \[0, 1, 2, 3\] as const/);
   assert.match(source, /const selected = phase >= SELECTED_PHASE/);
-  assert.match(source, /className=\{`hc-library-selector/);
-  assert.match(source, /animate=\{\{ x: frame\.x, y: frame\.y, width: frame\.width, height: frame\.height \}\}/);
   assert.match(source, /hc-library-check/);
 
-  // The old sliding track is gone: it moved the chosen card out of the window
-  // while the heading still claimed a template was selected.
-  assert.doesNotMatch(source, /hc-story-template-track|hc-story-template-window/);
-  assert.doesNotMatch(source, /hc-story-template-card/);
+  // The old sliding strip that lost the selected card is gone for good.
+  assert.doesNotMatch(source, /hc-story-template-track|hc-story-template-window|hc-story-template-card/);
+  assert.doesNotMatch(source, /hc-library-grid/);
+});
+
+test("choose, customise and review are one working segmented control", () => {
+  // Same control pattern as the reporting section: a measured sliding pill.
+  assert.match(source, /className="hc-process-steps"[\s\S]*?role="group"/);
+  assert.match(source, /className="hc-process-step-indicator"/);
+  assert.match(source, /setIndicator\(\{ left: button\.offsetLeft, width: button\.offsetWidth \}\)/);
+  assert.match(source, /aria-pressed=\{activeStep === index\}/);
+  assert.match(source, /onClick=\{\(\) => selectStep\(index\)\}/);
+  assert.match(source, /setPhase\(STORY_STEP_PHASES\[nextStep\]\)/);
+
+  assert.match(styles, /\.hc-process-steps \{[^}]*border-radius: 999px/);
+  assert.match(styles, /\.hc-process-steps button\[aria-pressed="true"\]/);
+  assert.match(styles, /\.hc-process-step-indicator \{[^}]*background: #fff/);
+  assert.match(styles, /\.hc-process-steps button:focus-visible/);
+
+  // The old dot-marker list is gone.
+  assert.doesNotMatch(source, /hc-process-step-mark/);
+  assert.doesNotMatch(styles, /hc-process-step-mark/);
 });
 
 test("screen two hands the chosen ad to the left and opens empty fields on the right", () => {
@@ -79,20 +120,7 @@ test("the demo edits a real ad instead of inventing copy", () => {
   assert.doesNotMatch(source, /guarantee|ROI|cost per lead|\d+ (new )?leads/i);
   // The typed image overlay is gone; the real creative carries its own text.
   assert.doesNotMatch(source, /YOUR NEXT HOME|YOUR SUBIACO HOME|editedOverlay|hc-story-creative-overlay/);
-});
-
-test("the preview stays a mock, gated on motion and viewport, and can be paused", () => {
-  assert.match(source, /IntersectionObserver/);
-  assert.match(source, /visibilitychange/);
-  assert.match(source, /if \(!playing \|\| !inView \|\| !pageVisible \|\| reduceMotion\) return/);
-  assert.match(source, /setPhase\(STORY_STATUS\.length - 1\)/);
-  assert.match(source, /setPlaying\(!reduceMotion && nextStep < PROCESS_STEPS\.length - 1\)/);
-
-  // WCAG 2.2.2: an auto-starting preview needs a pause and replay control.
-  assert.match(source, /hc-process-demo-transport/);
-  assert.match(source, /finished \? "Replay the demo" : playing \? "Pause the demo" : "Play the demo"/);
-
-  // Self-contained: no network, no storage, no analytics.
+  // Still a self-contained mock.
   assert.doesNotMatch(source, /fetch\(|localStorage|sessionStorage|XMLHttpRequest|analytics/i);
 });
 

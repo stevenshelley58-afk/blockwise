@@ -34,77 +34,65 @@
   text-transform: uppercase;
 }
 
+/* Segmented step control, matching the reporting section's tab control. */
 .hc-process-steps {
-  display: grid;
+  position: relative;
+  display: flex;
+  gap: 5px;
+  width: fit-content;
   margin-top: 32px;
-  border-top: 1px solid var(--hc-line);
+  border: 1px solid var(--hc-line);
+  border-radius: 999px;
+  padding: 6px;
+  background: #f1f2f4;
 }
 
 .hc-process-steps button {
-  display: grid;
-  grid-template-columns: 16px 1fr;
-  gap: 10px;
-  min-height: 66px;
-  align-items: center;
+  position: relative;
+  z-index: 1;
+  min-width: 100px;
+  min-height: 40px;
   border: 0;
-  border-bottom: 1px solid var(--hc-line);
-  border-left: 2px solid transparent;
-  padding: 12px 0 12px 14px;
-  margin-left: -14px;
+  border-radius: 999px;
+  padding: 0 16px;
   background: transparent;
   color: var(--hc-muted);
-  text-align: left;
+  font-family: var(--hc-display);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
-  transition: color 180ms ease, background 220ms ease, border-color 220ms ease;
-}
-
-.hc-process-steps button:hover {
-  background: rgba(42, 120, 214, .035);
-  border-left-color: rgba(42, 120, 214, .3);
+  transition: color .28s ease;
 }
 
 .hc-process-steps button[aria-pressed="true"] {
   color: var(--hc-ink);
-  background: rgba(42, 120, 214, .06);
-  border-left-color: var(--hc-blue);
 }
 
-.hc-process-step-mark {
-  width: 8px;
-  height: 8px;
-  border: 1px solid var(--hc-faint);
-  border-radius: 50%;
-  background: transparent;
-  transition: border-color 180ms ease, background 180ms ease, transform 220ms cubic-bezier(.23,1,.32,1);
+.hc-process-steps button:focus-visible {
+  outline: 2px solid var(--hc-ink);
+  outline-offset: 2px;
 }
 
-.hc-process-steps button[aria-pressed="true"] .hc-process-step-mark {
-  border-color: var(--hc-ink);
-  background: var(--hc-ink);
-  transform: scale(1.15);
+.hc-process-step-indicator {
+  position: absolute;
+  z-index: 0;
+  top: 6px;
+  bottom: 6px;
+  left: 0;
+  border: 1px solid #d3d7df;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(16,18,23,.04);
+  transition: transform .48s cubic-bezier(.4, 0, .2, 1), width .48s cubic-bezier(.4, 0, .2, 1);
+  pointer-events: none;
 }
 
-.hc-process-steps button > span:last-child {
-  display: grid;
-  gap: 3px;
-  padding-right: 14px;
-}
-
-.hc-process-steps strong {
-  font-family: var(--hc-display);
-  font-size: 15px;
-  font-weight: 750;
-}
-
-.hc-process-steps small {
+.hc-process-hint {
+  margin-top: 12px;
   color: var(--hc-muted);
   font-size: 12.5px;
-  line-height: 1.35;
-  transition: color 220ms ease;
-}
-
-.hc-process-steps button[aria-pressed="true"] small {
-  color: var(--hc-muted);
+  line-height: 1.4;
 }
 
 .hc-process-actions {
@@ -145,42 +133,6 @@
   pointer-events: none;
   background: linear-gradient(180deg, rgba(255,255,255,.65), transparent 28%);
   mask: linear-gradient(#000, transparent 55%);
-}
-
-/* The demo footer holds the one control the preview needs: Pause / Play / Replay. */
-.hc-process-demo-transport {
-  display: flex;
-  min-height: 52px;
-  align-items: center;
-  justify-content: center;
-  border-top: 1px solid var(--hc-line);
-  background: #fff;
-}
-
-.hc-process-demo-transport button {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  gap: 6px;
-  border: 0;
-  border-radius: 999px;
-  padding: 0 16px;
-  background: transparent;
-  color: var(--hc-muted);
-  font-size: 12.5px;
-  font-weight: 650;
-  cursor: pointer;
-  transition: background 200ms ease, color 200ms ease;
-}
-
-.hc-process-demo-transport button:hover {
-  background: rgba(16,18,23,.05);
-  color: var(--hc-ink);
-}
-
-.hc-process-demo-transport small {
-  color: var(--hc-muted);
-  font-size: 12px;
 }
 
 .hc-process-demo-topbar {
@@ -240,10 +192,16 @@
   white-space: nowrap !important;
 }
 
+/* Each scene gets the height it needs; the frame eases between them. */
 .hc-story-viewport {
   position: relative;
   height: 600px;
   overflow: hidden;
+  transition: height 420ms cubic-bezier(.4, 0, .2, 1);
+}
+
+.hc-process-demo[data-scene="browse"] .hc-story-viewport {
+  height: 332px;
 }
 
 .hc-story-scene {
@@ -274,19 +232,27 @@
 .hc-story-library {
   display: grid;
   align-content: center;
-  gap: 18px;
-  padding: 24px 30px 26px;
+  gap: 16px;
+  padding: 22px 0 24px;
   background: #f3f5f7;
 }
 
-.hc-library-grid {
+.hc-story-library .hc-story-scene-heading {
+  padding-inline: 30px;
+}
+
+.hc-library-window {
+  overflow: hidden;
+  /* Soft edges so a part-visible card reads as "more to come", not as a crop. */
+  mask: linear-gradient(90deg, transparent 0, #000 34px, #000 calc(100% - 34px), transparent 100%);
+}
+
+.hc-library-track {
   position: relative;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
   gap: 12px;
-  width: 100%;
-  max-width: 760px;
-  margin-inline: auto;
+  width: max-content;
+  padding-inline: 30px;
 }
 
 /* One frame that glides between ads, then locks on the chosen one. */
@@ -309,6 +275,7 @@
 .hc-library-card {
   position: relative;
   z-index: 1;
+  flex: 0 0 172px;
   overflow: hidden;
   border-radius: 14px;
   background: var(--hc-soft);
@@ -654,15 +621,9 @@
   .hc-process { padding-block: 64px; }
   .hc-process-layout { gap: 32px; }
   .hc-process-copy h2 { max-width: 12ch; font-size: 36px; }
-  .hc-process-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 26px; border: 0; }
-  .hc-process-steps button,
-  .hc-process-steps button[aria-pressed="true"] { display: grid; grid-template-columns: 1fr; min-height: 50px; padding: 9px 8px; border: 1px solid var(--hc-line); border-left: 1px solid var(--hc-line); border-radius: 11px; text-align: center; }
-  .hc-process-steps button[aria-pressed="true"] { border-color: var(--hc-ink); background: var(--hc-ink); color: #fff; }
-  .hc-process-steps button:hover { background: transparent; border-left-color: var(--hc-line); }
-  .hc-process-steps button > span:last-child { padding-right: 0; }
-  .hc-process-steps strong { font-size: 12px; }
-  .hc-process-steps small { font-size: 11.5px; }
-  .hc-process-steps button[aria-pressed="true"] small { color: rgba(255,255,255,.82); }
+  .hc-process-steps { width: 100%; gap: 4px; margin-top: 24px; }
+  .hc-process-steps button { flex: 1 1 0; min-width: 0; min-height: 44px; padding-inline: 6px; font-size: 12.5px; }
+  .hc-process-hint { margin-top: 10px; font-size: 12px; }
   .hc-process-actions { justify-items: stretch; margin-top: 20px; text-align: center; }
   .hc-process-actions .hc-button { width: 100%; }
   .hc-process-demo { border-radius: 18px; }
@@ -670,9 +631,13 @@
   .hc-process-demo-topbar > span { font-size: 11.5px; }
   .hc-process-demo-topbar ol { display: none; }
   .hc-story-viewport { height: 680px; }
+  .hc-process-demo[data-scene="browse"] .hc-story-viewport { height: 292px; }
 
-  .hc-story-library { gap: 14px; padding: 18px 16px 20px; }
-  .hc-library-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; max-width: none; }
+  .hc-story-library { gap: 14px; padding: 18px 0 20px; }
+  .hc-story-library .hc-story-scene-heading { padding-inline: 18px; }
+  .hc-library-window { mask: linear-gradient(90deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%); }
+  .hc-library-track { gap: 10px; padding-inline: 18px; }
+  .hc-library-card { flex: 0 0 150px; }
   .hc-story-scene-heading > strong { font-size: 18px; }
 
   .hc-story-editor { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px; }
@@ -691,5 +656,5 @@
 
 @media (max-width: 420px) {
   .hc-process-copy h2 { font-size: 34px; }
-  .hc-process-steps strong { font-size: 11px; }
+  .hc-process-steps button { font-size: 11.5px; padding-inline: 4px; }
 }
