@@ -30,3 +30,5 @@ checks and live acceptance; this README does not duplicate them.
 Development-server output is not production acceptance.
 
 `npm test` is the repository test suite; `npm run test:e2e` runs Playwright. The production acceptance path, backup rules, rollback, SSH access, and extension guidance are indexed in [docs/README.md](docs/README.md).
+
+<!-- autodeploy canary 064444 -->
