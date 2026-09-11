@@ -170,7 +170,9 @@ export function InputsPanel({
                     aria-current={highlighted ? "true" : undefined}
                     className={cn(
                       "min-h-11 rounded-(--r-card) bg-muted/30 transition-[border-color,box-shadow,background-color] duration-150 motion-reduce:transition-none",
-                      highlighted && "border-success bg-success-soft/60 ring-2 ring-success/40",
+                      // The focused ring stays green on the marked field, so the
+                      // clicked area and this box keep reading as one thing.
+                      highlighted && "border-success bg-success-soft/60 ring-2 ring-success/40 focus-visible:border-success focus-visible:ring-success/40",
                     )}
                     aria-describedby={`creative-${input.key}-count`}
                   />
