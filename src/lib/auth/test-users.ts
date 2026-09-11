@@ -6,8 +6,3 @@ export const testUsers = [
     homePath: "/operator",
   },
 ] as const;
-
-export function getRedirectForEmail(email?: string | null) {
-  const normalizedEmail = email?.toLowerCase();
-  return testUsers.find((user) => user.email === normalizedEmail)?.homePath ?? "/home";
-}

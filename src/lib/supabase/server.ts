@@ -2,21 +2,23 @@ import { createServerClient } from "@supabase/ssr";
 import type { CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+import { cleanSupabaseEnv, resolveSupabaseServerUrl } from "./credentials.ts";
+
 type CookieToSet = {
   name: string;
   value: string;
   options: CookieOptions;
 };
 
-function cleanSupabaseEnv(value?: string) {
-  return value?.replace(/^\uFEFF/, "").trim() ?? "";
-}
-
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
 
   return createServerClient(
-    cleanSupabaseEnv(process.env.NEXT_PUBLIC_SUPABASE_URL),
+    // Server-side reads and writes go to the internal Supabase router when the
+    // runtime provides one; see resolveSupabaseServerUrl. Auth redirect targets
+    // are built from the browser origin and NEXT_PUBLIC_APP_URL, never from
+    // this base URL, so the internal origin cannot leak into an email link.
+    resolveSupabaseServerUrl(),
     cleanSupabaseEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
     {
       auth: { flowType: "pkce" },

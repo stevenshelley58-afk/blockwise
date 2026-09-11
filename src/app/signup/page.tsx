@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { SignupForm } from "@/components/signup-form";
+import { HOME_PATH } from "@/lib/auth/home";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
   }
 
   if (user) {
-    redirect("/home");
+    redirect(HOME_PATH);
   }
 
   return (

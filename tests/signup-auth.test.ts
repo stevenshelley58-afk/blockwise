@@ -51,7 +51,11 @@ test("signup page redirects authenticated users and renders the signup form", ()
   const source = readFileSync(signupPagePath, "utf8");
 
   assert.match(source, /supabase\.auth\.getUser\(\)/i);
-  assert.match(source, /redirect\("\/home"\)/i);
+  // Signed-in visitors go straight to the dashboard. Routing them through the
+  // legacy /home redirect cost a second server render and an extra auth round
+  // trip to reach a destination that is a constant.
+  assert.match(source, /redirect\(HOME_PATH\)/);
+  assert.match(source, /import \{ HOME_PATH \} from "@\/lib\/auth\/home"/);
   assert.match(source, /<SignupForm/i);
   assert.match(source, /auditId/);
   assert.match(source, /\/self-serve\?auditId=/);

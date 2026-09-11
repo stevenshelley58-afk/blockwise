@@ -2,10 +2,19 @@ import { adTemplateSchema } from "../../../packages/ad-template-contract/src/sch
 import { MINIMUM_TEXT_SIZE_PX, type AdTemplate, type Layout } from "../../../packages/ad-template-contract/src/types.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+/**
+ * Card-level view of a gallery template.
+ *
+ * This deliberately carries no layout or colour data. It is rendered into the
+ * server component payload for every card, and the full layer geometry is
+ * ~95% of a template's bytes while being used by none of the list surfaces
+ * (gallery, Ad Studio home, home dashboard, audit picker). Anything that needs
+ * the real layouts calls getTemplate and gets an AdTemplate.
+ */
 export interface TemplateSummary {
   templateId: string; name: string; importedAt: string;
-  imageInputs: number; textInputs: number; feedLayout: Layout; storyLayout: Layout;
-  semanticColours: Record<string, string>; gallerySampleUrl: string; description: string;
+  imageInputs: number; textInputs: number;
+  gallerySampleUrl: string; description: string;
   leadType: TemplateLeadType;
 }
 export type TemplateLeadType = "seller" | "buyer" | "appraisal" | "open_home" | "market_update" | "other";
@@ -111,8 +120,6 @@ function summaryFromTemplate(template: AdTemplate, row: TemplateRow): TemplateSu
     leadType: templateLeadType([name, description, template.metadata.publishRequirements.objective, template.metadata.aiWritingGuidance.summary].join(" ")),
     importedAt: typeof row.created_at === "string" ? row.created_at : template.createdAt,
     imageInputs: template.imageInputs.length, textInputs: template.textInputs.length,
-    feedLayout: template.feedLayout as Layout, storyLayout: template.storyLayout as Layout,
-    semanticColours: { ...template.semanticColours },
     gallerySampleUrl: gallerySampleProxyUrl(templateId)!,
   };
 }

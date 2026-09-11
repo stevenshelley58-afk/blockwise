@@ -7,6 +7,7 @@ import { type FormEvent, useMemo, useState } from "react";
 import { ButtonSpinner } from "@/components/app/button-spinner";
 import { hasTurnstileSiteKey, TurnstileVerification } from "@/components/auth/turnstile-verification";
 import { SSOButtons } from "@/components/auth/sso-buttons";
+import { HOME_PATH } from "@/lib/auth/home";
 import { testUsers } from "@/lib/auth/test-users";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { validateLoginCredentials } from "@/lib/auth/form-validation";
@@ -60,7 +61,7 @@ export function LoginForm({ showTestProfiles = false, testProfilePassword = "" }
       return;
     }
 
-    router.replace("/home");
+    router.replace(HOME_PATH);
     router.refresh();
   }
 

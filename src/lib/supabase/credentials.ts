@@ -10,6 +10,27 @@ export function cleanSupabaseEnv(value?: string): string {
   return value?.replace(/^\uFEFF/u, "").trim() ?? "";
 }
 
+/**
+ * Origin for server-side Supabase traffic.
+ *
+ * Server code must not reach Supabase through the app's own public origin.
+ * On the VPS that URL resolves to the host's public address, so every query
+ * left the container, crossed the public TLS edge and came back: measured at
+ * ~200 ms per request from inside the app container versus ~3 ms when the
+ * request goes straight to the internal router. Every customer page pays this
+ * per query, so the internal origin is both a correctness-of-topology fix and
+ * the single largest server-side latency win.
+ *
+ * `BLOCKWISE_SUPABASE_SERVER_URL` is only ever set for the server runtime and
+ * must stay an internal, plain-HTTP address. When it is absent the public URL
+ * is used, which is what the browser and every non-VPS environment rely on.
+ */
+export function resolveSupabaseServerUrl(env: SupabaseServerEnv = process.env): string {
+  const internal = cleanSupabaseEnv(env.BLOCKWISE_SUPABASE_SERVER_URL);
+  if (internal) return internal.replace(/\/+$/u, "");
+  return cleanSupabaseEnv(env.NEXT_PUBLIC_SUPABASE_URL ?? env.SUPABASE_URL).replace(/\/+$/u, "");
+}
+
 export function isLegacySupabaseJwt(value: string): boolean {
   return /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/u.test(value);
 }

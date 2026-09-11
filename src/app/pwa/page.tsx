@@ -3,10 +3,13 @@ import Script from "next/script";
 export const dynamic = "force-static";
 export const revalidate = 86400;
 
+// Kept in sync with HOME_PATH in src/lib/auth/home.ts. This page is a static
+// asset so it cannot import the constant; going straight to the dashboard
+// avoids the legacy /home redirect hop on every app launch.
 const redirectWhenOnline = `
 (() => {
   const openHome = () => window.setTimeout(() => {
-    window.location.replace("/home?source=pwa");
+    window.location.replace("/self-serve?source=pwa");
   }, 350);
   if (navigator.onLine) {
     openHome();
