@@ -355,8 +355,8 @@ function stageConfiguration(
 ): { nextAction: string; allowedActions: string[]; resumePath: string } {
   const map: Record<CustomerActivationStage, { nextAction: string; allowedActions: string[]; resumePath: string }> = {
     verify_email: { nextAction: "Verify your email", allowedActions: ["resend_verification"], resumePath: "/signup" },
-    confirm_country: { nextAction: "Confirm your country", allowedActions: ["confirm_country"], resumePath: "/onboarding" },
-    submit_website: { nextAction: "Add your business website", allowedActions: ["submit_website"], resumePath: "/onboarding" },
+    confirm_country: { nextAction: "Confirm your country", allowedActions: ["confirm_country"], resumePath: "/ad-studio/brand" },
+    submit_website: { nextAction: "Add your business website", allowedActions: ["submit_website"], resumePath: "/ad-studio/brand" },
     approve_brand_pack: { nextAction: "Review your Brand Pack", allowedActions: ["approve_brand_pack", "retry_brand_scan"], resumePath: "/ad-studio/brand" },
     select_template: { nextAction: "Choose an ad template", allowedActions: ["select_template"], resumePath: "/ad-studio" },
     generate_first_ad: { nextAction: "Create your first ad", allowedActions: ["generate"], resumePath: "/ad-studio" },

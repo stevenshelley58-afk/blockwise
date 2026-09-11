@@ -35,9 +35,9 @@ export function isMetaPartnerStartEnabled(): boolean {
   return process.env[META_PARTNER_STARTS_ENABLED_ENV]?.trim() === "true";
 }
 
-// The deep link to Meta's Business settings → Partners screen, where the
-// customer pastes Blockwise's Business ID to share their assets.
-export const META_PARTNERS_URL = "https://business.facebook.com/settings/partners";
+// The Meta deep link and the four shared steps live with the customer-facing
+// guide in `src/components/meta/partner-steps.ts`, so the customer flow and the
+// Help walkthrough cannot drift apart.
 
 // Scopes the system user must be granted. ads_management covers campaign
 // creation/publishing; business_management lets the token enumerate the

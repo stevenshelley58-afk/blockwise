@@ -23,7 +23,7 @@ export type NicheNavItem = {
   href: string;
   label: string;
   /** Structural icon name, rendered by the shared customer shell. */
-  icon: "home" | "studio" | "performance" | "radar" | "property" | "leads" | "brand" | "settings";
+  icon: "home" | "studio" | "performance" | "radar" | "property" | "leads" | "brand" | "settings" | "help";
   /** Include this destination in the mobile tab bar, using this shorter label. */
   mobileLabel?: string;
   /** Grouping label rendered above the item (starts a new section). */
@@ -240,7 +240,7 @@ export type SettingsCopy = {
   };
 };
 
-export type OnboardingCopy = {
+export type HelpCopy = {
   title: string;
   lead: string;
 };
@@ -285,6 +285,6 @@ export type NicheConfig = {
     adRadar: AdRadarCopy;
     propertyCheck: PropertyCheckCopy;
     settings: SettingsCopy;
-    onboarding: OnboardingCopy;
+    help: HelpCopy;
   };
 };

@@ -23,6 +23,18 @@ const TONES: Record<MetaPartnerAccessRequestStatus, StatusTone> = {
   cancelled: "rose",
 };
 
+type VerifiedIds = {
+  adAccountId: string;
+  pageId: string;
+  instagramAccountId: string;
+};
+
+const EMPTY_IDS: VerifiedIds = {
+  adAccountId: "",
+  pageId: "",
+  instagramAccountId: "",
+};
+
 export function MetaPartnerAccessRequests({
   requests,
 }: {
@@ -30,6 +42,7 @@ export function MetaPartnerAccessRequests({
 }) {
   const [items, setItems] = useState(requests);
   const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [ids, setIds] = useState<Record<string, VerifiedIds>>({});
   const [pending, setPending] = useState<string | null>(null);
   const [message, setMessage] = useState<{
     error: boolean;
@@ -56,7 +69,11 @@ export function MetaPartnerAccessRequests({
         {
           method: "PATCH",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ status, reason }),
+          body: JSON.stringify({
+            status,
+            reason,
+            ...(ids[request.requestId] ?? EMPTY_IDS),
+          }),
         },
       );
       const payload = (await response.json().catch(() => ({}))) as {
@@ -101,9 +118,10 @@ export function MetaPartnerAccessRequests({
         <div>
           <h2 id="meta-partner-access-title">Meta partner-access requests</h2>
           <p className="item-meta">
-            Match the exact IDs against the assets visible to Blockwise in Meta
-            Business Settings. This is a manual verification, not an API
-            connection.
+            The customer confirms what they shared; read the real asset IDs from
+            the shared-asset list in Meta Business Settings and record them here
+            before marking the request ready. This is a manual verification, not
+            an API connection.
           </p>
         </div>
         <StatusPill tone="blue">Operator queue</StatusPill>
@@ -119,9 +137,16 @@ export function MetaPartnerAccessRequests({
             key={request.requestId}
             request={request}
             reason={reasons[request.requestId] ?? ""}
+            ids={ids[request.requestId] ?? EMPTY_IDS}
             pending={pending === request.requestId}
             onReason={(value) =>
               setReasons((current) => ({
+                ...current,
+                [request.requestId]: value,
+              }))
+            }
+            onIds={(value) =>
+              setIds((current) => ({
                 ...current,
                 [request.requestId]: value,
               }))
@@ -145,14 +170,18 @@ export function MetaPartnerAccessRequests({
 function RequestCard({
   request,
   reason,
+  ids,
   pending,
   onReason,
+  onIds,
   onUpdate,
 }: {
   request: MetaPartnerAccessRequest;
   reason: string;
+  ids: VerifiedIds;
   pending: boolean;
   onReason: (value: string) => void;
+  onIds: (value: VerifiedIds) => void;
   onUpdate: (
     request: MetaPartnerAccessRequest,
     status: MetaPartnerAccessRequestStatus,
@@ -179,6 +208,10 @@ function RequestCard({
           : request.status === "ready_for_manual_publishing"
             ? [["cancelled", "Revoke verification"]]
             : [];
+  const canRecordIds = ["requested", "verifying", "needs_changes"].includes(
+    request.status,
+  );
+  const recordsIds = !request.adAccountId && !request.pageId;
   return (
     <article className="item-card">
       <div className="row-between">
@@ -193,17 +226,47 @@ function RequestCard({
       <dl className="item-meta">
         <div>
           <dt>Ad account ID</dt>
-          <dd>{request.adAccountId}</dd>
+          <dd>{request.adAccountId || "Not recorded yet"}</dd>
         </div>
         <div>
           <dt>Facebook Page ID</dt>
-          <dd>{request.pageId}</dd>
+          <dd>{request.pageId || "Not recorded yet"}</dd>
         </div>
         <div>
           <dt>Instagram account ID</dt>
-          <dd>{request.instagramAccountId ?? "Not shared"}</dd>
+          <dd>{request.instagramAccountId ?? "Not recorded yet"}</dd>
         </div>
       </dl>
+      {canRecordIds ? (
+        <div className="customer-ops-credit-action">
+          <p className="item-meta">
+            {recordsIds
+              ? "The customer confirmed their sharing. Read the IDs from the shared-asset list in Meta and record them here."
+              : "Update the recorded IDs if the shared assets changed."}
+          </p>
+          <IdField
+            id={`meta-account-${request.requestId}`}
+            label="Ad account ID you verified"
+            value={ids.adAccountId}
+            placeholder={request.adAccountId || "act_… or numeric ID"}
+            onChange={(value) => onIds({ ...ids, adAccountId: value })}
+          />
+          <IdField
+            id={`meta-page-${request.requestId}`}
+            label="Facebook Page ID you verified"
+            value={ids.pageId}
+            placeholder={request.pageId || "Numeric Page ID"}
+            onChange={(value) => onIds({ ...ids, pageId: value })}
+          />
+          <IdField
+            id={`meta-instagram-${request.requestId}`}
+            label="Instagram account ID (optional)"
+            value={ids.instagramAccountId}
+            placeholder={request.instagramAccountId ?? "Leave blank if unused"}
+            onChange={(value) => onIds({ ...ids, instagramAccountId: value })}
+          />
+        </div>
+      ) : null}
       {request.statusReason ? (
         <p>
           <strong>Latest operator note:</strong> {request.statusReason}
@@ -250,6 +313,34 @@ function RequestCard({
         </div>
       ) : null}
     </article>
+  );
+}
+
+function IdField({
+  id,
+  label,
+  value,
+  placeholder,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div>
+      <label htmlFor={id}>{label}</label>
+      <input
+        id={id}
+        inputMode="numeric"
+        autoComplete="off"
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
   );
 }
 

@@ -5,6 +5,13 @@ import { deterministicUuid } from "../adstudio/id.ts";
 export const META_PARTNER_REQUEST_TARGET = "meta_partner_access_request";
 export const META_PARTNER_REQUEST_ACTION = "requested";
 export const META_PARTNER_STATUS_ACTION = "status_changed";
+/**
+ * How the request was raised. `confirmation` is the current customer flow: the
+ * customer shares assets in Meta and confirms it, and the operator reads the
+ * asset IDs from Meta's shared-asset list. `assets` carries IDs the customer
+ * typed on the retired form and is kept so those records still read correctly.
+ */
+export type MetaPartnerRequestType = "confirmation" | "assets";
 export const META_PARTNER_REQUEST_STATUSES = [
   "requested",
   "verifying",
@@ -17,6 +24,8 @@ export type MetaPartnerAccessRequestStatus =
 export type MetaPartnerAccessRequest = {
   requestId: string;
   workspaceId: string;
+  requestType: MetaPartnerRequestType;
+  /** Empty until an operator records what they verified in Meta. */
   adAccountId: string;
   pageId: string;
   instagramAccountId: string | null;
@@ -94,15 +103,23 @@ function toRequest(events: AuditRow[]): MetaPartnerAccessRequest | null {
     .at(-1);
   const status = statusEvent ? statusFromRow(statusEvent) : "requested";
   if (!status) return null;
+  // The customer's confirmation carries no asset IDs, so the operator records
+  // what they verified in Meta on the status event. Read the newest value from
+  // either event so old typed-ID requests keep working.
+  const verified = statusEvent?.metadata ?? {};
+  const assetId = (key: "adAccountId" | "pageId") => {
+    const value = verified[key] ?? metadata[key];
+    return typeof value === "string" ? value : "";
+  };
+  const instagramAccountId = verified.instagramAccountId ?? metadata.instagramAccountId;
   return {
     requestId: created.correlation_id ?? created.id,
     workspaceId: created.workspace_id,
-    adAccountId: String(metadata.adAccountId ?? ""),
-    pageId: String(metadata.pageId ?? ""),
+    requestType: metadata.requestType === "assets" ? "assets" : "confirmation",
+    adAccountId: assetId("adAccountId"),
+    pageId: assetId("pageId"),
     instagramAccountId:
-      typeof metadata.instagramAccountId === "string"
-        ? metadata.instagramAccountId
-        : null,
+      typeof instagramAccountId === "string" ? instagramAccountId : null,
     status,
     statusReason:
       statusEvent && typeof statusEvent.metadata?.reason === "string"
@@ -141,23 +158,34 @@ export async function createMetaPartnerAccessRequest(input: {
   workspaceId: string;
   actorProfileId: string;
   mutationId: string;
-  adAccountId: unknown;
-  pageId: unknown;
+  requestType?: unknown;
+  adAccountId?: unknown;
+  pageId?: unknown;
   instagramAccountId?: unknown;
 }) {
   const workspaceId = requireUuid(input.workspaceId, "workspaceId");
   const actorProfileId = requireUuid(input.actorProfileId, "actorProfileId");
   const mutationId = requireUuid(input.mutationId, "mutationId");
-  const adAccountId = normalizeMetaId(input.adAccountId, "account");
-  const pageId = normalizeMetaId(input.pageId, "page");
+  // A confirmation is the whole request: the customer has already shared the
+  // assets in Meta and the operator reads the IDs from Meta's shared list.
+  // Anything else still has to name the assets it is about.
+  const requestType: MetaPartnerRequestType =
+    input.requestType === "assets" ? "assets" : "confirmation";
+  const adAccountId =
+    requestType === "assets" ? normalizeMetaId(input.adAccountId, "account") : null;
+  const pageId =
+    requestType === "assets" ? normalizeMetaId(input.pageId, "page") : null;
   const instagramAccountId =
-    input.instagramAccountId == null || input.instagramAccountId === ""
-      ? null
-      : normalizeMetaId(input.instagramAccountId, "instagram");
+    requestType === "assets" &&
+    input.instagramAccountId != null &&
+    input.instagramAccountId !== ""
+      ? normalizeMetaId(input.instagramAccountId, "instagram")
+      : null;
   if (
-    !adAccountId ||
-    !pageId ||
-    (input.instagramAccountId && !instagramAccountId)
+    requestType === "assets" &&
+    (!adAccountId ||
+      !pageId ||
+      (input.instagramAccountId && !instagramAccountId))
   )
     throw new MetaPartnerAccessRequestError(
       "invalid_input",
@@ -170,8 +198,9 @@ export async function createMetaPartnerAccessRequest(input: {
   if (existing) {
     if (
       existing.workspaceId !== workspaceId ||
-      existing.adAccountId !== adAccountId ||
-      existing.pageId !== pageId ||
+      existing.requestType !== requestType ||
+      existing.adAccountId !== (adAccountId ?? "") ||
+      existing.pageId !== (pageId ?? "") ||
       existing.instagramAccountId !== instagramAccountId
     )
       throw new MetaPartnerAccessRequestError(
@@ -191,7 +220,7 @@ export async function createMetaPartnerAccessRequest(input: {
     target_id: workspaceId,
     correlation_id: mutationId,
     metadata: {
-      requestType: "meta_partner_access",
+      requestType,
       status: "requested",
       adAccountId,
       pageId,
@@ -282,6 +311,15 @@ export async function updateMetaPartnerAccessStatus(input: {
   status: MetaPartnerAccessRequestStatus;
   reason: string;
   actorProfileId: string;
+  /**
+   * The asset IDs the operator found on Meta's shared-asset list. Required to
+   * mark a confirmation-only request ready, because that request carries none.
+   */
+  verified?: {
+    adAccountId?: unknown;
+    pageId?: unknown;
+    instagramAccountId?: unknown;
+  };
 }) {
   const requestId = requireUuid(input.requestId, "requestId");
   const actorProfileId = requireUuid(input.actorProfileId, "actorProfileId");
@@ -309,6 +347,25 @@ export async function updateMetaPartnerAccessStatus(input: {
       409,
     );
 
+  const adAccountId =
+    normalizeMetaId(input.verified?.adAccountId, "account") ??
+    (current.adAccountId || null);
+  const pageId =
+    normalizeMetaId(input.verified?.pageId, "page") ?? (current.pageId || null);
+  const instagramAccountId =
+    input.verified?.instagramAccountId == null ||
+    input.verified?.instagramAccountId === ""
+      ? current.instagramAccountId
+      : normalizeMetaId(input.verified.instagramAccountId, "instagram");
+  if (
+    input.status === "ready_for_manual_publishing" &&
+    (!adAccountId || !pageId)
+  )
+    throw new MetaPartnerAccessRequestError(
+      "invalid_input",
+      "Record the ad account ID and Page ID you verified in Meta before marking this ready.",
+    );
+
   const transitionId = deterministicUuid(
     `meta_partner_access_transition:${requestId}:${current.updatedAt}:${input.status}`,
   );
@@ -324,6 +381,9 @@ export async function updateMetaPartnerAccessStatus(input: {
       requestType: "meta_partner_access",
       status: input.status,
       reason,
+      adAccountId,
+      pageId,
+      instagramAccountId,
     },
   });
   if (error && error.code !== "23505")

@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
       workspaceId: guard.access.workspaceId,
       actorProfileId: guard.access.userId,
       mutationId: body.mutationId as string,
+      requestType: body.requestType,
       adAccountId: body.adAccountId,
       pageId: body.pageId,
       instagramAccountId: body.instagramAccountId,

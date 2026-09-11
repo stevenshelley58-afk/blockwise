@@ -97,20 +97,23 @@ test("provider tokens encrypt with last-four metadata and decrypt with the same 
   assert.equal(decryptToken(encrypted, encryptionKey), "access-token-abc123");
 });
 
-test("OAuth return paths are allowlisted for onboarding", () => {
-  assert.equal(sanitizeOAuthReturnPath("/onboarding"), "/onboarding");
-  assert.equal(sanitizeOAuthReturnPath("https://evil.example/onboarding"), "/results");
+test("OAuth return paths are allowlisted to live customer routes", () => {
+  assert.equal(sanitizeOAuthReturnPath("/results"), "/results");
+  assert.equal(sanitizeOAuthReturnPath("/ad-studio"), "/ad-studio");
+  // The retired /onboarding screen is no longer an allowed return path.
+  assert.equal(sanitizeOAuthReturnPath("/onboarding"), "/results");
+  assert.equal(sanitizeOAuthReturnPath("https://evil.example/ad-studio"), "/results");
   assert.equal(sanitizeOAuthReturnPath("/settings"), "/results");
 
   const payload = createOAuthStatePayload({
     provider: "meta",
     workspaceId: "workspace_demo",
     userId: "user_demo",
-    returnPath: "/onboarding",
+    returnPath: "/ad-studio",
     nowSeconds: 1_779_840_000,
   });
 
-  assert.equal(payload.returnPath, "/onboarding");
+  assert.equal(payload.returnPath, "/ad-studio");
 });
 
 test("Meta OAuth state signs a safe Ad Studio resume path and campaign identifier", () => {

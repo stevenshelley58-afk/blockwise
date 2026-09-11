@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { ConnectMetaGuide } from "@/components/meta/connect-meta-guide";
 import { canManageProviderConnections } from "@/lib/auth/access-control";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { getMetaPartnerBusinessId } from "@/lib/providers/meta-partner";
 
 export const dynamic = "force-dynamic";
 
@@ -30,26 +29,14 @@ export default async function ConnectMetaPage() {
   const canManage = canManageProviderConnections(access);
 
   return (
-    <section
+    <main
       aria-label="Share Meta assets"
-      className="mx-auto w-full max-w-[1080px] px-4 pt-4 pb-24 [@media(min-width:768px)_and_(max-height:920px)]:pb-6 md:px-6 md:pt-5 md:pb-10 [@media(min-width:768px)_and_(max-height:920px)]:md:pb-4"
+      className="mx-auto w-full max-w-[760px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16"
     >
-      <header className="mx-auto mb-4 w-full max-w-[760px] [@media(min-width:768px)_and_(max-height:920px)]:mb-2 md:mb-5 [@media(min-width:768px)_and_(max-height:920px)]:md:mb-3">
-        <h1 className="mt-1 font-display text-[22px] font-extrabold tracking-[-0.02em] [@media(min-width:768px)_and_(max-height:920px)]:text-[19px] md:text-[26px] [@media(min-width:768px)_and_(max-height:920px)]:md:text-[22px]">
-          Share your Meta assets with Blockwise
-        </h1>
-        <p className="mt-1 text-[13px] text-muted-foreground">
-          Follow the real Meta screens below to share your ad account, Facebook
-          Page, and optional Instagram account. An authorised Blockwise operator
-          will verify the exact assets before publishing anything.
-        </p>
-      </header>
-
       <ConnectMetaGuide
         workspaceId={access.workspaceId}
         canManage={canManage}
-        businessId={getMetaPartnerBusinessId()}
       />
-    </section>
+    </main>
   );
 }

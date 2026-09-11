@@ -2,6 +2,7 @@
 
 import {
   BarChart3,
+  CircleHelp,
   Database,
   FileSearch,
   LayoutGrid,
@@ -63,6 +64,7 @@ const customerToolIcons = {
   leads: UsersRound,
   brand: UserRound,
   settings: Settings,
+  help: CircleHelp,
 } satisfies Record<(typeof niche.nav.items)[number]["icon"], NavIcon>;
 
 const selfServeNavItems: NavItem[] = niche.nav.items

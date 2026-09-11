@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 function read(path: string): string {
@@ -30,27 +30,29 @@ test("authenticated home is driven by the activation resolver and shared credit 
   assert.match(card, /activation\.resumePath/);
 });
 
-test("onboarding starts with an AU-only website scan and canonical Brand Pack review", () => {
-  const wizard = read("src/components/onboarding/onboarding-wizard.tsx");
+test("the retired onboarding screen is gone and Brand Pack owns brand setup", () => {
+  assert.equal(
+    existsSync("src/app/(customer)/onboarding/page.tsx"),
+    false,
+    "the /onboarding first screen must stay deleted",
+  );
+  assert.equal(
+    existsSync("src/components/onboarding/onboarding-wizard.tsx"),
+    false,
+  );
+
+  // Brand Pack is where a customer scans a website and reviews the pack.
+  const brandStudio = read("src/components/adstudio/brand-studio.tsx");
+  assert.match(brandStudio, /\/api\/adstudio\/brand-kits\/extract/);
+  assert.match(brandStudio, /\/approve/);
+
+  // The AU-only market route still backs activation; nothing links the wizard.
   const route = read("src/app/api/workspace/onboarding-market/route.ts");
-
-  assert.match(wizard, /Start with your website/);
-  assert.match(wizard, /Country and billing currency/);
-  assert.match(wizard, /\/api\/adstudio\/brand-kits\/extract/);
-  assert.match(wizard, /\/approve/);
-  assert.match(wizard, /Add the essentials instead/);
-  assert.match(wizard, /Review all details/);
-  assert.doesNotMatch(wizard, /Confirm your profile|Connect your ad accounts/);
-  assert.doesNotMatch(wizard, /United States/);
-
   assert.match(route, /country !== "AU"/);
   assert.match(route, /AU: "AUD"/);
   assert.match(route, /supports Australia only/);
   assert.match(route, /recordCustomerActivationMilestone/);
   assert.match(route, /milestone: "country_confirmed"/);
-  assert.match(route, /billing_checkout_completed_at/);
-  assert.match(route, /provider_connections/);
-  assert.match(route, /assisted workspace migration/);
 });
 
 test("settings expose profile, usage, market binding, booking, and five named seats", () => {

@@ -280,7 +280,7 @@ test("activation always derives the real next onboarding step", async () => {
   });
 
   assert.equal(result.currentStage, "confirm_country");
-  assert.equal(result.resumePath, "/onboarding");
+  assert.equal(result.resumePath, "/ad-studio/brand");
   assert.deepEqual(result.operatorBlockers, []);
 });
 

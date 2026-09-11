@@ -61,6 +61,8 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 - **Hierarchy before containers.** Use sections, rows, hairlines and disclosures before rounded cards or chart scaffolds. Keep Home flat by default.
 - **Lead with the customer's real creative.** Home leads with the customer's creative and keeps its next action linked to a server-resolved, available route.
 - **Guides are content-first.** Lead with the useful content, use rounded panels only when they improve grouping, and keep promotion subtle and secondary.
+- **Help owns the walkthrough.** `/help` is the customer destination for provider walkthroughs, screenshots, tips and edge cases. A working screen keeps only the instruction its next action needs, plus one link to Help; it never carries the manual. The Meta sharing steps in `src/components/meta/partner-steps.ts` are the single source shared by `/connect-meta` and Help, so the checklist and the walkthrough cannot drift apart.
+- **The customer never transcribes provider IDs.** A customer confirms what they shared in the provider's own screens; the operator reads the resulting asset IDs from the provider and records them. Never ask a customer to find and type an account, Page or pixel ID.
 
 ## Accessibility
 

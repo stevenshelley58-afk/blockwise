@@ -6,9 +6,12 @@ import path from "node:path";
 const root = process.cwd();
 const read = (file: string) => fs.readFileSync(path.join(root, file), "utf8");
 
-test("customer Meta guide uses four real screenshots and next/image", () => {
-  const source = read("src/components/meta/connect-meta-guide.tsx");
-  assert.match(source, /next\/image/);
+test("the Meta walkthrough carries four real screenshots and next/image", () => {
+  const steps = read("src/components/meta/partner-steps.ts");
+  const shot = read("src/components/meta/guide-shot.tsx");
+  const help = read("src/app/(customer)/help/page.tsx");
+  assert.match(shot, /next\/image/);
+  assert.match(help, /GuideShot/);
   const imageRefs = [
     "/help/meta/partner-access/01-partners.webp",
     "/help/meta/partner-access/02-give-access.webp",
@@ -16,25 +19,41 @@ test("customer Meta guide uses four real screenshots and next/image", () => {
     "/help/meta/partner-access/04-assets-and-permissions.webp",
   ];
   for (const ref of imageRefs) {
-    assert.match(source, new RegExp(ref.replaceAll("/", "\\/")));
+    assert.match(steps, new RegExp(ref.replaceAll("/", "\\/")));
     const asset = path.join(root, "public", ref);
     assert.ok(fs.existsSync(asset), `screenshot asset missing: ${ref}`);
   }
 });
 
-test("customer guide contains the partner sharing contract and honest manual handoff", () => {
+test("tips and the Business ID live in Help, not on the connect screen", () => {
   const guide = read("src/components/meta/connect-meta-guide.tsx");
+  const help = read("src/app/(customer)/help/page.tsx");
+  const steps = read("src/components/meta/partner-steps.ts");
+
+  // The connect screen is a checklist plus one confirmation.
+  assert.match(guide, /META_PARTNER_STEPS/);
+  assert.match(guide, /Confirm my sharing/);
+  assert.doesNotMatch(guide, /<Input/);
+  assert.doesNotMatch(guide, /Ad account ID|Page ID/);
+  assert.doesNotMatch(guide, /Before you start/);
+
+  // Help owns the walkthrough: screenshots, the ID and the permission detail.
+  assert.match(help, /CopyBusinessId/);
+  assert.match(steps, /Blockwise Business ID/);
+  assert.match(steps, /Leave Full control off/);
+  assert.match(steps, /Partners is missing/);
+});
+
+test("the customer flow names the sharing contract honestly", () => {
+  const guide = read("src/components/meta/connect-meta-guide.tsx");
+  const steps = read("src/components/meta/partner-steps.ts");
   const page = read("src/app/(customer)/connect-meta/page.tsx");
   const settings = read("src/app/(customer)/settings/connections-section.tsx");
-  const combined = `${guide}\n${page}\n${settings}`;
-  assert.match(combined, /Business ID/i);
+  const combined = `${guide}\n${steps}\n${page}\n${settings}`;
   assert.match(combined, /business\.facebook\.com\/settings\/partners/);
-  assert.match(combined, /adAccountId|ad account/i);
-  assert.match(combined, /pageId|Page ID/i);
-  assert.match(combined, /instagramAccountId|Instagram/i);
+  assert.match(combined, /share|sharing/i);
   assert.match(combined, /owner|admin/i);
-  assert.match(combined, /manual|operator/i);
-  assert.match(combined, /Share Meta assets|share.*assets/i);
+  assert.match(combined, /operator/i);
   assert.doesNotMatch(guide, /claimMeta|partner-claim/i);
   assert.doesNotMatch(guide, /Meta is connected/i);
 });

@@ -89,23 +89,21 @@ test.describe("customer UX flows", () => {
     await expect(page.getByText("Open pacing and location details", { exact: true })).toBeVisible();
   });
 
-  test("Meta connection keeps the essential step and makes optional help expandable", async ({ page }) => {
+  test("Meta sharing stays a short checklist on a phone", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/connect-meta");
-    await expect(page.getByRole("heading", { name: "Share your Meta assets with Blockwise", exact: true })).toBeVisible();
-    const intro = page.getByRole("button", { name: /show me what to do/i });
-    if (!(await intro.isVisible().catch(() => false))) {
-      await expect(page.getByRole("heading", { name: "Your access details were sent", exact: true })).toBeVisible();
-      await expect(page.getByRole("button", { name: "Check status", exact: true })).toBeVisible();
+    // Either the checklist or, for a workspace that already confirmed, the
+    // status card. No intro screen and no asset IDs on either.
+    const confirm = page.getByRole("button", { name: "Confirm my sharing", exact: true });
+    if (await confirm.isVisible().catch(() => false)) {
+      await expect(page.getByRole("heading", { name: "Share your Meta assets", exact: true })).toBeVisible();
+      await expect(confirm).toBeDisabled();
+      await expect(page.getByRole("checkbox", { name: /I have assigned my Page, ad account and permissions/i })).toBeVisible();
+      await expect(page.getByRole("link", { name: /Open the full walkthrough/i })).toHaveAttribute("href", "/help");
+      await expect(page.locator("#meta-ad-account-id")).toHaveCount(0);
       return;
     }
-    await intro.click();
-    const help = page.locator("details").filter({ hasText: "Help with this step" });
-    await expect(help).toBeVisible();
-    await expect(help.locator("summary")).toBeVisible();
-    await expect(help).not.toHaveAttribute("open", "");
-    await help.locator("summary").click();
-    await expect(help).toHaveAttribute("open", "");
+    await expect(page.getByRole("heading", { name: /checking your Meta sharing|Meta access is ready|change is needed in Meta/i })).toBeVisible();
   });
 });
 

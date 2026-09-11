@@ -111,7 +111,8 @@ export default async function ResultsPage({
       initialGeneratedAt={reporting.snapshot.generatedAt}
       userId={access.userId}
       workspaceId={access.workspaceId}
-      // Partner-access connect: one guided page handles share → poll → claim.
+      // Partner-access connect: the customer shares assets in Meta, confirms
+      // it on one screen, and an operator verifies the rest.
       metaConnectHref="/connect-meta"
       oauthNotice={oauthNotice}
       focusCampaignId={focusCampaignId}

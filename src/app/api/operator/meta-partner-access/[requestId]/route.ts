@@ -43,6 +43,9 @@ export async function PATCH(request: Request, context: Context) {
   const body = (await request.json().catch(() => ({}))) as {
     status?: unknown;
     reason?: unknown;
+    adAccountId?: unknown;
+    pageId?: unknown;
+    instagramAccountId?: unknown;
   };
   if (
     typeof body.status !== "string" ||
@@ -60,6 +63,11 @@ export async function PATCH(request: Request, context: Context) {
       status: body.status as MetaPartnerAccessRequestStatus,
       reason: typeof body.reason === "string" ? body.reason : "",
       actorProfileId: auth.userId,
+      verified: {
+        adAccountId: body.adAccountId,
+        pageId: body.pageId,
+        instagramAccountId: body.instagramAccountId,
+      },
     });
     return NextResponse.json({ request: result });
   } catch (error) {

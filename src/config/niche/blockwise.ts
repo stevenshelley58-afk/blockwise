@@ -1,8 +1,8 @@
 import type { NicheConfig } from "./niche";
 import { adRadar } from "./blockwise/ad-radar";
+import { help } from "./blockwise/help";
 import { home } from "./blockwise/home";
 import { leads } from "./blockwise/leads";
-import { onboarding } from "./blockwise/onboarding";
 import { performance } from "./blockwise/performance";
 import { propertyCheck } from "./blockwise/property-check";
 import { settings } from "./blockwise/settings";
@@ -39,6 +39,7 @@ export const blockwise: NicheConfig = {
       { href: "/property-check", label: "Property Check", icon: "property", feature: "propertyCheck" },
       { href: "/leads", label: "Leads", icon: "leads", mobileLabel: "Leads" },
       { href: "/ad-studio/brand", label: "Brand Pack", icon: "brand", section: "Set up" },
+      { href: "/help", label: "Help", icon: "help", section: "Set up" },
       { href: "/settings", label: "Settings", icon: "settings", section: "Set up" },
     ],
   },
@@ -57,6 +58,6 @@ export const blockwise: NicheConfig = {
     adRadar,
     propertyCheck,
     settings,
-    onboarding,
+    help,
   },
 };
