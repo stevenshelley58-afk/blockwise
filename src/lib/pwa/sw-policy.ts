@@ -2,7 +2,7 @@ export const PWA_CACHE_PREFIX = "blockwise-pwa";
 // Bump when shipped static assets under cached prefixes (e.g. /ads/) change at a
 // stable URL — the activate handler drops older caches, so devices refetch them
 // instead of serving a stale cache-first copy.
-export const PWA_CACHE_VERSION = "v4";
+export const PWA_CACHE_VERSION = "v5";
 export const STATIC_CACHE_NAME = `${PWA_CACHE_PREFIX}-${PWA_CACHE_VERSION}-static`;
 export const THUMBNAIL_CACHE_NAME = `${PWA_CACHE_PREFIX}-${PWA_CACHE_VERSION}-adstudio-thumbnails`;
 export const STATIC_CACHE_MAX_ENTRIES = 160;
@@ -110,11 +110,13 @@ export function isCacheableStaticAssetRequest(request: ServiceWorkerRequestLike,
   return isStaticAssetPath(url.pathname, request.destination);
 }
 
+/**
+ * A width variant of an Ad Studio display image. These are numerous and cheap,
+ * so they go to their own bounded cache instead of competing with app assets;
+ * the rule matches any `-<width>.webp` suffix, not one hard-coded ladder.
+ */
 export function isAdStudioThumbnailPath(pathname: string): boolean {
-  return (
-    pathname.startsWith("/adstudio-thumbnails/") &&
-    (pathname.endsWith("-320.webp") || pathname.endsWith("-640.webp"))
-  );
+  return pathname.startsWith("/adstudio-thumbnails/") && /-\d+\.webp$/.test(pathname);
 }
 
 export function canUseOfflineFallbackForNavigation(request: ServiceWorkerRequestLike, origin: string): boolean {
@@ -201,8 +203,7 @@ function isCacheableStaticAssetRequest(request) {
 }
 
 function isAdStudioThumbnailPath(pathname) {
-  return pathname.startsWith("/adstudio-thumbnails/") &&
-    (pathname.endsWith("-320.webp") || pathname.endsWith("-640.webp"));
+  return pathname.startsWith("/adstudio-thumbnails/") && /-\d+\.webp$/.test(pathname);
 }
 
 function canUseOfflineFallbackForNavigation(request) {

@@ -1,6 +1,33 @@
 export const withBasePath = (path: string) =>
   `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${path}`;
 
+/**
+ * The hero deck. Kept here with the rest of the homepage content so the data,
+ * its image widths and the responsive-variant build step all read one list.
+ */
+export type ShowcaseAd = {
+  id: string;
+  format: "feed" | "story";
+  page: string;
+  initials: string;
+  tone: "navy" | "blue" | "gold" | "charcoal";
+  image: string;
+  copy: string;
+  headline: string;
+  domain: string;
+};
+
+export const SHOWCASE_ADS: readonly ShowcaseAd[] = [
+  { id: "just-listed-feed", format: "feed", page: "Blockwise Realty", initials: "BR", tone: "navy", image: "/home/home-dusk.webp", copy: "Just listed in Mount Lawley. View the photos, floorplan and inspection times.", headline: "A new address worth seeing", domain: "BLOCKWISEREALTY.COM.AU" },
+  { id: "buyers-story", format: "story", page: "West & Co Property", initials: "W&C", tone: "blue", image: "/hero/hero-tall.webp", copy: "Qualified buyers are looking now.", headline: "See buyer demand", domain: "WESTANDCO.COM.AU" },
+  { id: "local-advice-feed", format: "feed", page: "Jordan Lee Property", initials: "JL", tone: "charcoal", image: "/home/open-home-living.webp", copy: "Local advice. Clear next steps. Talk with Jordan about your property plans.", headline: "Book a property call", domain: "JORDANLEE.COM.AU" },
+  { id: "appraisal-story", format: "story", page: "Mia Calloway Real Estate", initials: "MC", tone: "gold", image: "/ads/ad-coastline.webp", copy: "Find out what your home could be worth.", headline: "Request an appraisal", domain: "MIACALLOWAY.COM.AU" },
+  { id: "first-home-feed", format: "feed", page: "Northside Property", initials: "NP", tone: "navy", image: "/home/mt-lawley-federation.webp", copy: "Buying your first home? Start with the questions that make every inspection easier.", headline: "A smarter first-home checklist", domain: "NORTHSIDEPROPERTY.COM.AU" },
+  { id: "mobile-appraisal-story", format: "story", page: "Alex Morgan Property", initials: "AM", tone: "blue", image: "/home/workspace-hero/agent-ad.webp", copy: "Your local property appraisal, made simple.", headline: "Book an appraisal", domain: "ALEXMORGAN.COM.AU" },
+  { id: "market-report-feed", format: "feed", page: "Harbourline Realty", initials: "HR", tone: "charcoal", image: "/home/home-pool.webp", copy: "Prices, recent sales and buyer activity. See what changed in your local market.", headline: "Your suburb market report", domain: "HARBOURLINE.COM.AU" },
+  { id: "planning-story", format: "story", page: "Oak & Key Property", initials: "O&K", tone: "gold", image: "/ads/ad-hillview.webp", copy: "Plan your next move with a clearer property checklist.", headline: "Get the checklist", domain: "OAKANDKEY.COM.AU" },
+] as const;
+
 export const AD_EXAMPLES = [
   {
     id: "appraisal",

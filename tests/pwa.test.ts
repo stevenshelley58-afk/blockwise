@@ -14,6 +14,7 @@ import {
   canUseOfflineFallbackForNavigation,
   createServiceWorkerSource,
   isExcludedServiceWorkerPath,
+  isAdStudioThumbnailPath,
   isCacheableStaticAssetRequest,
 } from "../src/lib/pwa/sw-policy.ts";
 
@@ -51,6 +52,11 @@ test("root layout registers the production service worker", () => {
 test("service worker policy caches only same-origin static assets", () => {
   assert.equal(isCacheableStaticAssetRequest({ url: "/_next/static/chunks/app.js", destination: "script" }, ORIGIN), true);
   assert.equal(isCacheableStaticAssetRequest({ url: "/icons/icon-192.png", destination: "image" }, ORIGIN), true);
+  // Display-image width variants go to the bounded thumbnail cache, whatever
+  // ladder produced them, so they cannot evict app assets from the static cache.
+  assert.equal(isCacheableStaticAssetRequest({ url: "/adstudio-thumbnails/meta/abc-384.webp", destination: "image" }, ORIGIN), false);
+  assert.equal(isAdStudioThumbnailPath("/adstudio-thumbnails/meta/abc-384.webp"), true);
+  assert.equal(isAdStudioThumbnailPath("/adstudio-thumbnails/meta/abc-preview.webp"), false);
   assert.equal(isCacheableStaticAssetRequest({ url: "/hero/hero-wide.jpg", destination: "image" }, ORIGIN), true);
   assert.equal(
     isCacheableStaticAssetRequest({ url: "/adstudio-samples/sample.png", destination: "image" }, ORIGIN),
@@ -79,7 +85,8 @@ test("service worker policy uses offline fallback only for safe same-origin navi
 test("generated service worker source includes versioned cache and cleanup policy", () => {
   const source = createServiceWorkerSource();
 
-  assert.equal(PWA_CACHE_VERSION, "v4");
+  // Pinned on purpose: bump it here when shipped static assets change at a stable URL.
+  assert.equal(PWA_CACHE_VERSION, "v5");
   assert.match(source, new RegExp(`const STATIC_CACHE_NAME = "${STATIC_CACHE_NAME}"`));
   assert.match(source, new RegExp(`const STATIC_CACHE_MAX_ENTRIES = ${STATIC_CACHE_MAX_ENTRIES}`));
   assert.match(source, new RegExp(`const THUMBNAIL_CACHE_NAME = "${THUMBNAIL_CACHE_NAME}"`));

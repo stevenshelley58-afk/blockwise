@@ -13,6 +13,7 @@ import {
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { creativeImageSrcSet } from "@/lib/homepage-concept/creative-image";
 import { AD_EXAMPLES, AD_LIBRARY, withBasePath } from "@/lib/homepage-concept/content";
 
 import "./workflow-showcase.css";
@@ -204,6 +205,7 @@ function StoryAd({
       <motion.div layoutId="story-ad-creative" className="hc-story-ad-image" transition={STORY_MOVE}>
         <img
           src={withBasePath(STORY_AD.image)}
+          srcSet={creativeImageSrcSet(STORY_AD.image)}
           alt=""
           width="1080"
           height="1350"
@@ -353,6 +355,7 @@ function LibraryScene({ phase, narrow }: { phase: number; narrow: boolean }) {
                 >
                   <img
                     src={withBasePath(ad.image)}
+                    srcSet={creativeImageSrcSet(ad.image)}
                     alt=""
                     width="1080"
                     height="1350"
