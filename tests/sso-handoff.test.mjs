@@ -39,15 +39,26 @@ test("the public client id reaches the browser build", () => {
   assert.match(dockerfile, /^ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=\$NEXT_PUBLIC_GOOGLE_CLIENT_ID$/m);
 });
 
-test("the Content-Security-Policy allows the Google button", () => {
-  // Without these the browser blocks the script and the button iframe: the
-  // sign-in silently does nothing.
+test("the Content-Security-Policy allows the whole Google Identity Services surface", () => {
+  // Google's setup guide asks for the GIS parent URL in connect-src and
+  // frame-src rather than individual endpoints, so a GIS update cannot break
+  // the policy, plus the stylesheet in style-src and the client in script-src.
   const scriptSrc = nextConfig.match(/"script-src [^"]+"/)?.[0] ?? "";
+  const styleSrc = nextConfig.match(/"style-src [^"]+"/)?.[0] ?? "";
   const frameSrc = nextConfig.match(/"frame-src [^"]+"/)?.[0] ?? "";
-  const connectSrc = nextConfig.match(/"https:\/\/accounts\.google\.com",/)?.[0] ?? "";
-  assert.match(scriptSrc, /https:\/\/accounts\.google\.com/);
-  assert.match(frameSrc, /https:\/\/accounts\.google\.com/);
-  assert.ok(connectSrc, "connect-src must allow accounts.google.com");
+  const connectSrc = nextConfig.match(/^\s+"https:\/\/accounts\.google\.com\/gsi\/",$/m)?.[0] ?? "";
+  assert.match(scriptSrc, /https:\/\/accounts\.google\.com\/gsi\/client/);
+  assert.match(styleSrc, /https:\/\/accounts\.google\.com\/gsi\/style/);
+  assert.match(frameSrc, /https:\/\/accounts\.google\.com\/gsi\//);
+  assert.ok(connectSrc, "connect-src must allow the Google Identity Services parent URL");
+});
+
+test("the popup Google opens is not severed by the opener policy", () => {
+  // Google's setup guide: with FedCM disabled the popup needs
+  // same-origin-allow-popups, and plain same-origin breaks window
+  // communication ("a blank pop-up window or similar bugs"). The public edge
+  // injects same-origin, so the app has to state its own.
+  assert.match(nextConfig, /"Cross-Origin-Opener-Policy", value: "same-origin-allow-popups"/);
 });
 
 test("Microsoft keeps its redirect hand-off and its own mark", () => {
