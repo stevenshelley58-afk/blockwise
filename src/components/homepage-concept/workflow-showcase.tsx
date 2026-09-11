@@ -212,12 +212,17 @@ function StoryAd({
           fetchPriority="high"
           decoding="async"
         />
-        {/* The ad's headline is the largest text on the creative, so the field
-            writes there. It replaces the template's own headline block and stays
-            clear of the agent's portrait on the right. */}
+        {/* The creative carries no text of its own, so the headline the visitor
+            writes is set straight onto the image, the way a finished ad sets it.
+            A scrim under it keeps the type legible without reading as a panel. */}
         <span className={`hc-story-ad-headline${writingLink ? " is-writing" : ""}`}>
-          {linkChars > 0 ? STORY_AD.adTitle.slice(0, linkChars) : <i>{STORY_AD.adTitle}</i>}
-          {writingLink && linkTyping ? <span className="hc-story-caret" /> : null}
+          <i className="hc-story-ad-rule" aria-hidden="true" />
+          <span className="hc-story-ad-headline-text">
+            {linkChars > 0
+              ? STORY_AD.adTitle.slice(0, linkChars)
+              : <i className="hc-story-ad-placeholder">{STORY_AD.adTitle}</i>}
+            {writingLink && linkTyping ? <span className="hc-story-caret" /> : null}
+          </span>
         </span>
         <AnimatePresence>
           {approved ? (

@@ -68,7 +68,8 @@ test("the text is written a character at a time, in the field and the ad togethe
 test("the field writes the ad headline onto the image", () => {
   // The same counter drives a layer on the creative, so the field writes on the ad.
   assert.match(source, /className=\{`hc-story-ad-headline\$\{writingLink \? " is-writing" : ""\}`\}/);
-  assert.match(source, /STORY_AD\.adTitle\.slice\(0, linkChars\)[\s\S]{0,160}hc-story-caret/);
+  assert.match(source, /className="hc-story-ad-headline-text"/);
+  assert.match(source, /STORY_AD\.adTitle\.slice\(0, linkChars\)[\s\S]{0,200}hc-story-caret/);
   assert.match(styles, /\.hc-story-ad-image \{[^}]*container-type: inline-size/);
   // It sits on the template's own link title line, sized against the creative.
   assert.match(styles, /\.hc-story-ad-headline \{[^}]*position: absolute/);
@@ -77,9 +78,16 @@ test("the field writes the ad headline onto the image", () => {
   // headline the visitor writes is the only headline on the ad.
   assert.match(content, /image: "\/adstudio-fixtures\/meta-agent-intro-feed-037\/property-photo\.webp"/);
   assert.doesNotMatch(content, /f1eef3fb49b782ab7666cd14a7f793151f5fd439c724085ce68996e9ebb24f78/);
-  assert.match(styles, /\.hc-story-ad-headline \{[^}]*background: linear-gradient/);
+  // Set on the image like real ad type: display type on a scrim, no panel.
   assert.match(styles, /\.hc-story-ad-headline \{[^}]*color: #fff/);
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*font-style: normal/);
   assert.match(styles, /\.hc-story-ad-headline \{[^}]*text-transform: uppercase/);
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*text-shadow/);
+  assert.doesNotMatch(styles, /\.hc-story-ad-headline \{[^}]*background: #fefefe/);
+  // A scrim over the photo gives the type something to sit on.
+  assert.match(styles, /\.hc-story-ad-image::after \{[^}]*linear-gradient\(180deg/);
+  // The short accent rule a finished template sets above its headline.
+  assert.match(styles, /\.hc-story-ad-rule \{/);
 });
 
 test("the review step writes its values, presses, and puts the ad live", () => {
