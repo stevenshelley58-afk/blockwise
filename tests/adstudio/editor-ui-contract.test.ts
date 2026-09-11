@@ -158,7 +158,7 @@ describe("customer Ad Studio workbench contract", () => {
 
     // The matching control carries the same mark, in colour and in weight.
     assert.match(inputs, /highlightedKey\?: string \| null/);
-    assert.match(inputs, /highlighted && "border-success bg-success-soft\/60 ring-2 ring-success\/40"/);
+    assert.match(inputs, /highlighted && "border-success bg-success-soft\/60 ring-2 ring-success\/40 focus-visible:border-success focus-visible:ring-success\/40"/);
     assert.match(inputs, /font-semibold text-success/);
     assert.match(inputs, /aria-current=\{highlighted \? "true" : undefined\}/);
     // Layers with no input (plate, shape, icon) highlight no field.
