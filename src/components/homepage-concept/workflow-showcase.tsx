@@ -7,6 +7,9 @@ import {
   MessageCircle,
   MoreHorizontal,
   MousePointer2,
+  Pause,
+  Play,
+  RotateCcw,
   Share2,
   ShieldCheck,
   ThumbsUp,
@@ -14,7 +17,7 @@ import {
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
-import { AD_EXAMPLES, withBasePath } from "@/lib/homepage-concept/content";
+import { AD_EXAMPLES, AD_LIBRARY, withBasePath } from "@/lib/homepage-concept/content";
 
 import "./workflow-showcase.css";
 
@@ -24,46 +27,40 @@ const PROCESS_STEPS = [
   { label: "Review", hint: "Set the budget and go live" },
 ] as const;
 
-const STORY_PHASE_DELAYS = [1100, 1000, 1000, 1100, 1200, 850, 1050, 750, 1400] as const;
-const STORY_STEP_PHASES = [1, 2, 5] as const;
-const STORY_PHASE_TO_STEP = [0, 0, 1, 1, 1, 2, 2, 2, 2] as const;
-const STORY_TEMPLATE_SEQUENCE = [0, 1, 2, 0] as const;
+/**
+ * Nine phases: 0-3 choose an ad, 4-6 write it, 7-8 review it.
+ * The selector visits these library positions in order and settles on the last.
+ */
+const LIBRARY_SEQUENCE = [0, 1, 2, 3] as const;
+const SELECTED_PHASE = 3;
+const STORY_PHASE_DELAYS = [900, 880, 880, 1300, 1500, 1600, 1400, 1500, 1800] as const;
+const STORY_STEP_PHASES = [0, 4, 7] as const;
+const STORY_PHASE_TO_STEP = [0, 0, 0, 0, 1, 1, 1, 2, 2] as const;
 const STORY_STATUS = [
-  "Choose a template",
-  "Template selected",
-  "Customise the ad",
-  "Editing the post copy",
-  "Editing text on the creative",
-  "Review campaign",
-  "Campaign details filled",
-  "Approve campaign",
-  "Campaign approved",
+  "Choosing an ad. Browsing ready-made ads.",
+  "Choosing an ad.",
+  "Choosing an ad.",
+  "Ad selected.",
+  "Customising the ad. The text fields are empty.",
+  "Writing the post copy.",
+  "Adding a link title.",
+  "Review campaign.",
+  "Campaign approved.",
 ] as const;
 
-const STORY_CREATIVE = {
-  image: "/home/subiaco-townhouse.webp",
-  account: "West Coast Home Co",
-  avatar: "WCH",
-  startingCopy: "A better way to spend summer starts at home.",
-  editedCopy: "A better way to spend summer starts at home. Explore the new guide.",
-  startingOverlay: "YOUR NEXT HOME",
-  editedOverlay: "YOUR SUBIACO HOME",
-  domain: "WESTCOASTHOME.CO",
-  linkTitle: "Get the suburb property guide",
+/** The library entry the demo selects. It owns the real post copy and link title. */
+const SELECTED_AD = { ...AD_EXAMPLES[0], image: AD_LIBRARY[LIBRARY_SEQUENCE[LIBRARY_SEQUENCE.length - 1]].image };
+const STORY_AD = {
+  ...SELECTED_AD,
+  account: "Alex Morgan Property",
+  avatar: "AM",
+  domain: "ALEXMORGAN.COM.AU",
 } as const;
 
-/** Extra template cards shown in the browser to make the library look deep. */
-const BROWSER_CARDS = [
-  ...AD_EXAMPLES,
-  { id: "open-home", label: "Open home", image: AD_EXAMPLES[2].image },
-  { id: "just-sold", label: "Just sold", image: AD_EXAMPLES[0].image },
-  { id: "market-update", label: "Market update", image: AD_EXAMPLES[3].image },
-] as const;
-
 const STORY_EASE = [0.16, 1, 0.3, 1] as const;
-const STORY_MOVE = { duration: 0.55, ease: STORY_EASE };
-const STORY_ENTER = { duration: 0.45, ease: STORY_EASE };
-const STORY_EXIT = { duration: 0.25, ease: [0.32, 0, 0.67, 0] as const };
+const STORY_MOVE = { duration: 0.42, ease: STORY_EASE };
+const STORY_ENTER = { duration: 0.34, ease: STORY_EASE };
+const STORY_EXIT = { duration: 0.22, ease: [0.32, 0, 0.67, 0] as const };
 
 /** Entrance choreography: the section rises once, then its children cascade. */
 const SECTION_IN_VIEW = { once: true, margin: "-12%" } as const;
@@ -84,6 +81,19 @@ const DEMO_RISE = {
   shown: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.7, ease: STORY_EASE, delay: 0.12 } },
 } as const;
 
+/** True below the phone breakpoint, where the library shows fewer ads. */
+function useNarrowLibrary() {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 600px)");
+    const sync = () => setNarrow(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
+  return narrow;
+}
+
 function StoryCursor({ pressed = false }: { pressed?: boolean }) {
   return (
     <motion.span
@@ -98,65 +108,39 @@ function StoryCursor({ pressed = false }: { pressed?: boolean }) {
   );
 }
 
-function StoryOverlayText({ editing, edited }: { editing: boolean; edited: boolean }) {
-  if (!editing) return <>{edited ? STORY_CREATIVE.editedOverlay : STORY_CREATIVE.startingOverlay}</>;
-
-  return (
-    <span className="hc-story-replacement" aria-label={STORY_CREATIVE.editedOverlay}>
-      {Array.from(STORY_CREATIVE.editedOverlay).map((character, index) => (
-        <motion.span
-          key={`${character}-${index}`}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: index * 0.045, duration: 0.06, ease: "linear" }}
-        >
-          {character === " " ? " " : character}
-        </motion.span>
-      ))}
-      <span className="hc-story-caret" />
-    </span>
-  );
-}
-
+/** The Meta feed frame, reused by the editor and the review scene. */
 function StoryAd({ phase, review = false }: { phase: number; review?: boolean }) {
-  const copyEdited = phase >= 3;
-  const creativeEdited = phase >= 4;
+  const copyWritten = phase >= 5;
+  const linkWritten = phase >= 6;
 
   return (
-    <motion.article layoutId="story-ad" className={`hc-meta-ad hc-meta-feed hc-story-ad${review ? " is-review" : ""}`} transition={STORY_MOVE}>
+    <motion.article
+      layoutId="story-ad"
+      className={`hc-meta-ad hc-meta-feed hc-story-ad${review ? " is-review" : ""}`}
+      transition={STORY_MOVE}
+    >
       <header className="hc-meta-feed-head">
-        <span className="hc-meta-avatar" aria-hidden="true">{STORY_CREATIVE.avatar}</span>
-        <span><strong>{STORY_CREATIVE.account}</strong><small>Sponsored <Globe2 aria-hidden="true" size={9} /></small></span>
+        <span className="hc-meta-avatar" aria-hidden="true">{STORY_AD.avatar}</span>
+        <span><strong>{STORY_AD.account}</strong><small>Sponsored <Globe2 aria-hidden="true" size={9} /></small></span>
         <MoreHorizontal aria-hidden="true" size={16} />
       </header>
       <motion.p
-        className={`hc-meta-feed-copy${phase === 3 ? " is-editing" : ""}`}
-        key={copyEdited ? "edited-copy" : "starting-copy"}
-        initial={{ opacity: 0.35, y: 3 }}
+        className={`hc-meta-feed-copy${phase === 5 ? " is-editing" : ""}`}
+        key={copyWritten ? "written" : "empty"}
+        initial={{ opacity: 0.4, y: 3 }}
         animate={{ opacity: 1, y: 0 }}
         transition={STORY_ENTER}
       >
-        {copyEdited ? STORY_CREATIVE.editedCopy : STORY_CREATIVE.startingCopy}{phase === 3 ? <span className="hc-story-caret" /> : null}
+        {copyWritten ? STORY_AD.postCopy : <span className="hc-story-placeholder">Your post copy appears here</span>}
       </motion.p>
-      <motion.div layoutId="story-template-image" className="hc-story-ad-image" transition={STORY_MOVE}>
-        <img src={withBasePath(STORY_CREATIVE.image)} alt="" width="1080" height="1350" />
-        <span className="hc-story-image-shade" aria-hidden="true" />
-        <motion.span
-          className={`hc-story-creative-overlay${phase === 4 ? " is-editing" : ""}`}
-          role="textbox"
-          aria-label="Text on creative"
-          aria-readonly="true"
-          data-editing-target="creative"
-          key={creativeEdited ? "edited-creative" : "starting-creative"}
-          initial={{ opacity: 0, y: 8, filter: "blur(4px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          transition={STORY_ENTER}
-        >
-          <StoryOverlayText editing={phase === 4} edited={creativeEdited} />
-        </motion.span>
+      <motion.div layoutId="story-ad-creative" className="hc-story-ad-image" transition={STORY_MOVE}>
+        <img src={withBasePath(STORY_AD.image)} alt="" width="1080" height="1350" />
       </motion.div>
       <div className="hc-meta-link-preview">
-        <span><small>{STORY_CREATIVE.domain}</small><strong>{STORY_CREATIVE.linkTitle}</strong></span>
+        <span>
+          <small>{STORY_AD.domain}</small>
+          <strong>{linkWritten ? STORY_AD.linkTitle : <span className="hc-story-placeholder">Your link title</span>}</strong>
+        </span>
         <b>Learn more</b>
       </div>
       <div className="hc-meta-actions" aria-hidden="true">
@@ -168,60 +152,108 @@ function StoryAd({ phase, review = false }: { phase: number; review?: boolean })
   );
 }
 
-function TemplateBrowser({ phase }: { phase: number }) {
-  const activeTemplate = STORY_TEMPLATE_SEQUENCE[Math.min(phase, STORY_TEMPLATE_SEQUENCE.length - 1)];
-  const selected = phase === 1;
+/**
+ * Screen 1. The ready-made ad library with one selector frame that glides
+ * between ads, then settles on the chosen one.
+ */
+function LibraryScene({ phase, narrow }: { phase: number; narrow: boolean }) {
+  const cards = narrow ? AD_LIBRARY.slice(0, 4) : AD_LIBRARY;
+  const position = Math.min(phase, LIBRARY_SEQUENCE.length - 1);
+  const activeIndex = LIBRARY_SEQUENCE[position];
+  const selected = phase >= SELECTED_PHASE;
+
+  const gridRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const [frame, setFrame] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+
+  useEffect(() => {
+    const grid = gridRef.current;
+    const card = cardRefs.current[activeIndex];
+    if (!grid || !card) return;
+    const measure = () => {
+      setFrame({
+        x: card.offsetLeft - 5,
+        y: card.offsetTop - 5,
+        width: card.offsetWidth + 10,
+        height: card.offsetHeight + 10,
+      });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(grid);
+    return () => observer.disconnect();
+  }, [activeIndex, cards.length]);
 
   return (
     <motion.div
-      key="templates"
-      className="hc-story-scene hc-story-browser"
+      key="library"
+      className="hc-story-scene hc-story-library"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ ...STORY_EXIT, opacity: { duration: 0.22 } }}
+      transition={{ ...STORY_EXIT, opacity: { duration: 0.2 } }}
     >
       <div className="hc-story-scene-heading">
-        <span>Ready-made ads</span>
-        <strong>{selected ? "Template selected" : "Choose a starting point"}</strong>
+        <strong>{selected ? "Ad selected" : "Choose a starting point"}</strong>
       </div>
-      <div className="hc-story-template-window">
-        <motion.div
-          className="hc-story-template-track"
-          animate={{ x: `-${[0, 34, 0, 0][Math.min(phase, 3)]}%` }}
-          transition={STORY_MOVE}
-        >
-          {BROWSER_CARDS.map((example, index) => {
-            const active = index === activeTemplate;
-            const isStoryCard = index === 1;
-            return (
+
+      <div className="hc-library-grid" ref={gridRef}>
+        {frame ? (
+          <motion.span
+            className={`hc-library-selector${selected ? " is-selected" : ""}`}
+            aria-hidden="true"
+            initial={false}
+            animate={{ x: frame.x, y: frame.y, width: frame.width, height: frame.height }}
+            transition={STORY_MOVE}
+          />
+        ) : null}
+
+        {cards.map((ad, index) => {
+          const active = index === activeIndex;
+          const chosen = selected && active;
+          return (
+            <motion.div
+              key={ad.id}
+              ref={(node) => {
+                cardRefs.current[index] = node;
+              }}
+              className={`hc-library-card${active ? " is-active" : ""}${chosen ? " is-selected" : ""}`}
+              animate={{ opacity: active ? 1 : 0.62 }}
+              transition={STORY_MOVE}
+            >
               <motion.div
-                className={`hc-story-template-card${active ? " is-active" : ""}${selected && active ? " is-selected" : ""}`}
-                key={example.id}
-                animate={{ opacity: active ? 1 : 0.62, scale: active ? 1 : 0.965 }}
+                layoutId={chosen ? "story-ad-creative" : undefined}
+                className="hc-library-card-image"
                 transition={STORY_MOVE}
               >
-                <motion.div
-                  layoutId={selected && active ? "story-template-image" : undefined}
-                  className="hc-story-template-image"
-                  transition={STORY_MOVE}
-                >
-                  <img src={withBasePath(isStoryCard ? STORY_CREATIVE.image : example.image)} alt="" width="1080" height="1350" />
-                  {selected && active ? <span className="hc-story-selected"><Check aria-hidden="true" size={13} /> Selected</span> : null}
-                </motion.div>
-                <span><strong>{isStoryCard ? "Suburb guide" : example.label}</strong><small>Facebook &amp; Instagram</small></span>
+                <img src={withBasePath(ad.image)} alt="" width="1080" height="1350" />
               </motion.div>
-            );
-          })}
-        </motion.div>
+              <AnimatePresence>
+                {chosen ? (
+                  <motion.span
+                    className="hc-library-check"
+                    initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={STORY_ENTER}
+                  >
+                    <Check aria-hidden="true" size={13} strokeWidth={3} />
+                    Selected
+                  </motion.span>
+                ) : null}
+              </AnimatePresence>
+            </motion.div>
+          );
+        })}
       </div>
     </motion.div>
   );
 }
 
+/** Screen 2. The chosen ad on the left, empty text fields on the right. */
 function EditorScene({ phase }: { phase: number }) {
-  const copyActive = phase === 3;
-  const creativeActive = phase === 4;
+  const copyWritten = phase >= 5;
+  const linkWritten = phase >= 6;
 
   return (
     <motion.div
@@ -232,43 +264,48 @@ function EditorScene({ phase }: { phase: number }) {
       exit={{ opacity: 0 }}
       transition={STORY_ENTER}
     >
-      <aside className="hc-story-mini-rail">
-        <span>Templates</span>
-        <div className="is-selected">
-          <img src={withBasePath(STORY_CREATIVE.image)} alt="" width="1080" height="1350" />
-        </div>
-      </aside>
-
       <div className="hc-story-ad-workspace">
         <StoryAd phase={phase} />
       </div>
 
       <div className="hc-story-edit-panel">
-        <span>Customise</span>
         <h3>Make it yours</h3>
-        <label className={copyActive ? "is-active" : ""}>
+        <p className="hc-story-edit-hint">Write the text, then approve the campaign.</p>
+
+        <label className={`hc-field${phase === 5 ? " is-active" : ""}`} data-empty={copyWritten ? undefined : "true"}>
           <span>Post copy</span>
-          <motion.strong
-            key={phase >= 3 ? "new-post-copy" : "old-post-copy"}
-            initial={{ opacity: 0.35 }}
-            animate={{ opacity: 1 }}
-            transition={STORY_ENTER}
-          >
-            {phase >= 3 ? STORY_CREATIVE.editedCopy : STORY_CREATIVE.startingCopy}
-            {copyActive ? <span className="hc-story-caret" /> : null}
-          </motion.strong>
+          <strong>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={copyWritten ? "copy-written" : "copy-empty"}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.22, ease: STORY_EASE }}
+              >
+                {copyWritten ? STORY_AD.postCopy : "Write your post copy"}
+              </motion.span>
+            </AnimatePresence>
+            {phase === 5 ? <span className="hc-story-caret" /> : null}
+          </strong>
         </label>
-        <label className={creativeActive ? "is-active" : ""}>
-          <span>Text on creative</span>
-          <motion.strong
-            key={phase >= 4 ? "new-creative-copy" : "old-creative-copy"}
-            initial={{ opacity: 0.35 }}
-            animate={{ opacity: 1 }}
-            transition={STORY_ENTER}
-          >
-            {phase >= 4 ? STORY_CREATIVE.editedOverlay : STORY_CREATIVE.startingOverlay}
-            {creativeActive ? <span className="hc-story-caret" /> : null}
-          </motion.strong>
+
+        <label className={`hc-field${phase === 6 ? " is-active" : ""}`} data-empty={linkWritten ? undefined : "true"}>
+          <span>Link title</span>
+          <strong>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={linkWritten ? "link-written" : "link-empty"}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.22, ease: STORY_EASE }}
+              >
+                {linkWritten ? STORY_AD.linkTitle : "Add a link title"}
+              </motion.span>
+            </AnimatePresence>
+            {phase === 6 ? <span className="hc-story-caret" /> : null}
+          </strong>
         </label>
       </div>
     </motion.div>
@@ -276,7 +313,7 @@ function EditorScene({ phase }: { phase: number }) {
 }
 
 function ReviewScene({ phase }: { phase: number }) {
-  const valuesFilled = phase >= 6;
+  const valuesFilled = phase >= 7;
   const pressing = phase === 7;
   const approved = phase >= 8;
 
@@ -293,7 +330,12 @@ function ReviewScene({ phase }: { phase: number }) {
         <StoryAd phase={phase} review />
       </div>
 
-      <motion.div className="hc-story-review-panel" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ ...STORY_ENTER, delay: 0.14 }}>
+      <motion.div
+        className="hc-story-review-panel"
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ ...STORY_ENTER, delay: 0.14 }}
+      >
         <h3>Review campaign</h3>
         <dl>
           {[
@@ -321,7 +363,7 @@ function ReviewScene({ phase }: { phase: number }) {
         </dl>
         <motion.strong
           className={`hc-story-approve${approved ? " is-approved" : ""}`}
-          animate={{ scale: pressing ? 0.97 : approved ? 1 : 1 }}
+          animate={{ scale: pressing ? 0.97 : 1 }}
           transition={{ duration: 0.15, ease: "easeInOut" }}
         >
           <span className="hc-story-approve-mark" aria-hidden="true">
@@ -376,11 +418,13 @@ export function WorkflowShowcase() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const hasStarted = useRef(false);
   const reduceMotion = Boolean(useReducedMotion());
+  const narrow = useNarrowLibrary();
   const [phase, setPhase] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [inView, setInView] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
   const activeStep = STORY_PHASE_TO_STEP[phase];
+  const finished = phase >= STORY_STATUS.length - 1;
 
   useEffect(() => {
     const syncVisibility = () => setPageVisible(document.visibilityState === "visible");
@@ -405,6 +449,7 @@ export function WorkflowShowcase() {
     };
   }, [reduceMotion]);
 
+  /* Reduced motion gets the finished state with no timers at all. */
   useEffect(() => {
     if (reduceMotion) {
       setPhase(STORY_STATUS.length - 1);
@@ -412,22 +457,37 @@ export function WorkflowShowcase() {
     }
   }, [reduceMotion]);
 
+  /* One phase at a time. Stops for good on the approved frame, so nothing loops. */
   useEffect(() => {
     if (!playing || !inView || !pageVisible || reduceMotion) return;
-
+    if (phase >= STORY_STATUS.length - 1) {
+      setPlaying(false);
+      return;
+    }
     const timer = window.setTimeout(
-      () => setPhase((current) => current >= STORY_STATUS.length - 1 ? 0 : current + 1),
+      () => setPhase((current) => Math.min(current + 1, STORY_STATUS.length - 1)),
       STORY_PHASE_DELAYS[phase],
     );
     return () => window.clearTimeout(timer);
   }, [inView, pageVisible, phase, playing, reduceMotion]);
 
   function selectStep(nextStep: number) {
+    hasStarted.current = true;
     setPhase(STORY_STEP_PHASES[nextStep]);
-    setPlaying(!reduceMotion);
+    setPlaying(!reduceMotion && nextStep < PROCESS_STEPS.length - 1);
   }
 
-  const scene = phase <= 1 ? "browse" : phase <= 4 ? "edit" : "review";
+  function toggleTransport() {
+    hasStarted.current = true;
+    if (finished) {
+      setPhase(0);
+      setPlaying(true);
+      return;
+    }
+    setPlaying((current) => !current);
+  }
+
+  const scene = phase <= SELECTED_PHASE ? "browse" : phase <= 6 ? "edit" : "review";
 
   return (
     <motion.div
@@ -472,7 +532,7 @@ export function WorkflowShowcase() {
       <motion.div
         className="hc-process-demo"
         data-scene={scene}
-        aria-label="Animated example of creating and approving an ad"
+        aria-label="Animated example of choosing an ad and approving a campaign"
         variants={DEMO_RISE}
       >
         <div className="hc-process-demo-topbar">
@@ -486,14 +546,22 @@ export function WorkflowShowcase() {
         <LayoutGroup id="blockwise-story">
           <div className="hc-story-viewport" aria-hidden="true">
             <AnimatePresence mode="sync" initial={false}>
-              {scene === "browse" ? <TemplateBrowser phase={phase} /> : null}
+              {scene === "browse" ? <LibraryScene phase={phase} narrow={narrow} /> : null}
               {scene === "edit" ? <EditorScene phase={phase} /> : null}
               {scene === "review" ? <ReviewScene phase={phase} /> : null}
             </AnimatePresence>
           </div>
         </LayoutGroup>
-        <div className="hc-process-demo-caption">
-          <small>Preview · Choose → Customise → Review</small>
+
+        <div className="hc-process-demo-transport">
+          {reduceMotion ? (
+            <small>Animation off. Your device prefers reduced motion.</small>
+          ) : (
+            <button type="button" onClick={toggleTransport} aria-label={finished ? "Replay the demo" : playing ? "Pause the demo" : "Play the demo"}>
+              {finished ? <RotateCcw aria-hidden="true" size={14} /> : playing ? <Pause aria-hidden="true" size={14} /> : <Play aria-hidden="true" size={14} />}
+              {finished ? "Replay" : playing ? "Pause" : "Play"}
+            </button>
+          )}
         </div>
       </motion.div>
     </motion.div>

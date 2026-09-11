@@ -18,7 +18,7 @@ export const AD_EXAMPLES = [
     title: "A low-pressure first step.",
     body: "Lead with useful local expertise and invite a no-obligation conversation.",
     image:
-      "/adstudio-thumbnails/meta/e5f5c79cf1406642a592ca040d4b93a2ac7dca8d79e0ac4c437c2a8f70a337ec-preview.webp",
+      "/adstudio-thumbnails/meta/6b49016814ffdb9e64eb33943667efda84f3f55e0020d0fc00cbab4f121754d3-preview.webp",
     postCopy: "Curious what buyers would pay for your home? Get a free, no-obligation consultation.",
     linkTitle: "Free seller consultation",
   },
@@ -42,6 +42,22 @@ export const AD_EXAMPLES = [
     postCopy: "What is your suburb really worth right now? Get the latest market report for your area.",
     linkTitle: "Free suburb market report",
   },
+] as const;
+
+/**
+ * Real 4:5 Feed creatives from the Ad Studio library, used by the homepage
+ * "how it works" browser. Index 3 is the ad the demo selects, so its copy
+ * comes from the matching AD_EXAMPLES entry.
+ */
+export const AD_LIBRARY = [
+  { id: "just-listed", image: "/adstudio-thumbnails/meta/0899efc11fc68e177c731321421454f0001a393bbc8b0211dafad4a7f3b89347-preview.webp" },
+  { id: "smart-first-steps", image: "/adstudio-thumbnails/meta/1c119a3dae9089ca621e947afe16c7f5307748d3ea956a826750e61d078fe94c-preview.webp" },
+  { id: "open-home", image: "/adstudio-thumbnails/meta/127c60b3d1e238b9289dbe501dba65f249fa99e96fd5be4bd8848733e089fd35-preview.webp" },
+  { id: "appraisal", image: AD_EXAMPLES[0].image },
+  { id: "thinking-of-selling", image: "/adstudio-thumbnails/meta/6b49016814ffdb9e64eb33943667efda84f3f55e0020d0fc00cbab4f121754d3-preview.webp" },
+  { id: "buyers-wanted", image: AD_EXAMPLES[2].image },
+  { id: "own-land", image: AD_EXAMPLES[3].image },
+  { id: "rental-appraisal", image: "/adstudio-thumbnails/meta/8f909f4b8f396a6d3fa1a3940fccb64292ac3df511761d2d8b72b6b39f0ca8de-preview.webp" },
 ] as const;
 
 export const CONTACT_EMAIL = "hello@blockwise.sale";
