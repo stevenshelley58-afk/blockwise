@@ -76,6 +76,15 @@ export type HomeCopy = {
     leads: string;
     vsPrior: string;
     costPerLead: string;
+    weeklyTitle: string;
+    weeklySpend: string;
+    weeklyClicks: string;
+    weeklyCpc: string;
+    weekScope: string;
+    syncedAt: (when: string) => string;
+    sampleBadge: string;
+    sampleNote: string;
+    leadsPreviewFoot: string;
     adsLive: string;
     adsLiveUnit: (created: number) => string;
     publishedThisWeek: (count: number) => string;
@@ -116,6 +125,8 @@ export type HomeCopy = {
   }[];
   leads: {
     title: string;
+    followUp: string;
+    viewAll: string;
     emptyTitle: string;
     emptyBody: string;
     ctaLabel: string;

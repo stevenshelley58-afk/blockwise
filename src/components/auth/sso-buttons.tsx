@@ -53,43 +53,57 @@ const PROVIDER_CONFIG: Record<SSOProvider, { label: string; mark: () => React.JS
 export function SSOButtons({ mode = "signin" }: { mode?: "signin" | "signup" }) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [loadingProvider, setLoadingProvider] = useState<SSOProvider | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function signInWithOAuth(provider: SSOProvider) {
+    setError(null);
     setLoadingProvider(provider);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/confirm?next=/self-serve&flow=${mode}`,
-      },
-    });
-    if (error) {
-      setLoadingProvider(null);
-      // Error is handled by the OAuth redirect flow failing
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/confirm?next=/self-serve&flow=${mode}`,
+        },
+      });
+      if (!oauthError) {
+        // The hand-off to the provider is under way; the button stays busy
+        // until the browser leaves this page.
+        return;
+      }
+    } catch {
+      // A blocked or failed navigation throws instead of returning an error.
     }
+    // Reaching here means the redirect never started, so say so and offer the
+    // retry rather than parking the button in a disabled spinner.
+    setLoadingProvider(null);
+    setError(`${PROVIDER_CONFIG[provider].label} sign-in is unavailable right now. Use your email and password, or try again.`);
   }
 
   const actionLabel = mode === "signup" ? "Sign up" : "Sign in";
 
   return (
-    <div className="sso-grid">
-      {(Object.keys(PROVIDER_CONFIG) as SSOProvider[]).map((provider) => {
-        const config = PROVIDER_CONFIG[provider];
-        const isLoading = loadingProvider === provider;
-        const Mark = config.mark;
-        return (
-          <button
-            key={provider}
-            type="button"
-            className="sso-button"
-            onClick={() => void signInWithOAuth(provider)}
-            disabled={isLoading || loadingProvider !== null}
-            aria-busy={isLoading || undefined}
-          >
-            {isLoading ? <ButtonSpinner size={14} label={config.label} /> : <Mark />}
-            <span>{actionLabel} with {config.label}</span>
-          </button>
-        );
-      })}
+    <div className="sso-stack">
+      <div className="sso-grid">
+        {(Object.keys(PROVIDER_CONFIG) as SSOProvider[]).map((provider) => {
+          const config = PROVIDER_CONFIG[provider];
+          const isLoading = loadingProvider === provider;
+          const Mark = config.mark;
+          return (
+            <button
+              key={provider}
+              type="button"
+              className="sso-button"
+              onClick={() => void signInWithOAuth(provider)}
+              disabled={isLoading || loadingProvider !== null}
+              aria-busy={isLoading || undefined}
+            >
+              {isLoading ? <ButtonSpinner size={14} label={config.label} /> : <Mark />}
+              <span>{actionLabel} with {config.label}</span>
+            </button>
+          );
+        })}
+      </div>
+      {error ? <p className="form-error" role="alert">{error}</p> : null}
     </div>
   );
 }

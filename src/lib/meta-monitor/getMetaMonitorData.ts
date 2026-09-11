@@ -551,7 +551,7 @@ function buildAnglePerformance(ads: MetaAdPerformance[]): AnglePerformance[] {
 }
 
 function buildDaily(insightRows: MetaInsightRow[], leadFacts: LeadFacts, range: MonitorDateRange): MetaDailyPoint[] {
-  const spendByDate = new Map<string, { spend: number; platformLeads: number }>();
+  const spendByDate = new Map<string, { spend: number; clicks: number; platformLeads: number }>();
 
   for (const row of insightRows) {
     const date = range.days === 1 ? range.since : row.date_start;
@@ -560,9 +560,10 @@ function buildDaily(insightRows: MetaInsightRow[], leadFacts: LeadFacts, range: 
       continue;
     }
 
-    const existing = spendByDate.get(date) ?? { spend: 0, platformLeads: 0 };
+    const existing = spendByDate.get(date) ?? { spend: 0, clicks: 0, platformLeads: 0 };
 
     existing.spend += toNumber(row.spend);
+    existing.clicks += Math.round(toNumber(row.clicks));
     existing.platformLeads += Math.round(extractMetaLeadCount(row.actions));
     spendByDate.set(date, existing);
   }
@@ -578,6 +579,7 @@ function buildDaily(insightRows: MetaInsightRow[], leadFacts: LeadFacts, range: 
     points.push({
       date,
       spend,
+      clicks: Math.max(0, insights?.clicks ?? 0),
       leads: Math.max(insights?.platformLeads ?? 0, leadFacts.leadsByDate.get(date) ?? 0),
       validLeads,
       validCpl: safeCpl(spend, validLeads),

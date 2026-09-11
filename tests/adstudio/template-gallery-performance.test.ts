@@ -19,14 +19,9 @@ const root = join(fileURLToPath(new URL("../..", import.meta.url)));
 const read = (relative: string) => readFileSync(join(root, relative), "utf8");
 
 describe("Ad Studio template gallery stays cheap to render", () => {
-  it("serves gallery samples through the image optimizer with lazy loading", () => {
+  it("keeps gallery samples lazy and bounded in size", () => {
     const gallery = read("src/components/adstudio/template-gallery.tsx");
 
-    assert.match(
-      gallery,
-      /import Image from "next\/image"/,
-      "the gallery card must use next/image so samples are resized, re-encoded and cached",
-    );
     assert.match(
       gallery,
       /loading="lazy"/,
@@ -34,13 +29,14 @@ describe("Ad Studio template gallery stays cheap to render", () => {
     );
     assert.match(
       gallery,
-      /sizes=/,
-      "gallery samples need a sizes hint or the optimizer serves one oversized candidate",
+      /&w=\d+/,
+      "the gallery must request a downscaled sample, not the full Feed/Story render",
     );
+    assert.match(gallery, /decoding="async"/, "decoding must not block the main thread");
     assert.doesNotMatch(
       gallery,
-      /<img\b/,
-      "no raw <img> in the gallery card: it bypasses the optimizer and the browser cache",
+      /from "next\/image"/,
+      "next/image cannot be used here: its optimiser does not forward cookies, so it cannot fetch the authenticated sample route and every card 400s",
     );
   });
 
@@ -55,14 +51,15 @@ describe("Ad Studio template gallery stays cheap to render", () => {
     );
   });
 
-  it("makes renders revalidatable so repeat views and the optimizer do not re-render", () => {
+  it("downscales on the server and makes renders revalidatable", () => {
     const route = read("src/app/api/adstudio/templates/[templateId]/sample/route.ts");
 
+    assert.match(route, /sharp/u, "the route must downscale rather than serving a full-size render");
     assert.match(route, /etag/iu, "samples must carry an ETag so a repeat view gets a 304");
     assert.match(
       route,
       /max-age=\d{3,}/u,
-      "samples must carry a real freshness lifetime so the optimizer can reuse one resize",
+      "samples must carry a real freshness lifetime so repeat views stay free",
     );
     assert.doesNotMatch(
       route,

@@ -1,5 +1,5 @@
 import type { HomeData } from "@/components/self-serve/home-dashboard";
-import type { MetaMonitorPayload } from "@/lib/meta-monitor/types";
+import type { MetaDailyPoint, MetaMonitorPayload } from "@/lib/meta-monitor/types";
 
 /**
  * Client-safe half of the home dashboard read model.
@@ -54,13 +54,41 @@ export function homeSafeReadModelFromData(data: HomeData): HomeSafeReadModel {
   };
 }
 
+/**
+ * The trailing seven points of the series, which is the last seven days because
+ * the reporting builder emits a contiguous point per day. The home metrics band
+ * is explicitly a weekly view, so it must not re-label the snapshot's 30 day
+ * totals as a week.
+ */
+export function trailingWeekTotals(daily: MetaDailyPoint[]): {
+  spend: number;
+  clicks: number;
+} {
+  const ordered = [...daily].sort((a, b) => a.date.localeCompare(b.date));
+  const week = ordered.slice(-7);
+
+  return {
+    spend: week.reduce((total, point) => total + point.spend, 0),
+    clicks: week.reduce((total, point) => total + point.clicks, 0),
+  };
+}
+
+export function homeDailyPoints(daily: MetaDailyPoint[]): NonNullable<HomeData["performance"]>["daily"] {
+  return daily.map((point) => ({
+    date: point.date,
+    leads: point.leads,
+    spend: point.spend,
+    clicks: point.clicks,
+  }));
+}
+
 export function homePerformanceFromReporting(
   results: MetaMonitorPayload | null,
 ): { adsLive: number; performance: NonNullable<HomeData["performance"]> } | null {
   const summary = results?.summary;
   if (
     !results ||
-    results.source !== "live" ||
+    (results.source !== "live" && results.source !== "sample") ||
     !results.connected ||
     !summary ||
     results.range.key !== "last_30" ||
@@ -81,18 +109,26 @@ export function homePerformanceFromReporting(
   const totalsMatch =
     providerLeads === summary.leads &&
     Math.abs(providerSpend - summary.spend) < 0.01;
+  const isSample = results.source === "sample";
+  // Sample leads are fixtures, not captures, so they must never be presented as
+  // the workspace's own lead count.
+  const leads = isSample ? providerLeads : summary.leads;
+  const week = trailingWeekTotals(results.daily);
 
   return {
     adsLive: results.ads.filter((ad) => ad.status === "ACTIVE").length,
     performance: {
-      leads: summary.leads,
+      leads,
       cpl: totalsMatch && providerLeads > 0 ? summary.spend / providerLeads : null,
-      previousLeads: summary.previousPeriod?.leads ?? null,
+      previousLeads: isSample ? null : summary.previousPeriod?.leads ?? null,
       previousCpl: null,
-      daily: results.daily.map((point) => ({
-        date: point.date,
-        leads: point.leads,
-      })),
+      daily: homeDailyPoints(results.daily),
+      weekly: {
+        spend: week.spend,
+        clicks: week.clicks,
+        cpc: week.clicks > 0 ? week.spend / week.clicks : null,
+      },
+      isSample,
       lastSyncedAt: summary.lastSyncedAt,
     },
   };

@@ -13,8 +13,8 @@ export const dynamic = "force-dynamic";
 
 /**
  * Renders are workspace-scoped, so they stay `private` (never in a shared
- * proxy cache), but a revalidating browser and Next's image optimizer can both
- * hold one for an hour and re-confirm it with the ETag.
+ * proxy cache), but a revalidating browser can hold one for an hour and
+ * re-confirm it with the ETag.
  */
 const SAMPLE_CACHE_CONTROL = "private, max-age=3600, stale-while-revalidate=86400";
 
@@ -74,14 +74,32 @@ export async function GET(
       textValues,
       colourMap: template.semanticColours,
     }, placement);
+    // A gallery card renders a preview a few hundred pixels wide, so the full
+    // Feed/Story render (1080x1350) is mostly wasted bytes. Downscale and
+    // re-encode here, where the module already exists, rather than relying on
+    // Next's optimiser: that optimiser does not forward the caller's cookies,
+    // so it cannot fetch this authenticated route at all.
+    const widthParam = Number(request.nextUrl.searchParams.get("w"));
+    const targetWidth = Number.isFinite(widthParam) && widthParam >= 64 && widthParam <= 1080
+      ? Math.round(widthParam)
+      : 0;
+    let body = rendered.png;
+    let contentType = "image/png";
+    if (targetWidth > 0) {
+      const { default: sharp } = await import("sharp");
+      body = await sharp(rendered.png).resize({ width: targetWidth, withoutEnlargement: true }).webp({ quality: 78, effort: 4 }).toBuffer();
+      contentType = "image/webp";
+    }
     // A sample is a pure function of the template definition, the declared
-    // assets and the placement, so it is safe to cache hard. The ETag lets a
-    // revalidating browser skip the PNG body (304) and lets Next's image
-    // optimizer reuse one resize per width instead of re-rendering the canvas.
+    // assets, the placement and the requested width, so it is safe to cache
+    // hard. The ETag lets a repeat view skip the body with a 304 instead of
+    // re-running the canvas render.
     const etag = `"${createHash("sha256")
       .update(template.templateId)
       .update("\0")
       .update(placement)
+      .update("\0")
+      .update(String(targetWidth))
       .update("\0")
       .update(JSON.stringify(template))
       .digest("hex")
@@ -89,9 +107,9 @@ export async function GET(
     if (request.headers.get("if-none-match") === etag) {
       return new NextResponse(null, { status: 304, headers: { etag, "cache-control": SAMPLE_CACHE_CONTROL } });
     }
-    return new NextResponse(new Uint8Array(rendered.png), {
+    return new NextResponse(new Uint8Array(body), {
       headers: {
-        "content-type": "image/png",
+        "content-type": contentType,
         etag,
         "cache-control": SAMPLE_CACHE_CONTROL,
       },

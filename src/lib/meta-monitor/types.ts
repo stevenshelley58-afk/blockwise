@@ -27,6 +27,8 @@ export type MetaMonitorSummary = {
 export type MetaDailyPoint = {
   date: string;
   spend: number;
+  /** Link clicks for the day, aggregated the same way spend is. */
+  clicks: number;
   leads: number;
   validLeads: number;
   validCpl: number | null;

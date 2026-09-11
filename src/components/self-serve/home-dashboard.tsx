@@ -1,14 +1,14 @@
 "use client";
 
 import { motion } from "motion/react";
-import { ArrowDownRight, ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
 import { SafeImage } from "@/components/ui/safe-image";
 import { niche } from "@/config/niche";
 import type { HomeCreativeSuggestions } from "@/lib/home/creative-suggestions";
-import { formatCurrency, formatPercent } from "@/lib/meta-monitor/calculations";
+import { formatCurrency } from "@/lib/meta-monitor/calculations";
 import { entrance, useReducedMotion } from "@/lib/motion";
 import type { ActivationCardData } from "./activation-card";
 
@@ -22,7 +22,11 @@ export type HomeData = ActivationCardData & {
     cpl: number | null;
     previousLeads: number | null;
     previousCpl: number | null;
-    daily: Array<{ date: string; leads: number }>;
+    daily: Array<{ date: string; leads: number; spend: number; clicks: number }>;
+    /** Trailing seven days, the window the metrics band claims. */
+    weekly: { spend: number; clicks: number; cpc: number | null };
+    /** True when every number above is a labelled preview, not this workspace's delivery. */
+    isSample: boolean;
     lastSyncedAt: string | null;
   } | null;
   creativeSuggestions?: HomeCreativeSuggestions;
@@ -47,70 +51,70 @@ type Stat = {
   label: string;
   value: string;
   foot?: string;
-  trend?: number | null;
 };
 
+/** Costs read as money, so cents stay visible: $0.80, never $0.8. */
+const cents = (value: number) =>
+  `$${value.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/**
+ * The metrics band is a weekly view, so every figure comes from the trailing
+ * seven days. Sample previews only fill the band when the workspace has no
+ * performance data of its own, and are labelled as samples everywhere they
+ * appear.
+ */
 function statsFor(data: HomeData): Stat[] {
   const copy = niche.copy.home.kpis;
   const perf = data.performance;
-  const out: Stat[] = [];
+  if (!perf) return [];
 
-  if (data.ads.live != null) {
-    out.push({
-      label: copy.adsLive,
-      value: String(data.ads.live),
-      foot: copy.adsLiveUnit(data.ads.created),
-    });
+  const { weekly } = perf;
+  const out: Stat[] = [
+    { label: copy.weeklySpend, value: formatCurrency(weekly.spend) },
+    { label: copy.weeklyClicks, value: weekly.clicks.toLocaleString("en-AU") },
+    {
+      label: copy.weeklyCpc,
+      value: weekly.cpc != null ? cents(weekly.cpc) : "—",
+    },
+  ];
+
+  if (perf.isSample) {
+    out.push({ label: copy.leads, value: String(perf.leads), foot: copy.leadsPreviewFoot });
   } else {
     out.push({
-      label: copy.adsCreated,
-      value: String(data.ads.created),
-      foot:
-        data.ads.created === 0
-          ? copy.noAdsYet
-          : data.ads.publishedThisWeek > 0
-            ? copy.publishedThisWeek(data.ads.publishedThisWeek)
-            : undefined,
+      label: copy.adsLive,
+      value: String(data.ads.live ?? data.ads.created),
+      foot: copy.adsLiveUnit(data.ads.created),
     });
-  }
-
-  if (perf) {
-    out.push({
-      label: copy.leads,
-      value: String(perf.leads),
-      foot: perf.previousLeads != null ? `${perf.previousLeads} ${copy.vsPrior}` : undefined,
-      trend:
-        perf.previousLeads && perf.previousLeads > 0
-          ? (perf.leads - perf.previousLeads) / perf.previousLeads
-          : null,
-    });
-    if (perf.cpl != null) {
-      out.push({ label: copy.costPerLead, value: formatCurrency(perf.cpl) });
-    }
   }
 
   return out;
 }
 
-function TrendChip({ trend }: { trend: number }) {
-  const isUp = trend >= 0;
-  return (
-    <span
-      className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10.5px] font-bold tabular-nums ${
-        isUp ? "bg-success-soft text-success" : "bg-error-soft text-error"
-      }`}
-    >
-      {isUp ? <ArrowUpRight size={11} aria-hidden /> : <ArrowDownRight size={11} aria-hidden />}
-      {formatPercent(Math.abs(trend), 1)}
-    </span>
-  );
-}
-
-function StatRow({ stats, scope }: { stats: Stat[]; scope: string | null }) {
+function StatBand({ data, stats }: { data: HomeData; stats: Stat[] }) {
   if (stats.length === 0) return null;
+  const copy = niche.copy.home.kpis;
+  const perf = data.performance;
+  const synced = perf?.lastSyncedAt
+    ? new Intl.DateTimeFormat("en-AU", { dateStyle: "medium", timeStyle: "short" }).format(
+        new Date(perf.lastSyncedAt),
+      )
+    : null;
+
   return (
     <>
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <h1 className="font-display text-[15.5px] font-extrabold tracking-[-0.015em] text-foreground">
+          {copy.weeklyTitle}
+        </h1>
+        {perf?.isSample ? (
+          <span className="rounded-full border border-(--line-heavy) px-2.5 py-1 font-mono text-[9.5px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
+            {copy.sampleBadge}
+          </span>
+        ) : null}
+      </div>
+
+      <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4">
         {stats.map((stat) => (
           <div key={stat.label} className="min-w-0">
             <dt className="text-[12.5px] font-semibold text-muted-foreground">{stat.label}</dt>
@@ -118,13 +122,15 @@ function StatRow({ stats, scope }: { stats: Stat[]; scope: string | null }) {
               <span className="font-display text-[24px] font-extrabold leading-none tracking-[-0.02em] tabular-nums text-foreground">
                 {stat.value}
               </span>
-              {stat.trend != null ? <TrendChip trend={stat.trend} /> : null}
             </dd>
             {stat.foot ? <p className="mt-1 text-[11.5px] text-(--faint)">{stat.foot}</p> : null}
           </div>
         ))}
       </dl>
-      {scope ? <p className="mt-3 text-[11.5px] text-(--faint)">{scope}</p> : null}
+
+      <p className="mt-3 text-[11.5px] text-(--faint)">
+        {perf?.isSample ? copy.sampleNote : synced ? `${copy.weekScope} · ${copy.syncedAt(synced)}` : copy.weekScope}
+      </p>
     </>
   );
 }
@@ -139,6 +145,20 @@ function relativeTime(iso: string) {
   if (days < 7) return `${days} days ago`;
   if (days < 30) return `${Math.floor(days / 7)}w ago`;
   return `${Math.floor(days / 30)}mo ago`;
+}
+
+/**
+ * How long a lead has been sitting untouched. The workspace has no CRM contact
+ * state yet, so waiting time is the only follow-up signal that can be stated
+ * without inventing one.
+ */
+function waitingLabel(iso: string) {
+  const parsed = Date.parse(iso);
+  if (!Number.isFinite(parsed)) return null;
+  const days = Math.floor((Date.now() - parsed) / 86_400_000);
+  if (days < 1) return "Waiting since today";
+  if (days === 1) return "Waiting 1 day";
+  return `Waiting ${days} days`;
 }
 
 function LeadsSection({ leads }: { leads: HomeData["leads"] }) {
@@ -165,14 +185,17 @@ function LeadsSection({ leads }: { leads: HomeData["leads"] }) {
   return (
     <section className="mt-9 md:mt-11">
       <div className="flex items-center justify-between">
-        <h2 className="font-display text-[17px] font-extrabold tracking-[-0.015em] text-foreground">
-          {copy.title}
-        </h2>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h2 className="font-display text-[17px] font-extrabold tracking-[-0.015em] text-foreground">
+            {copy.title}
+          </h2>
+          <span className="text-[12.5px] text-(--faint)">{copy.followUp}</span>
+        </div>
         <Link
           href="/leads"
           className="inline-flex items-center gap-1 text-[13px] font-semibold text-muted-foreground hover:text-foreground"
         >
-          View all
+          {copy.viewAll}
           <ArrowRight size={14} />
         </Link>
       </div>
@@ -189,6 +212,9 @@ function LeadsSection({ leads }: { leads: HomeData["leads"] }) {
                   {lead.suburb} · {lead.source}
                 </span>
               </div>
+              <span className="hidden shrink-0 text-[11.5px] font-semibold text-warning tabular-nums sm:block">
+                {waitingLabel(lead.createdAt)}
+              </span>
               <span className="shrink-0 text-[11.5px] text-(--faint) tabular-nums">
                 {relativeTime(lead.createdAt)}
               </span>
@@ -269,7 +295,6 @@ export function HomeDashboard({ data }: { data: HomeData }) {
   const reduced = useReducedMotion();
   const { container, item: itemVariants } = entrance(reduced);
   const stats = statsFor(data);
-  const scope = data.performance ? niche.copy.home.chart.subtitle : null;
 
   return (
     <motion.div
@@ -280,7 +305,7 @@ export function HomeDashboard({ data }: { data: HomeData }) {
       className="mx-auto w-full max-w-[1120px] px-4 pb-28 pt-6 md:px-6 md:pb-16 md:pt-8"
     >
       <motion.section variants={itemVariants}>
-        <StatRow stats={stats} scope={scope} />
+        <StatBand data={data} stats={stats} />
       </motion.section>
 
       <motion.section variants={itemVariants}>

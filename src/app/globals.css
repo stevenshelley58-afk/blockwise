@@ -8217,6 +8217,11 @@ a.operator-file-row {
   }
 }
 /* SSO buttons, auth divider, mode toggle */
+.sso-stack {
+  display: grid;
+  gap: 10px;
+}
+
 .sso-grid {
   display: grid;
   gap: 10px;

@@ -5,13 +5,17 @@ import type { MetaAdPerformance, MetaDailyPoint, MetaMonitorPayload, MonitorRang
 /**
  * Demo fixtures shown when NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA === "true", or as
  * the default "demo data" experience for workspaces with no Meta connection.
- * Internally consistent over 30 days: spend Σ $5,940 · 176 leads · 118 valid.
+ * Internally consistent over 30 days: spend Σ $5,940 · 176 leads · 118 valid ·
+ * about 7,400 clicks, which keeps the demo cost per click near $0.80.
  * Demo data is dropped automatically the moment a real connection exists.
  */
 
 const SPEND_30 = [155, 170, 190, 240, 280, 310, 250, 205, 185, 160, 175, 210, 230, 195, 170, 150, 165, 185, 220, 260, 250, 205, 180, 165, 190, 215, 245, 205, 95, 85];
 const VALID_30 = [3, 2, 4, 5, 7, 6, 4, 3, 2, 0, 3, 4, 6, 5, 4, 3, 2, 3, 4, 5, 6, 4, 3, 0, 4, 5, 9, 7, 3, 2];
 const LEADS_30 = [5, 3, 6, 7, 10, 9, 6, 4, 3, 1, 4, 6, 9, 7, 6, 4, 3, 5, 6, 7, 9, 6, 4, 1, 6, 7, 13, 10, 5, 4];
+
+/** Keeps sample cost per click near the $0.80 the demo copy implies. */
+const SAMPLE_CLICK_SPEND_RATIO = 1.25;
 
 const SAMPLE_BUDGET = 7500;
 
@@ -111,6 +115,9 @@ export function buildSampleMetaMonitorPayload(
     return {
       date,
       spend,
+      // Derived from the day's spend so the sample stays internally consistent:
+      // Σ daily clicks equals SAMPLE_CLICK_SPEND_RATIO × Σ spend.
+      clicks: spend > 0 ? Math.max(1, Math.round(spend * SAMPLE_CLICK_SPEND_RATIO)) : 0,
       leads: leadsSeries[index],
       validLeads: validSeries[index],
       validCpl: safeCpl(spend, validSeries[index]),

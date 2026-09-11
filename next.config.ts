@@ -50,8 +50,7 @@ const nextConfig: NextConfig = {
     // surfaces actually render at (ad cards, gallery cards, hero deck).
     deviceSizes: [345, 420, 640, 828, 1080],
     imageSizes: [96, 160, 220, 320],
-    // Content is served from the same origin and from Supabase storage; the
-    // optimizer caches by URL, so a long minimum keeps repeat views free.
+    // The optimizer caches one resize per (url, width, format).
     minimumCacheTTL: 2_592_000,
   },
   // Tree-shake heavy barrel-export libs so only used modules ship to the client.
