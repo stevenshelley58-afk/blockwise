@@ -1,37 +1,51 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
 import { ButtonSpinner } from "@/components/app/button-spinner";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+
+/**
+ * Provider sign-in.
+ *
+ * Google uses Google Identity Services and posts the ID token straight to
+ * GoTrue (`signInWithIdToken`). The redirect flow it replaces depended on a PKCE
+ * code verifier surviving a full round trip through Google, which failed on the
+ * live site: the verifier was missing when the code came back, so no session was
+ * ever created. This path has no redirect and no browser-held verifier, so that
+ * failure cannot recur.
+ *
+ * Microsoft keeps the redirect hand-off, which is the only flow GoTrue exposes
+ * for it.
+ */
 
 type SSOProvider = "google" | "azure";
 
-/**
- * Official provider marks, inlined at their published brand colours so the
- * button is recognisable at a glance. Google's 48px "G" and Microsoft's
- * four-square logo; both keep their own aspect and are sized by `.sso-icon`.
- */
-function GoogleMark() {
-  return (
-    <svg className="sso-icon" viewBox="0 0 48 48" aria-hidden focusable="false">
-      <path
-        fill="#EA4335"
-        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
-      />
-      <path
-        fill="#4285F4"
-        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z"
-      />
-      <path
-        fill="#34A853"
-        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
-      />
-    </svg>
-  );
+const GOOGLE_SCRIPT_ID = "blockwise-google-identity";
+const GOOGLE_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
+
+/** Minimal shape of the Google Identity Services client this app uses. */
+type GoogleAccountsId = {
+  initialize(options: { client_id: string; callback: (response: { credential?: string }) => void }): void;
+  renderButton(
+    parent: HTMLElement,
+    options: {
+      type: "standard";
+      theme: "outline";
+      size: "large";
+      shape: "pill";
+      text: "signin_with" | "signup_with";
+      logo_alignment: "left";
+      locale: string;
+      width: number;
+    },
+  ): void;
+};
+
+function googleIdentity(): GoogleAccountsId | null {
+  if (typeof window === "undefined") return null;
+  const candidate = (window as unknown as { google?: { accounts?: { id?: GoogleAccountsId } } }).google;
+  return candidate?.accounts?.id ?? null;
 }
 
 function MicrosoftMark() {
@@ -45,71 +59,148 @@ function MicrosoftMark() {
   );
 }
 
-const PROVIDER_CONFIG: Record<SSOProvider, { label: string; mark: () => React.JSX.Element }> = {
-  google: { label: "Google", mark: GoogleMark },
-  azure: { label: "Microsoft", mark: MicrosoftMark },
-};
-
 export function SSOButtons({ mode = "signin" }: { mode?: "signin" | "signup" }) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
   const [loadingProvider, setLoadingProvider] = useState<SSOProvider | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // A ref, not the disabled attribute: a double click lands two authorize
-  // requests before React re-renders, and the second one overwrites the PKCE
-  // code verifier in storage that the first request's callback needs.
-  const handoffInFlight = useRef(false);
+  // A ref, not the disabled attribute: a double click lands a second request
+  // before React re-renders, and only one sign-in should ever be in flight.
+  const inFlight = useRef(false);
+  const googleSlot = useRef<HTMLDivElement | null>(null);
+  const googleReady = useRef(false);
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
-  async function signInWithOAuth(provider: SSOProvider) {
-    if (handoffInFlight.current) return;
-    handoffInFlight.current = true;
+  const actionLabel = mode === "signup" ? "Sign up" : "Sign in";
 
-    setError(null);
-    setLoadingProvider(provider);
-    try {
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/confirm?next=/self-serve&flow=${mode}`,
-        },
-      });
-      if (!oauthError) {
-        // The hand-off to the provider is under way; the button stays busy
-        // until the browser leaves this page.
+  const finishSignIn = useCallback(() => {
+    // A full document load, not a router push: the session cookie has just been
+    // written and every server component needs to read it.
+    window.location.assign("/self-serve");
+  }, []);
+
+  const handleGoogleCredential = useCallback(
+    async (credential: string | undefined) => {
+      if (!credential) {
+        setError("Google did not return a sign-in token. Please try again.");
         return;
       }
+      const { error: signInError } = await supabase.auth.signInWithIdToken({
+        provider: "google",
+        token: credential,
+      });
+      if (signInError) {
+        setError(`${signInError.message} Use your email and password, or try again.`);
+        return;
+      }
+      finishSignIn();
+    },
+    [supabase, finishSignIn],
+  );
+
+  // Render Google's own button once its script is available. The button is an
+  // iframe Google owns, so it is mounted imperatively rather than rendered.
+  useEffect(() => {
+    if (!googleClientId) return;
+
+    let cancelled = false;
+    let observer: ResizeObserver | null = null;
+
+    const draw = () => {
+      const gsi = googleIdentity();
+      const slot = googleSlot.current;
+      if (cancelled || !gsi || !slot || googleReady.current) return false;
+
+      gsi.initialize({
+        client_id: googleClientId,
+        callback: (response) => void handleGoogleCredential(response.credential),
+      });
+
+      const drawButton = () => {
+        const width = Math.max(240, Math.min(400, Math.round(slot.getBoundingClientRect().width)));
+        slot.replaceChildren();
+        gsi.renderButton(slot, {
+          type: "standard",
+          theme: "outline",
+          size: "large",
+          shape: "pill",
+          text: mode === "signup" ? "signup_with" : "signin_with",
+          logo_alignment: "left",
+          locale: "en_AU",
+          width,
+        });
+      };
+
+      googleReady.current = true;
+      drawButton();
+      observer = new ResizeObserver(drawButton);
+      observer.observe(slot);
+      return true;
+    };
+
+    if (draw()) {
+      return () => {
+        cancelled = true;
+        observer?.disconnect();
+      };
+    }
+
+    const existing = document.getElementById(GOOGLE_SCRIPT_ID) as HTMLScriptElement | null;
+    const script = existing ?? document.createElement("script");
+    if (!existing) {
+      script.id = GOOGLE_SCRIPT_ID;
+      script.src = GOOGLE_SCRIPT_SRC;
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+    const onLoad = () => {
+      draw();
+    };
+    script.addEventListener("load", onLoad);
+
+    return () => {
+      cancelled = true;
+      script.removeEventListener("load", onLoad);
+      observer?.disconnect();
+    };
+  }, [googleClientId, handleGoogleCredential, mode]);
+
+  async function signInWithMicrosoft() {
+    if (inFlight.current) return;
+    inFlight.current = true;
+
+    setError(null);
+    setLoadingProvider("azure");
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "azure",
+        options: {
+          redirectTo: `${window.location.origin}/auth/confirm?next=/self-serve&flow=${mode}`,
+        },
+      });
+      if (!oauthError) return;
     } catch {
       // A blocked or failed navigation throws instead of returning an error.
     }
-    // Reaching here means the redirect never started, so say so and offer the
-    // retry rather than parking the button in a disabled spinner.
-    handoffInFlight.current = false;
+    inFlight.current = false;
     setLoadingProvider(null);
-    setError(`${PROVIDER_CONFIG[provider].label} sign-in is unavailable right now. Use your email and password, or try again.`);
+    setError("Microsoft sign-in is unavailable right now. Use your email and password, or try again.");
   }
-
-  const actionLabel = mode === "signup" ? "Sign up" : "Sign in";
 
   return (
     <div className="sso-stack">
       <div className="sso-grid">
-        {(Object.keys(PROVIDER_CONFIG) as SSOProvider[]).map((provider) => {
-          const config = PROVIDER_CONFIG[provider];
-          const isLoading = loadingProvider === provider;
-          const Mark = config.mark;
-          return (
-            <button
-              key={provider}
-              type="button"
-              className="sso-button"
-              onClick={() => void signInWithOAuth(provider)}
-              disabled={isLoading || loadingProvider !== null}
-              aria-busy={isLoading || undefined}
-            >
-              {isLoading ? <ButtonSpinner size={14} label={config.label} /> : <Mark />}
-              <span>{actionLabel} with {config.label}</span>
-            </button>
-          );
-        })}
+        {googleClientId ? <div className="sso-google" ref={googleSlot} /> : null}
+        <button
+          type="button"
+          className="sso-button"
+          onClick={() => void signInWithMicrosoft()}
+          disabled={loadingProvider !== null}
+          aria-busy={loadingProvider === "azure" || undefined}
+        >
+          {loadingProvider === "azure" ? <ButtonSpinner size={14} label="Microsoft" /> : <MicrosoftMark />}
+          <span>{actionLabel} with Microsoft</span>
+        </button>
       </div>
       {error ? <p className="form-error" role="alert">{error}</p> : null}
     </div>

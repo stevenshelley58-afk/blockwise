@@ -109,10 +109,12 @@ const nextConfig: NextConfig = {
     // Security headers for the standalone Next server behind Caddy.
     // Directives are composed from the verified browser-loaded provider
     // inventory (do not add origins without a code reference):
-    // - script: self, Next inline bootstrap, Cloudflare Turnstile
+    // - script: self, Next inline bootstrap, Google Identity Services
+//   (components/auth/sso-buttons.tsx), Cloudflare Turnstile
     //   (components/auth/turnstile-verification.tsx), Google Tag Manager
     //   gtag.js (components/marketing-analytics.tsx), Vercel analytics.
-    // - frame: Cloudflare Turnstile widget iframe.
+    // - frame: Google Identity Services button iframe (Google owns and renders
+//   it), Cloudflare Turnstile widget iframe.
     // - image/media: self, data:, blob: (Konva canvas), Meta ad creatives
     //   rendered by Ad Radar/creative viewer (*.fbcdn.net,
     //   *.cdninstagram.com), Facebook page images.
@@ -131,6 +133,7 @@ const nextConfig: NextConfig = {
       "https://*.analytics.google.com",
       "https://analytics.google.com",
       "https://www.googletagmanager.com",
+      "https://accounts.google.com",
       "https://www.clarity.ms",
       "https://c.clarity.ms",
     ]
@@ -170,13 +173,13 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://www.googletagmanager.com https://www.clarity.ms https://va.vercel-scripts.com",
+              "script-src 'self' 'unsafe-inline' https://accounts.google.com https://challenges.cloudflare.com https://www.googletagmanager.com https://www.clarity.ms https://va.vercel-scripts.com",
               "style-src 'self' 'unsafe-inline'",
               "img-src " + imgSrc,
               "media-src " + mediaSrc,
               "font-src 'self' data:",
               `connect-src ${connectSrc}`,
-              "frame-src 'self' https://challenges.cloudflare.com",
+              "frame-src 'self' https://accounts.google.com https://content-accounts.google.com https://challenges.cloudflare.com",
               "frame-ancestors 'none'",
               "object-src 'none'",
               "base-uri 'self'",

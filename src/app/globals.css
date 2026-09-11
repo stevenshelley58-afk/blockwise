@@ -8227,6 +8227,13 @@ a.operator-file-row {
   gap: 10px;
 }
 
+/* Google renders its own button in an iframe inside this slot. */
+.sso-google {
+  display: grid;
+  min-height: 40px;
+  place-items: center;
+}
+
 .sso-button {
   display: inline-flex;
   min-height: 40px;
