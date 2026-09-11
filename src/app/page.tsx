@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { after } from "next/server";
 
 import { HomepageConcept } from "@/components/homepage-concept/homepage-concept";
 
@@ -9,6 +10,20 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-export default function HomePage() {
+type HomePageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function HomePage({ searchParams }: HomePageProps) {
+  const params = (await searchParams) ?? {};
+  const keys = Object.keys(params);
+  if (keys.length > 0) {
+    // A provider callback should never land on the marketing page. If it does,
+    // record what arrived so the redirect target can be traced.
+    after(() => {
+      console.error(`home route received query params: ${keys.join(",")}`);
+    });
+  }
+
   return <HomepageConcept />;
 }
