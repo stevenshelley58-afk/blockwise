@@ -35,7 +35,7 @@ type GoogleAccountsId = {
       size: "large";
       shape: "pill";
       text: "signin_with" | "signup_with";
-      logo_alignment: "left";
+      logo_alignment: "center";
       locale: string;
       width: number;
     },
@@ -124,7 +124,7 @@ export function SSOButtons({ mode = "signin" }: { mode?: "signin" | "signup" }) 
           size: "large",
           shape: "pill",
           text: mode === "signup" ? "signup_with" : "signin_with",
-          logo_alignment: "left",
+          logo_alignment: "center",
           locale: "en_AU",
           width,
         });
