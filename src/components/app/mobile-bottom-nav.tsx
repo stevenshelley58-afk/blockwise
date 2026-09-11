@@ -8,7 +8,6 @@ import { useMemo, useRef, useState } from "react";
 import { niche } from "@/config/niche";
 import { isItemActive, navByVariant, type NavItem } from "@/components/sidebar-nav";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type MobileBottomNavProps = {
   homeHref?: string;
@@ -50,6 +49,7 @@ export function MobileBottomNav({ homeHref = "/self-serve", account, homePilot =
 
   async function signOut() {
     setIsSigningOut(true);
+    const { createSupabaseBrowserClient } = await import("@/lib/supabase/browser");
     const supabase = createSupabaseBrowserClient();
     await supabase.auth.signOut();
     router.replace("/login");

@@ -22,7 +22,6 @@ import {
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarTrigger } from "@/components/ui/sidebar";
 import { niche } from "@/config/niche";
 import { purgeLocalReadModels, syncReadModelIdentity } from "@/lib/read-models/browser-store";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 
 type SelfServeShellProps = {
@@ -88,6 +87,12 @@ function useSignOut() {
 
   async function signOut() {
     setIsSigningOut(true);
+    // Imported here rather than at module scope: this handler is the only thing
+    // in the light chrome that needs Supabase, and a module-scope import put the
+    // whole client (238,933 B raw / ~61 KB gzip) into the first load of all 35
+    // authenticated routes. Sign-out is a deliberate user action, so paying for
+    // the chunk on click is the better trade.
+    const { createSupabaseBrowserClient } = await import("@/lib/supabase/browser");
     const supabase = createSupabaseBrowserClient();
     await purgeLocalReadModels();
     await supabase.auth.signOut();

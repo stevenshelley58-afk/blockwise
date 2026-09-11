@@ -34,7 +34,11 @@ test("Radar viewer exposes Save feedback inside the modal and keeps internal det
 test("Ads overview only offers New ad when reviewed templates exist", () => {
   const home = read("src/components/adstudio/home-command.tsx");
   const page = read("src/app/(customer)/ad-studio/page.tsx");
-  assert.match(page, /listTemplates\(supabase\)/);
+  // The page only needs `length > 0` to decide whether to offer New ad, so it
+  // uses the existence probe instead of loading the whole template library:
+  // listTemplates selects template_json for every active template, which
+  // measured 929 kB of JSON per request to answer a boolean.
+  assert.match(page, /hasActiveTemplates\(supabase\)/);
   assert.match(page, /hasAvailableTemplates/);
   assert.match(home, /hasAvailableTemplates ?/);
   assert.match(home, /Review Brand Pack/);

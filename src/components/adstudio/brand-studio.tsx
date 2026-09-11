@@ -15,7 +15,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { AdStudioBrandKit } from "@/lib/adstudio";
 import { mediaUrlForStoragePath } from "@/lib/adstudio/assets";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import {
   LOGO_MAX_BYTES,
   LOGO_UPLOAD_TYPES,
@@ -465,6 +464,10 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
   }
 
   async function uploadLogoAsset(file: File): Promise<string> {
+    // Deferred so the brand studio does not pull the Supabase client into the
+    // first load of /ad-studio/*; this upload path is the only thing here that
+    // needs it, and it only runs when the user picks a file.
+    const { createSupabaseBrowserClient } = await import("@/lib/supabase/browser");
     const supabase = createSupabaseBrowserClient();
     const safeName = sanitizeUploadFileName(file.name);
     const storagePath = `${kit.workspaceId}/brand/${kit.brandKitId}/${crypto.randomUUID()}-${safeName}`;
