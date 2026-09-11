@@ -44,6 +44,11 @@ export function AnimatedNumber({
 
   const spring = useSpring(reduced ? value : 0, springOptions ?? springs.slow);
   const display = useTransform(spring, (current) => format(current));
+  // The spring starts at zero, so the spring-driven text claims a zero the
+  // number does not have. Render the real value in the server markup and until
+  // the count-up actually starts: a slow or blocked bundle must never leave a
+  // spending or lead count reading zero.
+  const [counting, setCounting] = React.useState(false);
 
   React.useEffect(() => {
     if (reduced) {
@@ -52,12 +57,13 @@ export function AnimatedNumber({
     }
     if (started) {
       spring.set(value);
+      setCounting(true);
     }
   }, [reduced, spring, started, value]);
 
   return (
     <motion.span ref={ref} className={cn("tabular-nums", className)}>
-      {display}
+      {counting ? display : format(value)}
     </motion.span>
   );
 }

@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { HomeDashboard, type HomeData } from "../src/components/self-serve/home-dashboard.tsx";
 import {
   homePerformanceFromReporting,
+  previousWeekTotals,
   trailingWeekTotals,
 } from "../src/lib/home/home-safe-read-model.ts";
 import { buildSampleMetaMonitorPayload } from "../src/lib/meta-monitor/sampleMetaMonitorData.ts";
@@ -16,11 +17,21 @@ const SAMPLE = buildSampleMetaMonitorPayload({
   now: new Date("2026-09-06T08:00:00.000Z"),
 });
 
+/** The fixture the reporting layer serves a workspace that has not connected Meta. */
+const DISCONNECTED_SAMPLE: MetaMonitorPayload = buildSampleMetaMonitorPayload({
+  range: "last_30",
+  now: new Date("2026-09-06T08:00:00.000Z"),
+  connected: false,
+});
+
 function payloadWithSource(source: MetaMonitorPayload["source"]): MetaMonitorPayload {
   return { ...SAMPLE, connected: true, source };
 }
 
-function homeData(performance: HomeData["performance"]): HomeData {
+function homeData(
+  performance: HomeData["performance"],
+  overrides: Partial<HomeData> = {},
+): HomeData {
   return {
     workspaceName: "West Coast Home Co",
     hasBrand: true,
@@ -56,6 +67,7 @@ function homeData(performance: HomeData["performance"]): HomeData {
     },
     meta: { state: "not_connected", accountName: null },
     booking: { state: "not_booked" },
+    ...overrides,
   } as HomeData;
 }
 
@@ -84,6 +96,24 @@ test("weekly totals take the last seven points of the series", () => {
   assert.equal(short.clicks, 1060);
 });
 
+test("the prior week is the seven days before the trailing one", () => {
+  const fortnight = Array.from({ length: 14 }, (_, index) => ({
+    date: `2026-08-${String(index + 24).padStart(2, "0")}`,
+    spend: index + 1,
+    clicks: (index + 1) * 10,
+  }));
+
+  const prior = previousWeekTotals(fortnight);
+  assert.ok(prior);
+  // Days 1 to 7, not the trailing days 8 to 14.
+  assert.equal(prior.spend, 28);
+  assert.equal(prior.clicks, 280);
+  assert.equal(trailingWeekTotals(fortnight).spend, 77);
+
+  // A partial fortnight cannot support the comparison, so none is claimed.
+  assert.equal(previousWeekTotals(fortnight.slice(0, 13)), null);
+});
+
 test("weekly figure is the trailing seven days, not the 30 day total", () => {
   const model = homePerformanceFromReporting(payloadWithSource("live"));
   assert.ok(model);
@@ -106,16 +136,34 @@ test("sample reporting is flagged so the band can label it", () => {
   assert.ok(model.performance.weekly.clicks > 0);
 });
 
-test("the band labels sample numbers instead of presenting them as delivery", () => {
-  const model = homePerformanceFromReporting(payloadWithSource("sample"));
+test("an unconnected workspace gets the demo band, still flagged as a demo", () => {
+  const model = homePerformanceFromReporting(DISCONNECTED_SAMPLE);
+  assert.ok(model);
+  assert.equal(model.performance.isSample, true);
+  assert.ok(model.performance.weekly.clicks > 0);
+});
+
+test("live reporting from a disconnected account is never presented as delivery", () => {
+  // A live payload with no connection behind it is not this workspace's data,
+  // and it is not a labelled demo either, so the band must not claim it.
+  assert.equal(
+    homePerformanceFromReporting({ ...payloadWithSource("live"), connected: false }),
+    null,
+  );
+});
+
+test("the band labels demo numbers instead of presenting them as delivery", () => {
+  const model = homePerformanceFromReporting(DISCONNECTED_SAMPLE);
   assert.ok(model);
   const html = renderToStaticMarkup(createElement(HomeDashboard, { data: homeData(model.performance) }));
 
-  assert.match(html, /Sample data/);
-  assert.match(html, /not your account/);
-  assert.match(html, /Cost per click/);
-  assert.match(html, /Clicks/);
+  assert.match(html, /Demo data/);
+  assert.match(html, /Demo numbers for an example account, not yours\./);
+  assert.match(html, /Connect Meta to see your own/);
+  // The three figures the band owns, named the way the data actually reads.
   assert.match(html, /Spend/);
+  assert.match(html, /Link clicks/);
+  assert.match(html, /Cost per link click/);
 });
 
 test("the band claims a week and never a 30 day window", () => {
@@ -126,10 +174,51 @@ test("the band claims a week and never a 30 day window", () => {
   assert.match(html, /This week/);
   assert.match(html, /Last 7 days/);
   assert.doesNotMatch(html, /Last 30 days/);
+  assert.doesNotMatch(html, /Demo data/);
 });
 
-test("the band renders nothing rather than guessing when reporting is absent", () => {
+test("the band reports unavailable rather than guessing when reporting is absent", () => {
   const html = renderToStaticMarkup(createElement(HomeDashboard, { data: homeData(null) }));
-  assert.doesNotMatch(html, /This week/);
-  assert.doesNotMatch(html, /Sample data/);
+
+  assert.match(html, /This week/);
+  assert.match(html, /No reporting for this workspace yet\./);
+  // It says what is missing and offers the one way forward, rather than
+  // rendering three empty figure slots that read as a broken table.
+  assert.match(html, /href="\/results"/);
+  assert.match(html, /View performance/);
+  assert.doesNotMatch(html, /Spend/);
+  // A missing figure is never a zero, and never a demo dressed as delivery.
+  assert.doesNotMatch(html, /\$0\.00/);
+  assert.doesNotMatch(html, /Demo data/);
+});
+
+test("a workspace with no Meta connection is sent to connect, not to a report", () => {
+  const html = renderToStaticMarkup(
+    createElement(HomeDashboard, { data: homeData(null, { hasProvider: false }) }),
+  );
+  assert.match(html, /href="\/connect-meta"/);
+});
+
+test("the leads section says how many are waiting and offers the next action", () => {
+  const empty = renderToStaticMarkup(createElement(HomeDashboard, { data: homeData(null) }));
+  assert.match(empty, /No leads yet/);
+  assert.match(empty, /Create an ad/);
+
+  const withLeads = renderToStaticMarkup(
+    createElement(HomeDashboard, {
+      data: homeData(null, {
+        leads: [
+          {
+            id: "lead-1",
+            name: "Ana Whitfield",
+            suburb: "Scarborough",
+            source: "Meta",
+            createdAt: new Date(Date.now() - 3 * 86_400_000).toISOString(),
+          },
+        ],
+      }),
+    }),
+  );
+  assert.match(withLeads, /1 not yet followed up/);
+  assert.match(withLeads, /Waiting 3 days/);
 });

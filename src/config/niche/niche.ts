@@ -73,25 +73,26 @@ export type HomeCopy = {
     };
   };
   kpis: {
-    leads: string;
-    vsPrior: string;
-    costPerLead: string;
     weeklyTitle: string;
     weeklySpend: string;
     weeklyClicks: string;
     weeklyCpc: string;
     weekScope: string;
     syncedAt: (when: string) => string;
-    sampleBadge: string;
-    sampleNote: string;
-    leadsPreviewFoot: string;
-    adsLive: string;
-    adsLiveUnit: (created: number) => string;
-    publishedThisWeek: (count: number) => string;
-    adPacksLeft: string;
-    adsCreated: string;
-    noAdsYet: string;
-    adsPublished: (count: number) => string;
+    viewPerformance: string;
+    /** Spoken descriptions of the week-on-week change; the band shows only the percentage. */
+    vsPriorWeek: {
+      higher: (percent: number) => string;
+      lower: (percent: number) => string;
+      level: string;
+    };
+    demoBadge: string;
+    demoNote: string;
+    demoAction: string;
+    unavailableValue: string;
+    unavailableValueSpoken: string;
+    unavailableNote: string;
+    unavailableAction: string;
   };
   chart: {
     title: string;
@@ -125,7 +126,7 @@ export type HomeCopy = {
   }[];
   leads: {
     title: string;
-    followUp: string;
+    followUp: (count: number) => string;
     viewAll: string;
     emptyTitle: string;
     emptyBody: string;
