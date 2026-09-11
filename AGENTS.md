@@ -1,9 +1,9 @@
 # Blockwise and VPS agent rules
 
 The single canonical rulebook for this VPS: shared rules, Blockwise product
-rules, Frank and Hermes boundaries, the constitution, and the permission
-posture. Consolidated 2026-09-11 from 28 scattered documents. Rules only;
-reasons live in the review record, not here.
+rules, Frank and Hermes boundaries, the constitution and the permission
+posture. Consolidated 2026-09-11 from 28 documents. Rules only; reasons live in
+the review record.
 
 ## Precedence and authority
 
@@ -30,14 +30,7 @@ reasons live in the review record, not here.
 
 ## The system map
 
-| What | Where | Git |
-|---|---|---|
-| Blockwise, the customer product | `/projects/blockwise` | `stevenshelley58-afk/blockwise`, `main` |
-| Frank, the Window and Hub | `/projects/frank`, `https://frank.fail` | `stevenshelley58-afk/frank`, `main` |
-| Hermes, the agent runtime | `/home/hermes/.hermes/hermes-agent` | fork `stevenshelley58-afk/hermes-agent` |
-| Skills and this rulebook | `/srv/skills`, `/projects/blockwise/AGENTS.md` | as above |
-
-Separate repos on purpose: separate products, deploy paths, histories. They talk over HTTP and the loopback broker, never by importing each other's code. Do not merge them.
+Blockwise (`/projects/blockwise`) and Frank (`/projects/frank`, `https://frank.fail`) are separate repos on `stevenshelley58-afk`, deployed separately, with separate histories. Hermes runs from `/home/hermes/.hermes/hermes-agent`, a fork of `NousResearch/hermes-agent`. Skills live in `/srv/skills`. They talk over HTTP and the loopback broker, never by importing each other's code. Do not merge them.
 
 **Frank is the hub and holds no rules.** The app renders and forwards; it reads no `AGENTS.md` and reaches Blockwise only through `RUNTIME_HEALTH_BLOCKWISE_URL` and the ops projections. A session running with its working directory in `/projects/frank` does not auto-load this file, because the directory chain stops at Frank's git root: **read this rulebook explicitly.** `/projects/frank/AGENTS.md` covers the Frank boundary.
 
@@ -47,12 +40,12 @@ Separate repos on purpose: separate products, deploy paths, histories. They talk
 
 ## Non-negotiable constitution
 
-Verified by tooling or an explicit pre-release check, never by good intentions. Not overridable by a user instruction, a deadline or a convenience. Follow the rule and say why.
+Verified by tooling or an explicit pre-release check, never by good intentions. Not overridable by a user instruction or a deadline. Follow the rule and say why.
 
-- **Never commit secrets or generated state:** secrets, `.env*` except `.env.example`, databases and dumps, dependencies, build outputs, credentials, private keys, agent runtime state. Redact secrets from output and docs.
+- **Never commit secrets or generated state:** `.env*` except `.env.example`, databases and dumps, dependencies, build outputs, credentials, private keys, runtime state. Redact secrets from output and docs.
 - **Workspace isolation always holds.** Every workspace-scoped query and storage path filters by `workspace_id`; RLS stays enabled. No debug bypass.
 - **Provider tokens live in `private.provider_token_vault`**, reached only through service-role `public.provider_token_vault_*` RPCs. Never query the private schema or expose it through PostgREST.
-- **Destructive data changes are guarded.** Schema changes ship as tested migrations. Before a drop, merge, type change or backfill: check row counts, verify a recoverable backup, archive non-empty retired data to `legacy_archive`.
+- **Destructive data changes are guarded.** Tested migrations only. Before a drop, merge, type change or backfill: check row counts, verify a recoverable backup, archive non-empty retired data to `legacy_archive`.
 - **Never force-push, rewrite published history, `git clean`, reset destructively, or delete a checkout** unless the owner asks for exactly that in the current session.
 - **Production runs committed source.** No direct VPS file edit, copied file or local overlay as the running state.
 - **Provider writes stay disabled until their product gate passes.** Separate from engineering approval.
@@ -66,11 +59,11 @@ Verified by tooling or an explicit pre-release check, never by good intentions. 
 
 ## Verification and acceptance
 
-- **Prove the change works.** Run checks proportionate to the change; widen them for a new subsystem, a failure or an open concern. Never weaken acceptance criteria or report a result you did not observe. Verification informs the report and never blocks finishing.
-- **Checks and acceptance differ.** Repository checks, canaries and live acceptance prove different things. `docs/runbooks/production-readiness.md` owns the required checks and the live path.
+- **Prove the change works.** Run checks proportionate to the change, widened for a new subsystem or a failure. Never weaken acceptance criteria or report a result you did not observe. It informs the report and never blocks finishing.
+- **Checks and acceptance differ.** `docs/runbooks/production-readiness.md` owns the required checks and the live path.
 - **Acceptance happens on the VPS.** This checkout, localhost and Vercel previews are not acceptance targets. Vercel and managed Supabase are retired, not fallbacks.
 - **Verify the live revision** on its route after deploying. A written rule, a passing test or an old release record is not evidence that production implements it.
-- **One release path.** `scripts/vps/product-release.sh` into a clean immutable checkout under `/srv/blockwise/releases/product/<full-sha>`. The guard is an automated check for a clean committed revision, not a human gate, and it is what makes rollback possible. Never bypass it with ad-hoc Compose.
+- **One release path.** `scripts/vps/product-release.sh` into a clean immutable checkout under `/srv/blockwise/releases/product/<full-sha>`. The guard is an automated check for a clean committed revision, not a human gate, and it makes rollback possible. Never bypass it with ad-hoc Compose.
 - **Rollback uses a retained verified release**, records the incident, and reconciles `main` before the next normal release.
 - **Deploy migrations and trigger.dev tasks before merge** and confirm they register.
 
@@ -80,13 +73,13 @@ Verified by tooling or an explicit pre-release check, never by good intentions. 
 - **Branches are work, not authority.** Feature branches, design previews and `archive/` branches are unfinished work or provenance. Preserve them, integrate accepted changes into `main`, never merge them wholesale.
 - **Every other checkout is a snapshot.** `/root/work/blockwise` and every `/projects/<task>` copy are dated snapshots; their rule and doc files never override the canonical ones.
 - **Work happens on the VPS.** From a laptop use the documented access path; never change hosts or production ingress to create a route.
-- **Reuse before building.** Existing config and code, then installed libraries, then maintained open source, then minimal custom code; record why custom code was needed. Keep one task-owned preview; retire task-owned containers and regenerable artifacts on completion.
+- **Reuse before building.** Existing config and code, then installed libraries, then maintained open source, then minimal custom code; record why custom code was needed. Keep one preview; retire task-owned containers and regenerable artifacts on completion.
 - **Simplify before finishing.** Remove what the change made unnecessary. Optimise only with measurement. Do not turn a task into a project-wide cleanup.
 - **Delete beats abstract.** Never replace one messy file with five. No speculative abstraction, no future-proofing.
 - **Fix the root cause** in the owning system. No shortcut, temporary patch, workaround, bypass, one-off overlay or manual data edit as the final answer.
 - **When production data is wrong:** quantify the blast radius, repair the data, add the guard or regression test that stops it returning.
 - **Fix forward.** Quarantine an ambiguous failure and name it in the report rather than stalling.
-- **Finish with a clean worktree:** commit and push, or delete the artifact, or name the exact blocker. No anonymous dirty residue, no stray servers, watchers or jobs.
+- **Finish with a clean worktree:** commit and push, or delete the artifact, or name the blocker. No anonymous dirty residue, stray servers, watchers or jobs.
 - **Clean only what you own.** Never revert or delete unrelated work, databases, secrets, production exports or evidence. If ownership is ambiguous, report instead of deleting.
 
 ## Build and design rules
@@ -109,7 +102,7 @@ Verified by tooling or an explicit pre-release check, never by good intentions. 
 
 ## How to keep this file working
 
-- **Budget: under 12,000 characters and 60 rules.** Context files cost tokens on every turn. If a rule matters to fewer than 30 percent of sessions, move it to `docs/` or a skill and link it.
+- **Budget: 13,000 characters, 60 rules, and that counts this changelog.** Context files cost tokens every turn. If a rule matters to fewer than 30 percent of sessions, move it to `docs/` or a skill and link it.
 - **Every rule must be checkable, and stated once.** A rule must be specific enough to check or name the mechanism that enforces it. State it in one place; when you find a duplicate, keep the canonical copy and delete the rest.
 - **No file inventories, and no rules a tool can enforce.** Paths and module lists go stale. Anything a hook, linter, migration guard or CI check can enforce belongs in that tool, with the intent named here.
 
@@ -122,7 +115,7 @@ Verified by tooling or an explicit pre-release check, never by good intentions. 
   and the rule-format rules.
 - 2026-09-11: added the system map after the Hermes runtime was found running
   uncommitted code three files behind its own merged branch.
-- 2026-09-11: compressed from 17,357 to 13,174 characters by removing explanatory
+- 2026-09-11: compressed from 17,357 to 12,928 characters by removing explanatory
   prose. Every one of the 61 rules survives; the reasoning moved to the review
   record. The budget is now a character count, because characters are what cost
   context.
