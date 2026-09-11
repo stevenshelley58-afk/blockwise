@@ -39,6 +39,8 @@ Five things run on this VPS. Know which one you are changing.
 | Hermes, the agent runtime and executor | `/home/hermes/.hermes/hermes-agent` | fork `stevenshelley58-afk/hermes-agent` |
 | Skills and this rulebook | `/srv/skills`, `/projects/blockwise/AGENTS.md` | as above |
 
+Hermes also loads `.hermes.md` from this repo when its working directory is here. That file carries runtime self-knowledge only: where the runtime lives, what looks broken but is not, and the memory caps. Keep rules out of it.
+
 Separate repositories on purpose: separate products, deploy paths and histories. They talk over HTTP and the loopback broker, never by importing each other's code. Do not merge them.
 
 **Frank is the hub and holds no rules.** The Frank app renders and forwards work and reads no `AGENTS.md`. It reaches Blockwise only through `RUNTIME_HEALTH_BLOCKWISE_URL` and the ops projections. Agents in Frank read this rulebook plus `/projects/frank/AGENTS.md`.
