@@ -22,27 +22,37 @@ test("normaliseMediaUrl sends images through the renderer, segment-encoded", () 
   }
 });
 
-test("normaliseMediaUrl keeps videos on the object path", () => {
-  // The image renderer answers 400 for an mp4, so a render URL here would leave
-  // every video card with a broken creative. Videos keep the raw object and the
-  // poster frame stays a rendered image.
+test("normaliseMediaUrl sends only named images to the image renderer", () => {
+  // The renderer answers 400 for an mp4 (measured on the live 10,382,027 B
+  // sample), and the archive keeps images and videos together under
+  // extension-free `sha256/<hash>` keys, so a path that does not name an image
+  // type must keep the object URL it has always had.
   const previousStorageUrl = process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL;
   process.env.NEXT_PUBLIC_RESEARCH_STORAGE_URL = "https://hermes.example";
+  const object = (path: string) =>
+    `https://hermes.example/storage/v1/object/public/research-ad-creatives/${path}`;
 
   try {
-    for (const video of [
+    for (const raw of [
       "media-blobs/creative.mp4",
       "media-blobs/creative.MOV",
       "media-blobs/clip.webm",
       "email/video-294b2970.mp4",
+      // Extension-free archive key: images and videos share this shape, so the
+      // renderer is never asked for one.
+      "sha256/4cfd25421637e08efa69efe98736d61008951c4d2e05b033e5a849bc9951eb69",
+      "media-blobs/no-extension",
     ]) {
-      assert.equal(
-        normaliseMediaUrl(video),
-        `https://hermes.example/storage/v1/object/public/research-ad-creatives/${video}`,
-        `${video} must not be sent to the image renderer`,
-      );
+      assert.equal(normaliseMediaUrl(raw), object(raw), `${raw} must stay on the object path`);
     }
-    assert.match(normaliseMediaUrl("media-blobs/poster.mp4.jpg") ?? "", /\/render\/image\/public\//);
+    for (const image of [
+      "media-blobs/0a9bd4778ba61fd2c56af31eceeb4bf7deeea7c9ff01664db29f2f5c215ea33a.jpg",
+      "media-blobs/poster.mp4.jpg",
+      "email/00238b95de429a5b5613e2fc9978526d5b9f6a53bee413b9a7a80948604fc26d.jpg",
+    ]) {
+      assert.match(normaliseMediaUrl(image) ?? "", /\/render\/image\/public\//, `${image} should render`);
+    }
+    assert.match(normaliseMediaUrl("crew/photo.PNG") ?? "", /\/render\/image\/public\//);
   } finally {
     restoreEnv("NEXT_PUBLIC_RESEARCH_STORAGE_URL", previousStorageUrl);
   }
