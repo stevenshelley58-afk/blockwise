@@ -1,9 +1,9 @@
 # Blockwise documentation
 
-This is the sole current Blockwise documentation index. Read
-`/projects/frank/docs/standards/engineering-rules.md` and
-[AGENTS.md](../AGENTS.md) first. Older worktree and branch documents are
-snapshots, not alternate current rules.
+This is the sole current Blockwise documentation index. Read the canonical
+rulebook at [`/projects/blockwise/AGENTS.md`](../AGENTS.md) first; it carries the
+shared rules, the product rules and the constitution. Older worktree and branch
+documents are snapshots, not alternate current rules.
 
 The application has one source authority: `/projects/blockwise` on `main`,
 tracking `origin/main`. Normal releases use the guarded single-authority procedure

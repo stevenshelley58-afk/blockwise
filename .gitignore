@@ -84,3 +84,6 @@ record-meta-segments.cmd
 # Local tool logs must never be committed
 tailwindcss-*.log
 *.tsbuildinfo
+
+# Agent rule-file backups kept for provenance, never committed
+.agents-backup/
