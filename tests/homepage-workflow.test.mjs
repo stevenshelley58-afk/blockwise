@@ -69,14 +69,14 @@ test("the field writes the ad headline onto the image, clear of the portrait", (
   // It sits on the template's own link title line, sized against the creative.
   assert.match(styles, /\.hc-story-ad-headline \{[^}]*position: absolute/);
   assert.match(styles, /\.hc-story-ad-headline \{[^}]*text-transform: uppercase/);
-  // The template prints its own headline and it cannot be covered without
-  // reaching the portrait, so the new headline is its own plate over the photo.
-  assert.match(styles, /\.hc-story-ad-headline \{[^}]*background: linear-gradient/);
-  assert.match(styles, /\.hc-story-ad-headline \{[^}]*color: #fff/);
-  // Measured limits: inside the photo band, above the printed headline block
-  // (which starts at y 57.5%) and clear of the portrait on the right.
-  assert.match(styles, /\.hc-story-ad-headline \{[^}]*top: 11%/);
-  assert.match(styles, /\.hc-story-ad-headline \{[^}]*width: 70%/);
+  // It replaces the headline the template prints, rather than adding an element.
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*background: #fefefe/);
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*color: #1b2a4a/);
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*text-transform: uppercase/);
+  // Measured on the creative: the printed headline runs y 51-61.5% and reaches
+  // x 67%, her portrait starts at x 76%, the description sits below y 69.5%.
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*top: 50\.4%/);
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*width: 66%/);
 });
 
 test("the review step writes its values, presses, and puts the ad live", () => {
