@@ -99,6 +99,44 @@ describe("canonical editor preview handoff", () => {
     assert.deepEqual(revoked, ["blob:generated-1"]);
   });
 
+  it("keeps the displayed frame while the next one renders", async () => {
+    const second = deferred<Response>();
+    const states: Array<{ status: string; url: string | null }> = [];
+    const revoked: string[] = [];
+    let serial = 0;
+    const controller = createCanonicalPreviewController(
+      async () => {
+        serial += 1;
+        return serial === 1 ? response("first") : second.promise;
+      },
+      {
+        createObjectURL: () => "blob:" + String(serial),
+        revokeObjectURL: (url) => revoked.push(url),
+      },
+    );
+    const record = (state: { status: string; url: string | null }) => states.push({ status: state.status, url: state.url });
+
+    controller.request({ endpoint: "/preview", document, placement: "feed", debounceMs: 0, onState: record });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.deepEqual(states.at(-1), { status: "ready", url: "blob:1" });
+
+    // Editing again: the new frame is still rendering, so the old one stays up
+    // and its URL is not released yet.
+    controller.request({ endpoint: "/preview", document, placement: "feed", debounceMs: 0, onState: record });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.deepEqual(states.at(-1), { status: "pending", url: "blob:1" });
+    assert.deepEqual(revoked, []);
+
+    second.resolve(response("second"));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.deepEqual(states.at(-1), { status: "ready", url: "blob:2" });
+    assert.deepEqual(revoked, ["blob:1"]);
+
+    controller.dispose();
+    assert.deepEqual(revoked, ["blob:1", "blob:2"]);
+  });
+
   it("revokes the active object URL when replaced or disposed", async () => {
     const revoked: string[] = [];
     let serial = 0;

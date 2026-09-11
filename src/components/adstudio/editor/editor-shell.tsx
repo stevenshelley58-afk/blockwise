@@ -448,19 +448,23 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
   const [previewMode, setPreviewMode] = useState<"design" | "meta" | "split">("meta");
   const [zoom, setZoom] = useState<"fit" | 1 | 1.25 | 0.8>("fit");
   const [placementView, setPlacementView] = useState<Placement | "both">(state.activePlacement);
-  const [canonicalDocument, setCanonicalDocument] = useState<{ document: AdDocumentParsed; version: number } | null>(null);
+  const [canonicalDocument, setCanonicalDocument] = useState<AdDocumentParsed | null>(null);
   useEffect(() => {
     let cancelled = false;
     void buildAdDocument(state).then(document => {
+      // Keep the previous document object while nothing about it changed, so
+      // selecting a layer does not re-render the preview.
       if (!cancelled) setCanonicalDocument(previous =>
-        previous?.version === (state.editVersion ?? 0) && JSON.stringify(previous.document) === JSON.stringify(document)
-          ? previous : { document, version: state.editVersion ?? 0 });
+        previous && JSON.stringify(previous) === JSON.stringify(document) ? previous : document);
     }).catch(() => {
       if (!cancelled) setCanonicalDocument(null);
     });
     return () => { cancelled = true; };
   }, [state]);
-  const previewDocument = canonicalDocument?.version === (state.editVersion ?? 0) ? canonicalDocument.document : null;
+  // The last built document stays the preview source while the next one is
+  // being built. Withholding it on every keystroke is what made the creative
+  // drop back to the live canvas and flash.
+  const previewDocument = canonicalDocument;
   const feedCanonicalPreview = useCanonicalPreview({
     adId,
     workspaceId,

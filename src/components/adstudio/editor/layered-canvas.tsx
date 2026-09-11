@@ -255,7 +255,9 @@ export function LayeredCanvas({
           }}
         />
       ) : null}
-      {canonicalPreview?.status === "ready" && canonicalPreview.url ? (
+      {/* Any frame the editor holds is shown, including while the next one
+          renders: swapping the source is the only visible change. */}
+      {canonicalPreview?.url ? (
         <img
           src={canonicalPreview.url}
           alt={(layout.placement === "feed" ? "Feed" : "Story") + " canonical server preview"}

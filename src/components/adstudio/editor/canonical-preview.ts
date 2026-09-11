@@ -59,14 +59,24 @@ export function createCanonicalPreviewController(
     timer = null;
     controller?.abort();
     controller = null;
-    revokeCurrent();
+    // The frame on screen is deliberately left alone. Cancelling work must not
+    // blank the creative; the current URL is released when a replacement is in
+    // place, or on dispose.
   };
 
   const request = (input: PreviewRequest) => {
     cancelPending();
     if (disposed) return;
     const requestSequence = sequence;
-    input.onState({ status: "pending", url: null, documentHash: null, templateHash: null, error: null });
+    // Hold the current frame while the next one renders, so a burst of edits
+    // never shows an empty creative.
+    input.onState({
+      status: "pending",
+      url: currentUrl,
+      documentHash: null,
+      templateHash: null,
+      error: null,
+    });
     const run = async () => {
       controller = new AbortController();
       try {
@@ -115,6 +125,7 @@ export function createCanonicalPreviewController(
   const dispose = () => {
     disposed = true;
     cancelPending();
+    revokeCurrent();
   };
 
   return { request, cancelPending, dispose };
@@ -148,8 +159,9 @@ export function useCanonicalPreview({
   useEffect(() => {
     const controller = controllerRef.current!;
     if (!enabled || !isCanonicalPreviewRequestReady({ adId, workspaceId, document })) {
+      // Stop the work but keep the last frame. Blanking here is what turned a
+      // paused or not-yet-built document into a visible flash.
       controller.cancelPending();
-      setState({ status: "idle", url: null, documentHash: null, templateHash: null, error: null });
       return;
     }
     controller.request({
