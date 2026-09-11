@@ -11,12 +11,19 @@ test("homepage pricing presents three honest choices with direct signup", async 
   for (const value of [
     'TRIAL_SIGNUP_URL = "https://blockwise.sale/signup?offer=self-serve"',
     'TRIAL_CTA_LABEL = "Start your free trial"', "A$0", "A$249", "from A$1,500",
-    "per month, until cancelled", "Three Feed + Story ad packs", "One campaign",
+    "No Blockwise subscription fee", "per month, plus Meta ad spend",
+    "Cancel anytime. Monthly billing, no lock-in.",
+    "You only pay Blockwise if you choose a paid plan.",
+    "Choosing this plan is the paid step. Starting free does not auto-charge you.",
+    "Three Feed + Story ad packs", "One campaign",
     "Saved designs and leads stay available", "Up to 50 Feed + Story ad packs", "Up to four live campaigns",
   ]) assert.ok(data.includes(value), `missing offer fact: ${value}`);
+  // Three distinct plans, each priced with its own action, and only one featured.
+  assert.equal((data.match(/cta: \{ label:/g) ?? []).length, 3);
+  assert.equal((data.match(/featured: true/g) ?? []).length, 1);
   assert.match(component, /HOMEPAGE_PLANS\.map/);
   assert.match(component, /<details className="hp-plan-details">/);
-  assert.match(component, /hp-pricing-sequence/);
+  assert.match(component, /className="hp-plan-note"/);
   assert.match(component, /plan\.cta\.href/);
   assert.match(component, /homepage-pricing\.css/);
   assert.match(styles, /\.hp-pricing-grid/);
