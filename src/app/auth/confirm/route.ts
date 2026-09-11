@@ -51,6 +51,15 @@ export async function GET(request: NextRequest) {
   const flow = requestUrl.searchParams.get("flow");
   const next = sanitizeNextPath(requestUrl.searchParams.get("next"));
 
+  // The app logs no requests, so a provider sign-in that arrives with the wrong
+  // parameters, or never arrives, is invisible. Record what this route actually
+  // received before doing anything with it.
+  console.log(
+    `auth/confirm received: mechanism=${code ? "pkce_code" : token_hash ? `otp_${type}` : "no_parameters"} ` +
+      `flow=${flow ?? "-"} next=${next} params=${[...requestUrl.searchParams.keys()].join(",") || "-"} ` +
+      `referer=${request.headers.get("referer") ?? "-"}`,
+  );
+
   const supabase = await createSupabaseServerClient();
   const authError = code
     ? (await supabase.auth.exchangeCodeForSession(code)).error
