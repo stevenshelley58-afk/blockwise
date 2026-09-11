@@ -375,25 +375,28 @@
 }
 
 /* The ad's headline, written on the creative. It replaces the line the template
-   prints there rather than adding a second element. Measured on the creative, the
-   printed headline runs in two lines: y 51-55% and y 56.8-61.5%, reaching x 67%;
-   her portrait starts at x 76% and the description sits below y 69.5%. The panel
-   covers exactly that block, filled with the palette's own colour, and the new
-   headline is written in the template's own navy. Sized in cqw so it tracks the
-   creative at every width. */
+   prints there rather than adding a second element.
+
+   Measured on the creative with a labelled grid: the printed headline occupies
+   two lines, y 51-55% and y 56.8-61.5%, reaching x 67%; her portrait starts at
+   x 76%, and the description below the headline starts at y 64.5%. The panel is
+   pinned to that exact block, filled with the palette's own colour (#fefefe),
+   and the new headline is centred inside it in the template's own navy. Sized in
+   cqw so it tracks the creative at every width. */
 .hc-story-ad-headline {
   position: absolute;
-  top: 50.4%;
+  top: 50.6%;
   left: 5%;
-  display: block !important;
+  display: flex !important;
+  height: 11.6%;
   width: 66%;
-  min-height: 11.8%;
+  align-items: center;
+  padding: 0 0.6cqw;
   overflow: hidden;
-  padding: 0.5cqw 0.6cqw;
   background: #fefefe;
   color: #1b2a4a;
   font-family: var(--hc-display);
-  /* Matches the printed headline: two lines, ~47px on a 1080px creative. */
+  /* Two lines at the printed headline's scale, ~47px on a 1080px creative. */
   font-size: 4cqw;
   font-weight: 600;
   letter-spacing: .03em;

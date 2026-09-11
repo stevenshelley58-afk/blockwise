@@ -51,8 +51,8 @@ const STORY_STATUS = [
 ] as const;
 
 /** Milliseconds per character. The field and the ad advance on the same count. */
-const TYPE_SPEED_COPY = 14;
-const TYPE_SPEED_LINK = 24;
+const TYPE_SPEED_COPY = 24;
+const TYPE_SPEED_LINK = 40;
 
 /** The library entry the demo selects. It owns the real post copy and link title. */
 const SELECTED_AD = { ...AD_EXAMPLES[0], image: AD_LIBRARY[LIBRARY_SEQUENCE[LIBRARY_SEQUENCE.length - 1]].image };
@@ -443,8 +443,8 @@ const REVIEW_FIELDS = [
   ["Duration", "14 days"],
 ] as const;
 
-const REVIEW_ITEM_DELAY = 320;
-const REVIEW_ITEM_SPEED = 11;
+const REVIEW_ITEM_DELAY = 420;
+const REVIEW_ITEM_SPEED = 19;
 
 /**
  * Writes the review values in one after another. Each value keeps its own

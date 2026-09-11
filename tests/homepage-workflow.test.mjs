@@ -54,7 +54,11 @@ test("the text is written a character at a time, in the field and the ad togethe
   assert.match(styles, /\.hc-story-caret \{[^}]*animation: hc-story-caret/);
   const speeds = [...source.matchAll(/const TYPE_SPEED_\w+ = (\d+)/g)].map((match) => Number(match[1]));
   assert.equal(speeds.length, 2);
-  assert.ok(speeds.every((speed) => speed >= 8 && speed <= 60), `typing speed out of range: ${speeds}`);
+  assert.ok(speeds.every((speed) => speed >= 20 && speed <= 60), `typing speed out of range: ${speeds}`);
+  // The two writing fields must be slower than a machine tick.
+  assert.match(source, /const TYPE_SPEED_COPY = 24/);
+  assert.match(source, /const TYPE_SPEED_LINK = 40/);
+  assert.match(source, /const REVIEW_ITEM_SPEED = 19/);
 
   // A step jumped to ahead of the writing still shows a finished ad.
   assert.match(source, /const copyChars = scene === "browse" \? 0 : phase > 5 \? STORY_AD\.postCopy\.length/);
@@ -75,7 +79,8 @@ test("the field writes the ad headline onto the image, clear of the portrait", (
   assert.match(styles, /\.hc-story-ad-headline \{[^}]*text-transform: uppercase/);
   // Measured on the creative: the printed headline runs y 51-61.5% and reaches
   // x 67%, her portrait starts at x 76%, the description sits below y 69.5%.
-  assert.match(styles, /\.hc-story-ad-headline \{[^}]*top: 50\.4%/);
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*top: 50\.6%/);
+  assert.match(styles, /\.hc-story-ad-headline \{[^}]*height: 11\.6%/);
   assert.match(styles, /\.hc-story-ad-headline \{[^}]*width: 66%/);
 });
 
