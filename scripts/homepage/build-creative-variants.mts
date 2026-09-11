@@ -23,6 +23,10 @@ import { AD_EXAMPLES, AD_LIBRARY, SHOWCASE_ADS } from "../../src/lib/homepage-co
  * Idempotent: an existing variant whose real width already matches its step is
  * left untouched. Run it after adding or replacing a homepage creative, then
  * commit the new files. `tests/homepage-creative-variants.test.ts` is the guard.
+ *
+ * The filenames carry the width, not the encoding, and `/adstudio-thumbnails/`
+ * variants are served `immutable` for a year, so changing how a step is encoded
+ * means changing the step (or the name) rather than quietly rewriting a file.
  */
 const ROOT = process.cwd();
 const PUBLIC_DIR = path.join(ROOT, "public");
