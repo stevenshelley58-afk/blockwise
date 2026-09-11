@@ -22,13 +22,14 @@ Small numbers, which is what makes this tractable.
 
 | Item | Size | Notes |
 |---|---|---|
-| Postgres database | 41 MB | `product-backup.sh` already dumps and verifies this |
-| Object storage volume | 503 MB | **Not currently backed up - see below** |
+| Postgres database | 41 MB | Covered by the daily encrypted backup |
+| Object storage volume | 503 MB | Covered by the same backup (512 MB `storage.tar.gz.age`) |
 | Product stack RAM | ~550 MB | 7 containers, near-idle |
 | Supabase Postgres (`supabase_db_Blockwise`) | separate | exists for Hermes/research, not the product |
 | Product edge Caddy | config only | `infra/product/Caddyfile` |
 
-State is roughly 544 MB. This is a lift, not a migration project.
+State is roughly 544 MB, and all of it is already captured by the daily
+encrypted backup. This is a lift, not a migration project.
 
 ## The one blocker: the Ad DB is not reachable off-host
 
@@ -49,31 +50,33 @@ A moved product app cannot reach that address. Pick one:
 Option 1 is closer to how everything else already works and is the recommended
 default. Do not expose port 9119 directly to the internet.
 
-## Before anything else: close the storage backup gap
+## Backups already cover both halves
 
-`scripts/vps/product-backup.sh` dumps Postgres plus row counts and writes
-`SHA256SUMS`. It does **not** touch object storage, so the 503 MB in
-`blockwise-product-storage-data` - customer uploads, saved renders, template
-assets - would be lost with the box.
+A daily encrypted backup runs at 03:15 UTC: `blockwise-product-backup.timer`
+invokes `/usr/local/libexec/blockwise-product-encrypted-backup`, which dumps
+Postgres plus globals and row counts, archives the object storage volume, hashes
+every stored file, encrypts each artefact with `age`, verifies the result, and
+applies 90-day retention. The 2026-09-11 run holds a 512 MB
+`storage.tar.gz.age` beside the database dump, so objects are covered.
 
-Add object backup before relying on this move, and to protect the current host
-in the meantime:
+Be careful which script you trust here. `scripts/vps/product-backup.sh` in this
+repository is an ad-hoc database-only helper and is **not** the scheduled job;
+reasoning about backup coverage from the repo alone understates it. Check the
+deployed unit.
 
-```bash
-# Objects live in a named volume; archive it with a consistent snapshot.
-docker run --rm -v blockwise-product-storage-data:/data:ro \
-  -v /srv/blockwise/backups:/out alpine \
-  tar -C /data -czf /out/storage-$(date -u +%Y%m%dT%H%M%SZ).tgz .
-```
+One genuine caveat, recorded by the backup's own METADATA as
+`asset_consistency=filesystem-read-no-snapshot`: objects are read while the
+service is live, so a run during active writes can pair a database row with a
+newer or older object. For a move, take the backup in a quiet window and compare
+the restored object count against `storage.objects` before cutting over.
 
-Then verify by listing the archive and comparing object counts against
-`storage.objects` in the database (834 rows in `research-ad-creatives` alone at
-the time of writing). A backup nobody has restored is not a backup: rehearse the
-restore into a scratch volume before the real move.
+Rehearsing the restore still matters. The archive is only proven usable once
+extracted: 1029 files extracted cleanly and a spot-checked object matched the
+original byte for byte at the time of writing.
 
 ## Order of operations
 
-1. **Close the storage backup gap** (above) and rehearse a restore.
+1. **Rehearse a restore** from the existing encrypted backup (above).
 2. **Provision the target** in a Sydney region. The stack idles under 1 GB RAM
    and needs ~1 GB of disk for state plus images; size for build headroom and
    log retention rather than steady-state.
