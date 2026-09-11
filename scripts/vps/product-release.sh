@@ -84,7 +84,7 @@ assert_source_authority() {
   [[ -d "$SOURCE" ]] || fail "release source is not a directory: $SOURCE"
   local common releases_real source_real
   common="$(readlink -f -- "$("$GIT" -C "$SOURCE" rev-parse --git-common-dir)")" || fail "release source is not a git repository"
-  [[ "$common" == "$CANONICAL_SOURCE/.git" ]] || fail "release source is not a worktree of $CANONICAL_SOURCE"
+  [[ "$common" == "$CANONICAL_SOURCE/.git" ]] || fail "release source is not a worktree of $CANONICAL_SOURCE (source: '$SOURCE', common dir: '$common')"
   if [[ "$SOURCE" != "$CANONICAL_SOURCE" ]]; then
     releases_real="$(readlink -f -- "$RELEASES")"
     source_real="$(readlink -f -- "$SOURCE")"
