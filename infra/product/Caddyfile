@@ -10,11 +10,23 @@
 # loop or a second ACME certificate flow.
 #
 # Proxy chain: Frank edge -> product-caddy -> product-app.
-# Global trusted_proxies configuration names the Frank edge network
-# as the ONLY trusted hop, so {client_ip} resolves to the real customer
-# address and Caddy ignores any client-supplied X-Forwarded-For entries. The
-# resolved client IP is stamped into X-Blockwise-Client-IP (overwriting
-# whatever the client sent), and the application trusts ONLY that header.
+#
+# How the real client IP survives the chain (verified end to end):
+#  1. Frank's edge resolves the customer from Cloudflare's CF-Connecting-IP (or
+#     the connecting peer when the zone is not proxied) and forwards it as the
+#     X-Forwarded-For entry for this hop.
+#  2. This router trusts exactly one peer, {$TRUSTED_PROXY_RANGES} — the Frank
+#     edge — and runs trusted_proxies_strict, which selects the LEFT-most
+#     X-Forwarded-For entry rather than the right-most. Strict mode is what
+#     makes {client_ip} the customer instead of the edge. Every entry a client
+#     tries to inject before Frank is discarded, because Caddy only honours the
+#     header when the immediate peer is trusted.
+#  3. The resolved address is stamped into X-Blockwise-Client-IP, and the
+#     application reads that header first (src/lib/client-ip.ts).
+#
+# Changing {$TRUSTED_PROXY_RANGES} to an address the edge does not use silently
+# degrades every customer to the edge's container IP for rate limiting and
+# audit attribution, with no error — it fails open, not closed.
 http://{$BLOCKWISE_PRODUCT_DOMAIN} {
 	encode zstd gzip
 
