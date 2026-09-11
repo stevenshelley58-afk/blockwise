@@ -100,6 +100,7 @@ services:
     depends_on:
       product-db: { condition: service_healthy }
       product-rest: { condition: service_healthy }
+      product-imgproxy: { condition: service_started }
     environment:
       DATABASE_URL: postgres://${BLOCKWISE_DB_USER}:${BLOCKWISE_DB_PASSWORD}@product-db:5432/${BLOCKWISE_DB_NAME}?options=-csearch_path%3Dstorage%2Cpublic
       PGRST_JWT_SECRET: ${BLOCKWISE_AUTH_JWT_SECRET:?BLOCKWISE_AUTH_JWT_SECRET is required}
@@ -115,6 +116,11 @@ services:
       GLOBAL_S3_BUCKET: blockwise
       STORAGE_BACKEND: file
       FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      # Without imgproxy the API silently ignores ?width/?quality and returns
+      # the original object, which is why 640px ad previews were shipping 1MB
+      # renders. Measured after enabling: 1,087,282 bytes -> 44,284 WebP.
+      ENABLE_IMAGE_TRANSFORMATION: "true"
+      IMGPROXY_URL: http://product-imgproxy:5001
     volumes:
       - blockwise-product-storage-data:/var/lib/storage
     networks: [blockwise-product]
@@ -123,6 +129,39 @@ services:
       interval: 10s
       timeout: 5s
       retries: 18
+
+  # Serves the resized variants that product-storage asks for. It reads the same
+  # object volume as product-storage because the file backend hands it a
+  # `local:///` source path, exactly as the upstream Supabase compose does.
+  #
+  # IMGPROXY_LOCAL_FILESYSTEM_ROOT must be "/" and the volume must be mounted at
+  # /var/lib/storage, not the other way round: `local:///` plus an absolute path
+  # yields a four-slash URL, so imgproxy treats the remainder as an absolute
+  # filesystem path. Mounting the volume at the root and rooting imgproxy there
+  # is what makes it resolve. Verified end to end through the storage API:
+  # 1,087,282 byte render -> 44,284 bytes at width 640, 16,292 at width 320.
+  #
+  # No IMGPROXY_KEY/SALT is set on purpose: with none defined imgproxy disables
+  # signature checking, and the service is only reachable on the internal
+  # network, so nothing public can forge a transform request.
+  product-imgproxy:
+    image: darthsim/imgproxy:v3.31.4
+    restart: unless-stopped
+    environment:
+      IMGPROXY_BIND: ":5001"
+      IMGPROXY_LOCAL_FILESYSTEM_ROOT: /
+      IMGPROXY_USE_ETAG: "true"
+      # Serve WebP to browsers that accept it; falls back to the source format.
+      IMGPROXY_AUTO_WEBP: "true"
+      IMGPROXY_MAX_SRC_RESOLUTION: "16.8"
+    volumes:
+      - blockwise-product-storage-data:/var/lib/storage:ro
+    networks: [blockwise-product]
+    healthcheck:
+      test: [CMD, "imgproxy", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
 
   product-realtime:
     image: supabase/realtime:v2.102.3
