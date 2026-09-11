@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { NextResponse, type NextRequest } from "next/server";
 
 import {
@@ -9,6 +11,11 @@ import {
   AdDbConfigurationError,
   fetchAdDbMedia,
 } from "@/lib/research/ad-db-client";
+import {
+  adMediaDerivative,
+  derivativeFormat,
+  shouldDerivative,
+} from "@/lib/research/ad-media-derivative";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -77,7 +84,36 @@ async function proxyMedia(
         { status: 502 },
       );
     }
-    return new Response(method === "HEAD" ? null : upstream.body, {
+    // Archive images are 2048px and several megabytes, and the Ad DB ignores
+    // every resize parameter, so the bytes are downscaled here instead. Range
+    // requests and anything that is not a large image keep streaming untouched,
+    // and a resize failure serves the original bytes rather than an error.
+    let buffered: Uint8Array<ArrayBuffer> | null = null;
+    if (
+      shouldDerivative({
+        method,
+        range: request.headers.get("range"),
+        contentType: upstream.headers.get("content-type"),
+        contentLength: Number(upstream.headers.get("content-length") ?? 0),
+      })
+    ) {
+      buffered = new Uint8Array(await upstream.arrayBuffer());
+      try {
+        const format = derivativeFormat(request.headers.get("accept"));
+        // The source length is part of the key so a replaced object re-renders
+        // instead of serving a derivative of the bytes it used to hold.
+        const cacheKey = `${adId}:${mediaId}:${buffered.byteLength}`;
+        const derivative = await adMediaDerivative(cacheKey, buffered, format);
+        return new Response(method === "HEAD" ? null : derivative.body, {
+          status: 200,
+          headers: derivativeHeaders(upstream.headers, derivative.contentType, derivative.body.byteLength, `${cacheKey}:${format}`),
+        });
+      } catch (error) {
+        console.error("[ad-db] media derivative failed, serving the original", error);
+      }
+    }
+
+    return new Response(method === "HEAD" ? null : (buffered ?? upstream.body), {
       status: upstream.status,
       headers: safeMediaHeaders(upstream.headers),
     });
@@ -111,6 +147,26 @@ function safeMediaHeaders(source: Headers): Headers {
     const value = source.get(name);
     if (value) headers.set(name, value);
   }
+  return headers;
+}
+
+/**
+ * Headers for a derivative response. Range support is deliberately absent: the
+ * body is a re-encoded image, not a byte range of the original object.
+ */
+function derivativeHeaders(
+  source: Headers,
+  contentType: string,
+  byteLength: number,
+  key: string,
+): Headers {
+  const headers = new Headers({
+    "X-Content-Type-Options": "nosniff",
+    "content-type": contentType,
+    "content-length": String(byteLength),
+    "cache-control": source.get("cache-control") ?? "private, max-age=31536000, immutable",
+    etag: `"${createHash("sha256").update(key).update(String(byteLength)).digest("hex").slice(0, 32)}"`,
+  });
   return headers;
 }
 
