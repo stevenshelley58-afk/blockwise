@@ -10,9 +10,11 @@
 - Blockwise helps real-estate agents get leads, not sell houses. Lead with getting leads; ad creation, campaign management and reporting are tools that serve that.
 - Never imply guaranteed leads or sales. Show the real allowance, renewal, charge and cancellation terms beside the decision that needs them.
 - The flow: pick a Frank-built template pack, supply brand and property inputs, edit in AdStudio, save Feed and Story renders, review the publish setup, submit the gated Meta workflow. Campaigns, leads and billing live in the same product.
+- A lead books a call from the Blockwise customer surface. SnagTime is the scheduling engine, and Frank runs it as a Hub service: the customer never sees Frank and never reaches the operator console behind it.
+- Frank is the owner's Hub, not a customer surface. Frank runs and accounts for the apps; Blockwise is where customers live. Never put a customer-facing screen or a customer account in Frank.
 - Plain language on the customer surface: hide campaigns, ad sets, placements, provider IDs and coordinates, except where a connection screen needs the exact provider label.
 - Blockwise does not scrape ads, write blogs or generate templates. That is Frank and Hermes work.
-- Frank is the Window and Hub and holds no rules; it renders and forwards. Hermes owns reasoning, tools, skills, memory and execution. Frank must never gain an agent loop, provider runtime, duplicate memory store or second profile.
+- Frank renders and forwards, and the rules live in this file. Hermes owns reasoning, tools, skills, memory and execution. Frank must never gain an agent loop, provider runtime, duplicate memory store or second profile.
 - Hermes runs one profile, `default`; product workspaces are projects inside it. The repos are separate on purpose: never merge them or import one product's code from the other. Each component reads only its own stores.
 
 ## Constitution
