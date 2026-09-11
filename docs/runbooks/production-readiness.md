@@ -7,6 +7,30 @@ Read the compiled revision from live health and verify the intended full SHA
 with the product-health script. Dated releases below are historical evidence,
 not a fixed current release. [The index](../README.md) selects other procedures.
 
+## Automatic deployment of main
+
+`blockwise-autodeploy.timer` polls `origin/main` every 60 seconds and releases
+any new revision through `blockwise-autodeploy.service`. The unit runs
+`/usr/local/sbin/blockwise-autodeploy`, which prepares the immutable image and
+then deploys it with `scripts/vps/product-release.sh`.
+
+A release never reads a working tree. The script builds a worktree of the exact
+commit under `/srv/blockwise/releases/product/<sha>` and releases from there, so
+no uncommitted edit in any checkout can block or alter a release. A dirty
+canonical tree used to stop every deploy; it no longer can.
+
+This keeps the guarantees that make rollback possible. A released revision is
+still pinned to one commit, the release worktree must be detached, clean and at
+that commit, and `BLOCKWISE_ENABLE_PROVIDER_WRITES` must stay `false`. Deploying
+uncommitted source is still refused. `BLOCKWISE_RELEASE_SOURCE` names the tree a
+release reads from and is rejected unless it is a worktree of
+`/projects/blockwise` inside release storage.
+
+Logs: `/srv/blockwise/releases/autodeploy.log`. Check the live revision with
+`curl -fsS https://blockwise.sale/api/health`. To release by hand, use the same
+script with `--prepare` then `--deploy`; see
+[rollback](rollback.md) before reverting a revision.
+
 ## Historical candidate (7 September 2026, beta readiness)
 
 The following checkpoint and commands are historical only. They are superseded
