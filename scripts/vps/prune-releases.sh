@@ -84,22 +84,36 @@ for sha in "${ALL[@]}"; do
   if is_protected "$sha"; then
     kept=$((kept + 1)); continue
   fi
-  # Never retire a worktree that is dirty or not at its own commit.
-  if [[ ! -e "$dir/.git" ]]; then
-    printf 'skip %s: not a worktree\n' "${sha:0:12}"; kept=$((kept + 1)); continue
-  fi
-  if ! git -C "$dir" diff --quiet HEAD -- 2>/dev/null; then
-    printf 'skip %s: has uncommitted changes\n' "${sha:0:12}"; kept=$((kept + 1)); continue
-  fi
-  if [[ "$(git -C "$dir" rev-parse HEAD 2>/dev/null || true)" != "$sha" ]]; then
-    printf 'skip %s: worktree is not at its own commit\n' "${sha:0:12}"; kept=$((kept + 1)); continue
+  # A release directory that is still registered as a worktree is judged by its
+  # git state, and never retired while dirty or not at its own commit. One that
+  # is no longer registered, while still named for a commit, is residue: an
+  # earlier removal or prune left the directory behind and nothing will use it
+  # again. Those are removed without a git check, or gigabytes accumulate
+  # silently; three of them were holding 1.5 GB.
+  registered=false
+  git -C "$CANONICAL_SOURCE" worktree list --porcelain | grep -qxF "worktree $dir" && registered=true
+  note=""
+
+  if $registered; then
+    if ! git -C "$dir" diff --quiet HEAD -- 2>/dev/null; then
+      printf 'skip %s: has uncommitted changes\n' "${sha:0:12}"; kept=$((kept + 1)); continue
+    fi
+    if [[ "$(git -C "$dir" rev-parse HEAD 2>/dev/null || true)" != "$sha" ]]; then
+      printf 'skip %s: worktree is not at its own commit\n' "${sha:0:12}"; kept=$((kept + 1)); continue
+    fi
+  else
+    note=" [orphaned directory, not a registered worktree]"
   fi
 
   size="$(du -sb "$dir" 2>/dev/null | cut -f1 || echo 0)"
   freed=$((freed + size)); removed=$((removed + 1))
   if $APPLY; then
-    if git -C "$CANONICAL_SOURCE" worktree remove --force "$dir" 2>/dev/null; then :; else rm -rf -- "$dir"; fi
-    printf 'removed %s (%s)\n' "${sha:0:12}" "$(numfmt --to=iec "$size")"
+    if $registered; then
+      git -C "$CANONICAL_SOURCE" worktree remove --force "$dir" 2>/dev/null || rm -rf -- "$dir"
+    else
+      rm -rf -- "$dir"
+    fi
+    printf 'removed %s (%s)%s\n' "${sha:0:12}" "$(numfmt --to=iec "$size")" "$note"
   else
     printf 'would remove %s (%s)\n' "${sha:0:12}" "$(numfmt --to=iec "$size")"
   fi
