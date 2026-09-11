@@ -59,6 +59,25 @@ export async function listTemplates(supabase: SupabaseClient): Promise<TemplateS
     return template ? [summaryFromTemplate(template, row)] : [];
   });
 }
+
+/**
+ * Whether the reviewed template library has anything in it.
+ *
+ * `listTemplates` selects `template_json` for every active template, which
+ * measures 929 kB of JSON text and ~16 ms of detoast per call to build
+ * summaries the caller then throws away. The Ad Studio home page only asks
+ * `length > 0`, so it can answer with a one-row existence probe instead of
+ * pulling the whole library.
+ */
+export async function hasActiveTemplates(supabase: SupabaseClient): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("ad_templates")
+    .select("template_id")
+    .eq("library_status", "active")
+    .limit(1);
+  if (error) throw new Error(error.message);
+  return (data ?? []).length > 0;
+}
 export async function getTemplate(supabase: SupabaseClient, templateId: string): Promise<AdTemplate | null> {
   const { data, error } = await supabase
     .from("ad_templates")

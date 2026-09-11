@@ -1,6 +1,6 @@
 import { HomeCommand } from "@/components/adstudio/home-command";
 import { loadAdStudioLibraryPage, type LibraryAdModel } from "@/lib/adstudio/library-read-model";
-import { listTemplates } from "@/lib/adstudio/pack-gallery";
+import { hasActiveTemplates } from "@/lib/adstudio/pack-gallery";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 
 export const dynamic = "force-dynamic";
@@ -16,11 +16,11 @@ export default async function AdStudioPage() {
 
   const [adsResult, templatesResult] = await Promise.allSettled([
     loadAdStudioLibraryPage({ supabase, workspaceId: access.workspaceId, kind: "ads", limit: 3 }),
-    listTemplates(supabase),
+    hasActiveTemplates(supabase),
   ]);
   if (adsResult.status === "fulfilled") ads = adsResult.value.items as LibraryAdModel[];
   else adsError = true;
-  hasAvailableTemplates = templatesResult.status === "fulfilled" && templatesResult.value.length > 0;
+  hasAvailableTemplates = templatesResult.status === "fulfilled" && templatesResult.value;
   templatesLoadError = templatesResult.status === "rejected";
 
   return (
