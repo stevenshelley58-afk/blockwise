@@ -213,7 +213,16 @@ function StoryAd({
         {writingCopy && copyTyping ? <span className="hc-story-caret" /> : null}
       </p>
       <motion.div layoutId="story-ad-creative" className="hc-story-ad-image" transition={STORY_MOVE}>
-        <img src={withBasePath(STORY_AD.image)} alt="" width="1080" height="1350" />
+        <img
+          src={withBasePath(STORY_AD.image)}
+          alt=""
+          width="1080"
+          height="1350"
+          sizes="(min-width: 1024px) 320px, (min-width: 601px) 300px, 78vw"
+          loading="eager"
+          fetchPriority="high"
+          decoding="async"
+        />
       </motion.div>
       <div className="hc-meta-link-preview">
         <span>
@@ -327,7 +336,15 @@ function LibraryScene({ phase, narrow }: { phase: number; narrow: boolean }) {
                   className="hc-library-card-image"
                   transition={STORY_MOVE}
                 >
-                  <img src={withBasePath(ad.image)} alt="" width="1080" height="1350" />
+                  <img
+                    src={withBasePath(ad.image)}
+                    alt=""
+                    width="1080"
+                    height="1350"
+                    sizes="(min-width: 1024px) 150px, (min-width: 601px) 130px, 34vw"
+                    loading="lazy"
+                    decoding="async"
+                  />
                 </motion.div>
                 <AnimatePresence>
                   {chosen ? (
