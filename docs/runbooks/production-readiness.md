@@ -31,6 +31,30 @@ Logs: `/srv/blockwise/releases/autodeploy.log`. Check the live revision with
 script with `--prepare` then `--deploy`; see
 [rollback](rollback.md) before reverting a revision.
 
+## Keeping the checkout clean
+
+Two mechanisms stop the shared checkout filling with other sessions' work.
+
+`scripts/githooks/pre-commit` refuses to commit a file that was last modified
+before the current session started, because such a file cannot be this session's
+work. It records the session start once per checkout. Set
+`BLOCKWISE_ALLOW_OLD=1` for a deliberate exception. Install it once per
+repository, which covers every worktree:
+
+```bash
+git -C /projects/blockwise config core.hooksPath /projects/blockwise/scripts/githooks
+```
+
+`scripts/vps/cleanup-agent-checkouts.sh` lists dated snapshot checkouts and
+removes only those that are fully merged, have no uncommitted work and have been
+idle. Run it without arguments to report and with `--apply` to remove. It ignores
+generated SNAPSHOT banners and untracked build artifacts, so those never keep a
+dead checkout alive, and it never removes a checkout holding unmerged commits or
+uncommitted changes.
+
+Release worktrees are bounded separately: `scripts/vps/prune-releases.sh` keeps
+the live revision, the rollback revision and the newest five, on a weekly timer.
+
 ## Historical candidate (7 September 2026, beta readiness)
 
 The following checkpoint and commands are historical only. They are superseded
