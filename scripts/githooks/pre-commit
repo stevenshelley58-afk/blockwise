@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Refuse to publish files that this session never touched.
+#
+# Sessions share the canonical checkout, so `git add -A` there sweeps up whatever
+# another session had left uncommitted. That happened twice: eight home-page
+# files landed inside an AdStudio gallery commit, and a new release script landed
+# inside an AdStudio preview commit. Each time the message did not match the
+# contents, and because main deploys on push, the mistake can now reach
+# production.
+#
+# The signal is age, not dirtiness. A file modified before this session started
+# cannot be this session's work. The start is recorded once per checkout, the
+# first time this hook runs there, so a file committed later by whoever created
+# it is unaffected.
+#
+# Set BLOCKWISE_ALLOW_OLD=1 for a genuine exception, such as committing a file
+# that was deliberately staged long before the commit.
+set -Eeuo pipefail
+
+[[ "${BLOCKWISE_ALLOW_OLD:-0}" == "1" ]] && exit 0
+
+marker="$(git rev-parse --git-path blockwise-session)"
+if [[ ! -f "$marker" ]]; then
+  date +%s > "$marker"
+  exit 0
+fi
+started="$(cat "$marker" 2>/dev/null || echo 0)"
+[[ "$started" =~ ^[0-9]+$ ]] || exit 0
+
+mapfile -t staged < <(git diff --cached --name-only -z --diff-filter=ACMR | tr '\0' '\n' | grep -Ev '^$' || true)
+old=()
+for f in "${staged[@]:-}"; do
+  [[ -n "$f" && -f "$f" ]] || continue
+  mtime="$(stat -c %Y -- "$f" 2>/dev/null || echo 0)"
+  ((mtime > 0 && mtime < started)) && old+=("$f")
+done
+
+((${#old[@]} == 0)) && exit 0
+
+printf '\npre-commit refused: %s staged file(s) were last modified before this session started.\n' "${#old[@]}" >&2
+printf 'They are probably another session uncommitted work.\n\n' >&2
+for f in "${old[@]}"; do printf '    %s\n' "$f" >&2; done
+printf '\nStage only your own files, edit in a worktree at /worktrees/<task>, or set\nBLOCKWISE_ALLOW_OLD=1 if this is deliberate.\n\n' >&2
+exit 1
