@@ -13,9 +13,12 @@ test("workflow runs a fixed nine-phase sequence that stops on the approved frame
   assert.equal(statuses[3], "Ad selected.");
   assert.equal(statuses.at(-1), "Campaign approved.");
 
-  const delays = source.match(/const STORY_PHASE_DELAYS = \[([^\]]+)\]/)[1].split(",").map(Number);
-  assert.equal(delays.length, statuses.length);
-  assert.ok(delays.every((delay) => delay > 0));
+  // A hold of null means the phase waits for the text to finish being written.
+  const holds = source.match(/const STORY_HOLDS[^=]*= \[([^\]]+)\]/)[1].split(",").map((value) => value.trim());
+  assert.equal(holds.length, statuses.length);
+  assert.ok(holds.every((hold) => hold === "null" || Number(hold) > 0), `bad hold: ${holds}`);
+  assert.equal(holds[5], "null", "the post copy phase is paced by the typing");
+  assert.equal(holds[6], "null", "the link title phase is paced by the typing");
 
   // The three visitor steps still map onto the nine phases.
   const stepPhases = source.match(/const STORY_STEP_PHASES = \[([^\]]+)\]/)[1].split(",").map(Number);
@@ -23,8 +26,65 @@ test("workflow runs a fixed nine-phase sequence that stops on the approved frame
   assert.match(source, /const activeStep = STORY_PHASE_TO_STEP\[phase\]/);
 
   // One pass that ends, so nothing animates forever.
-  assert.match(source, /Math\.min\(current \+ 1, STORY_STATUS\.length - 1\)/);
+  assert.match(source, /if \(current >= STORY_STATUS\.length - 1\)/);
   assert.doesNotMatch(source, /current >= STORY_STATUS\.length - 1 \? 0 : current \+ 1/);
+});
+
+test("the text is written a character at a time, in the field and the ad together", () => {
+  // One counter per text, driving both surfaces, so they cannot drift apart.
+  assert.match(source, /function useTypewriter\(\{ run, text, at, past, speed, onComplete \}/);
+  assert.match(source, /setChars\(index\)/);
+  assert.match(source, /STORY_AD\.postCopy\.slice\(0, copyChars\)/);
+  assert.match(source, /STORY_AD\.linkTitle\.slice\(0, linkChars\)/);
+
+  // Nothing types until its phase arrives, and stepping back clears it.
+  assert.match(source, /run: phase >= 5/);
+  assert.match(source, /run: phase >= 6/);
+  assert.match(source, /if \(!run \|\| !text\) \{\s*setChars\(0\)/);
+  assert.match(source, /const typing = run && at === past && chars < text\.length/);
+  // A step change mid-write hands the text over rather than retyping it.
+  assert.match(source, /if \(at !== past\) \{\s*setChars\(text\.length\)/);
+  // Only the phase that is still current may move the story on.
+  assert.match(source, /if \(current !== from\) return current/);
+
+  // A caret that blinks at the write position, and a pace that is human.
+  assert.match(styles, /\.hc-story-caret \{[^}]*animation: hc-story-caret/);
+  const speeds = [...source.matchAll(/const TYPE_SPEED_\w+ = (\d+)/g)].map((match) => Number(match[1]));
+  assert.equal(speeds.length, 2);
+  assert.ok(speeds.every((speed) => speed >= 8 && speed <= 60), `typing speed out of range: ${speeds}`);
+
+  // A step jumped to ahead of the writing still shows a finished ad.
+  assert.match(source, /const copyChars = scene === "browse" \? 0 : phase > 5 \? STORY_AD\.postCopy\.length/);
+  assert.match(source, /const linkChars = scene === "browse" \|\| phase < 6 \? 0 : phase > 6 \? STORY_AD\.linkTitle\.length/);
+});
+
+test("the demo card keeps one size and the scenes change inside it", () => {
+  // One height token, no per-scene viewport height and no height animation.
+  assert.match(styles, /--hc-demo-height: 600px/);
+  assert.match(styles, /\.hc-story-viewport \{[^}]*height: var\(--hc-demo-height\)/);
+  assert.doesNotMatch(styles, /\.hc-process-demo\[data-scene="browse"\] \.hc-story-viewport/);
+  assert.doesNotMatch(styles, /transition: height/);
+  for (const width of ["1100px", "600px"]) {
+    assert.match(styles, new RegExp(`@media \\(max-width: ${width}\\)`));
+  }
+  const heights = [...styles.matchAll(/--hc-demo-height: (\d+)px/g)].map((match) => Number(match[1]));
+  assert.equal(heights.length, 3, "one height for each of the three breakpoints");
+  assert.deepEqual(heights, [...heights].sort((a, b) => a - b), "the frame only grows as the screen narrows");
+
+  // Every scene fills the frame and centres its own block inside it.
+  assert.match(styles, /\.hc-story-scene \{[^}]*position: absolute[^}]*inset: 0/);
+  assert.match(styles, /\.hc-story-review \{[^}]*align-content: center/);
+  assert.match(styles, /\.hc-story-editor \{[^}]*align-content: center/);
+});
+
+test("the highlight is green everywhere, with a green fill", () => {
+  assert.match(styles, /\.hc-process-demo \{\s*--scene-accent: var\(--hc-green\);\s*--scene-soft: #e3f5eb;/);
+  // The old amber customise accent is gone for good.
+  assert.doesNotMatch(styles, /#d99a1a|#fbf1d9/);
+  assert.match(styles, /\.hc-field\.is-active > strong \{[^}]*background: var\(--scene-soft\)/);
+  assert.match(styles, /\.hc-library-selector\.is-selected \{[^}]*border-color: var\(--scene-accent\)/);
+  assert.match(styles, /\.hc-process-steps button\[aria-pressed="true"\] \{\s*color: var\(--scene-accent\)/);
+  assert.match(styles, /\.hc-process-step-indicator \{[^}]*background: var\(--scene-soft\)/);
 });
 
 test("the story starts once when scrolled into view and then stops", () => {
@@ -73,9 +133,10 @@ test("screen one is a single row carousel of real ready-made ads", () => {
   assert.doesNotMatch(source, /hc-library-grid/);
 });
 
-test("choose, customise and review are one working segmented control", () => {
-  // Same control pattern as the reporting section: a measured sliding pill.
-  assert.match(source, /className="hc-process-steps"[\s\S]*?role="group"/);
+test("choose, customise and review are one working control in the card header", () => {
+  // Same control pattern as the reporting section: a measured sliding pill,
+  // now sitting in the demo card's top right rather than beside the headline.
+  assert.match(source, /className="hc-process-demo-topbar"[\s\S]*?className="hc-process-stage"[\s\S]*?className="hc-process-steps"[\s\S]*?role="group"/);
   assert.match(source, /className="hc-process-step-indicator"/);
   assert.match(source, /setIndicator\(\{ left: button\.offsetLeft, width: button\.offsetWidth \}\)/);
   assert.match(source, /aria-pressed=\{activeStep === index\}/);
@@ -84,22 +145,37 @@ test("choose, customise and review are one working segmented control", () => {
 
   assert.match(styles, /\.hc-process-steps \{[^}]*border-radius: 999px/);
   assert.match(styles, /\.hc-process-steps button\[aria-pressed="true"\]/);
-  assert.match(styles, /\.hc-process-step-indicator \{[^}]*background: #fff/);
+  assert.match(styles, /\.hc-process-step-indicator \{[^}]*background: var\(--scene-soft\)/);
   assert.match(styles, /\.hc-process-steps button:focus-visible/);
+  // The control no longer sits under the headline in the copy column.
+  assert.doesNotMatch(source, /hc-process-copy[\s\S]{0,400}hc-process-steps/);
 
   // The old dot-marker list is gone.
   assert.doesNotMatch(source, /hc-process-step-mark/);
   assert.doesNotMatch(styles, /hc-process-step-mark/);
 });
 
-test("screen two hands the chosen ad to the left and opens empty fields on the right", () => {
+test("each stage carries one short brief under the header", () => {
+  const briefs = [...source.matchAll(/\{ label: "([^"]+)", hint: "([^"]+)" \}/g)].map((match) => [match[1], match[2]]);
+  assert.deepEqual(briefs.map(([label]) => label), ["Choose", "Customise", "Review"]);
+  for (const [, hint] of briefs) {
+    assert.ok(hint.length > 0 && hint.length <= 48, `brief should stay short: ${hint}`);
+    assert.ok(!/[\u2014]/.test(hint), "no em dash in customer copy");
+  }
+  // The brief follows the active step, so it always describes what is on screen.
+  assert.match(source, /className="hc-process-brief"/);
+  assert.match(source, /PROCESS_STEPS\[activeStep\]\.hint/);
+  assert.match(styles, /\.hc-process-brief \{[^}]*color: var\(--hc-muted\)/);
+});
+
+test("screen two hands the chosen ad to the left and writes the fields on the right", () => {
   assert.match(source, /className="hc-story-ad-workspace"/);
   assert.match(source, /className="hc-story-edit-panel"/);
   assert.match(source, /<h3>Make it yours<\/h3>/);
 
   // Both fields start empty and say what to write, so nothing reads as broken.
-  assert.match(source, /data-empty=\{copyWritten \? undefined : "true"\}/);
-  assert.match(source, /data-empty=\{linkWritten \? undefined : "true"\}/);
+  assert.match(source, /data-empty=\{copyChars === 0 \? "true" : undefined\}/);
+  assert.match(source, /data-empty=\{linkChars === 0 \? "true" : undefined\}/);
   assert.match(source, /Write your post copy/);
   assert.match(source, /Add a link title/);
   assert.match(styles, /\.hc-field\[data-empty="true"\] > strong/);

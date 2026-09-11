@@ -268,26 +268,52 @@ test("homepage concept preview is contained, interactive, static, and explicitly
   await takeSectionScreenshots(page, "desktop-1440");
   await assertAllImagesLoaded(page);
   await page.locator(".hc-hero").screenshot({ path: screenshotPath("desktop-1440-hero-readable.png") });
-  // The workflow studio is an auto-playing showcase. A visitor can jump between
+  // The workflow demo is an auto-playing showcase. A visitor can jump between
   // steps, but the creative itself is decorative and carries no controls.
   const steps = page.locator(".hc-process-steps");
-  const studio = page.locator(".wf-studio");
+  const demo = page.locator(".hc-process-demo");
   await expect(steps.getByRole("button")).toHaveCount(3);
+  // The step control belongs to the card header, not to the copy column.
+  await expect(page.locator(".hc-process-demo-topbar .hc-process-steps")).toHaveCount(1);
+  await expect(page.locator(".hc-process-copy .hc-process-steps")).toHaveCount(0);
+
+  // One frame size for the whole story: it must not resize between steps.
+  const frameAt = async () => {
+    const box = await demo.boundingBox();
+    return Math.round(box!.height);
+  };
+  const frameAtChoose = await frameAt();
 
   await steps.getByRole("button", { name: "Review" }).click();
   await expect(steps.getByRole("button", { name: "Review" })).toHaveAttribute("aria-pressed", "true");
-  await expect(studio).toHaveAttribute("data-step", "2");
+  await expect(demo).toHaveAttribute("data-step", "2");
 
   // From the review step the loop advances to the approved state with no input.
-  await expect(page.locator(".wf-approve.is-approved")).toHaveCount(1, { timeout: 8000 });
+  await expect(page.locator(".hc-story-approve.is-approved")).toHaveCount(1, { timeout: 8000 });
+  expect(await frameAt(), "the demo frame must keep one height on the review step").toBe(frameAtChoose);
+
+  // The copy is written a character at a time, and the ad is written with it.
+  await steps.getByRole("button", { name: "Customise" }).click();
+  await expect(demo).toHaveAttribute("data-step", "1");
+  await expect(demo).toHaveAttribute("data-typing", "true", { timeout: 3000 });
+  const sampled = await page.evaluate(() => {
+    const field = document.querySelector(".hc-field > strong")?.textContent ?? "";
+    const ad = document.querySelector(".hc-meta-feed-copy")?.textContent ?? "";
+    return { field, ad };
+  });
+  const normalise = (value: string) => value.replace(/[^a-z0-9 ]/gi, "").trim();
+  expect(normalise(sampled.field).length, "the field must be visibly mid-write").toBeGreaterThan(0);
+  expect(normalise(sampled.ad), "the ad must show the same text as the field").toBe(normalise(sampled.field));
+  await expect(demo).not.toHaveAttribute("data-typing", "true", { timeout: 8000 });
+  expect(await frameAt(), "the demo frame must keep one height while text is written").toBe(frameAtChoose);
 
   await steps.getByRole("button", { name: "Choose" }).click();
   await expect(steps.getByRole("button", { name: "Choose" })).toHaveAttribute("aria-pressed", "true");
-  await expect(studio).toHaveAttribute("data-step", "0");
+  await expect(demo).toHaveAttribute("data-step", "0");
 
   // The workspace is decorative: hidden from assistive tech and free of controls,
   // so the example cannot be mistaken for a live campaign editor.
-  const workspace = page.locator(".wf-workspace");
+  const workspace = page.locator(".hc-story-viewport");
   await expect(workspace).toHaveAttribute("aria-hidden", "true");
   await expect(workspace.locator("input, textarea, select, button")).toHaveCount(0);
 
@@ -331,15 +357,21 @@ test("homepage concept preview is contained, interactive, static, and explicitly
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.reload({ waitUntil: "networkidle" });
   await assertReducedMotionHeroFreezes(page);
-  // Under reduced motion the studio settles on the completed state and stays
-  // there, while manual step selection still works.
-  const reducedStudio = page.locator(".wf-studio");
-  await expect(reducedStudio).toHaveAttribute("data-phase", "8");
-  await expect(page.locator(".wf-approve.is-approved")).toHaveCount(1);
+  // Under reduced motion the demo settles on the completed state and stays
+  // there, while manual step selection still works. The frame height is fixed,
+  // so this is also where the settled size is checked.
+  const reducedDemo = page.locator(".hc-process-demo");
+  await expect(reducedDemo).toHaveAttribute("data-step", "2");
+  await expect(page.locator(".hc-story-approve.is-approved")).toHaveCount(1);
+  await expect(page.locator(".hc-story-ad").first()).toContainText("Thinking of selling?");
+  const reducedHeight = Math.round((await reducedDemo.boundingBox())!.height);
   await page.waitForTimeout(600);
-  await expect(reducedStudio).toHaveAttribute("data-phase", "8");
+  await expect(page.locator(".hc-story-approve.is-approved")).toHaveCount(1);
   await page.locator(".hc-process-steps").getByRole("button", { name: "Customise" }).click();
-  await expect(reducedStudio).toHaveAttribute("data-step", "1");
+  await expect(reducedDemo).toHaveAttribute("data-step", "1");
+  expect(Math.round((await reducedDemo.boundingBox())!.height), "the settled frame keeps one height").toBe(reducedHeight);
+  await page.locator(".hc-process-steps").getByRole("button", { name: "Review" }).click();
+  await expect(reducedDemo).toHaveAttribute("data-step", "2");
 
   await takeSectionScreenshots(page, "mobile-390");
   await page.screenshot({ path: screenshotPath("mobile-390-readable.png"), fullPage: true });
@@ -356,10 +388,11 @@ test("homepage concept preview is contained, interactive, static, and explicitly
 
   await assertLayoutAt(page, 768);
   await page.locator(".hc-process-steps").getByRole("button", { name: "Choose" }).click();
-  await expect(page.locator(".wf-studio")).toHaveAttribute("data-step", "0");
-  // All three templates stay on the rail at tablet width, not just the selected one.
-  await expect(page.locator(".wf-library .wf-template")).toHaveCount(3);
-  await expect(page.locator(".wf-template.is-selected")).toHaveCount(1);
+  await expect(page.locator(".hc-process-demo")).toHaveAttribute("data-step", "0");
+  // The ready-made library stays a single row of real ads at tablet width, with
+  // exactly one of them marked as chosen.
+  await expect(page.locator(".hc-library-card").first()).toBeVisible();
+  await expect(page.locator(".hc-library-selector")).toHaveCount(1);
   await assertVisibleElementsFit(page);
   await page.screenshot({ path: screenshotPath("mobile-768-whole-page.png"), fullPage: true });
   await assertNoWritesOrTracking();

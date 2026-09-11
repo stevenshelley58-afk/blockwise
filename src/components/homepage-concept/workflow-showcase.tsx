@@ -12,16 +12,16 @@ import {
   ThumbsUp,
 } from "lucide-react";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AD_EXAMPLES, AD_LIBRARY, withBasePath } from "@/lib/homepage-concept/content";
 
 import "./workflow-showcase.css";
 
 const PROCESS_STEPS = [
-  { label: "Choose", hint: "Pick a ready-made template" },
-  { label: "Customise", hint: "Change the wording and image" },
-  { label: "Review", hint: "Set the budget and go live" },
+  { label: "Choose", hint: "Pick a ready-made ad from the library" },
+  { label: "Customise", hint: "Write the post copy and link title" },
+  { label: "Review", hint: "Check the budget and approve it" },
 ] as const;
 
 /**
@@ -30,7 +30,11 @@ const PROCESS_STEPS = [
  */
 const LIBRARY_SEQUENCE = [0, 1, 2, 3] as const;
 const SELECTED_PHASE = 3;
-const STORY_PHASE_DELAYS = [900, 880, 880, 1300, 1500, 1600, 1400, 1500, 1800] as const;
+/**
+ * How long each phase holds. `null` means the phase waits for the visitor to
+ * watch the text being written, so typing sets the pace rather than a timer.
+ */
+const STORY_HOLDS: ReadonlyArray<number | null> = [760, 700, 700, 1000, 620, null, null, 1150, 1800];
 const STORY_STEP_PHASES = [0, 4, 7] as const;
 const STORY_PHASE_TO_STEP = [0, 0, 0, 0, 1, 1, 1, 2, 2] as const;
 const STORY_STATUS = [
@@ -38,12 +42,16 @@ const STORY_STATUS = [
   "Choosing an ad.",
   "Choosing an ad.",
   "Ad selected.",
-  "Customising the ad. The text fields are empty.",
+  "Customising the ad. Write the post copy.",
   "Writing the post copy.",
   "Adding a link title.",
   "Review campaign.",
   "Campaign approved.",
 ] as const;
+
+/** Milliseconds per character. The field and the ad advance on the same count. */
+const TYPE_SPEED_COPY = 14;
+const TYPE_SPEED_LINK = 24;
 
 /** The library entry the demo selects. It owns the real post copy and link title. */
 const SELECTED_AD = { ...AD_EXAMPLES[0], image: AD_LIBRARY[LIBRARY_SEQUENCE[LIBRARY_SEQUENCE.length - 1]].image };
@@ -55,9 +63,9 @@ const STORY_AD = {
 } as const;
 
 const STORY_EASE = [0.16, 1, 0.3, 1] as const;
-const STORY_MOVE = { duration: 0.42, ease: STORY_EASE };
-const STORY_ENTER = { duration: 0.34, ease: STORY_EASE };
-const STORY_EXIT = { duration: 0.22, ease: [0.32, 0, 0.67, 0] as const };
+const STORY_MOVE = { duration: 0.5, ease: STORY_EASE };
+const SCENE_FADE = { duration: 0.52, ease: STORY_EASE };
+const STORY_ENTER = { duration: 0.38, ease: STORY_EASE };
 
 /** Entrance choreography: the section rises once, then its children cascade. */
 const SECTION_IN_VIEW = { once: true, margin: "-12%" } as const;
@@ -91,6 +99,71 @@ function useNarrowLibrary() {
   return narrow;
 }
 
+/**
+ * Types `text` one character at a time and reports how many are showing. The
+ * same count drives the text field and the ad preview, so both are written
+ * together. Nothing runs until `run` turns true, and `run` turning false again
+ * clears the text, which is what stepping backwards needs. `at` is the phase
+ * the run started on and `past` is the phase that finishes it, so a step change
+ * mid-write hands over instead of starting the same text again.
+ */
+function useTypewriter({ run, text, at, past, speed, onComplete }: {
+  run: boolean;
+  text: string;
+  at: number;
+  past: number;
+  speed: number;
+  onComplete: (phase: number) => void;
+}) {
+  const [chars, setChars] = useState(0);
+  const timerRef = useRef<number | null>(null);
+  const settleRef = useRef(onComplete);
+  settleRef.current = onComplete;
+
+  useEffect(() => {
+    if (!run || !text) {
+      setChars(0);
+      return;
+    }
+    /* Picking up where another scene left off: show the text, do not retype it. */
+    if (at !== past) {
+      setChars(text.length);
+      return;
+    }
+    setChars(0);
+    let index = 0;
+    const schedule = () => {
+      // Slightly uneven on purpose: a steady tick reads as a machine, not a hand.
+      timerRef.current = window.setTimeout(() => {
+        index += 1;
+        setChars(index);
+        if (index >= text.length) {
+          timerRef.current = null;
+          settleRef.current(past);
+          return;
+        }
+        schedule();
+      }, speed + (index % 5 === 0 ? 26 : 0));
+    };
+    schedule();
+    return () => {
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    };
+  }, [run, text, at, past, speed]);
+
+  const reset = useCallback(() => {
+    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    timerRef.current = null;
+    setChars(0);
+  }, []);
+
+  /* Derived, not stored: nothing can drift out of step with the count. */
+  const typing = run && at === past && chars < text.length;
+
+  return { chars, typing, reset };
+}
+
 function StoryCursor({ pressed = false }: { pressed?: boolean }) {
   return (
     <motion.span
@@ -106,9 +179,23 @@ function StoryCursor({ pressed = false }: { pressed?: boolean }) {
 }
 
 /** The Meta feed frame, reused by the editor and the review scene. */
-function StoryAd({ phase, review = false }: { phase: number; review?: boolean }) {
-  const copyWritten = phase >= 5;
-  const linkWritten = phase >= 6;
+function StoryAd({
+  phase,
+  copyChars,
+  linkChars,
+  copyTyping,
+  linkTyping,
+  review = false,
+}: {
+  phase: number;
+  copyChars: number;
+  linkChars: number;
+  copyTyping: boolean;
+  linkTyping: boolean;
+  review?: boolean;
+}) {
+  const writingCopy = phase === 5;
+  const writingLink = phase === 6;
 
   return (
     <motion.article
@@ -121,22 +208,20 @@ function StoryAd({ phase, review = false }: { phase: number; review?: boolean })
         <span><strong>{STORY_AD.account}</strong><small>Sponsored <Globe2 aria-hidden="true" size={9} /></small></span>
         <MoreHorizontal aria-hidden="true" size={16} />
       </header>
-      <motion.p
-        className={`hc-meta-feed-copy${phase === 5 ? " is-editing" : ""}`}
-        key={copyWritten ? "written" : "empty"}
-        initial={{ opacity: 0.4, y: 3 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={STORY_ENTER}
-      >
-        {copyWritten ? STORY_AD.postCopy : <span className="hc-story-placeholder">Your post copy appears here</span>}
-      </motion.p>
+      <p className={`hc-meta-feed-copy${writingCopy ? " is-editing" : ""}`}>
+        {copyChars > 0 ? STORY_AD.postCopy.slice(0, copyChars) : <span className="hc-story-placeholder">Your post copy appears here</span>}
+        {writingCopy && copyTyping ? <span className="hc-story-caret" /> : null}
+      </p>
       <motion.div layoutId="story-ad-creative" className="hc-story-ad-image" transition={STORY_MOVE}>
         <img src={withBasePath(STORY_AD.image)} alt="" width="1080" height="1350" />
       </motion.div>
       <div className="hc-meta-link-preview">
         <span>
           <small>{STORY_AD.domain}</small>
-          <strong>{linkWritten ? STORY_AD.linkTitle : <span className="hc-story-placeholder">Your link title</span>}</strong>
+          <strong>
+            {linkChars > 0 ? STORY_AD.linkTitle.slice(0, linkChars) : <span className="hc-story-placeholder">Your link title</span>}
+            {writingLink && linkTyping ? <span className="hc-story-caret" /> : null}
+          </strong>
         </span>
         <b>Learn more</b>
       </div>
@@ -200,7 +285,7 @@ function LibraryScene({ phase, narrow }: { phase: number; narrow: boolean }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ ...STORY_EXIT, opacity: { duration: 0.2 } }}
+      transition={SCENE_FADE}
     >
       <div className="hc-story-scene-heading">
         <strong>{selected ? "Ad selected" : "Choose a starting point"}</strong>
@@ -267,11 +352,20 @@ function LibraryScene({ phase, narrow }: { phase: number; narrow: boolean }) {
   );
 }
 
-/** Screen 2. The chosen ad on the left, empty text fields on the right. */
-function EditorScene({ phase }: { phase: number }) {
-  const copyWritten = phase >= 5;
-  const linkWritten = phase >= 6;
-
+/** Screen 2. The chosen ad on the left, the text fields being written on the right. */
+function EditorScene({
+  phase,
+  copyChars,
+  linkChars,
+  copyTyping,
+  linkTyping,
+}: {
+  phase: number;
+  copyChars: number;
+  linkChars: number;
+  copyTyping: boolean;
+  linkTyping: boolean;
+}) {
   return (
     <motion.div
       key="editor"
@@ -279,49 +373,35 @@ function EditorScene({ phase }: { phase: number }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={STORY_ENTER}
+      transition={SCENE_FADE}
     >
       <div className="hc-story-ad-workspace">
-        <StoryAd phase={phase} />
+        <StoryAd
+          phase={phase}
+          copyChars={copyChars}
+          linkChars={linkChars}
+          copyTyping={copyTyping}
+          linkTyping={linkTyping}
+        />
       </div>
 
       <div className="hc-story-edit-panel">
         <h3>Make it yours</h3>
         <p className="hc-story-edit-hint">Write the text, then approve the campaign.</p>
 
-        <label className={`hc-field${phase === 5 ? " is-active" : ""}`} data-empty={copyWritten ? undefined : "true"}>
+        <label className={`hc-field${phase === 5 ? " is-active" : ""}`} data-empty={copyChars === 0 ? "true" : undefined}>
           <span>Post copy</span>
           <strong>
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.span
-                key={copyWritten ? "copy-written" : "copy-empty"}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.22, ease: STORY_EASE }}
-              >
-                {copyWritten ? STORY_AD.postCopy : "Write your post copy"}
-              </motion.span>
-            </AnimatePresence>
-            {phase === 5 ? <span className="hc-story-caret" /> : null}
+            {copyChars > 0 ? STORY_AD.postCopy.slice(0, copyChars) : "Write your post copy"}
+            {phase === 5 && copyTyping ? <span className="hc-story-caret" /> : null}
           </strong>
         </label>
 
-        <label className={`hc-field${phase === 6 ? " is-active" : ""}`} data-empty={linkWritten ? undefined : "true"}>
+        <label className={`hc-field${phase === 6 ? " is-active" : ""}`} data-empty={linkChars === 0 ? "true" : undefined}>
           <span>Link title</span>
           <strong>
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.span
-                key={linkWritten ? "link-written" : "link-empty"}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.22, ease: STORY_EASE }}
-              >
-                {linkWritten ? STORY_AD.linkTitle : "Add a link title"}
-              </motion.span>
-            </AnimatePresence>
-            {phase === 6 ? <span className="hc-story-caret" /> : null}
+            {linkChars > 0 ? STORY_AD.linkTitle.slice(0, linkChars) : "Add a link title"}
+            {phase === 6 && linkTyping ? <span className="hc-story-caret" /> : null}
           </strong>
         </label>
       </div>
@@ -329,7 +409,15 @@ function EditorScene({ phase }: { phase: number }) {
   );
 }
 
-function ReviewScene({ phase }: { phase: number }) {
+function ReviewScene({
+  phase,
+  copyChars,
+  linkChars,
+}: {
+  phase: number;
+  copyChars: number;
+  linkChars: number;
+}) {
   const valuesFilled = phase >= 7;
   const pressing = phase === 7;
   const approved = phase >= 8;
@@ -341,10 +429,17 @@ function ReviewScene({ phase }: { phase: number }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={STORY_ENTER}
+      transition={SCENE_FADE}
     >
       <div className="hc-story-review-preview">
-        <StoryAd phase={phase} review />
+        <StoryAd
+          phase={phase}
+          copyChars={copyChars}
+          linkChars={linkChars}
+          copyTyping={false}
+          linkTyping={false}
+          review
+        />
       </div>
 
       <motion.div
@@ -444,6 +539,38 @@ export function WorkflowShowcase() {
   const stepsRef = useRef<HTMLDivElement>(null);
   const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
 
+  /* Only a phase that is still current may advance the story, so a step change
+     can never be overtaken by a timer or a keystroke from the step before it. */
+  const nextPhase = useCallback((from: number) => {
+    setPhase((current) => {
+      if (current !== from) return current;
+      if (current >= STORY_STATUS.length - 1) {
+        setPlaying(false);
+        return current;
+      }
+      return current + 1;
+    });
+  }, []);
+
+  const copy = useTypewriter({
+    run: phase >= 5,
+    text: STORY_AD.postCopy,
+    at: phase,
+    past: 5,
+    speed: TYPE_SPEED_COPY,
+    onComplete: nextPhase,
+  });
+  const link = useTypewriter({
+    run: phase >= 6,
+    text: STORY_AD.linkTitle,
+    at: phase,
+    past: 6,
+    speed: TYPE_SPEED_LINK,
+    onComplete: nextPhase,
+  });
+  const resetCopy = copy.reset;
+  const resetLink = link.reset;
+
   useEffect(() => {
     const syncVisibility = () => setPageVisible(document.visibilityState === "visible");
     const observer = new IntersectionObserver(
@@ -475,19 +602,22 @@ export function WorkflowShowcase() {
     }
   }, [reduceMotion]);
 
-  /* One phase at a time. Stops for good on the approved frame, so nothing loops. */
+  /**
+   * One phase at a time. A phase that writes text waits for the typing to
+   * finish, so the copy is always read at a human pace. Stops for good on the
+   * approved frame, so nothing loops.
+   */
   useEffect(() => {
     if (!playing || !inView || !pageVisible || reduceMotion) return;
     if (phase >= STORY_STATUS.length - 1) {
       setPlaying(false);
       return;
     }
-    const timer = window.setTimeout(
-      () => setPhase((current) => Math.min(current + 1, STORY_STATUS.length - 1)),
-      STORY_PHASE_DELAYS[phase],
-    );
+    const hold = STORY_HOLDS[phase];
+    if (hold === null) return;
+    const timer = window.setTimeout(() => nextPhase(phase), hold);
     return () => window.clearTimeout(timer);
-  }, [inView, pageVisible, phase, playing, reduceMotion]);
+  }, [inView, pageVisible, phase, playing, reduceMotion, nextPhase]);
 
   /* Slide the pill behind whichever step the story is on. */
   useEffect(() => {
@@ -505,12 +635,19 @@ export function WorkflowShowcase() {
   }, [activeStep]);
 
   function selectStep(nextStep: number) {
+    resetCopy();
+    resetLink();
     hasStarted.current = true;
     setPhase(STORY_STEP_PHASES[nextStep]);
     setPlaying(!reduceMotion && nextStep < PROCESS_STEPS.length - 1);
   }
 
   const scene = phase <= SELECTED_PHASE ? "browse" : phase <= 6 ? "edit" : "review";
+  /* How much text each field shows. A later phase is already complete, the
+     phase that writes a field counts characters, an earlier one is still empty.
+     Stepping back to Choose clears both, so the story starts from nothing. */
+  const copyChars = scene === "browse" ? 0 : phase > 5 ? STORY_AD.postCopy.length : phase === 5 ? copy.chars : 0;
+  const linkChars = scene === "browse" || phase < 6 ? 0 : phase > 6 ? STORY_AD.linkTitle.length : link.chars;
 
   return (
     <motion.div
@@ -526,30 +663,6 @@ export function WorkflowShowcase() {
         <motion.small className="hc-process-eyebrow" variants={COPY_ITEM}>Blockwise Ad Studio</motion.small>
         <motion.h2 variants={COPY_ITEM}>Create real estate ads for Facebook &amp; Instagram.</motion.h2>
 
-        <motion.div className="hc-process-steps" ref={stepsRef} role="group" aria-label="How Blockwise works" variants={COPY_ITEM}>
-          {indicator ? (
-            <span
-              className="hc-process-step-indicator"
-              style={{ transform: `translateX(${indicator.left}px)`, width: `${indicator.width}px` }}
-              aria-hidden="true"
-            />
-          ) : null}
-          {PROCESS_STEPS.map((item, index) => (
-            <button
-              key={item.label}
-              type="button"
-              aria-pressed={activeStep === index}
-              onClick={() => selectStep(index)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </motion.div>
-
-        <motion.p className="hc-process-hint" key={activeStep} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={STORY_ENTER}>
-          {PROCESS_STEPS[activeStep].hint}
-        </motion.p>
-
         <motion.div className="hc-process-actions" variants={COPY_ITEM}>
           <a className="hc-button hc-button--primary" href="#trial">
             Start free trial
@@ -562,14 +675,47 @@ export function WorkflowShowcase() {
       <motion.div
         className="hc-process-demo"
         data-scene={scene}
+        data-step={activeStep}
+        data-typing={copy.typing || link.typing ? "true" : undefined}
         aria-label="Animated example of choosing an ad and approving a campaign"
         variants={DEMO_RISE}
       >
         <div className="hc-process-demo-topbar">
           <span><i aria-hidden="true" /> Blockwise Ad Studio</span>
-          <ol aria-hidden="true">
-            {PROCESS_STEPS.map((item, index) => <li className={activeStep === index ? "is-active" : ""} key={item.label}>{item.label}</li>)}
-          </ol>
+
+          <div className="hc-process-stage">
+            <div className="hc-process-steps" ref={stepsRef} role="group" aria-label="How Blockwise works">
+              {indicator ? (
+                <span
+                  className="hc-process-step-indicator"
+                  style={{ transform: `translateX(${indicator.left}px)`, width: `${indicator.width}px` }}
+                  aria-hidden="true"
+                />
+              ) : null}
+              {PROCESS_STEPS.map((item, index) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  aria-pressed={activeStep === index}
+                  onClick={() => selectStep(index)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                className="hc-process-brief"
+                key={activeStep}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.24, ease: STORY_EASE }}
+              >
+                {PROCESS_STEPS[activeStep].hint}
+              </motion.span>
+            </AnimatePresence>
+          </div>
         </div>
 
         <p className="hc-sr-only" aria-live="polite">{STORY_STATUS[phase]}</p>
@@ -577,8 +723,18 @@ export function WorkflowShowcase() {
           <div className="hc-story-viewport" aria-hidden="true">
             <AnimatePresence mode="sync" initial={false}>
               {scene === "browse" ? <LibraryScene phase={phase} narrow={narrow} /> : null}
-              {scene === "edit" ? <EditorScene phase={phase} /> : null}
-              {scene === "review" ? <ReviewScene phase={phase} /> : null}
+              {scene === "edit" ? (
+                <EditorScene
+                  phase={phase}
+                  copyChars={copyChars}
+                  linkChars={link.chars}
+                  copyTyping={copy.typing}
+                  linkTyping={link.typing}
+                />
+              ) : null}
+              {scene === "review" ? (
+                <ReviewScene phase={phase} copyChars={copyChars} linkChars={linkChars} />
+              ) : null}
             </AnimatePresence>
           </div>
         </LayoutGroup>
