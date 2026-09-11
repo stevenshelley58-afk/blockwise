@@ -82,7 +82,7 @@ function dedupeAdvertisers(rows: AdvertiserRow[], term: string, limit: number): 
     suggestions.push({
       pageId: row.page_id?.trim() || null,
       pageName,
-      pageImageUrl: normaliseMediaUrl(row.page_image_url),
+      pageImageUrl: normaliseMediaUrl(row.page_image_url, "image"),
     });
   }
 

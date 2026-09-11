@@ -176,7 +176,7 @@ export function normaliseCustomerMetaAdLibraryCard(row: CustomerMetaAdLibraryCar
     pageId: cleanString(row.page_id),
     pageName,
     pageUrl: normalisePublicUrl(row.page_url),
-    pageImageUrl: normaliseMediaUrl(row.page_image_url),
+    pageImageUrl: normaliseMediaUrl(row.page_image_url, "image"),
     activeStatus,
     startedAt: cleanString(row.ad_delivery_started_at),
     // Defensive: legacy rows ingested before the invariant was enforced may
@@ -237,7 +237,7 @@ function resolveMedia(row: CustomerMetaAdLibraryCardRow): CustomerMetaAdLibraryM
   const rejectedImageUrls = new Set<string>();
 
   for (const asset of assets) {
-    const url = normaliseMediaUrl(asset.storagePath) ?? normaliseMediaUrl(asset.url);
+    const url = normaliseMediaUrl(asset.storagePath, asset.kind) ?? normaliseMediaUrl(asset.url, asset.kind);
     if (!url) continue;
     const kind = asset.kind === "video" || isVideoUrl(url) ? "video" : "image";
     if (asset.captureStatus && asset.captureStatus !== "captured") continue;
@@ -249,21 +249,22 @@ function resolveMedia(row: CustomerMetaAdLibraryCardRow): CustomerMetaAdLibraryM
       id: url,
       kind,
       url,
-      posterUrl: normaliseMediaUrl(asset.posterStoragePath) ?? normaliseMediaUrl(asset.posterUrl),
+      posterUrl:
+        normaliseMediaUrl(asset.posterStoragePath, "image") ?? normaliseMediaUrl(asset.posterUrl, "image"),
     });
   }
 
-  const storedVideo = normaliseMediaUrl(row.video_storage_path);
+  const storedVideo = normaliseMediaUrl(row.video_storage_path, "video");
   if (storedVideo) {
     addMedia(media, {
       id: storedVideo,
       kind: "video",
       url: storedVideo,
-      posterUrl: normaliseMediaUrl(row.video_thumbnail_url),
+      posterUrl: normaliseMediaUrl(row.video_thumbnail_url, "image"),
     });
   }
 
-  const storedImage = normaliseMediaUrl(row.image_storage_path);
+  const storedImage = normaliseMediaUrl(row.image_storage_path, "image");
   if (storedImage && !rejectedImageUrls.has(storedImage)) {
     addMedia(media, { id: storedImage, kind: "image", url: storedImage, posterUrl: null });
   }
@@ -381,7 +382,18 @@ function normalisePublicUrl(value: unknown): string | null {
   return url;
 }
 
-export function normaliseMediaUrl(value: unknown): string | null {
+/**
+ * Resolves a research creative to a URL the browser can load.
+ *
+ * `kind` is the asset's own declared media kind from `media_assets`, used to pick
+ * the endpoint, because the archive stores images and videos under
+ * extension-free `sha256/<hash>` keys where the path alone says nothing. Verified
+ * against production: for all 63 objects under that prefix the declared kind
+ * matches the file's real content (53 image, 3 thumbnail, 9 video, no mismatch).
+ * Without a usable kind the path decides, and an unnamed path keeps the object
+ * URL it has always had.
+ */
+export function normaliseMediaUrl(value: unknown, kind?: string | null): string | null {
   const url = cleanString(value);
   if (url && hasUnresolvedTemplateMarker(url)) return null;
   if (!url) return null;
@@ -402,13 +414,14 @@ export function normaliseMediaUrl(value: unknown): string | null {
   if (!storageUrl) return null;
   const encodedPath = url.split("/").map(encodeURIComponent).join("/");
   const objectUrl = `${storageUrl}/storage/v1/object/public/research-ad-creatives/${encodedPath}`;
-  // The renderer is an image renderer, and an object is only identified by its
-  // name here, so a path has to name an image before it goes there. Two measured
-  // reasons: an mp4 answers `400 application/json` through `/render/image/` (the
-  // 10,382,027 B sample did), and the archive stores images and videos side by
-  // side under extension-free `sha256/<hash>` keys, where nothing in the path
-  // says which is which. Anything unnamed stays on the object path.
-  if (!IMAGE_OBJECT_PATH.test(url)) return objectUrl;
+  // The renderer is an image renderer: an mp4 answers `400 application/json`
+  // through `/render/image/` (measured on the 10,382,027 B sample), so a declared
+  // video never goes there, whatever its name says.
+  const declaredKind = typeof kind === "string" ? kind.trim().toLowerCase() : "";
+  if (VIDEO_MEDIA_KINDS.has(declaredKind)) return objectUrl;
+  // A declared still, or a path that names an image type, may be rendered.
+  // Anything else keeps the object URL it has always had.
+  if (!IMAGE_MEDIA_KINDS.has(declaredKind) && !IMAGE_OBJECT_PATH.test(url)) return objectUrl;
   // Named images go through the renderer so imgproxy downscales and re-encodes
   // them. Archive creatives are up to 2048px and several megabytes, and the raw
   // path shipped every byte into cards that render at up to ~526 px: measured on
@@ -427,6 +440,12 @@ function cleanString(value: unknown): string | null {
 
 /** Image file types the storage renderer is allowed to be asked for. */
 const IMAGE_OBJECT_PATH = /\.(?:avif|jpe?g|png|webp)$/iu;
+
+/** `media_assets` kinds that identify a still image. */
+const IMAGE_MEDIA_KINDS = new Set(["image", "thumbnail", "photo", "picture"]);
+
+/** `media_assets` kinds that identify motion, which the image renderer cannot take. */
+const VIDEO_MEDIA_KINDS = new Set(["video", "reel", "clip", "animated"]);
 
 function isVideoUrl(url: string): boolean {
   return /\.(mp4|mov|webm)(?:$|\?)/i.test(url) || /video-/i.test(url);

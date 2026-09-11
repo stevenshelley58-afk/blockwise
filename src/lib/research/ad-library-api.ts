@@ -245,7 +245,7 @@ function addMedia(
   storagePath: string | null,
   sourceUrl: string | null,
 ) {
-  const url = normaliseMediaUrl(storagePath) ?? sourceUrl;
+  const url = normaliseMediaUrl(storagePath, kind) ?? sourceUrl;
   if (!url || media.some((item) => item.url === url)) return;
   media.push({ kind, url, storagePath, sourceUrl });
 }

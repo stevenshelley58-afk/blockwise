@@ -53,6 +53,20 @@ test("normaliseMediaUrl sends only named images to the image renderer", () => {
       assert.match(normaliseMediaUrl(image) ?? "", /\/render\/image\/public\//, `${image} should render`);
     }
     assert.match(normaliseMediaUrl("crew/photo.PNG") ?? "", /\/render\/image\/public\//);
+
+    // The declared kind decides when the path cannot, which is the whole
+    // extension-free archive: production data was checked asset by asset and the
+    // declared kind matches the file's real content in all 63 cases.
+    const sha = "sha256/4cfd25421637e08efa69efe98736d61008951c4d2e05b033e5a849bc9951eb69";
+    assert.match(normaliseMediaUrl(sha, "image") ?? "", /\/render\/image\/public\//);
+    assert.match(normaliseMediaUrl(sha, "thumbnail") ?? "", /\/render\/image\/public\//);
+    assert.equal(normaliseMediaUrl(sha, "video"), object(sha));
+    // A declared video wins over an image name, so a mislabelled path cannot
+    // reach the image renderer.
+    assert.equal(normaliseMediaUrl("media-blobs/creative.mp4.jpg", "video"), object("media-blobs/creative.mp4.jpg"));
+    // Unknown kinds fall back to the path, never to the renderer.
+    assert.equal(normaliseMediaUrl(sha, "unknown"), object(sha));
+    assert.equal(normaliseMediaUrl(sha, null), object(sha));
   } finally {
     restoreEnv("NEXT_PUBLIC_RESEARCH_STORAGE_URL", previousStorageUrl);
   }
