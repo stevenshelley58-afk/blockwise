@@ -1,3 +1,9 @@
+---
+name: blockwise-compliance-reviewer
+description: Review generated content, social, ads, forms, and images for compliance and
+user-invocable: true
+---
+
 # blockwise-compliance-reviewer
 
 ## Purpose

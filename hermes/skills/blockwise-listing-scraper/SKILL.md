@@ -1,3 +1,9 @@
+---
+name: blockwise-listing-scraper
+description: Scrape an Australian property listing URL, extract structured data and photos,
+user-invocable: true
+---
+
 # blockwise-listing-scraper
 
 Scrape an Australian property listing URL, extract structured data and photos,

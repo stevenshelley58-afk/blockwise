@@ -1,3 +1,9 @@
+---
+name: blockwise-seo-schema-builder
+description: Create SEO metadata and Article schema for the draft guide package.
+user-invocable: true
+---
+
 # blockwise-seo-schema-builder
 
 ## Purpose

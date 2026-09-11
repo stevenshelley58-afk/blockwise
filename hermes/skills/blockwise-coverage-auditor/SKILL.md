@@ -1,3 +1,9 @@
+---
+name: blockwise-coverage-auditor
+description: Audit postcode coverage so missing competitors become visible defects rather
+user-invocable: true
+---
+
 # blockwise-coverage-auditor
 
 ## Purpose

@@ -1,3 +1,9 @@
+---
+name: blockwise-image-reviewer
+description: Reject weak or risky generated images before they reach page or ad drafts.
+user-invocable: true
+---
+
 # blockwise-image-reviewer
 
 ## Purpose

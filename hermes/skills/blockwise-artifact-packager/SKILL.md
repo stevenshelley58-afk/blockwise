@@ -1,3 +1,9 @@
+---
+name: blockwise-artifact-packager
+description: Prepare all generated draft outputs for the operator review screen.
+user-invocable: true
+---
+
 # blockwise-artifact-packager
 
 ## Purpose

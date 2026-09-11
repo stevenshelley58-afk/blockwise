@@ -1,3 +1,9 @@
+---
+name: blockwise-lead-ad-generator
+description: Turn the article into a draft Meta lead generation ad package for Blockwise
+user-invocable: true
+---
+
 # blockwise-lead-ad-generator
 
 ## Purpose

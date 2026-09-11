@@ -1,3 +1,9 @@
+---
+name: blockwise-operator-chat
+description: **Status:** live operator research chat. The `/operator/research` console calls
+user-invocable: true
+---
+
 # blockwise-operator-chat
 
 **Status:** live operator research chat. The `/operator/research` console calls

@@ -1,3 +1,9 @@
+---
+name: blockwise-prompt-manager
+description: Manage versioned prompt templates and prompt sets for content skills.
+user-invocable: true
+---
+
 # blockwise-prompt-manager
 
 ## Purpose

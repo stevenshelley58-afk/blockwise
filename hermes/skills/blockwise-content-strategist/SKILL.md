@@ -1,3 +1,9 @@
+---
+name: blockwise-content-strategist
+description: Turn a researched topic into a commercial content plan that connects the guide
+user-invocable: true
+---
+
 # blockwise-content-strategist
 
 ## Purpose

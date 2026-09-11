@@ -1,3 +1,9 @@
+---
+name: blockwise-page-resolver
+description: Resolve a census-verified agent or agency to the real Meta advertiser page used
+user-invocable: true
+---
+
 # blockwise-page-resolver
 
 ## Purpose

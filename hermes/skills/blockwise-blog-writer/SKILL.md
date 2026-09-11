@@ -1,3 +1,9 @@
+---
+name: blockwise-blog-writer
+description: Write the first long-form Blockwise field-guide draft for real estate agents
+user-invocable: true
+---
+
 # blockwise-blog-writer
 
 ## Purpose

@@ -1,3 +1,9 @@
+---
+name: blockwise-agent-census
+description: Own the verified real-estate roster for a single postcode. This is the only
+user-invocable: true
+---
+
 # blockwise-agent-census
 
 ## Purpose

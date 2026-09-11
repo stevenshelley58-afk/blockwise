@@ -1,3 +1,9 @@
+---
+name: blockwise-blog-formatter
+description: Convert an edited field guide into website-ready content blocks.
+user-invocable: true
+---
+
 # blockwise-blog-formatter
 
 ## Purpose

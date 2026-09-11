@@ -1,3 +1,9 @@
+---
+name: blockwise-ad-collector
+description: Scan Meta Ad Library by Page ID and ingest ads, media, creatives and search
+user-invocable: true
+---
+
 # blockwise-ad-collector
 
 ## Purpose

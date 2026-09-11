@@ -1,3 +1,9 @@
+---
+name: blockwise-social-post-generator
+description: Create organic Facebook and Instagram drafts that point back to the article or
+user-invocable: true
+---
+
 # blockwise-social-post-generator
 
 ## Purpose

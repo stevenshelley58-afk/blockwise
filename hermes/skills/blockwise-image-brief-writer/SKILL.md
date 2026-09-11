@@ -1,3 +1,9 @@
+---
+name: blockwise-image-brief-writer
+description: Create controlled image briefs and prompts for the guide, social, and ad
+user-invocable: true
+---
+
 # blockwise-image-brief-writer
 
 ## Purpose

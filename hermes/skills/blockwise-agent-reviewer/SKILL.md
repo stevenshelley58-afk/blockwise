@@ -1,3 +1,9 @@
+---
+name: blockwise-agent-reviewer
+description: Act as a senior Blockwise marketing operator and review the full package.
+user-invocable: true
+---
+
 # blockwise-agent-reviewer
 
 ## Purpose

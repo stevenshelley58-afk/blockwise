@@ -1,3 +1,9 @@
+---
+name: blockwise-topic-researcher
+description: Gather source-backed material for a Blockwise authority article.
+user-invocable: true
+---
+
 # blockwise-topic-researcher
 
 ## Purpose

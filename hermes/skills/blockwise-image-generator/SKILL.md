@@ -1,3 +1,9 @@
+---
+name: blockwise-image-generator
+description: Generate image candidates from approved image briefs in the later image phase.
+user-invocable: true
+---
+
 # blockwise-image-generator
 
 ## Purpose

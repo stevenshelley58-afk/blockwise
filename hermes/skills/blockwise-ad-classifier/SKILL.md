@@ -1,3 +1,9 @@
+---
+name: blockwise-ad-classifier
+description: Classify each captured real-estate creative so the app can filter by ad type,
+user-invocable: true
+---
+
 # blockwise-ad-classifier
 
 ## Purpose

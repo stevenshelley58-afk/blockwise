@@ -1,3 +1,9 @@
+---
+name: blockwise-blog-editor
+description: Improve the guide draft for clarity, specificity, claims, tone, commercial
+user-invocable: true
+---
+
 # blockwise-blog-editor
 
 ## Purpose

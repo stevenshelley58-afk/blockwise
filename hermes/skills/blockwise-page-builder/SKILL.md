@@ -1,3 +1,9 @@
+---
+name: blockwise-page-builder
+description: Prepare a draft guide page package from formatted content, approved assets, SEO
+user-invocable: true
+---
+
 # blockwise-page-builder
 
 ## Purpose

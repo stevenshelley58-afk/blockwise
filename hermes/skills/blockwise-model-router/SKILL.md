@@ -1,3 +1,9 @@
+---
+name: blockwise-model-router
+description: Select the best available model for each content skill by policy, using
+user-invocable: true
+---
+
 # blockwise-model-router
 
 ## Purpose

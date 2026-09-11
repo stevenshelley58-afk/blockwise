@@ -1,3 +1,9 @@
+---
+name: blockwise-instant-form-generator
+description: Create a draft Higher Intent Instant Form for the Blockwise Seller Lead Audit.
+user-invocable: true
+---
+
 # blockwise-instant-form-generator
 
 ## Purpose

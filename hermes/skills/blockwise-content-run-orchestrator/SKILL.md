@@ -1,3 +1,9 @@
+---
+name: blockwise-content-run-orchestrator
+description: Own a draft-only Content-to-Lead run from operator trigger through packaged
+user-invocable: true
+---
+
 # blockwise-content-run-orchestrator
 
 ## Purpose

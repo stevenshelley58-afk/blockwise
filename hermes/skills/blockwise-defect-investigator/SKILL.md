@@ -1,3 +1,9 @@
+---
+name: blockwise-defect-investigator
+description: Operator-triggered investigation for an open coverage defect. It determines
+user-invocable: true
+---
+
 # blockwise-defect-investigator
 
 ## Purpose

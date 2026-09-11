@@ -1,3 +1,9 @@
+---
+name: blockwise-agent-cleanup
+description: Run the final cleanup gate before any Blockwise agent reports a task as done,
+user-invocable: true
+---
+
 # blockwise-agent-cleanup
 
 ## Purpose
