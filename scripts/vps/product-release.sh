@@ -83,7 +83,13 @@ assert_source_authority() {
   readonly SOURCE
   [[ -d "$SOURCE" ]] || fail "release source is not a directory: $SOURCE"
   local common releases_real source_real
-  common="$(readlink -f -- "$("$GIT" -C "$SOURCE" rev-parse --git-common-dir)")" || fail "release source is not a git repository"
+  common="$("$GIT" -C "$SOURCE" rev-parse --git-common-dir)" || fail "release source is not a git repository"
+  # git reports this relative to the working directory, and a service manager
+  # starts with none, so re-anchor it to the source before resolving. Without
+  # this a relative answer such as ".git" becomes "/.git" and every override is
+  # rejected.
+  [[ "$common" = /* ]] || common="$SOURCE/$common"
+  common="$(readlink -f -- "$common")"
   [[ "$common" == "$CANONICAL_SOURCE/.git" ]] || fail "release source is not a worktree of $CANONICAL_SOURCE (source: '$SOURCE', common dir: '$common')"
   if [[ "$SOURCE" != "$CANONICAL_SOURCE" ]]; then
     releases_real="$(readlink -f -- "$RELEASES")"
