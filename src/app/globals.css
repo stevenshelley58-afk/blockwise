@@ -8224,36 +8224,44 @@ a.operator-file-row {
 
 .sso-grid {
   display: grid;
+  /* Google renders its button at the width it is given, up to 400px, so
+     the grid takes that same width and both buttons match. */
   gap: 10px;
+  width: 100%;
+  max-width: 400px;
+  justify-self: center;
 }
 
 /* Google renders its own button in an iframe inside this slot. */
 .sso-google {
   display: grid;
-  min-height: 40px;
+  height: 40px;
   place-items: center;
 }
 
+/* Mirrors the geometry and type of Google's own button so the two provider
+   buttons read as one pair. Only the mark differs. */
 .sso-button {
   display: inline-flex;
+  height: 40px;
   min-height: 40px;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-ctl);
+  gap: 12px;
+  border: 1px solid #dadce0;
+  border-radius: 999px;
   background: var(--surface);
   padding: 0 16px;
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 600;
+  color: #3c4043;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   transition: border-color 150ms ease, background 150ms ease;
 }
 
 .sso-button:hover,
 .sso-button:focus-visible {
-  border-color: var(--accent);
+  border-color: #c8ccd1;
   background: var(--surface-subtle);
   outline: none;
 }
