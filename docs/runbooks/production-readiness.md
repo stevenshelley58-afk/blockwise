@@ -45,6 +45,17 @@ repository, which covers every worktree:
 git -C /projects/blockwise config core.hooksPath /projects/blockwise/scripts/githooks
 ```
 
+Agents claim a worktree with
+`git -C /projects/blockwise worktree add -b <task> /worktrees/<task> origin/main`.
+`/worktrees` must stay mode `2775` owned by `root:hermes` so every agent group
+can create one, and the hook and its directory must stay readable and executable
+by that group (`755`), because git runs the hook with the agent's own uid:
+
+```bash
+install -d -m 2775 -o root -g hermes /worktrees
+chmod 755 /projects/blockwise/scripts/githooks /projects/blockwise/scripts/githooks/pre-commit
+```
+
 `scripts/vps/cleanup-agent-checkouts.sh` lists dated snapshot checkouts and
 removes only those that are fully merged, have no uncommitted work and have been
 idle. Run it without arguments to report and with `--apply` to remove. It ignores
