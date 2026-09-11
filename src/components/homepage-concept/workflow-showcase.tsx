@@ -223,6 +223,12 @@ function StoryAd({
           fetchPriority="high"
           decoding="async"
         />
+        {/* The template's link title is written on the creative. This sits on the
+            same line, so what the field writes appears on the ad itself. */}
+        <span className={`hc-story-ad-link${writingLink ? " is-writing" : ""}`}>
+          {linkChars > 0 ? STORY_AD.linkTitle.slice(0, linkChars) : <i>Your link title</i>}
+          {writingLink && linkTyping ? <span className="hc-story-caret" /> : null}
+        </span>
       </motion.div>
       <div className="hc-meta-link-preview">
         <span>

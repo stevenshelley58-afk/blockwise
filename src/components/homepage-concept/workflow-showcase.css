@@ -359,6 +359,7 @@
 
 .hc-story-ad-image {
   position: relative;
+  container-type: inline-size;
   aspect-ratio: 4 / 5;
   overflow: hidden;
   border-block: 1px solid #d8dce3;
@@ -370,6 +371,42 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* The link title written on the creative, on the template's own link title line.
+   The palette panel behind it is sampled from the creative (#fdfdfd), so the
+   template's own line is replaced rather than double printed. Sized in cqw so it
+   tracks the creative at every width. */
+.hc-story-ad-link {
+  position: absolute;
+  top: 65.4%;
+  left: 8.2%;
+  display: block;
+  width: 80%;
+  overflow: hidden;
+  padding: 0.5cqw 0.4cqw;
+  border-radius: 1px;
+  background: #fdfdfd;
+  color: #b08a4a;
+  font-family: var(--hc-display);
+  font-size: 3cqw;
+  font-weight: 600;
+  letter-spacing: .1em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: color .3s ease;
+}
+
+.hc-story-ad-link > i {
+  color: rgba(176,138,74,.5);
+  font-style: normal;
+}
+
+/* While it is being written it reads as the field the visitor is typing in. */
+.hc-story-ad-link.is-writing {
+  color: #8a6a2f;
+  background: #fdfbf7;
 }
 
 .hc-story-ad .hc-meta-link-preview {

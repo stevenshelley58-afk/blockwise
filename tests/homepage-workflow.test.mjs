@@ -58,6 +58,19 @@ test("the text is written a character at a time, in the field and the ad togethe
   assert.match(source, /const linkChars = scene === "browse" \|\| phase < 6 \? 0 : phase > 6 \? STORY_AD\.linkTitle\.length/);
 });
 
+test("the link title is written onto the ad image, not only under it", () => {
+  // The same counter drives a layer on the creative, so the field writes on the ad.
+  assert.match(source, /className=\{`hc-story-ad-link\$\{writingLink \? " is-writing" : ""\}`\}/);
+  assert.match(source, /STORY_AD\.linkTitle\.slice\(0, linkChars\)[\s\S]{0,140}hc-story-caret/);
+  assert.match(styles, /\.hc-story-ad-image \{[^}]*container-type: inline-size/);
+  // It sits on the template's own link title line, sized against the creative.
+  assert.match(styles, /\.hc-story-ad-link \{[^}]*position: absolute/);
+  assert.match(styles, /\.hc-story-ad-link \{[^}]*font-size: 3cqw/);
+  assert.match(styles, /\.hc-story-ad-link \{[^}]*text-transform: uppercase/);
+  // The panel behind it is the creative's own colour, so there is no double print.
+  assert.match(styles, /\.hc-story-ad-link \{[^}]*background: #fdfdfd/);
+});
+
 test("the demo card keeps one size and the scenes change inside it", () => {
   // One height token, no per-scene viewport height and no height animation.
   assert.match(styles, /--hc-demo-height: 600px/);
