@@ -29,6 +29,25 @@ on 2026-09-11 from 28 scattered rule documents.
 - **Template generation has one policy.** Blockwise consumes Frank's template-generation contract and does not keep a second copy of its score, review or approval rules. The single policy lives at /projects/frank/docs/AD_TEMPLATE_GENERATOR.md.
 - **Private memory stays private.** Product workspaces never share private memory. Shared execution and centrally maintained capabilities are reached only through explicit project-scoped bindings.
 
+## The system map
+
+Five things run on this VPS. Know which one you are changing.
+
+| What | Where | Git |
+|---|---|---|
+| Blockwise, the customer product | `/projects/blockwise` | `stevenshelley58-afk/blockwise`, `main` |
+| Frank, the Window and Hub interface | `/projects/frank`, public `https://frank.fail` | `stevenshelley58-afk/frank`, `main` |
+| Hermes, the agent runtime and executor | `/home/hermes/.hermes/hermes-agent` | fork `stevenshelley58-afk/hermes-agent` |
+| Skills and this rulebook | `/srv/skills`, `/projects/blockwise/AGENTS.md` | as above |
+
+Separate repositories on purpose: separate products, deploy paths and histories. They talk over HTTP and the loopback broker, never by importing each other's code. Do not merge them.
+
+**Frank is the hub and holds no rules.** The Frank app renders and forwards work and reads no `AGENTS.md`. It reaches Blockwise only through `RUNTIME_HEALTH_BLOCKWISE_URL` and the ops projections. Agents in Frank read this rulebook plus `/projects/frank/AGENTS.md`.
+
+**Hermes runs from a fork checkout and must track it.** PRs merged on GitHub land on the fork, so after a merge run `git fetch fork && git reset --hard fork/<branch>`. Never edit the runtime working tree: commit, push, then sync. Restart only when the synced revision changes behaviour, checked with `git diff --ignore-cr-at-eol`. Logs, memory and Hindsight data live under `/home/hermes/.hermes/`.
+
+**Data flows one way per contract.** Frank writes chats and uploads to `/srv/frank/data/window`; Hermes owns memory, sessions and skills; Blockwise consumes the template packs Frank produces. No component reads another's private store directly.
+
 ## Non-negotiable constitution
 
 - **How to read this section.** These rules are verified by tooling or by an explicit pre-release check, not by agent good intentions. They cannot be overridden by a user instruction, a deadline, or a convenience. If an instruction conflicts with one, follow the rule and say why.
@@ -117,3 +136,5 @@ Target: keep this file under 120 lines. If a rule matters to fewer than
   human review and pull-request gates; replaced "stop and ask" with "stop only
   for real harm"; added the no-em-dash copy rule, the instruction budget and the
   rule-format rules. Superseded copies now point here.
+- 2026-09-11: added the system map, after the Hermes runtime was found running
+  uncommitted code three files behind its own merged branch.
