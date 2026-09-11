@@ -158,7 +158,7 @@ describe("customer Ad Studio workbench contract", () => {
 
     // The matching control carries the same mark, in colour and in weight.
     assert.match(inputs, /highlightedKey\?: string \| null/);
-    assert.match(inputs, /highlighted && "border-success bg-success-soft\/60 ring-2 ring-success\/40 focus-visible:border-success focus-visible:ring-success\/40"/);
+    assert.match(inputs, /highlighted && !invalid && "border-success bg-success-soft\/60 ring-2 ring-success\/40 focus-visible:border-success focus-visible:ring-success\/40"/);
     assert.match(inputs, /font-semibold text-success/);
     assert.match(inputs, /aria-current=\{highlighted \? "true" : undefined\}/);
     // Layers with no input (plate, shape, icon) highlight no field.
@@ -180,6 +180,37 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(shell, /\{\.\.\.previewSelection\("story"\)\}/);
     assert.match(shell, /selectedLayerId: state\.activePlacement === placement \? state\.selectedLayerId : null/);
     assert.doesNotMatch(shell, /canvasFor\(state\.activePlacement, "fit", false\)/);
+  });
+
+  it("marks the fields a failed Save is waiting on", () => {
+    const inputs = readFileSync("src/components/adstudio/editor/inputs-panel.tsx", "utf8");
+    const shell = readFileSync("src/components/adstudio/editor/editor-shell.tsx", "utf8");
+
+    // Save names the exact keys it rejected and marks those controls red.
+    assert.match(shell, /const \[invalidKeys, setInvalidKeys\] = useState<string\[\]>\(\[\]\)/);
+    assert.match(shell, /const incomplete = \[\.\.\.missingText\.map\(input => input\.key\), \.\.\.missingImages\.map\(input => input\.key\)\]/);
+    assert.match(shell, /setInvalidKeys\(incomplete\)/);
+    // The section holding the first field opens, and that field comes into view.
+    assert.match(shell, /setInspectorTab\(missingText\.length > 0 \? "copy" : "creative"\)/);
+    assert.match(shell, /scrollIntoView\(\{ block: "center", behavior: "smooth" \}\)/);
+
+    // Filling the field, or letting the template copy fill it, clears the mark.
+    assert.match(shell, /const clearInvalidKey = useCallback/);
+    assert.match(shell, /const handleTextValueChange = useCallback/);
+    assert.match(shell, /updateTextValue=\{handleTextValueChange\}/);
+    assert.match(shell, /invalidKeys=\{invalidKeys\}/);
+
+    // The control: red border, ring and label, plus aria-invalid for assistive tech.
+    assert.match(inputs, /invalidKeys\?: string\[\]/);
+    assert.match(inputs, /invalid && "border-destructive bg-destructive\/5 ring-2 ring-destructive\/40 focus-visible:border-destructive focus-visible:ring-destructive\/40"/);
+    assert.match(inputs, /invalid && "bg-destructive\/5 ring-2 ring-destructive\/40 ring-offset-2 ring-offset-card"/);
+    assert.match(inputs, /aria-invalid=\{invalid \? true : undefined\}/);
+    // Selection green never fights the error red.
+    assert.match(inputs, /highlighted && !invalid && "border-success/);
+
+    // The readiness count uses the same rule as Save, so the header can never
+    // promise fewer missing fields than Save reports.
+    assert.match(shell, /editorTextInputs\(pack\)\.filter\(input => !\(state\.textValues\[input\.key\] \?\? ""\)\.trim\(\)\)\.length/);
   });
 
   it("shows template defaults, recovers stale saves, and keeps publishing choices explicit", () => {

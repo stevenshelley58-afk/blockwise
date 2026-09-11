@@ -61,6 +61,8 @@ export interface InputsPanelProps {
    * the clicked area and the field that edits it read as one thing.
    */
   highlightedKey?: string | null;
+  /** Input keys a failed Save is waiting on. These controls are marked red. */
+  invalidKeys?: string[];
   /** Focusing a control selects its layer on the ad canvas. */
   onFieldFocus?: (key: string) => void;
 }
@@ -88,6 +90,7 @@ export function InputsPanel({
   showTemplateControls = true,
   showBusinessName = true,
   highlightedKey = null,
+  invalidKeys = [],
   onFieldFocus,
 }: InputsPanelProps) {
   const requiredImageInputs = imageInputs.filter(input => input.required !== false);
@@ -156,9 +159,10 @@ export function InputsPanel({
             {textInputs.map(input => {
               const value = textValues[input.key] ?? "";
               const highlighted = highlightedKey === input.key;
+              const invalid = invalidKeys.includes(input.key);
               return (
                 <div key={input.key} className="block">
-                  <Label htmlFor={`creative-${input.key}`} className={cn("mb-1 block text-sm", highlighted ? "font-semibold text-success" : "font-medium")}>{input.label}</Label>
+                  <Label htmlFor={`creative-${input.key}`} className={cn("mb-1 block text-sm", invalid ? "font-semibold text-destructive" : highlighted ? "font-semibold text-success" : "font-medium")}>{input.label}</Label>
                   <Input
                     id={`creative-${input.key}`}
                     type="text"
@@ -168,11 +172,14 @@ export function InputsPanel({
                     onChange={e => onTextChange(input.key, e.target.value)}
                     onFocus={() => onFieldFocus?.(input.key)}
                     aria-current={highlighted ? "true" : undefined}
+                    aria-invalid={invalid ? true : undefined}
                     className={cn(
                       "min-h-11 rounded-(--r-card) bg-muted/30 transition-[border-color,box-shadow,background-color] duration-150 motion-reduce:transition-none",
-                      // The focused ring stays green on the marked field, so the
-                      // clicked area and this box keep reading as one thing.
-                      highlighted && "border-success bg-success-soft/60 ring-2 ring-success/40 focus-visible:border-success focus-visible:ring-success/40",
+                      // The focused ring keeps the field's own colour, so the
+                      // clicked area and this box read as one thing.
+                      highlighted && !invalid && "border-success bg-success-soft/60 ring-2 ring-success/40 focus-visible:border-success focus-visible:ring-success/40",
+                      // An empty required field is red until it is filled.
+                      invalid && "border-destructive bg-destructive/5 ring-2 ring-destructive/40 focus-visible:border-destructive focus-visible:ring-destructive/40",
                     )}
                     aria-describedby={`creative-${input.key}-count`}
                   />
@@ -208,6 +215,7 @@ export function InputsPanel({
                 libraryAssets={libraryAssets}
                 onLibraryPick={onLibraryPick}
                 highlighted={highlightedKey === input.key}
+                invalid={invalidKeys.includes(input.key)}
                 onFieldFocus={onFieldFocus}
               />
             ))}
@@ -228,6 +236,7 @@ export function InputsPanel({
                       libraryAssets={libraryAssets}
                       onLibraryPick={onLibraryPick}
                       highlighted={highlightedKey === input.key}
+                      invalid={invalidKeys.includes(input.key)}
                       onFieldFocus={onFieldFocus}
                     />
                   ))}
@@ -258,6 +267,7 @@ function ImageSlotControl({
   libraryAssets,
   onLibraryPick,
   highlighted = false,
+  invalid = false,
   onFieldFocus,
 }: {
   input: ImageInput;
@@ -268,6 +278,7 @@ function ImageSlotControl({
   libraryAssets?: Array<{ id?: string; url: string; label: string }>;
   onLibraryPick?: (key: string, sourceAssetId: string) => void | Promise<void>;
   highlighted?: boolean;
+  invalid?: boolean;
   onFieldFocus?: (key: string) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -324,13 +335,15 @@ function ImageSlotControl({
       tabIndex={-1}
       onFocus={() => onFieldFocus?.(input.key)}
       aria-current={highlighted ? "true" : undefined}
+      aria-invalid={invalid ? true : undefined}
       className={cn(
         "rounded-(--r-card) transition-[box-shadow,background-color] duration-150 motion-reduce:transition-none",
-        highlighted && "bg-success-soft/50 ring-2 ring-success/40 ring-offset-2 ring-offset-card",
+        highlighted && !invalid && "bg-success-soft/50 ring-2 ring-success/40 ring-offset-2 ring-offset-card",
+        invalid && "bg-destructive/5 ring-2 ring-destructive/40 ring-offset-2 ring-offset-card",
       )}
     >
       <span className="mb-1 flex items-center justify-between gap-2 text-sm font-medium text-foreground">
-        <span className={cn(highlighted && "font-semibold text-success")}>{input.label}</span>
+        <span className={cn(invalid ? "font-semibold text-destructive" : highlighted && "font-semibold text-success")}>{input.label}</span>
         <span className="text-[11px] font-normal text-muted-foreground">{input.required === false ? "Optional" : "Required"}</span>
       </span>
       <input

@@ -526,11 +526,24 @@ export interface TemplateCopyValues {
   metaCopy: MetaCopy;
 }
 
-/** The template's suggested copy, read from the portable defaults. */
+/**
+ * The template's suggested copy.
+ *
+ * A direct-template pack ships its on-image wording as the input placeholder:
+ * that is the copy the customer already sees on the creative. Packs that also
+ * carry editorDefaults.textValues keep using those. Reading only the defaults
+ * left "Use template copy" filling the Meta fields while every on-image field
+ * stayed empty, so Save then rejected copy the customer could see on the ad.
+ */
 export function templateCopyValues(pack: AdTemplate): TemplateCopyValues {
   const defaults = readEditorDefaults(pack);
+  const textValues: Record<string, string> = {};
+  for (const input of editorTextInputs(pack)) {
+    const suggested = (defaults.textValues[input.key] ?? input.placeholder ?? "").trim();
+    if (suggested) textValues[input.key] = suggested;
+  }
   return {
-    textValues: { ...defaults.textValues },
+    textValues,
     metaCopy: {
       primaryText: defaults.metaCopy.primaryText ?? "",
       headline: defaults.metaCopy.headline ?? "",

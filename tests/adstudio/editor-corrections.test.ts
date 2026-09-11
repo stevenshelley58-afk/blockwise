@@ -11,6 +11,7 @@ import {
 } from "../../src/components/adstudio/editor/use-editor-state.ts";
 import { adDocumentSchema } from "../../packages/ad-template-contract/src/schema.ts";
 import { InvalidActiveRevisionError } from "../../src/lib/adstudio/create-customer-ad.ts";
+import { editorTextInputs } from "../../src/components/adstudio/editor/use-editor-state.ts";
 import type { AdTemplate } from "../../packages/ad-template-contract/src/types.ts";
 
 // ---------------------------------------------------------------------------
@@ -105,10 +106,21 @@ describe("template-copy checkbox semantics", () => {
     assert.equal(values.metaCopy.cta, "SIGN_UP");
     assert.equal(values.metaCopy.primaryText, "Template primary text");
     assert.equal(values.metaCopy.headline, "Template meta headline");
-    // Direct-template architecture: overlay text has placeholders, not
-    // persisted suggestions, so the template copy map starts empty.
-    assert.deepEqual(values.textValues, {});
+    // A direct-template pack ships its on-image wording as the input
+    // placeholder, which is the copy the customer already sees on the creative.
+    // The checkbox has to fill those, or Save rejects wording that is on the ad.
+    assert.deepEqual(values.textValues, { headline: "Template headline", subline: "Template subline" });
     assert.equal(JSON.stringify(pack), before);
+  });
+
+  it("the checkbox fills every on-image field the pack has wording for", () => {
+    const pack = makeTemplate();
+    const applied = applyTemplateCopy({ headline: "", subline: "" }, { primaryText: "", headline: "", description: "", cta: "LEARN_MORE" }, pack);
+    assert.deepEqual(applied.textValues, { headline: "Template headline", subline: "Template subline" });
+    assert.deepEqual(Object.keys(applied.filledText).sort(), ["headline", "subline"]);
+    // Nothing is left for Save to reject.
+    const stillEmpty = editorTextInputs(pack).filter(input => !(applied.textValues[input.key] ?? "").trim());
+    assert.deepEqual(stillEmpty, []);
   });
 
   it("applyTemplateCopy fills only empty fields and records provenance", () => {
@@ -124,10 +136,11 @@ describe("template-copy checkbox semantics", () => {
     assert.equal(result.metaCopy.headline, "Template meta headline");
     // …customer copy was never overwritten…
     assert.equal(result.textValues.headline, customerText);
-    assert.equal(result.textValues.subline, "");
     assert.equal(result.metaCopy.description, "My description");
+    // …the empty on-image field got its template wording…
+    assert.equal(result.textValues.subline, "Template subline");
     // …and provenance lists exactly the filled fields.
-    assert.deepEqual(result.filledText, {});
+    assert.deepEqual(Object.keys(result.filledText), ["subline"]);
     assert.deepEqual(Object.keys(result.filledMeta).sort(), ["headline", "primaryText"]);
   });
 
