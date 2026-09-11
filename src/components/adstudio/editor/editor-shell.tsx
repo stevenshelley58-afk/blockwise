@@ -491,9 +491,35 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
     logoUrl: brandLogoUrl,
     destinationUrl: state.destinationUrl,
   } as const;
+  const openInspector = (tab: InspectorTab) => {
+    setInspectorTab(tab);
+    setInspectorOpen(true);
+    setLayersOpen(false);
+  };
+  const editLayer = (placement: Placement, layerId: string) => {
+    setActivePlacement(placement);
+    selectLayer(layerId);
+    const layout = placement === "feed" ? pack.feedLayout : pack.storyLayout;
+    const layer = layout.layers.find((candidate) => candidate.layerId === layerId);
+    const tab: InspectorTab = layer?.type === "text" ? "copy" : layer?.type === "image_slot" || layer?.type === "logo" ? "creative" : "colours";
+    openInspector(tab);
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 1279px)").matches) setMobileInspectorOpen(true);
+    if (layer && "inputKey" in layer) {
+      window.setTimeout(() => document.getElementById(`creative-${layer.inputKey}`)?.focus(), 80);
+    }
+  };
+  /**
+   * Every ad surface answers the same click, including the Meta preview the
+   * editor opens on. Only the active placement carries the mark.
+   */
+  const previewSelection = (placement: Placement) => ({
+    selectedLayerId: state.activePlacement === placement ? state.selectedLayerId : null,
+    onSelect: (layerId: string) => editLayer(placement, layerId),
+  });
   const feedMetaPreview = (
     <FeedPreview
       {...metaPreviewBase}
+      {...previewSelection("feed")}
       layout={pack.feedLayout}
       canonicalPreview={feedCanonicalPreview}
       cropOverrides={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.crops.feed]))}
@@ -503,6 +529,7 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
   const storyMetaPreview = (
     <StoryPreview
       {...metaPreviewBase}
+      {...previewSelection("story")}
       layout={pack.storyLayout}
       canonicalPreview={storyCanonicalPreview}
       cropOverrides={Object.fromEntries(state.imageValues.map(iv => [iv.inputKey, iv.crops.story]))}
@@ -530,23 +557,6 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
     const next = value as Placement | "both";
     setPlacementView(next);
     if (next !== "both") setActivePlacement(next);
-  };
-  const openInspector = (tab: InspectorTab) => {
-    setInspectorTab(tab);
-    setInspectorOpen(true);
-    setLayersOpen(false);
-  };
-  const editLayer = (placement: Placement, layerId: string) => {
-    setActivePlacement(placement);
-    selectLayer(layerId);
-    const layout = placement === "feed" ? pack.feedLayout : pack.storyLayout;
-    const layer = layout.layers.find((candidate) => candidate.layerId === layerId);
-    const tab: InspectorTab = layer?.type === "text" ? "copy" : layer?.type === "image_slot" || layer?.type === "logo" ? "creative" : "colours";
-    openInspector(tab);
-    if (typeof window !== "undefined" && window.matchMedia("(max-width: 1279px)").matches) setMobileInspectorOpen(true);
-    if (layer && "inputKey" in layer) {
-      window.setTimeout(() => document.getElementById(`creative-${layer.inputKey}`)?.focus(), 80);
-    }
   };
   const canvasFor = (placement: Placement, canvasZoom: "fit" | 0.8 | 1 | 1.25 = zoom, interactive = true) => (
     <DesignCanvas
@@ -617,7 +627,7 @@ function RedesignedEditor({ pack, adId, workspaceId, templateId, state, activeLa
           placementView === "both" ? <div className="grid min-h-0 w-full flex-1 grid-cols-1 gap-3 overflow-auto md:grid-cols-2 md:overflow-hidden"><PlacementCanvas label="Feed" active={state.activePlacement === "feed"}>{canvasFor("feed", "fit")}</PlacementCanvas><PlacementCanvas label="Story" active={state.activePlacement === "story"}>{canvasFor("story", "fit")}</PlacementCanvas></div> : canvasFor(placementView)
         ) : previewMode === "meta" ? (
           placementView === "both" ? <div className="grid min-h-0 w-full flex-1 grid-cols-1 gap-3 overflow-auto md:grid-cols-2"><PlacementCanvas label="Feed preview">{feedMetaPreview}</PlacementCanvas><PlacementCanvas label="Story preview">{storyMetaPreview}</PlacementCanvas></div> : <div className="flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden">{metaPreview}</div>
-        ) : <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-3 overflow-auto md:flex-row"><div className="flex min-h-0 min-w-0 max-w-full flex-1 items-center justify-center">{canvasFor(state.activePlacement, "fit", false)}</div><div className="flex min-h-0 min-w-0 max-w-full flex-1 items-center justify-center overflow-hidden">{metaPreview}</div></div>}
+        ) : <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-3 overflow-auto md:flex-row"><div className="flex min-h-0 min-w-0 max-w-full flex-1 items-center justify-center">{canvasFor(state.activePlacement, "fit")}</div><div className="flex min-h-0 min-w-0 max-w-full flex-1 items-center justify-center overflow-hidden">{metaPreview}</div></div>}
         {previewMode === "design" ? <div className="z-10 flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-(--surface) p-1 shadow-float" aria-label="Canvas zoom"><button type="button" aria-pressed={zoom === "fit"} className="min-h-11 rounded-full px-3 text-xs font-semibold hover:bg-muted" onClick={() => setZoom("fit")}>Fit</button><button type="button" aria-pressed={zoom === 1} className="min-h-11 rounded-full px-3 text-xs font-semibold hover:bg-muted" onClick={() => setZoom(1)}>100%</button><button type="button" className="min-h-11 min-w-11 rounded-full hover:bg-muted" aria-label="Zoom out" onClick={() => setZoom(0.8)}><ZoomOut className="mx-auto size-4" /></button><button type="button" className="min-h-11 min-w-11 rounded-full hover:bg-muted" aria-label="Zoom in" onClick={() => setZoom(1.25)}><ZoomIn className="mx-auto size-4" /></button><span className="px-2 text-xs font-medium text-muted-foreground" role="status" aria-live="polite">{placementView === "both" ? "Both · fit" : zoom === "fit" ? "Fit" : `${Math.round(zoom * 100)}%`}</span></div> : null}
       </section>
       {inspectorOpen ? <aside aria-label="Editor inspector" className="hidden w-[22rem] shrink-0 overflow-y-auto border-l border-border bg-card xl:block"><InspectorTabs value={inspectorTab} onChange={setInspectorTab} />{inspector}</aside> : null}

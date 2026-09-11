@@ -168,6 +168,18 @@ describe("customer Ad Studio workbench contract", () => {
     assert.match(inputs, /onFocus=\{\(\) => onFieldFocus\?\.\(input\.key\)\}/);
     assert.match(shell, /if \(layer && layer\.layerId !== state\.selectedLayerId\) selectLayer\(layer\.layerId\)/);
     assert.match(shell, /onFieldFocus=\{focusLayerForInput\}/);
+
+    // The editor opens on the Meta preview, so that creative answers the same
+    // click as the design canvas, and the split view stays consistent with it.
+    const previews = readFileSync("src/components/adstudio/editor/meta-previews.tsx", "utf8");
+    assert.match(previews, /selectedLayerId\?: string \| null/);
+    assert.match(previews, /onSelect\?: \(layerId: string\) => void/);
+    assert.equal(previews.match(/selectedLayerId=\{selectedLayerId\}/g)?.length, 2);
+    assert.equal(previews.match(/onSelect=\{onSelect\}/g)?.length, 2);
+    assert.match(shell, /\{\.\.\.previewSelection\("feed"\)\}/);
+    assert.match(shell, /\{\.\.\.previewSelection\("story"\)\}/);
+    assert.match(shell, /selectedLayerId: state\.activePlacement === placement \? state\.selectedLayerId : null/);
+    assert.doesNotMatch(shell, /canvasFor\(state\.activePlacement, "fit", false\)/);
   });
 
   it("shows template defaults, recovers stale saves, and keeps publishing choices explicit", () => {

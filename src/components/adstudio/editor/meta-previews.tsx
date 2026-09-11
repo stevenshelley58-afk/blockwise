@@ -40,6 +40,9 @@ export interface MetaPreviewProps {
   destinationUrl?: string;
   className?: string;
   canonicalPreview?: CanonicalPreviewState;
+  /** The creative answers the same click as the design canvas. */
+  selectedLayerId?: string | null;
+  onSelect?: (layerId: string) => void;
 }
 
 /** Circular avatar — the Brand Pack logo, or initials when none exists. */
@@ -93,6 +96,8 @@ export function FeedPreview({
   destinationUrl,
   className,
   canonicalPreview,
+  selectedLayerId,
+  onSelect,
 }: MetaPreviewProps) {
   const domain = domainLabel(destinationUrl) || "Destination not set";
   const primaryText = truncateForPreview(copy.primaryText, META_COPY_CONSTRAINTS.primaryText);
@@ -128,6 +133,8 @@ export function FeedPreview({
           textValues={textValues}
           cropOverrides={cropOverrides}
           canonicalPreview={canonicalPreview}
+          selectedLayerId={selectedLayerId}
+          onSelect={onSelect}
           className="h-full w-full"
         />
       </div>
@@ -176,6 +183,8 @@ export function StoryPreview({
   logoUrl,
   className,
   canonicalPreview,
+  selectedLayerId,
+  onSelect,
 }: MetaPreviewProps) {
   return (
     <div
@@ -193,6 +202,8 @@ export function StoryPreview({
         textValues={textValues}
         cropOverrides={cropOverrides}
         canonicalPreview={canonicalPreview}
+        selectedLayerId={selectedLayerId}
+        onSelect={onSelect}
         className="absolute inset-0 h-full w-full"
       />
 
