@@ -32,11 +32,27 @@ export function templateAssetStoragePath(templateId: string, assetKey: string, f
     .join("/");
 }
 
-export function gallerySampleProxyUrl(templateId: string, placement: GallerySamplePlacement = "feed", existingAdId?: string): string | null {
+export function gallerySampleProxyUrl(
+  templateId: string,
+  placement: GallerySamplePlacement = "feed",
+  existingAdId?: string,
+  /**
+   * Rendered width. The sample route re-encodes to WebP at this width and caches
+   * per width, so a gallery card asks for a card-sized preview instead of the
+   * full 1080x1350 PNG. Omit it only when the caller really wants the full render.
+   */
+  width?: number,
+): string | null {
   if (!SAFE_ROUTE_PART.test(templateId)) return null;
-  const path = `/api/adstudio/templates/${encodeURIComponent(templateId)}/sample?placement=${placement}`;
-  if (!existingAdId) return path;
-  return SAFE_ROUTE_PART.test(existingAdId) ? `${path}&adId=${encodeURIComponent(existingAdId)}` : null;
+  const params = new URLSearchParams({ placement });
+  if (existingAdId) {
+    if (!SAFE_ROUTE_PART.test(existingAdId)) return null;
+    params.set("adId", existingAdId);
+  }
+  if (width && Number.isFinite(width) && width >= 64 && width <= 1080) {
+    params.set("w", String(Math.round(width)));
+  }
+  return `/api/adstudio/templates/${encodeURIComponent(templateId)}/sample?${params}`;
 }
 
 export function templateAssetProxyUrl(templateId: string, assetKey: string, existingAdId?: string): string | null {

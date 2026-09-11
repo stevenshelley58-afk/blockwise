@@ -98,6 +98,22 @@ describe("Ad Studio direct layered template gallery", () => {
       gallerySampleProxyUrl("layered-template-01", "feed", "8dc1234c-88d2-4d51-aebd-2c84a36fa8cf"),
       "/api/adstudio/templates/layered-template-01/sample?placement=feed&adId=8dc1234c-88d2-4d51-aebd-2c84a36fa8cf",
     );
+    // A gallery card asks for a card-sized render: without a width the route
+    // sends the full 1080x1350 PNG, which is ~30x the bytes of the WebP.
+    assert.equal(
+      gallerySampleProxyUrl("layered-template-01", "feed", "8dc1234c-88d2-4d51-aebd-2c84a36fa8cf", 384),
+      "/api/adstudio/templates/layered-template-01/sample?placement=feed&adId=8dc1234c-88d2-4d51-aebd-2c84a36fa8cf&w=384",
+    );
+    assert.equal(
+      gallerySampleProxyUrl("layered-template-01", "story", undefined, 384),
+      "/api/adstudio/templates/layered-template-01/sample?placement=story&w=384",
+    );
+    // Outside the route's accepted range the parameter is dropped, so a bad
+    // caller cannot ask for an unbounded render.
+    assert.equal(
+      gallerySampleProxyUrl("layered-template-01", "feed", undefined, 5000),
+      "/api/adstudio/templates/layered-template-01/sample?placement=feed",
+    );
   });
 
   it("uses exact component encoding and real layered previews", () => {

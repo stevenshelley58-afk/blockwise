@@ -6,6 +6,14 @@ import { isExampleBrandKitSourceUrl } from "./persistence.ts";
 import { adFormatLabel, deriveAdLibraryStatus, type AdLibraryStatus } from "./library-contract.ts";
 export { adFormatLabel, deriveAdLibraryStatus } from "./library-contract.ts";
 
+/**
+ * Rendered width for a library card preview. The grid is three columns inside a
+ * 1120px container, so a card is 330-362px wide; 384 covers it at 1x, and the
+ * sample route answers about 30 KB of WebP instead of the 1080x1350 PNG it used
+ * to send because no width was asked for.
+ */
+const AD_LIBRARY_TILE_WIDTH = 384;
+
 export function savedAdDownloadPaths(revision: Record<string, unknown> | undefined): {
   feed: string | null;
   story: string | null;
@@ -187,7 +195,7 @@ export async function loadAdStudioLibraryPage(input: {
         adId: String(row.id),
         templateId: String(row.template_id ?? ""),
         name: typeof row.name === "string" && row.name.trim() ? row.name : "Untitled ad",
-        src: src ?? (templateId ? gallerySampleProxyUrl(templateId, "feed", String(row.id)) : null),
+        src: src ?? (templateId ? gallerySampleProxyUrl(templateId, "feed", String(row.id), AD_LIBRARY_TILE_WIDTH) : null),
         feedDownloadPath: feedPath,
         storyDownloadPath: storyPath,
         format: adFormatLabel(Boolean(feedPath), Boolean(storyPath)),
