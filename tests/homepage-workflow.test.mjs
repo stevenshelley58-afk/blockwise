@@ -144,6 +144,10 @@ test("the story starts once when scrolled into view and then stops", () => {
   assert.match(source, /if \(entry\.isIntersecting && !reduceMotion && !hasStarted\.current\)/);
   assert.match(source, /hasStarted\.current = true/);
   assert.match(source, /visibilitychange/);
+  // A phone viewport is shorter than this section, so a high threshold would
+  // mean the story never starts there at all.
+  assert.match(source, /threshold: 0\.12/);
+  assert.doesNotMatch(source, /threshold: 0\.3/);
   assert.match(source, /if \(!playing \|\| !inView \|\| !pageVisible\) return/);
   // Reduced motion shortens the run instead of stranding the story mid-way.
   assert.match(source, /reduceMotion \? 260 : hold/);

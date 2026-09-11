@@ -674,7 +674,9 @@ export function WorkflowShowcase() {
           setPlaying(true);
         }
       },
-      { threshold: 0.3 },
+      /* A phone viewport is shorter than this section, so 0.3 of it can never
+         be on screen there and the story would never start. */
+      { threshold: 0.12 },
     );
 
     syncVisibility();
