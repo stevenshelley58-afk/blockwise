@@ -103,6 +103,26 @@ export const TERMS_HREF = "https://blockwise.sale/terms";
 export const LOGIN_HREF = "https://blockwise.sale/login";
 export const BUSINESS_IDENTITY = "Blockwise is operated by SHELLEY, STEVEN JOHN.";
 
+/**
+ * Public booking. SnagTime, the self-hosted scheduling service, answers on
+ * BOOKING_ORIGIN and serves one page per event type at /book/<slug>. Naming
+ * the origin and the slug together keeps the home page link and the published
+ * event type from drifting apart. The origin is the canonical value fixed by
+ * the SnagTime fork's docs/BLOCKWISE-INTEGRATION.md.
+ *
+ * The event type behind BOOKING_EVENT_SLUG must be published, public and 20
+ * minutes, because BOOKING_POINTS states that length to the visitor.
+ */
+export const BOOKING_ORIGIN = "https://book.blockwise.sale";
+export const BOOKING_EVENT_SLUG = "intro-call";
+export const BOOKING_HREF = `${BOOKING_ORIGIN}/book/${BOOKING_EVENT_SLUG}`;
+
+export const BOOKING_POINTS = [
+  "20 minutes, by video or phone",
+  "No card required",
+  "No obligation to continue",
+] as const;
+
 export type FaqLink = { readonly label: string; readonly href: string };
 export type Faq = { readonly question: string; readonly answer: string; readonly links?: readonly FaqLink[] };
 
