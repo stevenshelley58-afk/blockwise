@@ -104,13 +104,12 @@ test.describe("customer UX flows", () => {
     // metric chips: both drive the same example payload.
     const metric = page.getByLabel("Chart metric");
     const range = page.getByLabel("Date range");
-    await expect(metric).toHaveText(/Enquiries over time/);
+    await expect(metric).toHaveText(/Leads over time/);
     await expect(range).toHaveText(/7 days/);
     await metric.click();
     // Every metric with a daily series is offered, most important first.
     await expect(page.getByRole("option")).toHaveText([
-      "Enquiries over time",
-      "Valid leads over time",
+      "Leads over time",
       "Cost per lead over time",
       "Spend over time",
       "Reach over time",

@@ -25,17 +25,17 @@ const COUNT_SPRING = { ...springs.slow, duration: countUpDuration };
  * and drops the `leading-[1.35]` (or `leading-none`) sitting in an earlier
  * argument. Merging them silently changed the card's line boxes.
  */
-const LABEL: Record<"default" | "compact", string> = {
-  default: "text-[12px] leading-[1.35] font-semibold text-muted-foreground",
-  compact: "text-[10.5px] leading-[1.35] font-semibold text-muted-foreground sm:text-[12px]",
-};
+const LABEL = "text-[12px] leading-[1.35] font-semibold text-muted-foreground";
 
-const VALUE_BASE: Record<"default" | "compact", string> = {
-  default:
-    "mt-1 font-display text-[22px] leading-none font-extrabold tracking-[-0.025em] tabular-nums lg:text-[24px]",
-  compact:
-    "mt-1 font-display text-[18px] leading-none font-extrabold tracking-[-0.025em] tabular-nums sm:text-[24px]",
-};
+/*
+ * The figure is sized against the card it sits in rather than the viewport, so a
+ * five-figure spend shrinks to fit the narrowest card instead of printing over
+ * the card beside it. The cap only bites below about 360px: every wider card has
+ * room for the full size, and `wrap-anywhere` is the last resort for a figure
+ * longer than even that, which wraps inside its own card rather than escaping it.
+ */
+const VALUE_BASE =
+  "mt-1 font-display text-[min(22px,18cqw)] leading-none font-extrabold tracking-[-0.025em] tabular-nums wrap-anywhere lg:text-[min(24px,18cqw)]";
 
 /** Unavailable is not zero: a null figure reads muted, a real one reads in full ink. */
 const VALUE_TONE: Record<"quiet" | "loud", string> = {
@@ -98,14 +98,6 @@ type Props = {
   unavailable?: string;
   /** The word a screen reader hears for that mark, e.g. "Not reported". */
   unavailableSpoken?: string;
-  /** Phone-first sizing, so three cards fit a 320px row. */
-  compact?: boolean;
-  /**
-   * Drop the " vs {compareLabel}" tail below `sm`, so a phone reads just the
-   * figure and its arrow. The spoken sentence and every wider width are
-   * unchanged.
-   */
-  hideCompareOnPhone?: boolean;
 };
 
 /**
@@ -117,12 +109,10 @@ export function ChangeNote({
   change,
   compareLabel,
   spokenChange,
-  hideCompareOnPhone = false,
 }: {
   change: MetricChange;
   compareLabel?: string;
   spokenChange?: string;
-  hideCompareOnPhone?: boolean;
 }) {
   const Icon = change.direction === "up" ? ArrowUp : change.direction === "down" ? ArrowDown : null;
   const compare = compareLabel ? ` vs ${compareLabel}` : null;
@@ -133,11 +123,7 @@ export function ChangeNote({
       {spokenChange ? <span className="sr-only">{spokenChange}</span> : null}
       <span aria-hidden={spokenChange ? true : undefined} className="tabular-nums">
         {change.direction === "level" ? "No change" : `${change.percent}%`}
-        {compare && hideCompareOnPhone ? (
-          <span className="hidden sm:inline">{compare}</span>
-        ) : (
-          compare
-        )}
+        {compare}
       </span>
     </span>
   );
@@ -153,8 +139,6 @@ export function MetricCard({
   spokenChange,
   unavailable = "—",
   unavailableSpoken,
-  compact = false,
-  hideCompareOnPhone = false,
 }: Props): React.ReactElement {
   // The line and the comparison stack: side by side they would squeeze the note
   // into a column of two-word lines at two up. Fewer than two points draws
@@ -166,17 +150,14 @@ export function MetricCard({
 
   return (
     <div
-      className={cn(
-        "min-w-0 rounded-(--r-card) border border-(--line) bg-card shadow-card",
-        compact
-          ? "px-2.5 py-3 sm:px-[18px] sm:pt-[17px] sm:pb-[15px]"
-          : "px-4 py-3.5 lg:px-[18px] lg:pt-[17px] lg:pb-[15px]",
-      )}
+      // The card is its own container, so the figure inside it can size itself
+      // against the card rather than the viewport.
+      className="@container min-w-0 rounded-(--r-card) border border-(--line) bg-card px-4 py-3.5 shadow-card lg:px-[18px] lg:pt-[17px] lg:pb-[15px]"
     >
-      <dt className={LABEL[compact ? "compact" : "default"]}>{label}</dt>
+      <dt className={LABEL}>{label}</dt>
       <dd
         className={cn(
-          VALUE_BASE[compact ? "compact" : "default"],
+          VALUE_BASE,
           VALUE_TONE[value === null ? "quiet" : "loud"],
         )}
       >
@@ -193,12 +174,7 @@ export function MetricCard({
         <div className="mt-2.5 flex flex-col gap-1.5">
           {line}
           {change ? (
-            <ChangeNote
-              change={change}
-              compareLabel={compareLabel}
-              spokenChange={spokenChange}
-              hideCompareOnPhone={hideCompareOnPhone}
-            />
+            <ChangeNote change={change} compareLabel={compareLabel} spokenChange={spokenChange} />
           ) : null}
         </div>
       ) : null}

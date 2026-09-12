@@ -172,8 +172,8 @@ export function HomePerformanceChart({ daily }: { daily: HomeDailyPoint[] | null
         ) : (
           <div className="grid h-[218px] place-items-center rounded-xl border border-dashed border-border">
             <div className="max-w-[260px] text-center">
-              <p className="text-sm font-bold">{daily?.length ? "No enquiries recorded" : "Reporting unavailable"}</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{daily?.length ? "No enquiries are recorded for this reporting period." : "There is no verified reporting data for this period."}</p>
+              <p className="text-sm font-bold">{daily?.length ? "No leads recorded" : "Reporting unavailable"}</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{daily?.length ? "No leads are recorded for this reporting period." : "There is no verified reporting data for this period."}</p>
             </div>
           </div>
         )}

@@ -4,16 +4,17 @@ import type { MetaDailyPoint } from "./types.ts";
 /**
  * Every metric Results can draw a line for, most important first.
  *
- * Order is the product's own: how many leads came in, how many of those were
- * worth having, what they cost, what was spent, then how the ads delivered and
- * how people responded. A figure with no daily series (reach and impressions
- * per day are aggregated from the same insight rows as spend) cannot be charted
- * and does not belong here; neither does "running ads", which is a count today
- * rather than something that moves over a period.
+ * Order is the product's own: how many leads came in, what they cost, what was
+ * spent, then how the ads delivered and how people responded. A figure with no
+ * daily series (reach and impressions per day are aggregated from the same
+ * insight rows as spend) cannot be charted and does not belong here; neither
+ * does "running ads", which is a count today rather than something that moves
+ * over a period, nor the count of valid leads, which the tables that audit lead
+ * quality carry rather than becoming a line of its own. The valid lead *rate*
+ * stays: it is the share of the leads on the chart that were worth having.
  */
 export type ChartMetricKey =
   | "leads"
-  | "validLeads"
   | "cpl"
   | "spend"
   | "reach"
@@ -59,12 +60,6 @@ function axisTick(format: (value: number) => string, short: Intl.NumberFormat) {
 
 export const CHART_METRICS: readonly ChartMetricDefinition[] = [
   { key: "leads", read: (point) => point.leads, format: whole, axisFormat: axisTick(whole, shortNumber) },
-  {
-    key: "validLeads",
-    read: (point) => point.validLeads,
-    format: whole,
-    axisFormat: axisTick(whole, shortNumber),
-  },
   {
     key: "cpl",
     read: (point) => point.validCpl,

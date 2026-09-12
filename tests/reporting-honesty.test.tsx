@@ -127,13 +127,13 @@ test("a demo is labelled in the same bar and the same words everywhere", () => {
 });
 
 
-test("Home chart does not describe missing data as zero enquiries", () => {
+test("Home chart does not describe missing data as zero leads", () => {
   for (const daily of [null, []]) {
     const html = renderToStaticMarkup(createElement(HomePerformanceChart, { daily }));
     assert.match(html, /Reporting unavailable/);
-    assert.doesNotMatch(html, /No enquiries recorded|No leads yet/);
+    assert.doesNotMatch(html, /No leads recorded|No leads yet/);
   }
   const html = renderToStaticMarkup(createElement(HomePerformanceChart, { daily: [{ date: "2026-09-06", leads: 0 }] }));
-  assert.match(html, /No enquiries recorded/);
+  assert.match(html, /No leads recorded/);
   assert.doesNotMatch(html, /Reporting unavailable/);
 });

@@ -185,9 +185,9 @@ export type PerformanceCopy = {
   subtitle: string;
   /** The only ranges Results offers: one day, a week, a month, or the customer's own span. */
   ranges: { d1: string; d7: string; d30: string };
+  /** One label per chart the menu offers, in the menu's own order. */
   charts: {
     leads: string;
-    validLeads: string;
     cpl: string;
     spend: string;
     reach: string;

@@ -16,7 +16,6 @@ test("every chart metric is offered once, most important first", () => {
 
   assert.deepEqual(keys, [
     "leads",
-    "validLeads",
     "cpl",
     "spend",
     "reach",

@@ -5,8 +5,7 @@ export const performance: PerformanceCopy = {
   subtitle: "Spend, leads and cost per lead across your live ads.",
   ranges: { d1: "1 day", d7: "7 days", d30: "30 days" },
   charts: {
-    leads: "Enquiries over time",
-    validLeads: "Valid leads over time",
+    leads: "Leads over time",
     cpl: "Cost per lead over time",
     spend: "Spend over time",
     reach: "Reach over time",
@@ -20,7 +19,7 @@ export const performance: PerformanceCopy = {
     cpl: "Days with no valid leads show no cost per lead.",
     cpc: "Days with no link clicks show no cost per link click.",
     ctr: "Days with no impressions show no click-through rate.",
-    validRate: "Days with no enquiries show no valid lead rate.",
+    validRate: "Days with no leads show no valid lead rate.",
   },
   figureHeading: { today: "Today", last_7: "Last 7 days", last_30: "Last 30 days" },
   figureLabels: {
