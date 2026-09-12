@@ -166,7 +166,7 @@ export function HeroAdShowcase() {
               key={format}
               variant="ghost"
               size="sm"
-              disc="none"
+              arrow={null}
               type="button"
               aria-pressed={(manualFormat ?? SHOWCASE_ADS[order[0]].format) === format}
               onClick={() => chooseFormat(format)}

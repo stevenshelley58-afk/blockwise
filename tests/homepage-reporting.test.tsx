@@ -65,6 +65,8 @@ test("reporting demo is manual, isolated and explicit about side effects", async
   assert.match(source, /document.visibilityState/);
   assert.match(source, /reducedMotion/);
   assert.match(source, /data-report-visible/);
+  assert.match(source, /stageRef/);
+  assert.match(source, /observer\.observe\(target\)/);
   assert.match(emailPreview, /LEAD_EMAIL_TEMPLATE/);
 
   // No network, storage, analytics, polling or contact side effects in the demo.

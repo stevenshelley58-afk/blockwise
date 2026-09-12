@@ -112,7 +112,9 @@
   .rr-chart-plot { height: 164px; }
   .rr-chart-labels span:not(:first-child):not(:last-child) { display: none; }
   .rr-lead-email { padding: 16px 16px 20px; }
-  .rr-lead-email-grid { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .rr-lead-email-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "email" "creative"; gap: 18px; }
+  .rr-lead-email-card { grid-area: email; }
+  .rr-lead-email-creative { grid-area: creative; }
   .rr-lead-email-creative { padding: 16px; }
   .rr-lead-email-creative-img { max-width: 160px; }
   .rr-lead-email-card { padding: 18px 18px 20px; }

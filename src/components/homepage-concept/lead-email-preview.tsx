@@ -12,7 +12,7 @@ export function LeadEmailPreview() {
     <div className="rr-lead-email" aria-label="New lead email preview">
       <div className="rr-lead-email-grid">
         <figure className="rr-lead-email-creative">
-          <figcaption>Related creative</figcaption>
+          <figcaption>Your ad</figcaption>
           <img
             className="rr-lead-email-creative-img"
             src={withBasePath(email.creative.src)}

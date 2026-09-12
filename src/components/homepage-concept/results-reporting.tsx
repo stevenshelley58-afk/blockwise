@@ -37,7 +37,7 @@ export function ResultsReporting() {
   const [isInView, setIsInView] = useState(false);
   const [isDocumentVisible, setIsDocumentVisible] = useState(true);
   const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
-  const sectionRef = useRef<HTMLElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<HTMLElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
   const touchedRef = useRef(false);
@@ -63,9 +63,9 @@ export function ResultsReporting() {
     chooseView(next);
   }
 
-  /* Arm once, the first time the chart scrolls into view. */
+  /* Arm once, the first time the report card scrolls into view. */
   useEffect(() => {
-    const target = sectionRef.current;
+    const target = stageRef.current;
     if (!target) return;
     if (typeof IntersectionObserver === "undefined") {
       setIsInView(true);
@@ -142,7 +142,6 @@ export function ResultsReporting() {
 
   return (
     <section
-      ref={sectionRef}
       style={{ "--rr-draw": DRAW_MS + "ms", "--rr-state": durations.state + "s" } as CSSProperties}
       className={`rr-results${armed ? " is-armed" : ""}`}
       data-report-visible={isInView && isDocumentVisible ? "true" : "false"}
@@ -158,7 +157,7 @@ export function ResultsReporting() {
           </div>
         </header>
 
-        <div className="rr-stage hc-demo-card" aria-label="Interactive example report">
+        <div ref={stageRef} className="rr-stage hc-demo-card" aria-label="Interactive example report">
           <header className="rr-stage-topbar">
 
             <div className="rr-stage-slot">
