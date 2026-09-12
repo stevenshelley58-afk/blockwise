@@ -86,7 +86,6 @@ export type HomeCopy = {
       lower: (percent: number) => string;
       level: string;
     };
-    demoBadge: string;
     demoNote: string;
     demoAction: string;
     unavailableValue: string;
@@ -132,9 +131,12 @@ export type HomeCopy = {
     emptyBody: string;
     ctaLabel: string;
   };
-  perthAds: {
-    title: string;
+  localAds: {
+    /** `place` is the workspace's own suburb or postcode, or the fallback area. */
+    title: (place: string) => string;
     viewAll: string;
+    /** Searched instead until a brand address supplies a postcode. */
+    fallbackArea: { searchTerm: string; place: string };
   };
 };
 

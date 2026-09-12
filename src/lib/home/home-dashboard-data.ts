@@ -1,4 +1,5 @@
 import type { HomeData } from "@/components/self-serve/home-dashboard";
+import { niche } from "@/config/niche";
 import { resolveCustomerActivation } from "@/lib/activation/customer-activation";
 import { loadReportingSnapshot } from "@/lib/meta-monitor/reporting-snapshots";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -6,11 +7,48 @@ import type { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { listTemplates } from "@/lib/adstudio/pack-gallery";
 import { buildHomeCreativeSuggestions, type HomeCreativeSuggestions } from "@/lib/home/creative-suggestions";
 import { homePerformanceFromReporting, mergeHomeSafeReadModel, type HomeSafeReadModel } from "@/lib/home/home-safe-read-model";
+import { HOME_LOCAL_AD_LIMIT, selectHomeLocalAds } from "@/lib/home/home-local-ads";
 import { leadSourceLabel } from "@/lib/leads/rows";
+import { resolveBrandPackLocation } from "@/lib/research/brand-pack-suburb";
 import { loadPublicAdRadarCards } from "@/lib/research/public-ad-radar";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
+type BrandKitRow = {
+  business_name?: string | null;
+  colours_json?: unknown;
+  source_url?: string | null;
+  review_status?: string | null;
+  contact_json?: { address?: string | null } | null;
+};
+
+/**
+ * Home's local-ads list, keyed on the workspace's own area.
+ *
+ * The Brand Pack address carries the postcode when the customer's website gave
+ * one, and a postcode is the strongest Ad Radar search key there is. Until the
+ * address yields one, Home falls back to the niche's default area rather than
+ * showing no list at all. More cards are read than Home shows, because the ones
+ * worth showing are not always the most recent.
+ */
+async function loadHomeLocalAds(
+  serviceSupabase: SupabaseServiceClient,
+  brandKit: BrandKitRow | null,
+): Promise<{ area: HomeData["localAdsArea"]; ads: HomeData["localAds"] }> {
+  const copy = niche.copy.home.localAds;
+  const brandLocation = resolveBrandPackLocation(brandKit?.contact_json?.address ?? null);
+  const area = {
+    searchTerm: brandLocation?.searchTerm ?? copy.fallbackArea.searchTerm,
+    place: brandLocation?.place ?? copy.fallbackArea.place,
+  };
+  const response = await loadPublicAdRadarCards(serviceSupabase, {
+    location: area.searchTerm,
+    limit: HOME_LOCAL_AD_LIMIT * 3,
+    sort: "recent",
+  });
+
+  return { area, ads: selectHomeLocalAds(response.ads, HOME_LOCAL_AD_LIMIT) };
+}
 
 // The read-model contract lives in a client-safe module; re-exported here so
 // existing server-side importers keep one import site.
@@ -27,18 +65,24 @@ export async function loadHomeDashboardData(input: {
   reportingNeedsRefresh: boolean;
   reportingGeneratedAt: string;
 }> {
-  const [campaigns, customerAds, brandKits, connections, workspace, wallet, activation, reporting, templates, leadsResult, perthAdsResult] =
+  const brandKitsQuery = input.supabase
+    .from("adstudio_brand_kits")
+    .select("business_name, colours_json, source_url, review_status, contact_json")
+    .eq("workspace_id", input.workspaceId)
+    .limit(1);
+  // A builder re-runs its request on every `then`, so the one brand-kit read is
+  // memoised: the dashboard needs the pack itself, and the local-ads list needs
+  // the address inside it.
+  const brandKitRead = Promise.resolve(brandKitsQuery);
+
+  const [campaigns, customerAds, brandKits, connections, workspace, wallet, activation, reporting, templates, leadsResult, localAdsResult] =
     await Promise.all([
       input.supabase
         .from("adstudio_campaigns")
         .select("id, created_at, template_key")
         .eq("workspace_id", input.workspaceId),
       input.supabase.from("ad_customer_ads").select("template_id").eq("workspace_id", input.workspaceId),
-      input.supabase
-        .from("adstudio_brand_kits")
-        .select("business_name, colours_json, source_url, review_status")
-        .eq("workspace_id", input.workspaceId)
-        .limit(1),
+      brandKitRead,
       input.supabase
         .from("provider_connections")
         .select("id, provider, status, external_account_name, updated_at")
@@ -81,24 +125,9 @@ export async function loadHomeDashboardData(input: {
           })),
         )
         .catch(() => []),
-      Promise.resolve(
-        loadPublicAdRadarCards(input.serviceSupabase, {
-          location: "Perth, WA",
-          limit: 4,
-          sort: "recent",
-        }),
-      )
-        .then((res) =>
-          res.ads.map((ad) => ({
-            id: ad.id,
-            pageName: ad.pageName,
-            headline: ad.headline,
-            suburb: ad.suburb,
-            state: ad.state,
-            imageUrl: ad.media[0]?.url ?? null,
-          })),
-        )
-        .catch(() => []),
+      brandKitRead
+        .then(({ data }) => loadHomeLocalAds(input.serviceSupabase, (data?.[0] as BrandKitRow | undefined) ?? null))
+        .catch(() => ({ area: null, ads: [] })),
     ]);
 
   const results = reporting?.snapshot.payload ?? null;
@@ -176,7 +205,8 @@ export async function loadHomeDashboardData(input: {
     performance: live?.performance ?? null,
     creativeSuggestions,
     leads: leadsResult,
-    perthAds: perthAdsResult,
+    localAds: localAdsResult.ads,
+    localAdsArea: localAdsResult.area,
   };
   const periodEnd =
     typeof workspaceRow.stripe_current_period_end === "string"

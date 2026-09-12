@@ -39,7 +39,8 @@ function homeData(
     ads: { created: 0, live: null, publishedThisWeek: 0 },
     performance,
     leads: [],
-    perthAds: [],
+    localAds: [],
+    localAdsArea: null,
     activation: {
       currentStage: "brand",
       nextAction: "brand",
@@ -157,13 +158,17 @@ test("the band labels demo numbers instead of presenting them as delivery", () =
   assert.ok(model);
   const html = renderToStaticMarkup(createElement(HomeDashboard, { data: homeData(model.performance) }));
 
-  assert.match(html, /Demo data/);
+  // The demo tone is said once, in the note under the figures. A second badge
+  // beside the heading only repeated it.
+  assert.doesNotMatch(html, /Demo data/);
   assert.match(html, /Demo numbers for an example account, not yours\./);
   assert.match(html, /Connect Meta to see your own/);
-  // The three figures the band owns, named the way the data actually reads.
+  // The three figures the band owns, named the way the data actually reads, and
+  // each one in the shared card surface rather than loose on the page.
   assert.match(html, /Spend/);
   assert.match(html, /Link clicks/);
   assert.match(html, /Cost per link click/);
+  assert.equal(html.match(/data-metric=/g)?.length, 3);
 });
 
 test("the band claims a week and never a 30 day window", () => {

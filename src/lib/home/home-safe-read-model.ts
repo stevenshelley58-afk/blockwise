@@ -35,7 +35,8 @@ export type HomeSafeReadModel = Pick<
   | "performance"
   | "creativeSuggestions"
   | "leads"
-  | "perthAds"
+  | "localAds"
+  | "localAdsArea"
 >;
 
 export function mergeHomeSafeReadModel(
@@ -57,7 +58,8 @@ export function homeSafeReadModelFromData(data: HomeData): HomeSafeReadModel {
     performance: data.performance,
     creativeSuggestions: data.creativeSuggestions,
     leads: data.leads,
-    perthAds: data.perthAds,
+    localAds: data.localAds,
+    localAdsArea: data.localAdsArea,
   };
 }
 

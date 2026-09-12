@@ -58,7 +58,10 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 ## Components
 
 - **Reuse the shared vocabulary.** src/components/ui/ is the shared vocabulary for buttons, cards, dialogs, sheets, tables, selects, inputs and navigation. Build from it before creating anything new.
-- **Hierarchy before containers.** Use sections, rows, hairlines and disclosures before rounded cards or chart scaffolds. Keep Home flat by default.
+- **Hierarchy before containers.** Use sections, rows, hairlines and disclosures before rounded cards or chart scaffolds. Keep Home flat by default, with one named exception: the weekly metrics row below.
+- **The weekly metrics row is Home's only card row.** The three trailing-week figures (spend, link clicks, cost per link click) each render in the shared KPI card surface — `rounded-(--r-card)`, `border-(--line)`, `bg-card`, `shadow-card` — with that figure's sparkline and prior-week comparison inside its own card. Leads, local ads and everything else on Home stay flat: sections, rows and hairlines.
+- **One label per fact.** State a caveat once, at the level it applies to. A band that is entirely demo data says so in its one note under the figures; it does not repeat the same word as a badge beside the heading.
+- **Ad Radar feeds Home's local ads, keyed on the workspace's own area.** Read the list for the postcode from the workspace's brand address, and fall back to the niche's default area until an address supplies one. Never fill the list with a card that cannot draw its own still image: prefer ads with an image and a headline, and never hand a video file to an image element.
 - **Lead with the customer's real creative.** Home leads with the customer's creative and keeps its next action linked to a server-resolved, available route.
 - **Guides are content-first.** Lead with the useful content, use rounded panels only when they improve grouping, and keep promotion subtle and secondary.
 - **Help owns the walkthrough.** `/help` is the customer destination for provider walkthroughs, screenshots, tips and edge cases. A working screen keeps only the instruction its next action needs, plus one link to Help; it never carries the manual. The Meta sharing steps in `src/components/meta/partner-steps.ts` are the single source shared by `/connect-meta` and Help, so the checklist and the walkthrough cannot drift apart.
@@ -81,6 +84,10 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 
 ## Changelog
 
+- 2026-09-12: Home's weekly metrics moved into the shared KPI card surface, the
+  duplicate demo badge beside the heading was removed in favour of the one note
+  under the figures, and Home's local-ads list became Ad Radar results keyed on
+  the workspace's own postcode.
 - 2026-09-12: ad-account connection simplified. Added four rules: one action per
   connection row, provider values shown read-only with their source named, asset
   choices that save themselves, and a way out of every waiting state. The

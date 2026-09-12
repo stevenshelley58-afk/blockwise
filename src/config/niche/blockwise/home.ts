@@ -39,7 +39,6 @@ export const home: HomeCopy = {
       lower: (percent) => `${percent}% lower than the prior week`,
       level: "Level with the prior week",
     },
-    demoBadge: "Demo data",
     demoNote: "Demo numbers for an example account, not yours.",
     demoAction: "Connect Meta to see your own",
     unavailableValue: "—",
@@ -100,8 +99,10 @@ export const home: HomeCopy = {
     emptyBody: "Leads land here as soon as your first ad is live.",
     ctaLabel: "Create an ad",
   },
-  perthAds: {
-    title: "Ads in Perth",
+  localAds: {
+    title: (place) => `Ads near ${place}`,
     viewAll: "View all",
+    // The Perth default stands until a brand address gives us a postcode.
+    fallbackArea: { searchTerm: "Perth, WA", place: "Perth" },
   },
 };

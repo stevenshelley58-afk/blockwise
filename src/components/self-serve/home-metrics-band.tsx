@@ -168,11 +168,6 @@ export function HomeMetricsBand({
         >
           {copy.weeklyTitle}
         </h2>
-        {tone === "demo" ? (
-          <span className="rounded-full border border-(--line-heavy) px-2.5 py-1 font-mono text-[9.5px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
-            {copy.demoBadge}
-          </span>
-        ) : null}
         <p className="text-[11.5px] text-muted-foreground">
           {tone === "live" && synced
             ? `${copy.weekScope} · ${copy.syncedAt(synced)}`
@@ -192,39 +187,45 @@ export function HomeMetricsBand({
       </div>
 
       {metrics.length > 0 ? (
-        <dl className="mt-5 grid grid-cols-1 gap-y-5 sm:grid-cols-3 sm:gap-x-8 sm:gap-y-0">
+        // The three figures wear the shared KPI card: same surface, hairline,
+        // radius and shadow as every other card in the product, with the
+        // sparkline and the prior-week comparison inside the card they belong
+        // to. Below `sm` each card puts its label and value on one line,
+        // because three columns cannot hold a five-figure spend at a legible
+        // size on a phone.
+        <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-3.5">
           {metrics.map((metric) => (
-            // Below `sm` the figures sit on one line each, label left and value
-            // right: three columns cannot hold a five-figure spend at a legible
-            // size on a phone, and the figures must never collide.
             <div
               key={metric.key}
-              className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-2 sm:block"
+              data-metric={metric.key}
+              className="min-w-0 rounded-(--r-card) border border-(--line) bg-card px-4 py-3.5 shadow-card sm:px-[18px] sm:pt-[17px] sm:pb-[15px]"
             >
-              <dt className="text-[12px] leading-[1.35] font-semibold text-muted-foreground">
-                {metric.label}
-              </dt>
-              <dd
-                className={cn(
-                  "justify-self-end font-display text-[22px] leading-none font-extrabold tracking-[-0.025em] tabular-nums sm:mt-1.5 sm:block sm:justify-self-auto sm:text-[28px]",
-                  metric.value === null ? "text-muted-foreground" : "text-foreground",
-                )}
-              >
-                {metric.value === null ? (
-                  <>
-                    <span aria-hidden>{copy.unavailableValue}</span>
-                    <span className="sr-only">{copy.unavailableValueSpoken}</span>
-                  </>
-                ) : (
-                  <AnimatedNumber
-                    value={metric.value}
-                    format={metric.format}
-                    springOptions={COUNT_SPRING}
-                  />
-                )}
-              </dd>
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-2 sm:block">
+                <dt className="text-[12px] leading-[1.35] font-semibold text-muted-foreground">
+                  {metric.label}
+                </dt>
+                <dd
+                  className={cn(
+                    "justify-self-end font-display text-[22px] leading-none font-extrabold tracking-[-0.025em] tabular-nums sm:mt-1.5 sm:block sm:justify-self-auto sm:text-[24px]",
+                    metric.value === null ? "text-muted-foreground" : "text-foreground",
+                  )}
+                >
+                  {metric.value === null ? (
+                    <>
+                      <span aria-hidden>{copy.unavailableValue}</span>
+                      <span className="sr-only">{copy.unavailableValueSpoken}</span>
+                    </>
+                  ) : (
+                    <AnimatedNumber
+                      value={metric.value}
+                      format={metric.format}
+                      springOptions={COUNT_SPRING}
+                    />
+                  )}
+                </dd>
+              </div>
               {metric.series.length > 1 || metric.change ? (
-                <dd className="col-span-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 sm:col-span-1 sm:mt-2.5 sm:min-h-[26px]">
+                <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 sm:min-h-[26px]">
                   {metric.series.length > 1 ? (
                     <Sparkline
                       points={metric.series}
@@ -233,7 +234,7 @@ export function HomeMetricsBand({
                     />
                   ) : null}
                   {metric.change ? <ChangeNote change={metric.change} /> : null}
-                </dd>
+                </div>
               ) : null}
             </div>
           ))}
@@ -241,8 +242,18 @@ export function HomeMetricsBand({
       ) : null}
 
       {notice ? (
-        <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-(--r-card) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/60 px-4 py-3">
-          <p className="text-[12.5px] text-muted-foreground">{notice.text}</p>
+        // One notice, one label for the whole band: the demo tone says it once
+        // here rather than twice, and the amber dot is the same marker Results
+        // puts on the same statement.
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-(--r-card) border border-(--line) bg-(--surface-subtle) px-4 py-3">
+          <p className="flex min-w-0 items-start gap-2.5 text-[12.5px] leading-snug text-muted-foreground">
+            {tone === "demo" ? (
+              // Anchored to the sentence's first line rather than to the row, so
+              // a note that wraps never leaves the dot floating on its own.
+              <span className="mt-[6px] size-[8px] shrink-0 rounded-full bg-warning" aria-hidden />
+            ) : null}
+            <span>{notice.text}</span>
+          </p>
           {/* The only action the band offers in these tones, so it keeps a
               full touch target on the phone rather than a line of small text. */}
           <Link

@@ -20,8 +20,8 @@ test("authenticated home is driven by the activation resolver and shared credit 
   assert.doesNotMatch(page, /INCLUDED_AD_PACKS|usedAdPacks|remainingAdPacks/);
   assert.doesNotMatch(dashboard, /HomeSetupCard/);
   assert.match(dashboard, /leads/);
-  assert.match(dashboard, /perthAds/);
-  // Home shows metrics, recent leads, and Perth ads. No workspace greeting,
+  assert.match(dashboard, /localAds/);
+  // Home shows metrics, recent leads, and local ads. No workspace greeting,
   // no activation card, no setup progress duplication. The resolver-driven
   // card stays an account-surface concern, and the hardcoded three-step
   // mockup remains banned above.

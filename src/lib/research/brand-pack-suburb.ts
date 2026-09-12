@@ -9,6 +9,9 @@
  *
  * Returns null when nothing confident can be extracted. Callers must fall back
  * to the existing IP-based location guess in that case.
+ *
+ * The returned `place` is what a heading can use on its own; `label` is the
+ * fuller form for a form field or a chip.
  */
 
 const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"] as const;
@@ -16,8 +19,10 @@ const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"] as const
 export type BrandPackLocation = {
   /** The term handed to the Ad Radar search API. */
   searchTerm: string;
-  /** Human label for the "ads near X" heading. */
+  /** Full human label, e.g. "Scarborough, WA 6019". */
   label: string;
+  /** Heading-sized place name: the suburb, or the postcode when that is all we have. */
+  place: string;
 };
 
 export function resolveBrandPackLocation(address: string | null | undefined): BrandPackLocation | null {
@@ -35,7 +40,7 @@ export function resolveBrandPackLocation(address: string | null | undefined): Br
     const suburb = titleCase(full[1]);
     const state = full[2].toUpperCase();
     const postcode = full[3];
-    return { searchTerm: postcode, label: `${suburb}, ${state} ${postcode}` };
+    return { searchTerm: postcode, label: `${suburb}, ${state} ${postcode}`, place: suburb };
   }
 
   // Suburb + state, no postcode.
@@ -43,7 +48,7 @@ export function resolveBrandPackLocation(address: string | null | undefined): Br
   if (noPostcode) {
     const suburb = titleCase(noPostcode[1]);
     const state = noPostcode[2].toUpperCase();
-    return { searchTerm: suburb, label: `${suburb}, ${state}` };
+    return { searchTerm: suburb, label: `${suburb}, ${state}`, place: suburb };
   }
 
   // Bare four-digit postcode. Street numbers come first, postcodes last, so the
@@ -51,7 +56,7 @@ export function resolveBrandPackLocation(address: string | null | undefined): Br
   const postcodes = cleaned.match(/\b[0-9]{4}\b/gu);
   if (postcodes && postcodes.length > 0) {
     const postcode = postcodes[postcodes.length - 1];
-    return { searchTerm: postcode, label: postcode };
+    return { searchTerm: postcode, label: postcode, place: postcode };
   }
 
   return null;

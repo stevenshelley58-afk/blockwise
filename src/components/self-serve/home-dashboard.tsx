@@ -9,6 +9,7 @@ import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
 import { SafeImage } from "@/components/ui/safe-image";
 import { niche } from "@/config/niche";
 import type { HomeCreativeSuggestions } from "@/lib/home/creative-suggestions";
+import type { HomeLocalAd } from "@/lib/home/home-local-ads";
 import { entrance, useReducedMotion } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { ActivationCardData } from "./activation-card";
@@ -38,14 +39,13 @@ export type HomeData = ActivationCardData & {
     source: string;
     createdAt: string;
   }>;
-  perthAds: Array<{
-    id: string;
-    pageName: string;
-    headline: string | null;
-    suburb: string | null;
-    state: string | null;
-    imageUrl: string | null;
-  }>;
+  localAds: HomeLocalAd[];
+  /**
+   * The area those ads were read for: the workspace's own suburb or postcode
+   * when the brand address supplied one, otherwise the niche's default area.
+   * Null only when the list is empty.
+   */
+  localAdsArea: { place: string; searchTerm: string } | null;
 };
 
 /** The section heading scale, so the band and the lists read as one page. */
@@ -143,15 +143,24 @@ function LeadsSection({ leads }: { leads: HomeData["leads"] }) {
   );
 }
 
-function PerthAdsSection({ ads }: { ads: HomeData["perthAds"] }) {
-  const copy = niche.copy.home.perthAds;
-  if (ads.length === 0) return null;
+function LocalAdsSection({
+  ads,
+  area,
+}: {
+  ads: HomeData["localAds"];
+  area: HomeData["localAdsArea"];
+}) {
+  const copy = niche.copy.home.localAds;
+  if (ads.length === 0 || area === null) return null;
 
   return (
     <section className="mt-10 md:mt-12">
       <div className="flex items-center justify-between gap-4">
-        <h2 className={cn(SECTION_TITLE, "min-w-0")}>{copy.title}</h2>
-        <Link href="/ad-radar" className={cn(SECTION_LINK, "shrink-0")}>
+        <h2 className={cn(SECTION_TITLE, "min-w-0")}>{copy.title(area.place)}</h2>
+        <Link
+          href={`/ad-radar?q=${encodeURIComponent(area.searchTerm)}`}
+          className={cn(SECTION_LINK, "shrink-0")}
+        >
           {copy.viewAll}
           <ArrowRight size={14} aria-hidden />
         </Link>
@@ -180,7 +189,7 @@ function PerthAdsSection({ ads }: { ads: HomeData["perthAds"] }) {
                 </span>
                 <span className="truncate text-[12px] text-muted-foreground">
                   {ad.headline ?? "Ad"} ·{" "}
-                  {ad.suburb ? `${ad.suburb}, ${ad.state ?? "WA"}` : "Perth, WA"}
+                  {ad.suburb ? `${ad.suburb}, ${ad.state ?? "WA"}` : area.place}
                 </span>
               </div>
               <ArrowRight size={16} aria-hidden className={ROW_ARROW} />
@@ -213,7 +222,7 @@ export function HomeDashboard({ data }: { data: HomeData }) {
       </motion.section>
 
       <motion.section variants={itemVariants}>
-        <PerthAdsSection ads={data.perthAds} />
+        <LocalAdsSection ads={data.localAds} area={data.localAdsArea} />
       </motion.section>
     </motion.div>
   );
