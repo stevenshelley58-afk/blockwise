@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { creativeImageSrcSet } from "@/lib/homepage-concept/creative-image";
 import { AD_EXAMPLES, AD_LIBRARY, withBasePath } from "@/lib/homepage-concept/content";
 
+import "./demo-card.css";
 import "./workflow-showcase.css";
 
 const PROCESS_STEPS = [
@@ -794,7 +795,7 @@ export function WorkflowShowcase() {
       </motion.div>
 
       <motion.div
-        className="hc-process-demo"
+        className="hc-process-demo hc-demo-card"
         data-scene={scene}
         data-step={activeStep}
         data-typing={copy.typing || link.typing ? "true" : undefined}

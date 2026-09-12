@@ -1,0 +1,31 @@
+/* ------------------------------------------------------------------ *
+ * The demo card shell.
+ *
+ * Every animated surface on the homepage renders a preview of the same
+ * product, so they take one frame: one radius, one edge, one shadow. Each
+ * section keeps its own height, header layout and internal bands.
+ * ------------------------------------------------------------------ */
+
+.hc-demo-card {
+  --r-card: 24px;
+  position: relative;
+  min-width: 0;
+  border-radius: var(--r-card);
+  background: var(--hc-canvas);
+  box-shadow:
+    inset 0 0 0 1px rgba(16,18,23,.045),
+    0 4px 10px rgba(16,18,23,.05),
+    0 30px 80px rgba(16,18,23,.13);
+}
+
+/* Rounds the header without clipping its siblings. A card that must let content
+   travel outside it (the ad-creation scenes) relies on this instead of
+   overflow: hidden. */
+.hc-demo-card > :first-child {
+  border-start-start-radius: var(--r-card);
+  border-start-end-radius: var(--r-card);
+}
+
+@media (max-width: 600px) {
+  .hc-demo-card { --r-card: 16px; }
+}

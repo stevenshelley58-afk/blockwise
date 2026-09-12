@@ -71,3 +71,50 @@ test("homepage FAQ remains grouped, collapsed and matches the offer", async () =
   assert.doesNotMatch(faqSection, /<details[^>]*open/);
   assert.match(faqSection, /<details className="hc-faq-group"/);
 });
+
+test("every demo card on the homepage takes one shell", async () => {
+  const [shell, workflow, results, workflowCss, resultsCss] = await Promise.all([
+    readFile(new URL("../src/components/homepage-concept/demo-card.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/homepage-concept/workflow-showcase.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/homepage-concept/results-reporting.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/homepage-concept/workflow-showcase.css", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/homepage-concept/results-reporting.css", import.meta.url), "utf8"),
+  ]);
+
+  // The shell is declared once: one radius scale, one edge, one shadow.
+  assert.match(shell, /\.hc-demo-card \{[^}]*--r-card: 24px/);
+  assert.match(shell, /\.hc-demo-card \{[^}]*border-radius: var\(--r-card\)/);
+  assert.match(shell, /@media \(max-width: 600px\) \{\s*\.hc-demo-card \{ --r-card: 16px; \}/);
+  // Rounding the header is what lets a card skip overflow: hidden.
+  assert.match(shell, /\.hc-demo-card > :first-child \{[^}]*border-start-start-radius: var\(--r-card\)/);
+
+  // Both surfaces consume it, and each imports it rather than relying on order.
+  assert.match(workflow, /className="hc-process-demo hc-demo-card"/);
+  assert.match(results, /className="rr-stage hc-demo-card"/);
+  assert.match(workflow, /import "\.\/demo-card\.css"/);
+  assert.match(results, /import "\.\/demo-card\.css"/);
+
+  // Neither card may reintroduce its own shell values.
+  assert.doesNotMatch(workflowCss, /\.hc-process-demo \{[^}]*border-radius/);
+  assert.doesNotMatch(resultsCss, /\.rr-stage \{[^}]*border-radius/);
+  assert.doesNotMatch(workflowCss, /\.hc-process-demo \{[^}]*box-shadow/);
+  assert.doesNotMatch(resultsCss, /\.rr-stage \{[^}]*box-shadow: 0 30px 80px #0004/);
+
+  // Each keeps its own height and header layout: only the frame is shared.
+  assert.match(workflowCss, /--hc-demo-height: 764px/);
+  assert.match(workflowCss, /\.hc-process-demo \{[^}]*overflow: visible/);
+  assert.match(resultsCss, /\.rr-stage \{[^}]*overflow: hidden/);
+});
+
+test("the ad-creation headline is set as a block, not shrunk to one line", async () => {
+  const css = await readFile(new URL("../src/components/homepage-concept/workflow-showcase.css", import.meta.url), "utf8");
+  const layout = css.match(/\.hc-process-layout \{([^}]*)\}/)[1];
+  const headline = css.match(/\.hc-process-copy h2 \{([^}]*)\}/)[1];
+  // The column has to be wide enough to set the headline at display size.
+  const column = Number(layout.match(/minmax\(260px, ([\d.]+)fr\)/)[1]);
+  assert.ok(column >= 0.9, `copy column fraction is ${column}, too narrow for a display headline`);
+  const size = Number(headline.match(/clamp\((\d+)px/)[1]);
+  assert.ok(size >= 30, `headline starts at ${size}px, still caption sized`);
+  // Two lines, one per span, is the intended shape.
+  assert.match(css, /\.hc-process-copy h2 > span \{\s*display: block/);
+});

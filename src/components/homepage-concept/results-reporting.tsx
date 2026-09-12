@@ -11,6 +11,7 @@ import {
   type ReportRange,
 } from "@/lib/homepage-concept/reporting";
 import { LeadEmailPreview } from "./lead-email-preview";
+import "./demo-card.css";
 import "./results-reporting.css";
 
 type ReportingView = ReportRange | "email";
@@ -126,7 +127,7 @@ export function ResultsReporting() {
           </div>
         </header>
 
-        <div className="rr-stage" aria-label="Interactive example report">
+        <div className="rr-stage hc-demo-card" aria-label="Interactive example report">
           <header className="rr-stage-head">
             <div className="rr-stage-brand">
               <img src={withBasePath("/brand/blockwise-logo.svg")} alt="" width={110} height={26} />
