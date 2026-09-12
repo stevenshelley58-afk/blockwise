@@ -1,9 +1,9 @@
 import {
   type InternalAuthResult,
   verifyInternalRequest,
-} from "@/lib/internal-auth";
+} from "../internal-auth.ts";
 
-import { OWNER_CRM_SNAPSHOT_INTERNAL_SCOPE } from "./customer-snapshot";
+import { OWNER_CRM_SNAPSHOT_INTERNAL_SCOPE } from "./customer-snapshot.ts";
 
 type InternalVerifier = (
   request: Request,
