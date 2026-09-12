@@ -173,3 +173,13 @@ The native trial gives the iframe the available canvas width. Copy assistance an
 - 2026-09-11: condensed to binding rules. Reference material, worked examples and
   route inventories moved out; token values, the motion vocabulary and the owner
   preferences kept verbatim from the previous version.
+
+
+## Scoped Meta connection preview exception
+
+The synthetic `/concept/meta-connect` preview may use the existing `--ui-data`
+blue token for its numbered panels, asset icons and primary CTA so the
+reference-aligned concept reads as a clear connection flow. This is a route-local
+exception documented for the preview only: it adds no token, does not change the
+production customer palette, and must not be copied to general customer actions
+or non-quantitative product surfaces.

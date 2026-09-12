@@ -218,8 +218,178 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
           </p>
         </div>
 
-        <details className="mb-6 rounded-(--r-card) border border-border bg-card px-4 py-3">
-          <summary className="cursor-pointer text-sm font-semibold">
+        <ol className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <li>
+            <PreviewPanel number="1" title="Connect your Meta accounts">
+              <p className="text-sm leading-5 text-muted-foreground">
+                Give Blockwise access to your business assets. You choose what
+                we can access and can remove it anytime.
+              </p>
+              <Button
+                asChild
+                className="mt-5 h-11 min-h-11 w-full [--ui-cta:var(--ui-data)]"
+              >
+                <a
+                  href={META_CONNECT_PREVIEW.metaSettingsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Open Meta settings
+                </a>
+              </Button>
+            </PreviewPanel>
+          </li>
+
+          <li>
+            <PreviewPanel number="2" title="Use our Business Portfolio ID">
+              <p className="text-sm leading-5 text-muted-foreground">
+                Add Blockwise as a partner in Meta Business Settings.
+              </p>
+              <div className="mt-4 rounded-(--r-ctl) border border-border bg-(--surface-subtle) p-3">
+                <span className="block text-xs text-muted-foreground">
+                  Blockwise Business Portfolio ID
+                </span>
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  <code className="whitespace-nowrap text-sm font-semibold tracking-[0.02em]">
+                    {businessId ?? "Unavailable"}
+                  </code>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 min-h-11 shrink-0 px-3"
+                    aria-label="Copy Business Portfolio ID"
+                    onClick={() => void copyBusinessId()}
+                    disabled={!businessId || !hydrated}
+                    arrow={null}
+                  >
+                    {copyState === "copied" ? (
+                      <Check aria-hidden="true" />
+                    ) : (
+                      <Clipboard aria-hidden="true" />
+                    )}
+                    {copyState === "copied" ? "Copied" : "Copy"}
+                  </Button>
+                  <span className="sr-only" aria-live="polite">
+                    {copyState === "copied"
+                      ? "Business Portfolio ID copied"
+                      : ""}
+                  </span>
+                </div>
+              </div>
+              {copyState === "failed" ? (
+                <p className="mt-2 text-xs text-destructive" role="alert">
+                  Copy was unavailable. Select the ID and copy it manually.
+                </p>
+              ) : null}
+            </PreviewPanel>
+          </li>
+
+          <li>
+            <PreviewPanel number="3" title="Share these assets">
+              <p className="text-sm leading-5 text-muted-foreground">
+                Choose Partial access. Leave Full control off.
+              </p>
+              <div className="mt-4 space-y-2">
+                <AssetRow
+                  icon={<Facebook aria-hidden="true" />}
+                  label="Facebook Page"
+                  detail="Required"
+                />
+                <AssetRow
+                  icon={<BarChart3 aria-hidden="true" />}
+                  label="Ad account"
+                  detail="Required"
+                />
+                <AssetRow
+                  icon={<Instagram aria-hidden="true" />}
+                  label="Instagram account"
+                  detail="Optional"
+                />
+              </div>
+            </PreviewPanel>
+          </li>
+
+          <li>
+            <PreviewPanel number="4" title={status.title}>
+              <p className="text-sm leading-5 text-muted-foreground">
+                {status.body}
+              </p>
+              {connectionState === "connected" ? (
+                <AssetConfirmation
+                  hydrated={hydrated}
+                  continued={continued}
+                  onContinue={() => setContinued(true)}
+                />
+              ) : (
+                <div className="mt-5">
+                  <Button
+                    type="button"
+                    className="h-11 min-h-11 w-full [--ui-cta:var(--ui-data)]"
+                    onClick={() => void runCheck()}
+                    disabled={checking || !hydrated}
+                  >
+                    {checking ? (
+                      <LoaderCircle
+                        className="animate-spin motion-reduce:animate-none"
+                        aria-hidden="true"
+                      />
+                    ) : connectionState === "missing" ? (
+                      <RefreshCw aria-hidden="true" />
+                    ) : (
+                      <Shield aria-hidden="true" />
+                    )}
+                    {checking ? "Checking" : checkLabel}
+                  </Button>
+                  <StatusPill tone={status.tone}>{status.label}</StatusPill>
+                  <p
+                    className="mt-3 text-center text-xs text-muted-foreground"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    {checkMessage}
+                  </p>
+                </div>
+              )}
+              {continued ? (
+                <div className="mt-4 border-t border-border pt-4">
+                  <p
+                    className="rounded-(--r-card) bg-success-soft px-3 py-2.5 text-xs leading-5 text-foreground"
+                    role="status"
+                  >
+                    <strong>Next step preview:</strong> your example assets are
+                    ready for publishing setup. Nothing was saved.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="mt-3 h-11 min-h-11"
+                    onClick={() => setContinued(false)}
+                    arrow={null}
+                  >
+                    Back to result
+                  </Button>
+                </div>
+              ) : null}
+            </PreviewPanel>
+          </li>
+        </ol>
+
+        <details className="mt-6 rounded-(--r-card) border border-border bg-card">
+          <summary className="cursor-pointer px-4 py-4 text-sm font-semibold sm:px-5">
+            Need the full walkthrough?
+          </summary>
+          <div className="grid gap-5 border-t border-border p-4 sm:p-5 lg:grid-cols-2">
+            <p className="text-sm leading-5 text-muted-foreground lg:col-span-2">
+              Meta settings screenshots. Select an image to enlarge.
+            </p>
+            {META_PARTNER_STEPS.map((step) => (
+              <WalkthroughStep step={step} key={step.title} />
+            ))}
+          </div>
+        </details>
+
+        <details className="mt-4 rounded-(--r-card) border border-border bg-card px-4 py-3">
+          <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">
             Preview options
           </summary>
           <div className="mt-3 grid max-w-[240px] gap-1.5">
@@ -254,175 +424,6 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
             </Select>
           </div>
         </details>
-
-        <ol className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <li>
-            <PreviewPanel number="1" eyebrow="Connect Meta" title="Connect your Meta accounts">
-              <p className="text-sm leading-5 text-muted-foreground">
-                Give Blockwise access to your business assets. You choose what
-                we can access and can remove it anytime.
-              </p>
-              <Button
-                asChild
-                className="mt-5 h-11 min-h-11 w-full"
-                variant="default"
-              >
-                <a
-                  href={META_CONNECT_PREVIEW.metaSettingsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Open Meta Business Settings
-                </a>
-              </Button>
-            </PreviewPanel>
-          </li>
-
-          <li>
-            <PreviewPanel number="2" eyebrow="Add Blockwise as a partner" title="Use our Business Portfolio ID">
-              <p className="text-sm leading-5 text-muted-foreground">
-                Add Blockwise as a partner in Meta Business Settings.
-              </p>
-              <div className="mt-4 rounded-(--r-ctl) border border-border bg-(--surface-subtle) p-3">
-                <span className="block text-xs text-muted-foreground">
-                  Blockwise Business Portfolio ID
-                </span>
-                <div className="mt-1 flex items-center justify-between gap-2">
-                  <code className="break-all text-base font-semibold tracking-[0.02em]">
-                    {businessId ?? "Unavailable"}
-                  </code>
-                  <Button
-                    type="button"
-                    size="icon-sm"
-                    variant="outline"
-                    aria-label="Copy Business Portfolio ID"
-                    onClick={() => void copyBusinessId()}
-                    disabled={!businessId || !hydrated}
-                    arrow={null}
-                  >
-                    {copyState === "copied" ? (
-                      <Check aria-hidden="true" />
-                    ) : (
-                      <Clipboard aria-hidden="true" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-              {copyState === "failed" ? (
-                <p className="mt-2 text-xs text-destructive" role="alert">
-                  Copy was unavailable. Select the ID and copy it manually.
-                </p>
-              ) : null}
-            </PreviewPanel>
-          </li>
-
-          <li>
-            <PreviewPanel number="3" eyebrow="Share your assets" title="Share these assets">
-              <p className="text-sm leading-5 text-muted-foreground">
-                Choose Partial access. Leave Full control off.
-              </p>
-              <div className="mt-4 space-y-2">
-                <AssetRow
-                  icon={<Facebook aria-hidden="true" />}
-                  label="Facebook Page"
-                  detail="Required"
-                />
-                <AssetRow
-                  icon={<BarChart3 aria-hidden="true" />}
-                  label="Ad account"
-                  detail="Required"
-                />
-                <AssetRow
-                  icon={<Instagram aria-hidden="true" />}
-                  label="Instagram account"
-                  detail="Optional"
-                />
-              </div>
-            </PreviewPanel>
-          </li>
-
-          <li>
-            <PreviewPanel number="4" eyebrow="Check connection" title={status.title}>
-              <p className="text-sm leading-5 text-muted-foreground">
-                {status.body}
-              </p>
-              {connectionState === "connected" ? (
-                <AssetConfirmation
-                  hydrated={hydrated}
-                  continued={continued}
-                  onContinue={() => setContinued(true)}
-                />
-              ) : (
-                <div className="mt-5">
-                  <Button
-                    type="button"
-                    className="h-11 min-h-11 w-full"
-                    onClick={() => void runCheck()}
-                    disabled={checking || !hydrated}
-                  >
-                    {checking ? (
-                      <LoaderCircle
-                        className="animate-spin motion-reduce:animate-none"
-                        aria-hidden="true"
-                      />
-                    ) : connectionState === "missing" ? (
-                      <RefreshCw aria-hidden="true" />
-                    ) : (
-                      <Shield aria-hidden="true" />
-                    )}
-                    {checking ? "Checking" : checkLabel}
-                  </Button>
-                  <p
-                    className="mt-3 text-center text-xs text-muted-foreground"
-                    role="status"
-                    aria-live="polite"
-                  >
-                    {checkMessage}
-                  </p>
-                </div>
-              )}
-              {connectionState !== "connected" ? (
-                <StatusPill tone={status.tone}>{status.label}</StatusPill>
-              ) : null}
-              {continued ? (
-                <div className="mt-4 border-t border-border pt-4">
-                  <p
-                    className="rounded-(--r-card) bg-success-soft px-3 py-2.5 text-xs leading-5 text-foreground"
-                    role="status"
-                  >
-                    <strong>Next step preview:</strong> your example assets are
-                    ready for publishing setup. Nothing was saved.
-                  </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="mt-3 h-11 min-h-11"
-                    onClick={() => setContinued(false)}
-                    arrow={null}
-                  >
-                    Back to result
-                  </Button>
-                </div>
-              ) : null}
-            </PreviewPanel>
-          </li>
-        </ol>
-
-        <details className="mt-6 rounded-(--r-card) border border-border bg-card">
-          <summary className="cursor-pointer px-4 py-4 text-sm font-semibold sm:px-5">
-            Need the full walkthrough?
-          </summary>
-          <div className="grid gap-5 border-t border-border p-4 sm:p-5 lg:grid-cols-2">
-            <p className="text-sm leading-5 text-muted-foreground lg:col-span-2">
-              These are the real Blockwise help screenshots. Click any image to
-              open it full size. They show where to click in Meta, not a live
-              account.
-            </p>
-            {META_PARTNER_STEPS.map((step) => (
-              <WalkthroughStep step={step} key={step.title} />
-            ))}
-          </div>
-        </details>
       </div>
     </main>
   );
@@ -430,24 +431,19 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
 
 function PreviewPanel({
   number,
-  eyebrow,
   title,
   children,
 }: {
   number: string;
-  eyebrow: string;
   title: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex h-full min-h-[300px] flex-col rounded-(--r-card) border border-border bg-card p-5 shadow-card">
-      <span className="grid size-8 place-items-center rounded-full bg-(--surface-subtle) text-sm font-semibold text-foreground">
+    <section className="flex h-full flex-col rounded-(--r-card) border border-border bg-card p-5 shadow-card xl:min-h-[300px]">
+      <span className="grid size-8 place-items-center rounded-full bg-data-soft text-sm font-semibold text-data">
         {number}
       </span>
-      <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-        {eyebrow}
-      </p>
-      <h2 className="mt-2 font-display text-[clamp(1.35rem,2vw,1.8rem)] font-semibold leading-tight tracking-[-0.03em]">
+      <h2 className="mt-4 font-display text-[clamp(1.35rem,2vw,1.8rem)] font-semibold leading-tight tracking-[-0.03em]">
         {title}
       </h2>
       <div className="mt-4 flex flex-1 flex-col">{children}</div>
@@ -466,7 +462,7 @@ function AssetRow({
 }) {
   return (
     <div className="flex items-center gap-3 rounded-(--r-ctl) border border-border bg-(--surface-subtle) px-3 py-2.5">
-      <span className="grid size-8 shrink-0 place-items-center rounded-full bg-background text-foreground [&_svg]:size-4">
+      <span className="grid size-8 shrink-0 place-items-center rounded-full bg-data-soft text-data [&_svg]:size-4">
         {icon}
       </span>
       <span className="min-w-0">
@@ -510,7 +506,9 @@ function AssetConfirmation({
         ))}
         <li className="flex items-center gap-3 rounded-(--r-ctl) border border-border bg-(--surface-subtle) px-3 py-2.5">
           <span className="min-w-0">
-            <strong className="block text-sm font-semibold">Not selected</strong>
+            <strong className="block text-sm font-semibold">
+              Not selected
+            </strong>
             <span className="text-xs text-muted-foreground">
               Instagram account, optional
             </span>
@@ -532,8 +530,9 @@ function AssetConfirmation({
 }
 
 function WalkthroughStep({ step }: { step: MetaPartnerStep }) {
-  const image = `/meta-connect-preview${step.image}`;
-  const fullImage = `/meta-connect-preview${step.fullImage ?? step.image}`;
+  const image = "/meta-connect-preview" + step.image;
+  const fullImage =
+    "/meta-connect-preview" + (step.fullImage ?? step.image);
   const caption =
     step.title === "Choose assets and permissions"
       ? "Use this image to locate the controls. Turn on Manage campaigns and View performance. Leave Full control off."
@@ -543,7 +542,9 @@ function WalkthroughStep({ step }: { step: MetaPartnerStep }) {
     <article className="overflow-hidden rounded-(--r-card) border border-border bg-(--surface-subtle)">
       <div className="p-4">
         <h3 className="font-display text-lg font-semibold">{step.title}</h3>
-        <p className="mt-1 text-xs font-medium text-muted-foreground">{caption}</p>
+        <p className="mt-1 text-xs font-medium text-muted-foreground">
+          {caption}
+        </p>
       </div>
       <a
         href={fullImage}

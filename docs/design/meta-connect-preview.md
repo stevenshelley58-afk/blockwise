@@ -7,7 +7,7 @@ state, or persist browser state.
 
 ## Composition
 
-The main surface is four compact, responsive panels:
+The main surface is four compact, responsive panels. This preview uses the existing data-blue token for a reference-aligned blue accent; see the scoped exception in `DESIGN.md`.
 
 1. Open Meta Business Settings, with the ownership and revocation reassurance.
 2. Copy the configured Blockwise Business Portfolio ID.
@@ -22,8 +22,8 @@ cancellable when the scenario changes or the component unmounts.
 
 ## Walkthrough
 
-The closed **Need the full walkthrough?** disclosure reuses the real,
-existing `META_PARTNER_STEPS` screenshot fixtures and their titles, alt text,
+The closed **Need the full walkthrough?** disclosure reuses the existing
+`META_PARTNER_STEPS` Meta settings screenshot fixtures and their titles, alt text,
 dimensions, details, and tips. Each image links to its same-origin full-size
 asset for mobile inspection. The screenshots locate controls in Meta; the copy
 states the final required permissions explicitly: turn on Manage campaigns and
