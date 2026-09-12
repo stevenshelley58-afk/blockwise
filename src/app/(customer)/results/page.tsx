@@ -3,6 +3,7 @@ import { after } from "next/server";
 
 import { MetaMonitorDashboard, type OAuthNotice } from "@/components/monitor/MetaMonitorDashboard";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { hasNoMetaConnection } from "@/lib/meta-monitor/payload-state";
 import { queueReportingRefresh } from "@/lib/meta-monitor/reporting-refresh-queue";
 import { loadReportingSnapshot } from "@/lib/meta-monitor/reporting-snapshots";
 import { buildSampleMetaMonitorPayload } from "@/lib/meta-monitor/sampleMetaMonitorData";
@@ -56,7 +57,7 @@ export default async function ResultsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const resolvedParams = await searchParams;
-  const showExample = resolvedParams.example === "1";
+  const explicitExample = resolvedParams.example === "1";
   const { supabase, access } = await requirePageSurfaceAccess("monitor");
   const requestedPlanId = typeof resolvedParams.planId === "string" ? resolvedParams.planId.trim() : "";
   let focusCampaignId: string | null = null;
@@ -96,9 +97,10 @@ export default async function ResultsPage({
   }
 
   const oauthNotice = resolveOAuthNotice(resolvedParams);
-  // Example reports are opt-in only. Keep the normal Results route backed by
-  // the reporting snapshot, while making the explicit example CTA reliable
-  // even when the live account is connected but has no report yet.
+  // Nothing connected: open the example report instead of a connect
+  // interstitial. It is labelled as an example and keeps the Connect Meta
+  // action, so the customer sees what Results will hold rather than a dead end.
+  const showExample = explicitExample || hasNoMetaConnection(reporting.snapshot.payload);
   const initialPayload = showExample
     ? buildSampleMetaMonitorPayload({ range: "last_30", now: new Date(), connected: false })
     : reporting.snapshot.payload;

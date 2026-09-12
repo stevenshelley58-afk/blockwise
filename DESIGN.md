@@ -52,6 +52,7 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 ## States
 
 - **Every data surface ships four states.** A surface that can load, be empty, succeed or fail renders all four. No dead ends.
+- **Nothing connected is not a dead end.** Performance opens the labelled example report with the Connect Meta action while the workspace has no Meta connection; it never parks the customer on an interstitial that only repeats that action.
 - **Unavailable is not zero.** Show unavailable reporting as unavailable with a contextual recovery link. Never substitute zero for missing data.
 - **No fabricated data in a card.** Every card renders an explicit ready, empty, attention, unavailable or error state and must not fabricate data.
 

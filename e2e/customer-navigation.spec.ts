@@ -143,8 +143,10 @@ test.describe("customer navigation canary", () => {
     await expect(page.getByText(/recent sync/i)).toHaveCount(0);
     await expect(page).toHaveURL(/\/results/);
     await expect(page.getByRole("heading", { name: "Results", exact: true })).toBeVisible();
-    await expect(page.getByText("Your reporting snapshot is being prepared. Existing results will stay visible during future refreshes.", { exact: true })).toBeVisible();
-    await expect(page.getByText("Example data", { exact: true })).toHaveCount(0);
+    // No Meta connection: Performance opens the labelled example report instead
+    // of a connect interstitial, and still never invents a sync time.
+    await expect(page.getByText("Example data", { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Connect Meta", exact: true }).first()).toBeVisible();
     await expect(page.getByText(/^Last known /)).toHaveCount(0);
     await settle(page);
     await assertNothingClipped(page);
@@ -197,8 +199,9 @@ test.describe("customer navigation canary", () => {
       await expect(page.getByText(/recent sync/i)).toHaveCount(0);
       await expect(page).toHaveURL(/\/results/);
       await expect(page.getByRole("heading", { name: "Results", exact: true })).toBeVisible();
-    await expect(page.getByText("Your reporting snapshot is being prepared. Existing results will stay visible during future refreshes.", { exact: true })).toBeVisible();
-      await expect(page.getByRole("main").getByText("Example data", { exact: true })).toHaveCount(0);
+      // The example report replaces the connect interstitial, and is labelled.
+      await expect(page.getByRole("main").getByText("Example data", { exact: true })).toBeVisible();
+      await expect(page.getByRole("link", { name: "Connect Meta", exact: true }).first()).toBeVisible();
       await expect(page.getByText(/^Last known /)).toHaveCount(0);
       await settle(page);
       await assertNothingClipped(page);

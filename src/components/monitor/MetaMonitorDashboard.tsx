@@ -22,6 +22,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { niche } from "@/config/niche";
 import { calculateTrend, formatCurrency, formatPercent, safeRate } from "@/lib/meta-monitor/calculations";
+import { hasNoMetaConnection } from "@/lib/meta-monitor/payload-state";
 import {
   buildResultsHierarchy,
   type ResultsCampaignRow,
@@ -269,7 +270,7 @@ export function MetaMonitorDashboard({
     window.setTimeout(() => card.classList.remove("ring-2", "ring-(--ink)", "ring-offset-2"), 1600);
   }
 
-  const showDisconnectedState = !showExample && payload.source === "sample" && !payload.connected;
+  const showDisconnectedState = !showExample && hasNoMetaConnection(payload);
   const displayPayload = showDisconnectedState
     ? { ...payload, summary: null, daily: [], suburbPerformance: [], ads: [], anglePerformance: [] }
     : payload;
@@ -318,7 +319,7 @@ export function MetaMonitorDashboard({
         </div>
       ) : null}
 
-      {showExample && payload.source === "sample" && !payload.connected && metaConnectHref ? (
+      {showExample && hasNoMetaConnection(payload) && metaConnectHref ? (
         <DemoModeNotice metaConnectHref={metaConnectHref} />
       ) : null}
 

@@ -70,12 +70,17 @@ test.describe("customer UX flows", () => {
     await expect(page.getByRole("link", { name: "Billing & plan", exact: true })).toBeVisible();
   });
 
-  test("results disconnected state offers an explicit example, switchable chart, and deliberate details", async ({ page }) => {
+  test("results opens the example report when nothing is connected, with a switchable chart", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
+    // No Meta connection: Performance goes straight to the labelled example
+    // report, keeping Connect Meta in reach instead of a connect interstitial.
     await page.goto("/results");
+    await expect(page).toHaveURL(/\/results$/);
     await expect(page.getByRole("heading", { name: "Results", exact: true })).toBeVisible();
-    await expect(page.getByText("Your reporting snapshot is being prepared.", { exact: false })).toBeVisible();
-    await expect(page.getByRole("button", { name: /refresh/i })).toHaveCount(1);
+    await expect(page.locator("span").filter({ hasText: /^Example report$/ })).toHaveCount(1);
+    await expect(page.getByRole("link", { name: "Connect Meta", exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /refresh/i })).toHaveCount(0);
+    await expect(page.getByRole("group", { name: "Results chart" })).toBeVisible();
 
     await page.goto("/results?example=1");
     await expect(page.locator("span").filter({ hasText: /^Example report$/ })).toHaveCount(1);
