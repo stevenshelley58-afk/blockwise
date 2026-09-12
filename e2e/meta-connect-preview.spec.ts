@@ -29,6 +29,8 @@ async function openPreview(page: Page, width: number, height: number) {
   await expect(
     page.getByRole("heading", { name: /Connect Facebook & Instagram/i }),
   ).toBeVisible();
+  await expect(page.getByRole("main")).toHaveAttribute("data-preview-ready", "true");
+  await page.evaluate(async () => document.fonts.ready);
 
   await expect(page.getByText("Preview", { exact: true })).toBeVisible();
   await expect(
@@ -108,7 +110,7 @@ test.describe("isolated Meta connection preview contract", () => {
     const copy = page.getByRole("button", { name: /copy.*(?:business )?id/i }).first();
     await expect(copy).toBeVisible();
     await copy.click();
-    await expect(copy).toContainText(/copied/i);
+    await expect(page.getByRole("button", { name: "Copied", exact: true })).toBeVisible();
 
     const clipboard = await page.evaluate(() => navigator.clipboard.readText());
     expect(clipboard).toBe(idMatch![0]);

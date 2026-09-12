@@ -28,6 +28,11 @@ def preview_route(upstream: str):
                 "X-Robots-Tag": ["noindex, nofollow, noarchive"],
                 "Cache-Control": ["no-store"],
             }}}]},
+            {"match": [{"path": ["/meta-connect-preview"], "method": ["GET", "HEAD"]}], "handle": [{
+                "handler": "static_response",
+                "status_code": 302,
+                "headers": {"Location": ["/meta-connect-preview/concept/meta-connect"]},
+            }], "terminal": True},
             {"match": [{"method": ["GET", "HEAD"]}], "handle": [{
                 "handler": "reverse_proxy",
                 "upstreams": [{"dial": upstream}],

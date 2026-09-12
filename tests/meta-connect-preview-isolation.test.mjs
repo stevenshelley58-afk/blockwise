@@ -44,6 +44,12 @@ test("the image and router route are bounded to the Meta-connect preview", async
   assert.match(ignore, /!public\/brand\/blockwise-logo\.svg/);
   assert.match(router, /ROUTE_ID = "blockwise-meta-connect-preview"/);
   assert.match(router, /"\/meta-connect-preview\/\*"/);
+  assert.match(router, /"path": \["\/meta-connect-preview"\], "method": \["GET", "HEAD"\]/);
+  assert.match(router, /"status_code": 302/);
+  assert.match(router, /"Location": \["\/meta-connect-preview\/concept\/meta-connect"\]/);
+  const exactPrefixRedirect = router.indexOf('"path": ["/meta-connect-preview"], "method": ["GET", "HEAD"]');
+  const broadPreviewUpstream = router.indexOf('"handler": "reverse_proxy"');
+  assert.ok(exactPrefixRedirect >= 0 && exactPrefixRedirect < broadPreviewUpstream, "the exact prefix must redirect before the preview upstream");
   assert.match(router, /\["GET", "HEAD"\]/);
   assert.match(router, /\["Cookie", "Authorization"\]/);
   assert.match(router, /Router changed concurrently; inspect before retrying/);
