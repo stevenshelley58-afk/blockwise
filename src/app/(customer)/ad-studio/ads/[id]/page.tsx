@@ -1,5 +1,7 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { EditorShell } from "@/components/adstudio/editor/editor-shell";
+import { TryVueEditorButton } from "@/components/adstudio/vue-editor/try-vue-editor-button";
+import { readVueNativeEditor } from "@/components/adstudio/vue-editor/fabric-scene";
 import { loadCustomerAd, InvalidActiveRevisionError, CustomerAdNotFoundError } from "@/lib/adstudio/create-customer-ad";
 import { getTemplateForExistingCustomerAd } from "@/lib/adstudio/pack-gallery";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
@@ -20,6 +22,9 @@ export default async function CustomerAdEditorPage({ params }: { params: Promise
     if (error instanceof InvalidActiveRevisionError) return <RecoveryScreen adId={id} revisionId={error.revisionId} issues={error.issues} />;
     throw error;
   }
+  // A native scene can contain freeform objects the legacy document model cannot
+  // represent. Never open it here, where a legacy save would discard that work.
+  if (readVueNativeEditor(ad.initialDocument)) redirect(`/ad-studio/ads/${encodeURIComponent(ad.adId)}/canvas`);
   const pack = await getTemplateForExistingCustomerAd({
     customerSupabase: supabase,
     internalSupabase: createSupabaseServiceClient(),
@@ -33,6 +38,7 @@ export default async function CustomerAdEditorPage({ params }: { params: Promise
     loadAdStudioWorkspaceLibraryAssets(supabase, access.workspaceId),
   ]);
   return <div className="flex h-[calc(100dvh-54px-4.75rem-env(safe-area-inset-top)-env(safe-area-inset-bottom)-var(--consent-banner-height,0px))] min-h-[200px] flex-col overflow-hidden bg-background text-foreground md:h-[calc(100dvh-60px)] md:min-h-[360px]">
+    <TryVueEditorButton adId={ad.adId} workspaceId={access.workspaceId} />
     <div className="min-h-0 flex-1"><EditorShell pack={pack} adId={ad.adId} workspaceId={access.workspaceId} canSave brandColours={brand.colours} brandBusinessName={brand.businessName} brandLogoUrl={brand.logoUrl} libraryAssets={libraryAssets} initialDocument={ad.initialDocument} initialRevision={ad.revisionNumber} adName={ad.name} /></div>
   </div>;
 }

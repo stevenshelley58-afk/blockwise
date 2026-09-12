@@ -95,7 +95,8 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   assert.ok(edgeCompose.includes("ipv4_address: ${FRANK_PRODUCT_EDGE_IP:-172.30.0.2}"));
   assert.match(edgeCompose, /name: blockwise-product/);
   assert.ok(envExample.includes("FRANK_PRODUCT_EDGE_IP=172.30.0.2"));
-  assert.ok(envExample.includes("TRUSTED_PROXY_RANGES=172.30.0.2/32"));
+  // Keep the exact deployed edge address recorded by the maintained example.
+  assert.ok(envExample.includes("TRUSTED_PROXY_RANGES=172.30.0.135/32"));
   assert.ok(envExample.includes("BLOCKWISE_PRODUCT_NETWORK_IP_RANGE=172.30.0.128/25"));
   assert.match(envExample, /^META_APP_SECRET=$/m);
   assert.match(envExample, /^BLOCKWISE_DB_VOLUME_NAME=blockwise-product-db-data$/m);
@@ -111,7 +112,8 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   assert.ok(workspaceManifestCopy >= 0, "Docker must copy workspace manifests before npm ci");
   const packageJson = JSON.parse(await read("package.json"));
   assert.equal(packageJson.scripts["build:packages"], "npm run --workspace @blockwise/ad-template-contract build && npm run --workspace @blockwise/ad-template-renderer build");
-  assert.equal(packageJson.scripts.prebuild, "npm run build:packages");
+  assert.equal(packageJson.scripts.prebuild, "npm run build:packages && npm run build:vue-editor");
+  assert.equal(packageJson.scripts["build:vue-editor"], "node scripts/build-vue-editor.mjs");
   assert.equal(packageJson.scripts.pretypecheck, "npm run build:packages");
   assert.match(dockerfile, /^RUN npm run build$/m);
   assert.doesNotMatch(dockerfile, /^RUN npm run build:packages$/m, "npm prebuild already builds the packages");

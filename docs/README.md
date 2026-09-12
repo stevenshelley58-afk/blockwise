@@ -15,6 +15,7 @@ alternate production versions.
 - [Architecture overview](architecture/overview.md)
 - [Product map](architecture/product-map.md)
 - [Extension guide](architecture/extension-guide.md)
+- [Native Ad Studio editor trial](architecture/adstudio-vue-editor.md)
 - [Production verification and release](runbooks/production-readiness.md)
 - [VPS access](runbooks/vps-ssh.md)
 - [Rollback](runbooks/rollback.md)
@@ -43,6 +44,8 @@ release authority. Keep published resource files aligned with their source
 guides. Third-party licence text is retained unchanged.
 
 ## Plans and historical evidence
+
+- [12 September native ad editor trial](releases/2026-09-12-native-ad-editor-trial.md)
 
 - [8 September single application authority](releases/2026-09-08-single-authority.md)
 

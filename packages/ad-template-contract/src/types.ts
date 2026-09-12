@@ -51,4 +51,19 @@ export interface ReplacementAsset { inputKey: string; assetKey: string; purpose?
 export interface RealAssetRef { inputKey: string; kind: string; required: boolean; }
 export interface TemplateMetadata { title: string; description: string; gallerySamples: { feed?: GallerySample; story?: GallerySample }; metaCopyDefaults: MetaCopyDefaults; aiWritingGuidance: AiWritingGuidance; publishRequirements: PublishRequirements; replacementAssets: ReplacementAsset[]; realAssetRefs: RealAssetRef[]; generationReview?: GenerationReview; }
 export interface AdTemplate { schema: "blockwise.ad-template"; templateId: string; createdAt: string; feedLayout: Layout; storyLayout: Layout; imageInputs: ImageInput[]; textInputs: TextInput[]; semanticColours: Record<ColourRole, string>; assets: Record<string, { fileName: string; mimeType: string }>; fonts: FontRef[]; metadata: TemplateMetadata; }
-export interface AdDocument { schema: "blockwise.ad-document"; templateId: string; sharedImageValues: Record<string, string>; sharedTextValues: Record<string, string>; feedCropOverrides: Record<string, Rect>; storyCropOverrides: Record<string, Rect>; colourMode: "template" | "brand_pack" | "custom"; resolvedColourMap: Record<string, string>; metaPrimaryText: string; metaHeadline: string; metaDescription: string; metaCta: string; destinationUrl?: string; brandBusinessName?: string; revision: number; lastRenderedAt?: string | null; }
+/** Vue Fabric Editor's native canvas snapshot, including explicit canvas size. */
+export interface NativeFabricScene {
+  version: string;
+  width: number;
+  height: number;
+  objects: Record<string, unknown>[];
+  [key: string]: unknown;
+}
+export interface NativeEditorDocument {
+  engine: "vue-fabric-editor";
+  version: 1;
+  feed: NativeFabricScene;
+  story: NativeFabricScene;
+  sourceAdId?: string;
+}
+export interface AdDocument { schema: "blockwise.ad-document"; templateId: string; sharedImageValues: Record<string, string>; sharedTextValues: Record<string, string>; feedCropOverrides: Record<string, Rect>; storyCropOverrides: Record<string, Rect>; colourMode: "template" | "brand_pack" | "custom"; resolvedColourMap: Record<string, string>; metaPrimaryText: string; metaHeadline: string; metaDescription: string; metaCta: string; destinationUrl?: string; brandBusinessName?: string; nativeEditor?: NativeEditorDocument; revision: number; lastRenderedAt?: string | null; }

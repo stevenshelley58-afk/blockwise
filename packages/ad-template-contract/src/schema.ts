@@ -232,6 +232,24 @@ export const adTemplateSchema = z.object({
 
 export type AdTemplateParsed = z.infer<typeof adTemplateSchema>;
 
+// Fabric adds vendor-specific object properties over time. The shared
+// document contract preserves them, while the server persistence boundary
+// performs the recursive size, depth, key and resource-reference checks.
+export const nativeFabricSceneSchema = z.object({
+  version: z.string().min(1).max(64),
+  width: z.number().int().positive().max(4096),
+  height: z.number().int().positive().max(4096),
+  objects: z.array(z.record(z.unknown())).max(500),
+}).passthrough();
+
+export const nativeEditorDocumentSchema = z.object({
+  engine: z.literal("vue-fabric-editor"),
+  version: z.literal(1),
+  feed: nativeFabricSceneSchema,
+  story: nativeFabricSceneSchema,
+  sourceAdId: z.string().min(1).max(128).optional(),
+}).strict();
+
 export const adDocumentSchema = z.object({
   schema: z.literal("blockwise.ad-document"), templateId: z.string().min(1),
   sharedImageValues: z.record(z.string().min(1)), sharedTextValues: z.record(z.string()),
@@ -242,6 +260,7 @@ export const adDocumentSchema = z.object({
   // Optional customer-facing display-name override (Brand Pack value is the
   // default). Omitted entirely on older documents — backward compatible.
   brandBusinessName: z.string().min(1).optional(),
+  nativeEditor: nativeEditorDocumentSchema.optional(),
   revision: z.number().int().positive(), lastRenderedAt: z.string().datetime().nullable().optional(),
 }).strict();
 export type AdDocumentParsed = z.infer<typeof adDocumentSchema>;

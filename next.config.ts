@@ -118,6 +118,7 @@ const nextConfig: NextConfig = {
   // which matches no feature-gated prefix, so the gate still governs "/suburb".
   async rewrites() {
     return [
+      { source: "/vue-ad-editor", destination: "/vue-ad-editor/index.html" },
       { source: "/:postcode(\\d{4})", destination: "/suburb/:postcode" },
     ];
   },
@@ -211,6 +212,31 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        ],
+      },
+      // The opt-in upstream editor is a self-hosted document, not an external
+      // service. Only this path can be framed by our own origin; every other
+      // customer page retains DENY / frame-ancestors 'none'.
+      {
+        source: "/vue-ad-editor/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob:",
+              "font-src 'self' data: blob:",
+              "connect-src 'self' blob:",
+              "frame-ancestors 'self'",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'none'",
+            ].join("; "),
+          },
+          { key: "Cache-Control", value: "no-cache" },
         ],
       },
       {

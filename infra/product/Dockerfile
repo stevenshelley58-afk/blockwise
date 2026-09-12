@@ -36,7 +36,8 @@ ENV NEXT_PUBLIC_CLARITY_PROJECT_ID=$NEXT_PUBLIC_CLARITY_PROJECT_ID
 ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID
 ENV NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA=$NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA
 ENV NEXT_TELEMETRY_DISABLED=1
-# npm prebuild builds both workspace packages before Next.
+# npm prebuild builds the workspace packages and pinned self-hosted Vue editor.
+# The upstream app installs its independent frozen pnpm lockfile inside this stage.
 RUN npm run build
 
 FROM node:22-slim AS runner

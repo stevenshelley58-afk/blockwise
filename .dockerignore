@@ -36,3 +36,8 @@ frank
 frank/**
 worker
 worker/**
+
+# Nested upstream app dependencies are installed in its own build stage.
+**/node_modules
+**/dist
+public/vue-ad-editor

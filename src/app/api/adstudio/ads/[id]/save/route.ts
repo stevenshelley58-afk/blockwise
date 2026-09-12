@@ -52,6 +52,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const document = parsed.data as AdDocumentParsed;
+  if (document.nativeEditor) {
+    return NextResponse.json(
+      { error: "Use the native editor save action for this ad.", code: "native_editor_route_required" },
+      { status: 409 },
+    );
+  }
   const metaCopyIssue = metaCopyLimitIssues({
     primaryText: document.metaPrimaryText,
     headline: document.metaHeadline,

@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "next dev",
     "build:packages": "npm run --workspace @blockwise/ad-template-contract build && npm run --workspace @blockwise/ad-template-renderer build",
-    "prebuild": "npm run build:packages",
+    "prebuild": "npm run build:packages && npm run build:vue-editor",
     "build:creative-variants": "node --import tsx scripts/homepage/build-creative-variants.mts",
     "build": "next build",
     "start": "next start",
@@ -26,7 +26,8 @@
     "verify:hard-reset": "node scripts/verify/hard-reset-static.mjs",
     "verify-env": "node scripts/verify-env.mjs",
     "verify-env:first-tester": "node scripts/verify-env.mjs --first-tester",
-    "seed:test-users": "node scripts/seed-test-users.mjs"
+    "seed:test-users": "node scripts/seed-test-users.mjs",
+    "build:vue-editor": "node scripts/build-vue-editor.mjs"
   },
   "dependencies": {
     "@sentry/core": "^10.69.0",

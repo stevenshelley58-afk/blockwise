@@ -89,6 +89,15 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 - **Asset choices save themselves.** A choice whose options come from the provider saves as it is picked, so there is no Save button to forget and no half-saved state. Workspace facts the customer owns keep an explicit Save.
 - **A waiting state always has a way out.** A screen waiting on a person or an external check offers the customer the action that moves it forward, and never traps them behind a status they cannot change.
 
+## Opt-in native editor trial
+
+- **Vue Fabric Editor is an upstream interface, not a new Blockwise design system.** The owner chose its ready-made editing experience to avoid maintaining another custom editor. Keep its standard canvas controls and toolbar inside a same-origin, style-isolated frame. Do not rebuild those controls in React or reskin every upstream component.
+- **The surrounding product remains Blockwise.** Entry, save status, template and AI copy, ad previews, errors and review/publish use the existing shared controls. The artwork leads; integrations are secondary panels rather than another permanent form.
+- **Trying is non-destructive.** Open a separate, recognisable trial copy. Keep the original ad and old editor available until the owner approves replacement. Never silently open a native design in the old renderer.
+- **The preview must show the edited artwork.** Feed and Story ad previews use the native editor's current exports, with the real template/brand text and native Meta CTA outside the artwork. Do not substitute the original template render after a free-form edit.
+
+The native trial gives the iframe the available canvas width. Copy assistance and Meta previews open in a shared Sheet from the header, rather than occupying a permanent third sidebar. Feed and Story dimensions are fixed; native file imports and cloud services are not exposed.
+
 ## Accessibility
 
 - **Accessibility is part of done.** Controls keep accessible names and roles, focus is visible and ordered, and colour is never the only carrier of meaning. Accessibility text is functional copy and is never trimmed by the fewer-words rule.
