@@ -40,7 +40,7 @@ export const home: HomeCopy = {
       level: "Level with the prior week",
     },
     demoNote: "Demo numbers for an example account, not yours.",
-    demoAction: "Connect Meta to see your own",
+    demoAction: "Connect Meta",
     unavailableValue: "—",
     unavailableValueSpoken: "Not reported",
     unavailableNote: "No reporting for this workspace yet.",
@@ -98,7 +98,7 @@ export const home: HomeCopy = {
     emptyTitle: "No leads yet",
     emptyBody: "Leads land here as soon as your first ad is live.",
     ctaLabel: "Create an ad",
-    exampleNote: "Example leads, not yours.",
+    exampleNote: "Example leads",
   },
   localAds: {
     title: "Ads near you",

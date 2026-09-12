@@ -177,7 +177,7 @@ test("the band labels demo numbers instead of presenting them as delivery", () =
   // beside the heading only repeated it.
   assert.doesNotMatch(html, /Demo data/);
   assert.match(html, /Demo numbers for an example account, not yours\./);
-  assert.match(html, /Connect Meta to see your own/);
+  assert.match(html, /Connect Meta/);
   // The four figures the band owns, named the way the data actually reads, and
   // each one in the shared card surface rather than loose on the page.
   assert.match(html, /Spend/);

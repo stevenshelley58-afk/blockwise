@@ -12,6 +12,13 @@ import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
  * to the sentence's first line rather than to the row so a note that wraps never
  * leaves the dot floating on its own. The action wears the product's own call to
  * action rather than a line of small text.
+ *
+ * The note and the action share one row whenever the note fits beside the
+ * action, which is the case for a short note at every width. The note is sized
+ * by its own content rather than by what is left over (`basis-auto`, not
+ * `basis-0`), so a long note drops the action to the next line instead of being
+ * crushed into a column two words wide. The bar tightens its own padding below
+ * `sm`; the action keeps the shared CTA's own geometry.
  */
 export function HomeNoticeBar({
   text,
@@ -24,8 +31,10 @@ export function HomeNoticeBar({
   marker?: boolean;
 }) {
   return (
-    <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-(--r-card) border border-(--line) bg-(--surface-subtle) px-4 py-2.5">
-      <p className="flex min-w-0 items-start gap-2.5 text-[12.5px] leading-snug text-muted-foreground">
+    <div
+      data-home-notice
+      className="mt-3 flex flex-wrap items-center gap-2 rounded-(--r-card) border border-(--line) bg-(--surface-subtle) px-3 py-2.5 sm:gap-3 sm:px-4">
+      <p className="flex min-w-0 flex-[1_1_auto] items-start gap-2.5 text-[12.5px] leading-snug text-muted-foreground">
         {marker ? (
           <span className="mt-[6px] size-[8px] shrink-0 rounded-full bg-warning" aria-hidden />
         ) : null}

@@ -71,6 +71,7 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 - **One figure card, used everywhere.** That card is `src/components/ui/metric-card.tsx`: label, figure, its own line, its comparison. Home and Results both build their figure rows from it, so a surface never hand-rolls a second stat card. A figure with no daily series draws no line, and a missing figure renders the unavailable mark rather than a zero.
 - **One period control per surface, next to the data it slices.** Results states its range once, in the chart card above the line it changes; the heading keeps the title, the sync state and Refresh. Do not repeat the same period as chips or a second selector, and choose the chart's own metric from a menu rather than a row of buttons.
 - **The chart menu offers every metric with a daily series, most important first.** Leads, then what they cost, then spend, then delivery and response, then the rates. A figure with no daily series is not offered rather than charted as an empty axis, and a ratio that a day cannot divide leaves a gap in the line with one note saying why.
+- **A notice bar keeps its note and its action on one row where the note fits.** The note is sized by its own content, so a short note ("Example leads") holds its row beside the action at every phone width, while a long one ("Demo numbers for an example account, not yours.") takes the line it needs and drops the action below rather than being crushed into a column two words wide. Keep the note short enough to share the row; never truncate the note to win the space.
 - **A demo workspace sees example leads, and they say so.** A workspace with no delivery of its own gets example rows where its own leads would be, under the same amber marker the demo figures use, so the empty state is a preview of the work rather than a blank. They are the one section that carries the product's call to action instead of a link of its own, because there is nowhere to go yet. A workspace with real delivery and no leads keeps saying "No leads yet".
 - **Leads are modelled on the CRM's records.** Blockwise's CRM is Frappe CRM: a lead is `CRM Lead` (lead name, territory, source, status, owner, Meta lead ids) and `source` and `status` are Link fields pointing at `CRM Lead Source` and `CRM Lead Status` records that a deployment names itself. A row prints the status record it is given rather than inventing a state, and falls back to waiting time only while no CRM state exists.
 - **One label per fact.** State a caveat once, at the level it applies to. A band that is entirely demo data says so in its one note under the figures; it does not repeat the same word as a badge beside the heading.
@@ -99,6 +100,8 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 
 ## Changelog
 
+- 2026-09-12: Home's notice bars keep the note and the action on one row, and
+  the leads note shortens to "Example leads" so a phone can hold that row.
 - 2026-09-12: the weekly band is titled "Last 7 days" (it no longer repeats the
   window twice), the local-ads heading is "Ads near you", the demo note's action
   wears the product's own call to action, and a demo workspace sees example leads
