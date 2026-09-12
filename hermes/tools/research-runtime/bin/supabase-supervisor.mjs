@@ -612,15 +612,16 @@ async function enqueueDueCensusJobs(buildRunId) {
 async function enqueueDueAdPageRefreshJobs(buildRunId) {
   if (!adPageRefreshEnabled) return { adRefreshCandidates: 0, adRefreshEnqueued: 0 };
   const challengeCooldownMs = metaBrowserChallengeCooldownRemaining();
-  if (challengeCooldownMs > 0) {
+  if (!firstFillOnly && challengeCooldownMs > 0) {
     return { adRefreshCandidates: 0, adRefreshEnqueued: 0, adRefreshSkippedChallengeCooldown: true, adRefreshChallengeCooldownMs: challengeCooldownMs };
   }
   const activeCollectors = await rest("research", `work_queue?select=id,advertiser_page_id,priority&job_type=eq.blockwise-ad-collector&status=in.(pending,claimed)&limit=${Math.max(adPageRefreshMaxActive * 2, adPageRefreshBatchSize)}`);
-  const blockingCollectors = activeCollectors.filter((job) => Number(job.priority || 99) <= adRefreshPriorityForPage({ status: "resolved_collectable" }));
+  const capacityCollectors = firstFillOnly ? [] : activeCollectors;
+  const blockingCollectors = capacityCollectors.filter((job) => Number(job.priority || 99) <= adRefreshPriorityForPage({ status: "resolved_collectable" }));
   if (blockingCollectors.length >= adPageRefreshMaxActive) {
-    return { adRefreshCandidates: 0, adRefreshEnqueued: 0, adRefreshSkippedActive: blockingCollectors.length, adRefreshBacklog: activeCollectors.length };
+    return { adRefreshCandidates: 0, adRefreshEnqueued: 0, adRefreshSkippedActive: blockingCollectors.length, adRefreshBacklog: capacityCollectors.length };
   }
-  const activePageIds = new Set(activeCollectors.map((job) => job.advertiser_page_id).filter(Boolean));
+  const activePageIds = new Set(capacityCollectors.map((job) => job.advertiser_page_id).filter(Boolean));
   // Ad Radar v2 scheduling: read durable scan state straight off the page
   // registry. Cadence and backoff live in next_scan_at/backoff_until
   // (maintained by research.schedule_page_after_scan / the collector); a
@@ -663,8 +664,8 @@ async function enqueueDueAdPageRefreshJobs(buildRunId) {
         metaPageId: String(page.page_id),
         build_run_id: buildRunId,
         scanMode,
-        country: "AU",
-        activeStatus: "all",
+        country: firstFillOnly ? "ALL" : "AU",
+        activeStatus: firstFillOnly ? "active" : "all",
         resultsLimit: metaCaptureResultsLimit,
       },
       status: "pending",
@@ -675,7 +676,7 @@ async function enqueueDueAdPageRefreshJobs(buildRunId) {
       enqueued += 1;
     }
   }
-  return { adRefreshCandidates: candidates.length, adRefreshEnqueued: enqueued, adRefreshActive: blockingCollectors.length, adRefreshBacklog: activeCollectors.length, adRefreshScanned: pages.length };
+  return { adRefreshCandidates: candidates.length, adRefreshEnqueued: enqueued, adRefreshActive: blockingCollectors.length, adRefreshBacklog: capacityCollectors.length, adRefreshScanned: pages.length };
 }
 
 async function runWatchdogs() {
@@ -5480,15 +5481,15 @@ async function runAdDbWorkerPass() {
     await enqueueDueAdPageRefreshJobs(buildRunId);
   }
   const pageSize = 100;
-  const maxQueuePages = 20;
   let job = null;
   let skippedUnmarkedMedia = 0;
   let pagesScanned = 0;
-  for (let offset = 0; offset < pageSize * maxQueuePages; offset += pageSize) {
+  for (let offset = 0;; offset += pageSize) {
     const jobs = await rest(
       "research",
       "work_queue?select=*&queue_name=eq.research&status=eq.pending&available_at=lte." + encode(now())
         + "&job_type=in.(blockwise-ad-collector,blockwise-media-collector)"
+        + (firstFillOnly ? "&or=(payload->>scanMode.eq.initial_fill,payload->>scan_mode.eq.initial_fill,payload->>initialFill.eq.true,payload->>parent_scan_mode.eq.initial_fill)" : "")
         + "&order=priority.asc,available_at.asc,created_at.asc&limit=" + pageSize + "&offset=" + offset,
     );
     pagesScanned += 1;

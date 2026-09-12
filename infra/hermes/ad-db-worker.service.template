@@ -1,30 +1,22 @@
 [Unit]
-Description=Canonical Blockwise Ad Radar collection and archive worker
+Description=Hermes Ad DB worker (immutable first-fill release)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 TimeoutStopSec=300
 WorkingDirectory=@RELEASE_ROOT@/hermes/tools/research-runtime
-ExecStart=/usr/bin/node @RELEASE_ROOT@/hermes/tools/research-runtime/bin/supabase-supervisor.mjs --ad-db-worker
-Environment=HERMES_AD_RADAR_FIRST_FILL_PROVIDER=apify
-Environment=HERMES_AD_RADAR_FIRST_FILL_ONLY=true
 Environment=HERMES_RAW_EVIDENCE_DIR=/srv/hermes/ad-db/raw-evidence
 ReadWritePaths=/srv/hermes/ad-db /srv/hermes/ad-db/raw-evidence
 User=hermes
 Group=hermes
 Environment=NODE_ENV=production
 EnvironmentFile=/srv/hermes/secrets/ad-db-worker.env
+ExecStart=@RELEASE_ROOT@/scripts/vps/hermes-ad-db-first-fill-launcher.sh @RELEASE_ROOT@
 Restart=on-failure
 RestartSec=10
-UMask=0077
 NoNewPrivileges=true
 PrivateTmp=true
-PrivateDevices=true
-ProtectSystem=strict
-ProtectHome=true
-CapabilityBoundingSet=
-RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 
 [Install]
 WantedBy=multi-user.target
