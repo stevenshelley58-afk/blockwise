@@ -84,4 +84,5 @@ test("reporting demo is manual, isolated and explicit about side effects", async
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.doesNotMatch(css, /\.hc-reporting|transition:\s*all/);
   assert.match(css, /data-report-visible="false"[\s\S]*animation-play-state: paused/);
+  assert.match(css, /grid-template-columns: minmax\(0, \.8fr\) minmax\(0, 1fr\) minmax\(0, 1\.5fr\)/);
 });
