@@ -199,6 +199,23 @@ export type PerformanceCopy = {
   };
   /** What a day with nothing to divide by leaves out of the line. */
   chartGaps: { cpl: string; cpc: string; ctr: string; validRate: string };
+  /**
+   * The heading over the four figures at the top of the page: the window they
+   * cover, one entry per range Results offers. A range the page cannot offer
+   * falls back to the payload's own label rather than an invented heading.
+   */
+  figureHeading: { today: string; last_7: string; last_30: string };
+  /** The four figures the page leads with, in the order they render. */
+  figureLabels: { spend: string; clicks: string; cpc: string; leads: string };
+  /**
+   * What a figure is measured against, one entry per range Results offers. The
+   * card appends it to the percentage, so it stays short enough to hold one line
+   * in a phone-sized card; any other range names its own length instead.
+   */
+  figureCompare: { today: string; last_7: string; last_30: string; custom: string };
+  /** The mark a figure with nothing to report renders, and what it says out loud. */
+  unavailableValue: string;
+  unavailableValueSpoken: string;
   /** Accessible names for the two chart controls. */
   chartMetricLabel: string;
   rangeLabel: string;

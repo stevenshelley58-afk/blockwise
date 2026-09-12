@@ -84,12 +84,28 @@ test.describe("customer UX flows", () => {
     // The page leads with the figures, not with a per-listing summary.
     await expect(page.getByText("Lead results", { exact: true })).toHaveCount(0);
 
+    // The four figures are the ones Home shows, over the week Results opens on,
+    // each with its own comparison. The month's total is nowhere on the page.
+    await expect(page.getByRole("heading", { name: "Last 7 days", exact: true })).toBeVisible();
+    const figures = page.locator("[data-metric]");
+    await expect(figures).toHaveCount(4);
+    await expect(figures.nth(0)).toContainText("Spend");
+    await expect(figures.nth(0)).toContainText("$1,200.00");
+    await expect(figures.nth(1)).toContainText("Link clicks");
+    await expect(figures.nth(1)).toContainText("1,497");
+    await expect(figures.nth(2)).toContainText("Cost per link click");
+    await expect(figures.nth(2)).toContainText("$0.80");
+    await expect(figures.nth(3)).toContainText("Leads");
+    await expect(figures.nth(3)).toContainText("46");
+    await expect(figures.nth(0)).toContainText("vs prior week");
+    await expect(page.getByText("$5,940.00", { exact: true })).toHaveCount(0);
+
     // The chart metric is a menu, and the range beside it replaces the old
     // metric chips: both drive the same example payload.
     const metric = page.getByLabel("Chart metric");
     const range = page.getByLabel("Date range");
     await expect(metric).toHaveText(/Enquiries over time/);
-    await expect(range).toHaveText(/30 days/);
+    await expect(range).toHaveText(/7 days/);
     await metric.click();
     // Every metric with a daily series is offered, most important first.
     await expect(page.getByRole("option")).toHaveText([
@@ -107,13 +123,14 @@ test.describe("customer UX flows", () => {
     await page.getByRole("option", { name: "Click-through rate over time" }).click();
     await expect(metric).toHaveText(/Click-through rate over time/);
     await expect(page.getByText("Days with no impressions show no click-through rate.")).toBeVisible();
+    // The same one control slices the figures above the chart as well, so the
+    // band is never a fixed week bolted onto a separately-ranged chart.
     await range.click();
-    await page.getByRole("option", { name: "7 days" }).click();
-    await expect(range).toHaveText(/7 days/);
-    // The comparison names the new period (the card keeps that phrase off the
-    // phone layout, so its presence is what is asserted) and the figures follow.
-    await expect(page.getByText(/vs previous 7 days/).first()).toBeAttached();
-    await expect(page.getByText("$5,940", { exact: true })).toHaveCount(0);
+    await page.getByRole("option", { name: "30 days" }).click();
+    await expect(range).toHaveText(/30 days/);
+    await expect(page.getByRole("heading", { name: "Last 30 days", exact: true })).toBeVisible();
+    await expect(figures.nth(0)).toContainText("$5,940.00");
+    await expect(figures.nth(0)).toContainText("vs prior 30 days");
 
     // Pacing and location moved inside the details card, which stays shut until
     // asked for; the campaign table and the ad cards open with the page.

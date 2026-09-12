@@ -3,7 +3,7 @@ import { after, NextResponse, type NextRequest } from "next/server";
 import { recordWorkspaceFunnelEventBestEffort } from "@/lib/analytics/progressive-funnel";
 import { canManageProviderConnections } from "@/lib/auth/access-control";
 import { requireWorkspaceAccess } from "@/lib/auth/workspace-access";
-import { queueReportingRefresh } from "@/lib/meta-monitor/reporting-refresh-queue";
+import { queueReportingRefreshes } from "@/lib/meta-monitor/reporting-refresh-queue";
 import { exchangeProviderCode } from "@/lib/providers/oauth-handlers";
 import { syncProviderWorkspace } from "@/lib/providers/provider-sync";
 import { resolveMonitorDateRange } from "@/lib/monitor/dashboard-data";
@@ -166,9 +166,8 @@ async function handleCallback(request: NextRequest) {
   // Connection completion never waits on Meta reporting. The results page
   // keeps its last snapshot while Trigger refreshes it in the background.
   after(async () => {
-    await queueReportingRefresh({
+    await queueReportingRefreshes({
       workspaceId: verified.payload.workspaceId,
-      range: "last_30",
       reason: "connection",
     }).catch(() => undefined);
   });

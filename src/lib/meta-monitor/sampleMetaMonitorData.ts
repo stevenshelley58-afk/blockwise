@@ -57,7 +57,6 @@ type SampleAd = {
   spend: number;
   reach: number;
   impressions: number;
-  clicks: number;
   leads: number;
   validLeads: number;
   placements: Array<[string, number]>;
@@ -68,42 +67,42 @@ const SAMPLE_ADS: SampleAd[] = [
   {
     adId: "120208746201302", adName: "Lover (Image)", suburb: "Carlingford", status: "ACTIVE",
     creativeType: "IMAGE", headline: "What's your home really worth?",
-    spend: 1495, reach: 143200, impressions: 334500, clicks: 8120, leads: 50, validLeads: 38,
+    spend: 1495, reach: 143200, impressions: 334500, leads: 50, validLeads: 38,
     placements: [["Facebook Feed", 72], ["Instagram Feed", 18], ["Instagram Stories", 8], ["Audience Network", 2]],
     devices: [["Mobile", 86], ["Desktop", 11], ["Tablet", 3]],
   },
   {
     adId: "120208746201303", adName: "40% OFF (Image)", suburb: "Carlingford", status: "ACTIVE",
     creativeType: "IMAGE", headline: "Limited appraisal offer",
-    spend: 1142, reach: 121600, impressions: 278300, clicks: 6512, leads: 32, validLeads: 21,
+    spend: 1142, reach: 121600, impressions: 278300, leads: 32, validLeads: 21,
     placements: [["Facebook Feed", 70], ["Instagram Feed", 20], ["Instagram Stories", 8], ["Audience Network", 2]],
     devices: [["Mobile", 84], ["Desktop", 13], ["Tablet", 3]],
   },
   {
     adId: "120208746201304", adName: "Property Checklist (Video)", suburb: "Parramatta", status: "ACTIVE",
     creativeType: "VIDEO", headline: "Selling? Start with this checklist",
-    spend: 1139, reach: 107800, impressions: 245900, clicks: 5813, leads: 35, validLeads: 23,
+    spend: 1139, reach: 107800, impressions: 245900, leads: 35, validLeads: 23,
     placements: [["Facebook Feed", 68], ["Instagram Feed", 22], ["Instagram Stories", 8], ["Audience Network", 2]],
     devices: [["Mobile", 83], ["Desktop", 14], ["Tablet", 3]],
   },
   {
     adId: "120208746201305", adName: "Home Value (Image)", suburb: "Subiaco", status: "PAUSED",
     creativeType: "IMAGE", headline: "Free home value report",
-    spend: 926, reach: 89400, impressions: 198400, clicks: 4721, leads: 27, validLeads: 17,
+    spend: 926, reach: 89400, impressions: 198400, leads: 27, validLeads: 17,
     placements: [["Facebook Feed", 74], ["Instagram Feed", 16], ["Instagram Stories", 7], ["Audience Network", 3]],
     devices: [["Mobile", 88], ["Desktop", 9], ["Tablet", 3]],
   },
   {
     adId: "120208746201306", adName: "Seller Guide (Image)", suburb: "Eastwood", status: "ACTIVE",
     creativeType: "IMAGE", headline: "The 2026 seller's guide",
-    spend: 738, reach: 76300, impressions: 176200, clicks: 4112, leads: 18, validLeads: 11,
+    spend: 738, reach: 76300, impressions: 176200, leads: 18, validLeads: 11,
     placements: [["Facebook Feed", 69], ["Instagram Feed", 21], ["Instagram Stories", 7], ["Audience Network", 3]],
     devices: [["Mobile", 85], ["Desktop", 12], ["Tablet", 3]],
   },
   {
     adId: "120208746201307", adName: "House Sold (Image)", suburb: "Marsfield", status: "ACTIVE",
     creativeType: "IMAGE", headline: "Just sold near you",
-    spend: 500, reach: 68800, impressions: 142300, clicks: 3128, leads: 14, validLeads: 8,
+    spend: 500, reach: 68800, impressions: 142300, leads: 14, validLeads: 8,
     placements: [["Facebook Feed", 71], ["Instagram Feed", 19], ["Instagram Stories", 8], ["Audience Network", 2]],
     devices: [["Mobile", 87], ["Desktop", 10], ["Tablet", 3]],
   },
@@ -116,9 +115,6 @@ export function buildSampleMetaMonitorPayload(
 ): MetaMonitorPayload {
   const range = resolveMonitorDateRange(input.range ?? "last_30", input.now ?? new Date(), input.customRange);
   const days = Math.min(range.days, 30);
-  // Anchor the demo series to the end of the range so wide ranges (Maximum,
-  // long custom spans) still chart the most recent 30 sample days.
-  const seriesStart = addDays(range.until, -(days - 1));
   const spendSeries = SPEND_30.slice(30 - days);
   const validSeries = VALID_30.slice(30 - days);
   const leadsSeries = LEADS_30.slice(30 - days);
@@ -129,13 +125,18 @@ export function buildSampleMetaMonitorPayload(
   const impressionsPerDollar = (sum(SAMPLE_ADS.map((ad) => ad.impressions)) * scale) / spend;
   const reachPerDollar = (sum(SAMPLE_ADS.map((ad) => ad.reach)) * scale) / spend;
 
-  const daily: MetaDailyPoint[] = spendSeries.map((spend, index) => {
-    const date = addDays(seriesStart, index);
+  // The demo holds one month. Build all of it, anchored to the end of the range
+  // so wide ranges (Maximum, long custom spans) still chart the most recent 30
+  // sample days, then take the window that was asked for: a week's figures and
+  // the week before it come out of the same series, so two surfaces showing
+  // that week also agree on what it is being compared against.
+  const monthStart = addDays(range.until, -29);
+  const monthDaily: MetaDailyPoint[] = SPEND_30.map((spend, index) => {
     const drift = 1 + SAMPLE_DELIVERY_RATIO_DRIFT[index % SAMPLE_DELIVERY_RATIO_DRIFT.length];
     const impressions = spend > 0 ? Math.max(1, Math.round(spend * impressionsPerDollar * drift)) : 0;
 
     return {
-      date,
+      date: addDays(monthStart, index),
       spend,
       // Derived from the day's spend so the sample stays internally consistent:
       // Σ daily clicks is SAMPLE_CLICK_SPEND_RATIO × Σ spend, give or take the
@@ -154,11 +155,12 @@ export function buildSampleMetaMonitorPayload(
       impressions,
       // Reach can never exceed impressions on the same day.
       reach: impressions > 0 ? Math.min(impressions, Math.max(1, Math.round(spend * reachPerDollar * drift))) : 0,
-      leads: leadsSeries[index],
-      validLeads: validSeries[index],
-      validCpl: safeCpl(spend, validSeries[index]),
+      leads: LEADS_30[index],
+      validLeads: VALID_30[index],
+      validCpl: safeCpl(spend, VALID_30[index]),
     };
   });
+  const daily = monthDaily.slice(30 - days);
 
   const leads = sum(leadsSeries);
   const validLeads = sum(validSeries);
@@ -170,7 +172,11 @@ export function buildSampleMetaMonitorPayload(
     const adLeads = Math.round(ad.leads * scale);
     const adValid = Math.min(Math.round(ad.validLeads * scale), adLeads);
     const impressions = Math.round(ad.impressions * scale);
-    const clicks = Math.round(ad.clicks * scale);
+    // The ad's own clicks follow its own spend by the ratio the daily series
+    // uses, so an ad's cost per click and the account's are the same number.
+    // Hand-written counts once drifted 4× from the series and left the demo's
+    // click-through rate card disagreeing with its own click-through chart.
+    const clicks = Math.round(adSpend * SAMPLE_CLICK_SPEND_RATIO);
 
     return {
       adId: ad.adId,
@@ -259,20 +265,67 @@ export function buildSampleMetaMonitorPayload(
       clicks: sum(ads.map((ad) => ad.metrics.clicks)),
       leads,
       validLeads,
-      previousPeriod: {
-        reach: Math.round(sum(ads.map((ad) => ad.metrics.reach)) / 1.14),
-        impressions: Math.round(sum(ads.map((ad) => ad.metrics.impressions)) / 1.11),
-        clicks: Math.round(sum(ads.map((ad) => ad.metrics.clicks)) / 1.08),
-        spend: round2(spend / 1.124),
-        leads: Math.round(leads / 1.183),
-        validLeads: Math.round(validLeads / 1.082),
-        validLeadRate: safeRate(Math.round(validLeads / 1.082), Math.round(leads / 1.183)),
-        validCpl: safeCpl(round2(spend / 1.124), Math.round(validLeads / 1.082)),
-      },
+      previousPeriod: previousPeriodFor(monthDaily, days, {
+        reach: sum(ads.map((ad) => ad.metrics.reach)),
+        impressions: sum(ads.map((ad) => ad.metrics.impressions)),
+        clicks: sum(ads.map((ad) => ad.metrics.clicks)),
+        spend,
+        leads,
+        validLeads,
+      }),
     },
     daily,
     suburbPerformance,
     ads,
+  };
+}
+
+/**
+ * What the window is compared against. The demo's own earlier days answer that
+ * whenever the month holds a full window before the one on screen, which is what
+ * keeps a week shown on two surfaces reporting one direction. Only a window
+ * wider than half the month has no earlier days left to use, and there the demo
+ * falls back to the ratios its fixture notes describe.
+ */
+function previousPeriodFor(
+  monthDaily: MetaDailyPoint[],
+  days: number,
+  current: {
+    reach: number;
+    impressions: number;
+    clicks: number;
+    spend: number;
+    leads: number;
+    validLeads: number;
+  },
+): NonNullable<MetaMonitorPayload["summary"]>["previousPeriod"] {
+  if (days * 2 <= monthDaily.length) {
+    const prior = monthDaily.slice(monthDaily.length - days * 2, monthDaily.length - days);
+    const priorSpend = round2(sum(prior.map((point) => point.spend)));
+    const priorLeads = sum(prior.map((point) => point.leads));
+    const priorValidLeads = sum(prior.map((point) => point.validLeads));
+
+    return {
+      reach: sum(prior.map((point) => point.reach)),
+      impressions: sum(prior.map((point) => point.impressions)),
+      clicks: sum(prior.map((point) => point.clicks)),
+      spend: priorSpend,
+      leads: priorLeads,
+      validLeads: priorValidLeads,
+      validLeadRate: safeRate(priorValidLeads, priorLeads),
+      validCpl: safeCpl(priorSpend, priorValidLeads),
+    };
+  }
+
+  return {
+    reach: Math.round(current.reach / 1.14),
+    impressions: Math.round(current.impressions / 1.11),
+    clicks: Math.round(current.clicks / 1.08),
+    spend: round2(current.spend / 1.124),
+    leads: Math.round(current.leads / 1.183),
+    validLeads: Math.round(current.validLeads / 1.082),
+    validLeadRate: safeRate(Math.round(current.validLeads / 1.082), Math.round(current.leads / 1.183)),
+    validCpl: safeCpl(round2(current.spend / 1.124), Math.round(current.validLeads / 1.082)),
   };
 }
 

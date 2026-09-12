@@ -5,6 +5,11 @@ import test from "node:test";
 import { hasNoMetaConnection } from "../src/lib/meta-monitor/payload-state.ts";
 import { buildSampleMetaMonitorPayload } from "../src/lib/meta-monitor/sampleMetaMonitorData.ts";
 import type { MetaMonitorPayload } from "../src/lib/meta-monitor/types.ts";
+import {
+  HOME_REPORTING_RANGE,
+  RESULTS_DEFAULT_RANGE,
+  WARMED_REPORTING_RANGES,
+} from "../src/lib/monitor/dashboard-data.ts";
 
 const range = "last_30" as const;
 
@@ -33,6 +38,24 @@ test("Results opens the example report when nothing is connected", async () => {
   );
   assert.match(page, /key=\{showExample \? "example" : "live"\}/);
   assert.match(page, /showExample=\{showExample\}/);
+});
+
+test("Results opens on the same week Home's figure row shows", async () => {
+  const page = await readFile(
+    new URL("../src/app/(customer)/results/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  // One constant decides what Results opens on: the snapshot it loads, the
+  // refresh it queues and the example it builds all name the same range, and no
+  // range of its own is hardcoded.
+  assert.equal(RESULTS_DEFAULT_RANGE, "last_7");
+  assert.equal((page.match(/range: RESULTS_DEFAULT_RANGE/g) ?? []).length, 3);
+  assert.doesNotMatch(page, /range: "last_(7|30)"/);
+  // A page that opened on a range nobody keeps warm would park every connected
+  // workspace on its fallback until the next scheduled pass.
+  assert.ok(WARMED_REPORTING_RANGES.includes(RESULTS_DEFAULT_RANGE));
+  assert.ok(WARMED_REPORTING_RANGES.includes(HOME_REPORTING_RANGE));
 });
 
 test("the example report follows the range the customer picks", () => {

@@ -34,7 +34,7 @@ import {
 } from "../billing/first-live-campaign.ts";
 import { BILLING_OFFER_VERSION } from "../billing/offers.ts";
 import { recordWorkspaceFunnelEventBestEffort } from "../analytics/progressive-funnel.ts";
-import { queueReportingRefresh } from "../meta-monitor/reporting-refresh-queue.ts";
+import { queueReportingRefreshes } from "../meta-monitor/reporting-refresh-queue.ts";
 import { recordAuditLog } from "../supabase/audit.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 
@@ -316,9 +316,8 @@ async function queueReportingRefreshAfterProviderChange(
   workspaceId: string,
   reason: "publish" | "mutation",
 ): Promise<void> {
-  await queueReportingRefresh({
+  await queueReportingRefreshes({
     workspaceId,
-    range: "last_30",
     reason,
   }).catch((error) => {
     console.warn("[meta-reporting] background refresh could not be queued", error);

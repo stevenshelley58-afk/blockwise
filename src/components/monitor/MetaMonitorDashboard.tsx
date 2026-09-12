@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ChevronDown, ChevronRight, ImageOff, Play, X } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { changeBetween, MetricCard, type MetricChange } from "@/components/ui/metric-card";
+import { changeBetween, formatCount, MetricCard, spokenPeriodChange } from "@/components/ui/metric-card";
 import {
   Select,
   SelectContent,
@@ -44,6 +44,7 @@ import { DemoModeNotice } from "./DemoModeNotice";
 import { EmptyMetaState } from "./EmptyMetaState";
 import { MetaMonitorHeader } from "./MetaMonitorHeader";
 import { MonitorDashboardSkeleton } from "./MonitorDashboardSkeleton";
+import { PerformanceFigureRow, compareTail } from "./PerformanceFigureRow";
 import { SuburbBarChart } from "./SuburbBarChart";
 
 // Recharts is heavy; load the chart bundles on demand so they don't ship in the
@@ -58,22 +59,6 @@ const DATA_HUE = "var(--ui-data)";
 const panelClass = "min-w-0 rounded-(--r-panel) border border-(--line) bg-(--surface) p-5 shadow-card";
 const panelTitleClass = "font-display text-[15.5px] font-extrabold tracking-[-0.015em]";
 const thClass = "font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase";
-
-const wholeNumber = (value: number) => Math.round(value).toLocaleString("en-AU");
-
-/**
- * The comparison as one sentence for assistive technology. The visible note
- * prints the percentage beside the arrow, so the spoken version has to carry
- * the direction in words.
- */
-function spokenChange(current: number, prior: number | null, days: number): string | undefined {
-  const change = changeBetween(current, prior);
-  if (!change) return undefined;
-  const period = `the previous ${days} day${days === 1 ? "" : "s"}`;
-  return change.direction === "level"
-    ? `No change from ${period}`
-    : `${change.percent}% ${change.direction === "up" ? "higher" : "lower"} than ${period}`;
-}
 
 export type OAuthNotice = {
   tone: "success" | "error" | "warning";
@@ -413,7 +398,14 @@ function Dashboard({
   const ctr = safeRate(summary.clicks, summary.impressions);
   const previousCtr = previous ? safeRate(previous.clicks, previous.impressions) : null;
   const days = payload.range.days;
-  const compareLabel = `previous ${days} day${days === 1 ? "" : "s"}`;
+  // One tail for both figure rows: the band and the figures inside More
+  // reporting details cover the same window, so they name it the same way.
+  const compareLabel = compareTail(payload.range);
+  // A figure with nothing to report keeps no comparison either: a missing rate
+  // beside a percentage would read as a real change from a real number.
+  const reachChange = changeBetween(summary.reach, previous?.reach ?? null);
+  const impressionsChange = changeBetween(summary.impressions, previous?.impressions ?? null);
+  const ctrChange = ctr == null ? null : changeBetween(ctr, previousCtr);
   const focusedCampaignVisible = Boolean(focusCampaignId && hierarchy.some((campaign) => campaign.campaignId === focusCampaignId));
   const [chartMetricKey, setChartMetricKey] = useState<ChartMetricKey>(DEFAULT_CHART_METRIC);
   const chartMetric =
@@ -425,9 +417,6 @@ function Dashboard({
     { value: "last_30", label: copy.ranges.d30 },
     { value: "custom", label: copy.customRange },
   ];
-  const spendSeries = payload.daily.map((point) => point.spend);
-  const leadSeries = payload.daily.map((point) => point.leads);
-  const clickSeries = payload.daily.map((point) => point.clicks);
   const activeAds = payload.ads.filter((ad) => ad.status === "ACTIVE").length;
   return (
     <div
@@ -446,31 +435,10 @@ function Dashboard({
             : "This ad is active. Its details will appear here after reporting refreshes."}
         </p>
       ) : null}
-      <dl className="grid grid-cols-[repeat(3,minmax(0,1fr))] gap-2.5 sm:gap-3.5">
-        <MetricCard
-          compact
-          hideCompareOnPhone
-          label="Enquiries"
-          value={summary.leads}
-          format={wholeNumber}
-          series={leadSeries}
-          change={changeBetween(summary.leads, previous?.leads ?? null)}
-          compareLabel={compareLabel}
-          spokenChange={spokenChange(summary.leads, previous?.leads ?? null, days)}
-        />
-        <MetricCard
-          compact
-          hideCompareOnPhone
-          label="Spend"
-          value={summary.spend}
-          format={formatCurrency}
-          series={spendSeries}
-          change={changeBetween(summary.spend, previous?.spend ?? null)}
-          compareLabel={compareLabel}
-          spokenChange={spokenChange(summary.spend, previous?.spend ?? null, days)}
-        />
-        <MetricCard compact label="Running ads" value={activeAds} format={wholeNumber} />
-      </dl>
+      {/* The page leads with the same four figures Home shows, over the range
+          the payload covers. Every other figure lives in More reporting
+          details. */}
+      <PerformanceFigureRow summary={summary} range={payload.range} daily={payload.daily} />
 
       {/* The demo caveat closes the figures it labels, in the same bar and the
           same words Home's figures close on. */}
@@ -567,36 +535,30 @@ function Dashboard({
             <MetricCard
               label="Reach"
               value={summary.reach}
-              format={wholeNumber}
-              change={changeBetween(summary.reach, previous?.reach ?? null)}
+              format={formatCount}
+              change={reachChange}
               compareLabel={compareLabel}
-              spokenChange={spokenChange(summary.reach, previous?.reach ?? null, days)}
+              spokenChange={spokenPeriodChange(reachChange, days)}
             />
             <MetricCard
               label="Impressions"
               value={summary.impressions}
-              format={wholeNumber}
-              change={changeBetween(summary.impressions, previous?.impressions ?? null)}
+              format={formatCount}
+              change={impressionsChange}
               compareLabel={compareLabel}
-              spokenChange={spokenChange(summary.impressions, previous?.impressions ?? null, days)}
-            />
-            <MetricCard
-              label="Link clicks"
-              value={summary.clicks}
-              format={wholeNumber}
-              series={clickSeries}
-              change={changeBetween(summary.clicks, previous?.clicks ?? null)}
-              compareLabel={compareLabel}
-              spokenChange={spokenChange(summary.clicks, previous?.clicks ?? null, days)}
+              spokenChange={spokenPeriodChange(impressionsChange, days)}
             />
             <MetricCard
               label="CTR"
               value={ctr}
               format={(value) => formatPercent(value, 2)}
-              change={changeBetween(ctr ?? 0, previousCtr)}
+              change={ctrChange}
               compareLabel={compareLabel}
-              spokenChange={spokenChange(ctr ?? 0, previousCtr, days)}
+              spokenChange={spokenPeriodChange(ctrChange, days)}
+              unavailable={copy.unavailableValue}
+              unavailableSpoken={copy.unavailableValueSpoken}
             />
+            <MetricCard label="Running ads" value={activeAds} format={formatCount} />
           </dl>
 
           <div className="grid gap-3.5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">

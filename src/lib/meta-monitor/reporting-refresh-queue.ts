@@ -1,5 +1,6 @@
 import { enqueueQueuedJob } from "../providers/job-queue-enqueue.ts";
 
+import { WARMED_REPORTING_RANGES } from "../monitor/dashboard-data.ts";
 import type { MonitorCustomRange, MonitorRange } from "../meta-monitor/types.ts";
 import { reportingRangeKey } from "../meta-monitor/reporting-snapshots.ts";
 
@@ -7,7 +8,7 @@ export async function queueReportingRefresh(input: {
   workspaceId: string;
   range: MonitorRange;
   customRange?: MonitorCustomRange;
-  reason: "stale_navigation" | "manual" | "connection" | "publish" | "mutation";
+  reason: ReportingRefreshReason;
   requestedAt?: Date;
 }) {
   const requestedAt = input.requestedAt ?? new Date();
@@ -27,4 +28,25 @@ export async function queueReportingRefresh(input: {
     maxAttempts: 3,
     dedupeKey: `reporting:${input.workspaceId}:${rangeKey}:${input.reason}:${bucket}`,
   });
+}
+
+type ReportingRefreshReason = "stale_navigation" | "manual" | "connection" | "publish" | "mutation";
+
+/**
+ * Refresh every range a customer surface opens on. Home's figure row reads the
+ * trailing month and Results opens on the trailing week, so a workspace
+ * refreshed for one of them has to be refreshed for the other: the page a
+ * customer lands on next would otherwise find no snapshot of its own range and
+ * park on its fallback until the next scheduled pass.
+ */
+export async function queueReportingRefreshes(input: {
+  workspaceId: string;
+  reason: ReportingRefreshReason;
+  requestedAt?: Date;
+}): Promise<void> {
+  await Promise.all(
+    WARMED_REPORTING_RANGES.map((range) =>
+      queueReportingRefresh({ ...input, range }),
+    ),
+  );
 }

@@ -21,17 +21,13 @@ import { niche } from "@/config/niche";
 import type { HomeData } from "@/components/self-serve/home-dashboard";
 import {
   changeBetween,
+  formatCount,
+  formatMoney,
   MetricCard,
   type MetricChange,
 } from "@/components/ui/metric-card";
 import { NoticeBar } from "@/components/ui/notice-bar";
 import { previousWeekTotals } from "@/lib/home/home-safe-read-model";
-
-/** Costs read as money, so cents stay visible: $0.80, never $0.8. */
-const money = (value: number) =>
-  `$${value.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-const whole = (value: number) => Math.round(value).toLocaleString("en-AU");
 
 /**
  * What the comparison is against. The screen-reader sentence spells the whole
@@ -77,7 +73,7 @@ function buildMetrics(performance: Performance): Metric[] {
       key: "spend",
       label: copy.weeklySpend,
       value: weekly.spend,
-      format: money,
+      format: formatMoney,
       series: week.map((point) => point.spend),
       change: prior ? changeBetween(weekly.spend, prior.spend) : null,
     },
@@ -85,7 +81,7 @@ function buildMetrics(performance: Performance): Metric[] {
       key: "clicks",
       label: copy.weeklyClicks,
       value: weekly.clicks,
-      format: whole,
+      format: formatCount,
       series: clicksPerDay,
       change: prior ? changeBetween(weekly.clicks, prior.clicks) : null,
     },
@@ -93,7 +89,7 @@ function buildMetrics(performance: Performance): Metric[] {
       key: "cpc",
       label: copy.weeklyCpc,
       value: weekly.cpc,
-      format: money,
+      format: formatMoney,
       series: cpcPerDay,
       change:
         weekly.cpc != null && priorCpc != null
@@ -104,7 +100,7 @@ function buildMetrics(performance: Performance): Metric[] {
       key: "leads",
       label: copy.weeklyLeads,
       value: weekly.leads,
-      format: whole,
+      format: formatCount,
       series: week.map((point) => point.leads),
       change: prior ? changeBetween(weekly.leads, prior.leads) : null,
     },

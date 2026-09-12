@@ -93,6 +93,23 @@ type NormalizableProviderReport = Omit<MonitorProviderReport, "metrics" | "daily
 const DAY_MS = 24 * 60 * 60 * 1000;
 const AU_DASHBOARD_OFFSET_MS = 10 * 60 * 60 * 1000;
 
+/**
+ * The range Results opens on: the trailing week, the same window Home's figure
+ * row shows. It is the range the page asks the server for, so it is also the
+ * one the reporting warm-up has to hold a snapshot for.
+ */
+export const RESULTS_DEFAULT_RANGE: MonitorRange = "last_7";
+
+/**
+ * The range Home's figure row reads. The band shows a week, but it takes that
+ * week — and the week before it — out of the trailing month, so the monthly
+ * snapshot stays the one Home cannot do without.
+ */
+export const HOME_REPORTING_RANGE: MonitorRange = "last_30";
+
+/** Every range a customer surface opens on, and so the ones kept warm. */
+export const WARMED_REPORTING_RANGES: MonitorRange[] = [RESULTS_DEFAULT_RANGE, HOME_REPORTING_RANGE];
+
 const RANGE_LABELS: Record<MonitorRange, string> = {
   today: "Today",
   yesterday: "Yesterday",

@@ -3,7 +3,7 @@ import { after, NextResponse, type NextRequest } from "next/server";
 import { recordWorkspaceFunnelEventBestEffort } from "@/lib/analytics/progressive-funnel";
 import { canManageProviderConnections } from "@/lib/auth/access-control";
 import { requireApiWorkspace } from "@/lib/auth/api-guards";
-import { queueReportingRefresh } from "@/lib/meta-monitor/reporting-refresh-queue";
+import { queueReportingRefreshes } from "@/lib/meta-monitor/reporting-refresh-queue";
 import { resolveMonitorDateRange } from "@/lib/monitor/dashboard-data";
 import {
   getMetaPartnerConfig,
@@ -179,9 +179,8 @@ export async function POST(request: NextRequest) {
   }
 
   after(async () => {
-    await queueReportingRefresh({
+    await queueReportingRefreshes({
       workspaceId: access.workspaceId,
-      range: "last_30",
       reason: "connection",
     }).catch(() => undefined);
   });

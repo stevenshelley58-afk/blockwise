@@ -46,6 +46,29 @@ const VALUE_TONE: Record<"quiet" | "loud", string> = {
 /** Period on period, as a percentage. Home's band builds it; the card paints it. */
 export type MetricChange = { direction: "up" | "down" | "level"; percent: number };
 
+/** Costs read as money, so cents stay visible: $0.80, never $0.8. */
+export const formatMoney = (value: number): string =>
+  `$${value.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/** A counted figure: link clicks, leads, impressions, running ads. */
+export const formatCount = (value: number): string => Math.round(value).toLocaleString("en-AU");
+
+/**
+ * The comparison as one sentence for assistive technology. The visible note
+ * prints the percentage beside the arrow, so the spoken version has to carry
+ * the direction in words.
+ */
+export function spokenPeriodChange(
+  change: MetricChange | null,
+  days: number,
+): string | undefined {
+  if (!change) return undefined;
+  const period = `the previous ${days} day${days === 1 ? "" : "s"}`;
+  return change.direction === "level"
+    ? `No change from ${period}`
+    : `${change.percent}% ${change.direction === "up" ? "higher" : "lower"} than ${period}`;
+}
+
 /**
  * Period on period, as a percentage. A prior period with nothing in it has no
  * percentage to report, so the comparison is dropped rather than shown as

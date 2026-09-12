@@ -2,6 +2,7 @@ import { enqueueQueuedJob } from "./job-queue-enqueue.ts";
 import { queueMetaLeadSync } from "./meta-leads-queue.ts";
 import { recoverStuckMetaPublishPlans } from "./meta-publish-queue.ts";
 import { sendAlertEmail } from "../alerts/notify.ts";
+import { WARMED_REPORTING_RANGES } from "../monitor/dashboard-data.ts";
 import { createSupabaseServiceClient } from "../supabase/service.ts";
 
 type ServiceSupabase = ReturnType<typeof createSupabaseServiceClient>;
@@ -148,13 +149,17 @@ export async function queueScheduledPerformanceReadModels(service: ServiceSupaba
             reportingWorkspaces.add(workspaceId);
             return true;
           });
-        recordResults(await Promise.allSettled(workspaceIds.map((workspaceId) => enqueueQueuedJob({
-          workspaceId,
-          kind: "reporting.refresh",
-          payload: { workspaceId, range: "last_30" },
-          maxAttempts: 3,
-          dedupeKey: `reporting-refresh:${workspaceId}:last-30:${bucket}`,
-        }))));
+        recordResults(await Promise.allSettled(workspaceIds.flatMap((workspaceId) =>
+          // Every range a customer surface opens on: Results opens on the
+          // trailing week, Home's figure row reads the trailing month.
+          WARMED_REPORTING_RANGES.map((range) => enqueueQueuedJob({
+            workspaceId,
+            kind: "reporting.refresh",
+            payload: { workspaceId, range },
+            maxAttempts: 3,
+            dedupeKey: `reporting-refresh:${workspaceId}:${range}:${bucket}`,
+          })),
+        )));
       },
     });
 

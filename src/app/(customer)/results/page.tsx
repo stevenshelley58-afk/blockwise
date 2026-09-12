@@ -7,6 +7,7 @@ import { hasNoMetaConnection } from "@/lib/meta-monitor/payload-state";
 import { queueReportingRefresh } from "@/lib/meta-monitor/reporting-refresh-queue";
 import { loadReportingSnapshot } from "@/lib/meta-monitor/reporting-snapshots";
 import { buildSampleMetaMonitorPayload } from "@/lib/meta-monitor/sampleMetaMonitorData";
+import { RESULTS_DEFAULT_RANGE } from "@/lib/monitor/dashboard-data";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,8 @@ export default async function ResultsPage({
       ? reconciled.campaignId.trim()
       : null;
   }
+  // Results opens on the trailing week, the same window Home's figure row
+  // shows, and the warm-up holds a snapshot for exactly this range.
   const reporting = await Sentry.startSpan(
     {
       name: "Load Performance reporting snapshot",
@@ -83,14 +86,14 @@ export default async function ResultsPage({
       loadReportingSnapshot({
         supabase,
         workspaceId: access.workspaceId,
-        range: "last_30",
+        range: RESULTS_DEFAULT_RANGE,
       }),
   );
   if (reporting.needsRefresh) {
     after(async () => {
       await queueReportingRefresh({
         workspaceId: access.workspaceId,
-        range: "last_30",
+        range: RESULTS_DEFAULT_RANGE,
         reason: "stale_navigation",
       }).catch(() => undefined);
     });
@@ -102,7 +105,7 @@ export default async function ResultsPage({
   // action, so the customer sees what Results will hold rather than a dead end.
   const showExample = explicitExample || hasNoMetaConnection(reporting.snapshot.payload);
   const initialPayload = showExample
-    ? buildSampleMetaMonitorPayload({ range: "last_30", now: new Date(), connected: false })
+    ? buildSampleMetaMonitorPayload({ range: RESULTS_DEFAULT_RANGE, now: new Date(), connected: false })
     : reporting.snapshot.payload;
 
   return (
