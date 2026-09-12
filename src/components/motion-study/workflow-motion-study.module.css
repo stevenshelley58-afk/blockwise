@@ -222,7 +222,7 @@
 .bwStudy[data-narrow="true"] .bwStudyTitle { font-size: 14px; }
 .bwStudy[data-narrow="true"] .bwStudyTitle i { width: 7px; height: 7px; }
 .bwStudy[data-narrow="true"] .bwStudySelector button { min-height: 44px; padding-inline: clamp(6px, 2.4cqw, 10px); font-size: clamp(10px, 3.4cqw, 11.5px); }
-.bwStudy[data-narrow="true"] .bwStudyStage { min-height: 820px; padding-bottom: 28px; }
+.bwStudy[data-narrow="true"] .bwStudyStage { min-height: 870px; padding-bottom: 28px; }
 .bwStudy[data-narrow="true"] .bwStudyGallery { align-items: start; gap: 8px; padding: 36px 16px; }
 .bwStudy[data-narrow="true"] .bwStudySideAd { max-width: 104px; border-radius: 12px; }
 .bwStudy[data-narrow="true"] .bwStudySideAd:first-child, .bwStudy[data-narrow="true"] .bwStudySideAd:last-child { justify-self: stretch; }
