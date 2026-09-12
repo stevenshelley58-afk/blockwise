@@ -21,6 +21,8 @@ import {
 import { CONTENT_RUN_JOB_TYPE, handleHermesContentRun } from "./content-engine.mjs";
 import { runAdRadarAccuracyAudit } from "./ad-radar-accuracy-audit.mjs";
 import { resolveAdRadarRuntime } from "./ad-radar-runtime-gate.mjs";
+import { createApifyFirstFillAdapter, normalizeApifyDataset } from "./ad-radar-apify-adapter.mjs";
+import { loadRuntimeProviderToken } from "./runtime-provider-token.mjs";
 import { classifyMetaAdLibraryPayload } from "./meta-ad-library-parser.mjs";
 import {
   assertBudgetWithinConfiguredCap,
@@ -143,6 +145,11 @@ const censusPolicySeedBatchSize = positiveInt("HERMES_CENSUS_POLICY_SEED_BATCH_S
 const censusRecycleBlockedEnabled = env.HERMES_CENSUS_RECYCLE_BLOCKED_ENABLED !== "false";
 const metaCaptureProvider = env.HERMES_META_CAPTURE_PROVIDER || (env.HERMES_META_CAPTURE_ENDPOINT ? "http_json" : "hermes_browser");
 const metaCaptureEndpoint = env.HERMES_META_CAPTURE_ENDPOINT || "";
+const providerVaultUrl = env.HERMES_PROVIDER_VAULT_URL || "";
+const providerVaultCredential = env.HERMES_PROVIDER_VAULT_SECRET_KEY || env.HERMES_PROVIDER_VAULT_SERVICE_ROLE_KEY || "";
+const apifyFirstFillEnabled = env.HERMES_AD_RADAR_FIRST_FILL_PROVIDER === "apify";
+const firstFillOnly = env.HERMES_AD_RADAR_FIRST_FILL_ONLY === "true";
+const apifyFirstFillMaxTotalChargeUsd = Number(env.HERMES_APIFY_FIRST_FILL_MAX_TOTAL_CHARGE_USD || 0.5);
 const metaOfficialAccessToken = env.HERMES_META_AD_LIBRARY_ACCESS_TOKEN || env.META_AD_LIBRARY_ACCESS_TOKEN || env.META_AD_LIBRARY_TOKEN || "";
 const metaOfficialApiEnabled = env.HERMES_META_OFFICIAL_API_ENABLED !== "false" && Boolean(metaOfficialAccessToken.trim());
 const metaOfficialApiVersion = env.HERMES_META_OFFICIAL_API_VERSION || env.META_AD_LIBRARY_API_VERSION || "v20.0";
@@ -1795,7 +1802,7 @@ async function enqueuePostIngestJobs(item, advertiserPageId, buildRunId, parentJ
       dedupe_key: `ad-radar:media:${item.ad_creative_id}:${item.creative_hash}`,
       advertiser_page_id: advertiserPageId,
       priority: 5,
-      payload: { adCreativeId: item.ad_creative_id, observedAdId: item.observed_ad_id, build_run_id: buildRunId, ad_db_child: true },
+      payload: { adCreativeId: item.ad_creative_id, observedAdId: item.observed_ad_id, build_run_id: buildRunId, ad_db_child: true, parent_scan_mode: parentJob?.payload?.scanMode || parentJob?.payload?.scan_mode || null },
       status: "pending",
       max_attempts: 3,
     }, parentJob);
@@ -2659,6 +2666,9 @@ function captureInput(payload) {
     runCreditCap: captureCreditCap(payload),
     realEstateGate: payload.realEstateGate,
     resolverDecisionId: payload.resolverDecisionId || null,
+    scanMode: ["initial_fill", "refresh", "manual"].includes(payloadString(payload.scanMode))
+      ? payloadString(payload.scanMode)
+      : payload.initialFill === true ? "initial_fill" : "refresh",
   };
 }
 
@@ -2724,6 +2734,60 @@ async function runHermesBrowserCapture(input) {
     timeoutMs: metaCaptureTimeoutMs,
     proxyUrl: env.RESIDENTIAL_PROXY_URL || env.HERMES_META_CAPTURE_PROXY_URL || "",
   });
+}
+
+let apifyFirstFillAdapterPromise = null;
+
+async function runApifyFirstFillCapture(input) {
+  const startedAt = now();
+  if (!apifyFirstFillEnabled || input.scanMode !== "initial_fill") return null;
+  if (!providerVaultUrl || !providerVaultCredential || !env.TOKEN_ENCRYPTION_KEY) {
+    return failedCaptureOutcome("apify", input, startedAt, "provider_vault_not_configured", { provider: "apify" }, 0);
+  }
+  try {
+    const token = await loadRuntimeProviderToken({
+      url: providerVaultUrl,
+      credential: providerVaultCredential,
+      provider: "apify",
+      keyMaterial: env.TOKEN_ENCRYPTION_KEY,
+    });
+    if (!token) return failedCaptureOutcome("apify", input, startedAt, "apify_token_missing_from_provider_vault", { provider: "apify" }, 0);
+    if (!apifyFirstFillAdapterPromise) {
+      apifyFirstFillAdapterPromise = Promise.resolve(createApifyFirstFillAdapter({
+        token,
+        rawEvidenceDir,
+        accountHardCapUsd: Number(env.HERMES_APIFY_ACCOUNT_HARD_CAP_USD || 19),
+        priorBilledUsd: Number(env.HERMES_APIFY_PRIOR_TRIAL_BILLED_USD || 0.4861),
+        timeoutMs: positiveInt("HERMES_APIFY_TIMEOUT_MS", 30_000),
+        pollIntervalMs: positiveInt("HERMES_APIFY_POLL_INTERVAL_MS", 1_000),
+        maxPolls: positiveInt("HERMES_APIFY_MAX_POLLS", 600),
+      }));
+    }
+    const adapter = await apifyFirstFillAdapterPromise;
+    const pageUrl = metaAdLibraryPageUrl(input);
+    const outcome = await adapter.run({
+      runKey: input.adFetchRunId,
+      pages: [{ pageId: input.metaPageId, url: pageUrl }],
+      providerInput: { urls: [{ url: pageUrl }] },
+      maxTotalChargeUsd: Number.isFinite(apifyFirstFillMaxTotalChargeUsd) && apifyFirstFillMaxTotalChargeUsd > 0
+        ? apifyFirstFillMaxTotalChargeUsd
+        : 0.5,
+      maxItems: Number(env.HERMES_APIFY_FIRST_FILL_MAX_ITEMS || 666),
+    });
+    const items = normalizeApifyDataset(outcome.items || []).map((item) => normaliseHostedMetaAd(item, input.metaPageId));
+    return {
+      ...outcome,
+      status: outcome.status === "succeeded" || outcome.status === "succeeded_partial" ? "SUCCEEDED" : "FAILED",
+      startedAt,
+      finishedAt: now(),
+      items,
+      itemCount: items.length,
+      errorMessage: outcome.status === "failed" ? "Apify first-fill failed" : null,
+      metadata: { ...(outcome.metadata || {}), advertiserPageId: input.advertiserPageId, resolverDecisionId: input.resolverDecisionId },
+    };
+  } catch (error) {
+    return failedCaptureOutcome("apify", input, startedAt, error.message, { provider: "apify" }, 0);
+  }
 }
 
 function configuredMetaFallbackSourceProvider() {
@@ -3053,6 +3117,10 @@ function scrapingBeeCostUsd(credits) {
 }
 
 async function runMetaPageCapture(input) {
+  if (apifyFirstFillEnabled && input.scanMode === "initial_fill") {
+    const apify = await runApifyFirstFillCapture(input);
+    if (apify) return { outcome: apify, sourceProvider: "apify", captureMode: "apify_first_fill" };
+  }
   const fallbackSourceProvider = configuredMetaFallbackSourceProvider();
   // A page scan makes AT MOST ONE paid ScrapingBee request. A failed primary
   // attempt is never followed by a second paid attempt for the same page.
@@ -3497,18 +3565,24 @@ function normaliseHostedMetaAd(raw, pageId) {
   const adId = String(pick(raw, "adArchiveID", "adArchiveId", "ad_archive_id", "archive_id", "library_id", "id"));
   const imageUrls = collectStrings(
     pick(firstCard, "imageUrl", "image_url", "originalImageUrl", "original_image_url", "resizedImageUrl", "resized_image_url"),
+    cards,
     pick(snapshot, "images", "image_urls", "ad_creative_images"),
     pick(raw, "images", "image_urls", "ad_creative_images", "adCreativeImages"),
+    pick(raw, "cards", "asset_cards", "ad_cards", "carousel_cards", "carouselCards"),
   );
   const videoUrls = collectStrings(
     pick(firstCard, "videoHdUrl", "video_hd_url", "videoSdUrl", "video_sd_url"),
+    cards,
     pick(snapshot, "videos", "video_urls"),
     pick(raw, "videos", "video_urls", "ad_creative_videos", "adCreativeVideos"),
+    pick(raw, "cards", "asset_cards", "ad_cards", "carousel_cards", "carouselCards"),
   );
   const thumbnailUrls = collectStrings(
     pick(firstCard, "videoPreviewImageUrl", "video_preview_image_url", "thumbnailUrl", "thumbnail_url"),
+    cards,
     pick(snapshot, "videoPreviewImageUrl", "video_preview_image_url", "thumbnailUrl", "thumbnail_url"),
     pick(raw, "video_preview_image_url", "thumbnail_url", "videoPreviewImageUrl", "thumbnailUrl"),
+    pick(raw, "cards", "asset_cards", "ad_cards", "carousel_cards", "carouselCards"),
   );
   const pageName = firstString(pick(raw, "pageName", "page_name"), pick(snapshot, "pageName", "page_name"));
   const normalisedPageId = String(pick(raw, "pageID", "pageId", "page_id") || pageId);
@@ -3600,7 +3674,9 @@ function collectStrings(...values) {
       out.add(decodeHtml(value));
     } else if (Array.isArray(value)) {
       for (const item of value) {
-        if (typeof item === "string" && item.trim()) out.add(decodeHtml(item));
+        if (Array.isArray(item)) {
+          for (const nested of collectStrings(item)) out.add(nested);
+        } else if (typeof item === "string" && item.trim()) out.add(decodeHtml(item));
         else if (item && typeof item === "object") {
           const url = firstString(pick(item, "url", "uri", "src", "imageUrl", "originalImageUrl", "videoHdUrl", "videoSdUrl", "thumbnailUrl"));
           const snakeUrl = firstString(pick(item, "image_url", "original_image_url", "resized_image_url", "video_hd_url", "video_sd_url", "thumbnail_url"));
@@ -3660,9 +3736,9 @@ function normalisePlatformForDb(platforms) {
 
 function creativeFromMetaAd(ad) {
   const snapshot = ad.snapshot || {};
-  const imageUrls = collectStrings(snapshot.images, snapshot.cards?.map?.((card) => [card.imageUrl, card.originalImageUrl, card.resizedImageUrl]) || []);
-  const videoUrls = collectStrings(snapshot.videos, snapshot.cards?.map?.((card) => [card.videoHdUrl, card.videoSdUrl]) || []);
-  const thumbnailUrls = collectStrings(snapshot.thumbnails, snapshot.cards?.map?.((card) => [card.videoPreviewImageUrl, card.thumbnailUrl]) || []);
+  const imageUrls = collectStrings(snapshot.images, snapshot.cards);
+  const videoUrls = collectStrings(snapshot.videos, snapshot.cards);
+  const thumbnailUrls = collectStrings(snapshot.thumbnails, snapshot.cards);
   const format = objectArray(snapshot.cards).length > 1 ? "carousel" : videoUrls.length ? "video" : imageUrls.length ? "image" : "unknown";
   return {
     format,
@@ -4273,9 +4349,11 @@ async function handleAdCollector(job) {
   const ingestTables = ["ad_fetch_runs", "observed_ads", "ad_snapshots", "ad_creatives", "media_assets"];
   const input = captureInput(payload);
   const buildRunId = await resolveBuildRunId(payload.build_run_id, payload.buildRunId);
-  const initialSourceProvider = scrapingBeeEnabled && scrapingBeeOrder === "primary"
-    ? META_SCRAPINGBEE_SOURCE_PROVIDER
-    : metaOfficialApiEnabled ? META_OFFICIAL_SOURCE_PROVIDER : configuredMetaFallbackSourceProvider();
+  const initialSourceProvider = apifyFirstFillEnabled && input.scanMode === "initial_fill"
+    ? "apify"
+    : scrapingBeeEnabled && scrapingBeeOrder === "primary"
+      ? META_SCRAPINGBEE_SOURCE_PROVIDER
+      : metaOfficialApiEnabled ? META_OFFICIAL_SOURCE_PROVIDER : configuredMetaFallbackSourceProvider();
   const adFetchRunId = await insertFetchRun(job, buildRunId, input, initialSourceProvider);
   if (!adFetchRunId) throw new Error("ad_fetch_run insert did not return an id");
   await markAdvertiserPageScanStarted(pageRow.id);
@@ -4511,15 +4589,21 @@ async function handleAdCollector(job) {
       resolved_advertiser_page_id: payload.advertiserPageId,
     });
   }
+  if (!coverageComplete || !paginationExhausted) {
+    // A successful provider response is not a complete first fill. Leave the
+    // page retryable and never advance first-fill or lifecycle truth.
+    await markAdvertiserPageCheckFailed(payload.advertiserPageId);
+    return { status: "complete", result: { handler: "blockwise-ad-collector", advertiser_page_id: payload.advertiserPageId, meta_page_id: payload.metaPageId, provider: sourceProvider, capture_mode, ads_seen: outcome.itemCount, ingested_count: ingested.length, active_ads: activeCount, coverage_complete: false, pagination_exhausted: false, first_fill_pending: true, reconciliation, ingest_tables: ingestTables } };
+  }
   await markAdvertiserPageScanSucceeded(payload.advertiserPageId, {
     activeCount,
     lastActiveSeenAt: activeCount > 0 ? now() : null,
   });
-  await rest("research", `advertiser_pages?id=eq.${payload.advertiserPageId}`, {
+  await rest("research", "advertiser_pages?id=eq." + payload.advertiserPageId, {
     method: "PATCH",
     body: json({ status: "resolved_collectable" }),
   });
-  return { status: "complete", result: { handler: "blockwise-ad-collector", advertiser_page_id: payload.advertiserPageId, meta_page_id: payload.metaPageId, provider: sourceProvider, capture_mode, ads_seen: outcome.itemCount, ingested_count: ingested.length, active_ads: activeCount, coverage_complete: coverageComplete, reconciliation, ingest_tables: ingestTables } };
+  return { status: "complete", result: { handler: "blockwise-ad-collector", advertiser_page_id: payload.advertiserPageId, meta_page_id: payload.metaPageId, provider: sourceProvider, capture_mode, ads_seen: outcome.itemCount, ingested_count: ingested.length, active_ads: activeCount, coverage_complete: true, pagination_exhausted: true, reconciliation, ingest_tables: ingestTables } };
 }
 
 async function handleMediaCollector(job) {
@@ -5341,8 +5425,17 @@ async function runAdDbWorkerPass() {
       + "&job_type=in.(blockwise-ad-collector,blockwise-media-collector)&dedupe_key=like.ad-radar:%25"
       + "&order=priority.asc,available_at.asc,created_at.asc&limit=100",
   );
-  const job = (jobs || []).find((candidate) => candidate.job_type === "blockwise-ad-collector"
-    || (candidate.job_type === "blockwise-media-collector" && candidate.payload?.ad_db_child === true));
+  const job = (jobs || []).find((candidate) => {
+    const initialFill = candidate.job_type === "blockwise-ad-collector"
+      && (candidate.payload?.scanMode === "initial_fill" || candidate.payload?.scan_mode === "initial_fill" || candidate.payload?.initialFill === true);
+    const firstFillChild = candidate.job_type === "blockwise-media-collector"
+      && candidate.payload?.ad_db_child === true
+      && candidate.payload?.parent_scan_mode === "initial_fill";
+    if (firstFillOnly && !initialFill && !firstFillChild) return false;
+    return initialFill || firstFillChild
+      || (!firstFillOnly && candidate.job_type === "blockwise-ad-collector")
+      || (!firstFillOnly && candidate.job_type === "blockwise-media-collector" && candidate.payload?.ad_db_child === true);
+  });
   if (!job) return { handled: 0, skipped_unmarked_media: (jobs || []).filter((candidate) => candidate.job_type === "blockwise-media-collector").length };
   await runExactJob(job.id);
   return { handled: 1, job_id: job.id, job_type: job.job_type };

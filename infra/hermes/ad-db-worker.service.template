@@ -1,0 +1,37 @@
+[Unit]
+Description=Canonical Blockwise Ad Radar collection and archive worker
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+TimeoutStopSec=300
+WorkingDirectory=@RELEASE_ROOT@/hermes/tools/research-runtime
+ExecStart=/usr/bin/node @RELEASE_ROOT@/hermes/tools/research-runtime/bin/supabase-supervisor.mjs --ad-db-worker
+Environment=HERMES_META_CAPTURE_CLI_PATH=@RELEASE_ROOT@/hermes/tools/meta-library-capture/bin/capture.mjs
+Environment=HERMES_META_BROWSER_EXECUTABLE=/usr/bin/google-chrome
+Environment=HERMES_WORKER_LOCK_PATH=/srv/hermes/ad-db/worker.lock
+Environment=HERMES_AD_RADAR_FIRST_FILL_PROVIDER=apify
+Environment=HERMES_AD_RADAR_FIRST_FILL_ONLY=true
+Environment=HOME=/srv/hermes/ad-db/browser-home
+Environment=XDG_CACHE_HOME=/srv/hermes/ad-db/browser-home/cache
+Environment=XDG_CONFIG_HOME=/srv/hermes/ad-db/browser-home/config
+Environment=TMPDIR=/srv/hermes/ad-db/browser-home/tmp
+ReadWritePaths=/srv/hermes/ad-db /srv/hermes/ad-db/assets /srv/hermes/ad-db/raw-evidence /srv/hermes/ad-db/browser-home
+User=hermes
+Group=hermes
+Environment=NODE_ENV=production
+EnvironmentFile=/srv/hermes/secrets/ad-db-worker.env
+Restart=on-failure
+RestartSec=10
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target
