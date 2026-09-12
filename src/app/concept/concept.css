@@ -8,9 +8,13 @@
   --hc-line: #e2e5ea;
   --hc-line-dark: rgba(255, 255, 255, 0.14);
   --hc-muted: #545a66;
-  --hc-faint: #8b919d;
+  /* 5.13:1 on white. The old #8b919d was 3.17:1 and failed the plan notes and
+     the footer small print, which are the only two things that read it. */
+  --hc-faint: #676e7b;
   --hc-blue: #2a78d6;
-  --hc-blue-bright: #4e9cf5;
+  /* 3.69:1 on the card canvas. The old #4e9cf5 was 2.65:1, under the 3:1 floor
+     for the 48px demo headline, which is the largest thing that reads it. */
+  --hc-blue-bright: #2f80e8;
   --hc-blue-soft: #e8f1fc;
   --hc-amber: #d99a1a;
   --hc-amber-soft: #fbf1d9;
@@ -248,7 +252,9 @@
 
 .hc-trial { padding-block: 112px; background: var(--hc-dark); color: #fff; }
 .hc-trial-grid { display: grid; grid-template-columns: .88fr 1.12fr; align-items: center; gap: clamp(52px, 8vw, 110px); }
-.hc-trial-grid > div > p { color: rgba(255,255,255,.62); }
+/* globals.css zeroes every paragraph's top margin, so the gap under the trial
+   headline is padding here. */
+.hc-trial-grid > div > p { padding-top: 14px; color: rgba(255,255,255,.62); }
 .hc-trial-points { display: flex; flex-wrap: wrap; gap: 12px 20px; margin-top: 30px; }
 .hc-trial-points span { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,.72); font-size: 12px; }
 .hc-trial-points svg { color: var(--hc-blue-bright); }

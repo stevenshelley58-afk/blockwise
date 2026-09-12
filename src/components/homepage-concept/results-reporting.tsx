@@ -129,10 +129,13 @@ export function ResultsReporting() {
 
         <div className="rr-stage hc-demo-card" aria-label="Interactive example report">
           <header className="rr-stage-head">
-            <div className="rr-stage-brand">
-              <img src={withBasePath("/brand/blockwise-logo.svg")} alt="" width={110} height={26} />
-              <span>Blockwise</span>
-            </div>
+            <img
+              className="rr-stage-brand"
+              src={withBasePath("/brand/blockwise-logo.svg")}
+              alt="Blockwise"
+              width={110}
+              height={26}
+            />
           </header>
 
           <div className="rr-tabs" ref={tabsRef} role="group" aria-label="Example report view">

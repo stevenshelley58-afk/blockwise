@@ -118,3 +118,52 @@ test("the ad-creation headline is set as a block, not shrunk to one line", async
   // Two lines, one per span, is the intended shape.
   assert.match(css, /\.hc-process-copy h2 > span \{\s*display: block/);
 });
+
+test("the results card holds one height in every view", async () => {
+  const css = await readFile(new URL("../src/components/homepage-concept/results-reporting.css", import.meta.url), "utf8");
+  // The card is sized to the chart views; the taller email view scrolls inside
+  // it, because a view that resized the card moved the trial section and the
+  // footer under the reader.
+  assert.match(css, /\.rr-stage \{ --rr-stage-h: \d+px;[^}]*height: var\(--rr-stage-h\)/);
+  assert.match(css, /\.rr-panel \{ flex: 1 1 auto; min-height: 0; overflow: hidden; \}/);
+  assert.match(css, /\.rr-panel > \.rr-lead-email \{ max-height: 100%; overflow-y: auto/);
+  for (const width of [474, 467]) {
+    assert.ok(css.includes(`--rr-stage-h: ${width}px`), `missing the ${width}px breakpoint value`);
+  }
+});
+
+test("headline and small print clear the contrast floor", async () => {
+  const css = await readFile(new URL("../src/app/concept/concept.css", import.meta.url), "utf8");
+  const token = (name) => css.match(new RegExp(`--${name}: (#[0-9a-f]{6})`, "i"))[1];
+  const luminance = (hex) => {
+    const channels = [1, 3, 5]
+      .map((at) => parseInt(hex.slice(at, at + 2), 16) / 255)
+      .map((value) => (value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+  };
+  const ratio = (a, b) => {
+    const [high, low] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (high + 0.05) / (low + 0.05);
+  };
+  // The demo headline is 48px, so it needs the 3:1 large-text floor.
+  assert.ok(ratio(token("hc-blue-bright"), token("hc-canvas")) >= 3, "the demo headline is under 3:1 on the card canvas");
+  // Plan notes at 12px and the footer small print at 11px need 4.5:1 on white.
+  assert.ok(ratio(token("hc-faint"), "#ffffff") >= 4.5, "small print is under 4.5:1 on white");
+});
+
+test("the hero ad deck offers a stop", async () => {
+  const showcase = await readFile(new URL("../src/components/homepage-concept/hero-ad-showcase.tsx", import.meta.url), "utf8");
+  const css = await readFile(new URL("../src/components/homepage-concept/hero-ad-showcase.css", import.meta.url), "utf8");
+  // WCAG 2.2.2: moving content that runs for more than five seconds needs a pause.
+  assert.match(showcase, /aria-pressed=\{playing\}/);
+  assert.match(showcase, /hc-meta-rotate-toggle/);
+  assert.match(css, /\.hc-meta-rotate-toggle \{/);
+  // The reader's own pause survives the other play conditions.
+  assert.match(showcase, /const shouldPlay = playing && inView && pageVisible && !reduceMotion;/);
+});
+
+test("the trial headline and its supporting line do not collide", async () => {
+  const css = await readFile(new URL("../src/app/concept/concept.css", import.meta.url), "utf8");
+  // globals.css zeroes paragraph top margins, so the gap has to be padding.
+  assert.match(css, /\.hc-trial-grid > div > p \{ padding-top: 14px/);
+});

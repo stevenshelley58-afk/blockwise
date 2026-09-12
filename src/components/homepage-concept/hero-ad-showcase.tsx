@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, Globe2, MessageCircle, MoreHorizontal, Send, Share2, ThumbsUp } from "lucide-react";
+import { ChevronRight, Globe2, MessageCircle, MoreHorizontal, Pause, Play, Send, Share2, ThumbsUp } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
@@ -102,7 +102,9 @@ export function HeroAdShowcase() {
   const [inView, setInView] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
   const [compactDeck, setCompactDeck] = useState(false);
-  const shouldPlay = inView && pageVisible && !reduceMotion;
+  /* A reader who asks for less motion gets a still deck unless they ask for it. */
+  const [playing, setPlaying] = useState(() => !reduceMotion);
+  const shouldPlay = playing && inView && pageVisible && !reduceMotion;
 
   useEffect(() => {
     const syncVisibility = () => setPageVisible(document.visibilityState === "visible");
@@ -134,6 +136,20 @@ export function HeroAdShowcase() {
   return (
     <div className="hc-meta-showcase" ref={sectionRef}>
       <span className="hc-meta-example-label">Example ads</span>
+      {/* WCAG 2.2.2: the deck rotates indefinitely, so the reader needs a stop.
+          Hidden under reduced motion, where the deck never rotates on its own. */}
+      {reduceMotion ? null : (
+        <button
+          type="button"
+          className="hc-meta-rotate-toggle"
+          aria-pressed={playing}
+          aria-label={playing ? "Pause the example ads" : "Play the example ads"}
+          onClick={() => setPlaying((current) => !current)}
+        >
+          {playing ? <Pause size={11} aria-hidden="true" /> : <Play size={11} aria-hidden="true" />}
+          <span>{playing ? "Pause" : "Play"}</span>
+        </button>
+      )}
       <div className="hc-meta-stage" aria-label="Animated examples of Facebook Feed and Instagram Story ads">
         <p className="hc-sr-only">Showing {SHOWCASE_ADS[order[0]].format === "feed" ? "Facebook Feed" : "Instagram Story"} example from {SHOWCASE_ADS[order[0]].page}</p>
         <div className="hc-meta-deck">
