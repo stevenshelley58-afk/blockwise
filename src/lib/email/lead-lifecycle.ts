@@ -7,6 +7,19 @@
  *
  * Drip automation is intentionally outside the transactional outbox; lifecycle
  * events are durably recorded for a separate CRM/nurture projection.
+ *
+ * THE LEGACY LEAD EMAIL PATHS ARE DEAD. Blockwise does not send email to a lead
+ * address: there is no customer mailbox access, "Email lead" only opens the
+ * agent's own mail app, and the lead-management rebuild notifies verified
+ * workspace members only (see src/lib/notifications/lead-notices.ts).
+ *
+ * `scheduleFollowUpEmail`, `sendLeadDigest` and `sendBatchDigests` have no
+ * production caller. `sendLeadDigest` also fails the PII rule for agent notices
+ * - it mails full lead name, email and phone - and duplicates the new-lead
+ * notice producer. They are kept only so the outbox's scheduled not-before
+ * behaviour stays covered, and each refuses to enqueue unless an operator
+ * explicitly sets LEAD_LIFECYCLE_EMAIL_ENABLED=true. Do not wire them into the
+ * lead lifecycle.
  */
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -63,6 +76,7 @@ export type DigestInput = {
  * multiple agents, or single send for one recipient.
  */
 export async function sendLeadDigest(input: DigestInput): Promise<{ id: string } | null> {
+  assertLeadEmailPathEnabled();
   if (input.leads.length === 0) return null;
 
   const leadRows = input.leads
@@ -136,11 +150,30 @@ export type FollowUpAuthorization = {
 };
 
 /**
+ * True only when an operator has explicitly re-enabled the legacy lead email
+ * paths (agent-to-lead follow-up, PII-heavy lead digest). Off by default; see
+ * the module note above.
+ */
+export function isLeadLifecycleEmailEnabled(): boolean {
+  return process.env.LEAD_LIFECYCLE_EMAIL_ENABLED === "true";
+}
+
+function assertLeadEmailPathEnabled(): void {
+  if (!isLeadLifecycleEmailEnabled()) {
+    throw new Error("lead lifecycle email is disabled: Blockwise never sends email to a lead address");
+  }
+}
+
+/**
  * Schedule a follow-up email for a specific time (e.g. 9am next business day).
  * The outbox holds the email until the scheduled time; the drain honours its
  * not-before timestamp.
+ *
+ * DEAD PATH: throws unless LEAD_FOLLOWUP_EMAIL_ENABLED=true. There is no
+ * production caller and none should be added — Blockwise never emails a lead.
  */
 export async function scheduleFollowUpEmail(input: ScheduledFollowUpInput): Promise<{ id: string }> {
+  assertLeadEmailPathEnabled();
   assertFollowUpAuthorization(input.authorization);
   const idempotencyKey = buildFollowupKey(input);
   const result = await enqueueEmail(input.supabase ?? createSupabaseServiceClient(), {

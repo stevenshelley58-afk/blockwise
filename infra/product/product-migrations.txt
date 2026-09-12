@@ -105,3 +105,4 @@
 20260906010000_no_card_trial_delivery_start.sql
 20260907010000_postcode_outreach_drafts.sql
 202609080001_ad_radar_customer_interest_source.sql
+202609080002_crm_workspace_sites_and_delivery.sql

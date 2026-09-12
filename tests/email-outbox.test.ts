@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { drainEmailOutbox, enqueueEmail, isEmailSuppressed, recordEmailSuppression } from "../src/lib/email/outbox.ts";
-import { scheduleFollowUpEmail } from "../src/lib/email/lead-lifecycle.ts";
+import { isLeadLifecycleEmailEnabled, scheduleFollowUpEmail, sendLeadDigest } from "../src/lib/email/lead-lifecycle.ts";
 import type { EmailProvider } from "../src/lib/email/provider.ts";
 import type { EmailMessage } from "../src/lib/email/provider.ts";
 
@@ -178,13 +178,51 @@ describe("email outbox", () => {
     assert.equal(supabase.outbox[0].next_attempt_at, "2099-01-01T00:00:00.000Z");
   });
 
-  it("schedules follow-ups with an explicit not-before timestamp", async () => {
+  it("refuses lead lifecycle email while the path is dead", async () => {
     const supabase = makeSupabase();
-    await scheduleFollowUpEmail({
-      to: "customer@example.com", from: "hello@blockwise.sale", subject: "Follow up", text: "Tomorrow",
-      scheduledAt: "2099-01-01T09:00:00.000Z", leadId: "lead-1", authorization: { legalBasis: "express_consent", approvedRecipientAt: "2026-09-07T00:00:00.000Z", approvedContentId: "content-1", approvedAt: "2026-09-07T00:00:00.000Z" }, supabase,
-    });
-    assert.equal(supabase.outbox[0].next_attempt_at, "2099-01-01T09:00:00.000Z");
+    const previous = process.env.LEAD_LIFECYCLE_EMAIL_ENABLED;
+    delete process.env.LEAD_LIFECYCLE_EMAIL_ENABLED;
+    try {
+      assert.equal(isLeadLifecycleEmailEnabled(), false);
+      await assert.rejects(
+        () => scheduleFollowUpEmail({
+          to: "customer@example.com", from: "hello@blockwise.sale", subject: "Follow up", text: "Tomorrow",
+          scheduledAt: "2099-01-01T09:00:00.000Z", leadId: "lead-1", authorization: { legalBasis: "express_consent", approvedRecipientAt: "2026-09-07T00:00:00.000Z", approvedContentId: "content-1", approvedAt: "2026-09-07T00:00:00.000Z" }, supabase,
+        }),
+        /never sends email to a lead address/,
+      );
+      assert.equal(supabase.outbox.length, 0);
+      // The PII-heavy legacy digest is dead too: an agent notice carries a
+      // short line and an authenticated link, not lead contact records.
+      await assert.rejects(
+        () => sendLeadDigest({
+          agentEmail: "agent@agency.test", agentName: "Ada", from: "hello@blockwise.sale",
+          date: "2026-09-08", leads: [{ email: "buyer@example.test", fullName: "Buyer Person", suburb: "Suburbia" }],
+          supabase,
+        }),
+        /never sends email to a lead address/,
+      );
+      assert.equal(supabase.outbox.length, 0);
+    } finally {
+      if (previous === undefined) delete process.env.LEAD_LIFECYCLE_EMAIL_ENABLED;
+      else process.env.LEAD_LIFECYCLE_EMAIL_ENABLED = previous;
+    }
+  });
+
+  it("schedules follow-ups with an explicit not-before timestamp when explicitly enabled", async () => {
+    const supabase = makeSupabase();
+    const previous = process.env.LEAD_LIFECYCLE_EMAIL_ENABLED;
+    process.env.LEAD_LIFECYCLE_EMAIL_ENABLED = "true";
+    try {
+      await scheduleFollowUpEmail({
+        to: "customer@example.com", from: "hello@blockwise.sale", subject: "Follow up", text: "Tomorrow",
+        scheduledAt: "2099-01-01T09:00:00.000Z", leadId: "lead-1", authorization: { legalBasis: "express_consent", approvedRecipientAt: "2026-09-07T00:00:00.000Z", approvedContentId: "content-1", approvedAt: "2026-09-07T00:00:00.000Z" }, supabase,
+      });
+      assert.equal(supabase.outbox[0].next_attempt_at, "2099-01-01T09:00:00.000Z");
+    } finally {
+      if (previous === undefined) delete process.env.LEAD_LIFECYCLE_EMAIL_ENABLED;
+      else process.env.LEAD_LIFECYCLE_EMAIL_ENABLED = previous;
+    }
   });
   it("collapses duplicate enqueues to the first message", async () => {
     const supabase = makeSupabase();
