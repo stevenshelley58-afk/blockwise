@@ -96,7 +96,7 @@ test("account reservations include prior trial spend and reject cap overflow", a
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 
-test("known spend keeps the full reservation until fresh account billing catches up", async () => {
+test("known or zero terminal cost retains the full reservation without explicit no-charge proof", async () => {
   const dir = await tempDir(); let billed = 0;
   try {
     const ledger = new ApifyBudgetLedger({ rawEvidenceDir: dir, priorBilledUsd: 0, accountUsageGetter: async () => ({ billedUsd: billed, verifiedAt: new Date().toISOString() }) });
@@ -106,7 +106,7 @@ test("known spend keeps the full reservation until fresh account billing catches
     billed = 0.1;
     assert.equal((await ledger.snapshot()).reservedUsd, 0.5);
     billed = 0.2;
-    assert.equal((await ledger.snapshot()).reservedUsd, 0);
+    assert.equal((await ledger.snapshot()).reservedUsd, 0.5);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 
@@ -128,17 +128,17 @@ test("overlapping reservations require aggregate billing confirmation before eit
     await ledger.reserve({ reservationId: "b", runKey: "b", reservedUsd: 0.5 });
     await ledger.settle("a", 0.2); await ledger.settle("b", 0.3);
     billed = 0.2; assert.equal((await ledger.snapshot()).reservedUsd, 1);
-    billed = 0.5; assert.equal((await ledger.snapshot()).reservedUsd, 0);
+    billed = 0.5; assert.equal((await ledger.snapshot()).reservedUsd, 1);
     await ledger.reserve({ reservationId: "c", runKey: "c", reservedUsd: 0.5 });
     await ledger.settle("c", 0.2);
-    billed = 0.5; assert.equal((await ledger.snapshot()).reservedUsd, 0.5);
-    billed = 0.7; assert.equal((await ledger.snapshot()).reservedUsd, 0);
+    billed = 0.5; assert.equal((await ledger.snapshot()).reservedUsd, 1.5);
+    billed = 0.7; assert.equal((await ledger.snapshot()).reservedUsd, 1.5);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 
 test("reusing a run key with changed input is rejected and a reached item cap is incomplete", async () => {
   const store = new Map(); const ledger = fakeLedger(); let starts = 0;
-  const client = { async startActor() { starts += 1; return { id: "run-limit", defaultDatasetId: "d" }; }, async getRun() { return { id: "run-limit", status: "SUCCEEDED", defaultDatasetId: "d", usageTotalUsd: 0.001 }; }, async getDatasetItems() { return [{ ad_archive_id: "1", page_id: "1", is_active: true, snapshot: { page_id: "1" }, pageInfo: { page_id: "1" } }]; } };
+  const client = { async startActor() { starts += 1; return { id: "run-limit", defaultDatasetId: "d" }; }, async getRun() { return { id: "run-limit", status: "SUCCEEDED", defaultDatasetId: "d", usageTotalUsd: 0.001, platformUsageBillingModel: "DEVELOPER", chargedEventCounts: { "apify-default-dataset-item": 1, "apify-actor-start": 1 } }; }, async getDatasetItems() { return [{ ad_archive_id: "1", page_id: "1", is_active: true, snapshot: { page_id: "1" }, pageInfo: { page_id: "1" } }]; } };
   const adapter = createApifyFirstFillAdapter({ client, store: { get: async (key) => store.get(key) ?? null, put: async (key, value) => store.set(key, value) }, ledger, pollIntervalMs: 0 });
   const first = await adapter.run({ runKey: "same", maxTotalChargeUsd: 0.5, maxItems: 1, providerInput: { q: "a" }, urls: [{ url: "https://www.facebook.com/1" }] });
   assert.equal(first.status, "SUCCEEDED_PARTIAL"); assert.equal(first.metadata.capHit, true);
@@ -173,7 +173,7 @@ test("file run store serializes concurrent writes without dropping a run", async
 
 test("run cap is treated as incomplete even when the provider reports success-like data", async () => {
   const store = new Map(); const ledger = fakeLedger();
-  const client = { async startActor() { return { id: "run-cap", defaultDatasetId: "d" }; }, async getRun() { return { id: "run-cap", status: "ABORTED", statusMessage: "Maximum total charge reached", defaultDatasetId: "d", usageTotalUsd: 0.5 }; }, async getDatasetItems() { return [{ ad_archive_id: "1", page_id: "1", is_active: true, snapshot: { page_id: "1" }, pageInfo: { page_id: "1" } }]; } };
+  const client = { async startActor() { return { id: "run-cap", defaultDatasetId: "d" }; }, async getRun() { return { id: "run-cap", status: "ABORTED", statusMessage: "Maximum total charge reached", defaultDatasetId: "d", usageTotalUsd: 0.5, platformUsageBillingModel: "DEVELOPER", chargedEventCounts: { "apify-default-dataset-item": 1, "apify-actor-start": 1 } }; }, async getDatasetItems() { return [{ ad_archive_id: "1", page_id: "1", is_active: true, snapshot: { page_id: "1" }, pageInfo: { page_id: "1" } }]; } };
   const adapter = createApifyFirstFillAdapter({ client, store: { get: async (key) => store.get(key) ?? null, put: async (key, value) => store.set(key, value) }, ledger, pollIntervalMs: 0 });
   const result = await adapter.run({ runKey: "cap-1", maxTotalChargeUsd: 0.5, providerInput: {}, urls: [{ url: "https://www.facebook.com/1" }] });
   assert.equal(result.status, "SUCCEEDED_PARTIAL");

@@ -8,6 +8,8 @@ export const APIFY_ITEM_PRICE_USD = 0.00075;
 export const APIFY_START_PRICE_USD = 0.00005;
 export const APIFY_ACCOUNT_HARD_CAP_USD = 19;
 export const APIFY_PRIOR_TRIAL_BILLED_USD = 0.48610;
+export const APIFY_ACTOR_TIMEOUT_SECONDS = 600;
+export const APIFY_DATASET_PAGE_SIZE = 1000;
 const TERMINAL_STATUSES = new Set(["SUCCEEDED", "FAILED", "ABORTED", "TIMED-OUT", "TIMED_OUT", "KILLED"]);
 
 export class ApifyAdapterError extends Error {
@@ -21,9 +23,17 @@ export class ApifyAdapterError extends Error {
 }
 
 function finiteNonNegative(value, label) {
-  const number = Number(value);
-  if (!Number.isFinite(number) || number < 0) throw new ApifyAdapterError("invalid_budget", `${label} must be a finite non-negative number`);
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) throw new ApifyAdapterError("invalid_budget", `${label} must be a finite non-negative number`);
+  return value;
+}
+function finiteNonNegativeInteger(value, label) {
+  const number = finiteNonNegative(value, label);
+  if (!Number.isSafeInteger(number)) throw new ApifyAdapterError("invalid_budget", `${label} must be a finite non-negative integer`);
   return number;
+}
+function reservationIsLiability(entry) { return entry.status !== "settled" || entry.knownNoCharge !== true; }
+function reservedLiabilityUsd(reservations) {
+  return Object.values(reservations).filter(reservationIsLiability).reduce((sum, entry) => sum + finiteNonNegative(entry.reservedUsd, "persisted reservedUsd"), 0);
 }
 function money(value) { return Math.round(value * 100000000) / 100000000; }
 async function atomicJsonWrite(path, value) {
@@ -78,16 +88,9 @@ export class ApifyBudgetLedger {
     return this.withLock(async () => {
       const state = await this.readState();
       const billed = Math.max(this.priorBilledUsd, await this.usage());
-      const existingBaselines = Object.values(state.reservations).map((entry) => entry.baselineBilledUsd).filter((value) => Number.isFinite(value));
-      const campaignBaseline = state.campaignBaselineUsd ?? (existingBaselines.length ? Math.min(...existingBaselines) : this.priorBilledUsd);
-      const committedSpend = state.campaignCommittedActualUsd ?? Object.values(state.reservations).reduce((sum, entry) => sum + (Number.isFinite(entry.settledUsd) ? entry.settledUsd : 0), 0);
-      state.campaignCommittedActualUsd = committedSpend;
-      const campaignFloor = campaignBaseline + committedSpend;
-      for (const entry of Object.values(state.reservations)) {
-        if (entry.status === "settled_pending_billing" && billed + 1e-9 >= campaignFloor) entry.status = "settled";
-      }
-      await atomicJsonWrite(this.path, state);
-      const reserved = Object.values(state.reservations).filter((entry) => entry.status === "reserved" || entry.status === "unknown" || entry.status === "settled_pending_billing").reduce((sum, entry) => sum + entry.reservedUsd, 0);
+      // Account-wide billing can include unrelated usage. It is never evidence
+      // that this campaign's maximum liability has settled.
+      const reserved = reservedLiabilityUsd(state.reservations);
       return { accountHardCapUsd: this.accountHardCapUsd, priorBilledUsd: this.priorBilledUsd, billedUsd: billed, reservedUsd: money(reserved), remainingUsd: money(Math.max(0, this.accountHardCapUsd - billed - reserved)) };
     });
   }
@@ -103,19 +106,9 @@ export class ApifyBudgetLedger {
         return { ...existing, idempotent: true };
       }
       const billed = Math.max(this.priorBilledUsd, await this.usage());
-      const existingBaselines = Object.values(state.reservations).map((entry) => entry.baselineBilledUsd).filter((value) => Number.isFinite(value));
-      const campaignBaseline = state.campaignBaselineUsd ?? (existingBaselines.length ? Math.min(...existingBaselines) : billed);
-      state.campaignBaselineUsd ??= campaignBaseline;
-      const committedSpend = state.campaignCommittedActualUsd ?? Object.values(state.reservations).reduce((sum, entry) => sum + (Number.isFinite(entry.settledUsd) ? entry.settledUsd : 0), 0);
-      state.campaignCommittedActualUsd = committedSpend;
-      const campaignFloor = campaignBaseline + committedSpend;
-      for (const entry of Object.values(state.reservations)) {
-        if (entry.status === "settled_pending_billing" && billed + 1e-9 >= campaignFloor) entry.status = "settled";
-      }
-      const reserved = Object.values(state.reservations).filter((entry) => entry.status === "reserved" || entry.status === "unknown" || entry.status === "settled_pending_billing").reduce((sum, entry) => sum + entry.reservedUsd, 0);
+      const reserved = reservedLiabilityUsd(state.reservations);
       if (billed + reserved + amount > this.accountHardCapUsd + 1e-9) throw new ApifyAdapterError("account_budget_exceeded", `Apify account cap would be exceeded (${money(billed + reserved + amount)} > ${this.accountHardCapUsd})`);
       const entry = { reservationId, runKey, reservedUsd: amount, baselineBilledUsd: billed, status: "reserved", createdAt: new Date().toISOString(), settledUsd: null };
-      state.campaignBaselineUsd ??= billed;
       state.reservations[reservationId] = entry;
       await atomicJsonWrite(this.path, state);
       return { ...entry, idempotent: false, billedUsd: billed, reservedTotalUsd: money(reserved + amount) };
@@ -138,9 +131,9 @@ export class ApifyBudgetLedger {
         return { ...entry, idempotent: true };
       }
       entry.settledUsd = amount; entry.settledAt = new Date().toISOString();
-      state.campaignCommittedActualUsd = (state.campaignCommittedActualUsd ?? 0) + amount;
-      if (amount === 0 && knownNoCharge) entry.status = "settled";
-      else { entry.status = "settled_pending_billing"; entry.billingFloorUsd = money((entry.baselineBilledUsd ?? this.priorBilledUsd) + amount); }
+      // Terminal run billing is eventually consistent. Retain the original maximum reservation.
+      entry.knownNoCharge = amount === 0 && knownNoCharge === true;
+      entry.status = entry.knownNoCharge ? "settled" : "settled_pending_billing";
       await atomicJsonWrite(this.path, state); return { ...entry, idempotent: false };
     });
   }
@@ -167,14 +160,14 @@ export class ApifyClient {
     } catch (error) { if (error instanceof ApifyAdapterError) throw error; throw new ApifyAdapterError("provider_transport_unknown", `Apify request outcome is unknown: ${error.message}`, { retryable: true }); }
     finally { clearTimeout(timeout); }
   }
-  startActor({ input, maxTotalChargeUsd, maxItems }) { return this.request(`acts/${encodeURIComponent(APIFY_ACTOR_ID).replace(/%7E/gu, "~")}/runs`, { method: "POST", query: { build: APIFY_ACTOR_BUILD, maxTotalChargeUsd, maxItems }, body: input }); }
+  startActor({ input, maxTotalChargeUsd, maxItems, timeoutSeconds = APIFY_ACTOR_TIMEOUT_SECONDS }) { return this.request(`acts/${encodeURIComponent(APIFY_ACTOR_ID).replace(/%7E/gu, "~")}/runs`, { method: "POST", query: { build: APIFY_ACTOR_BUILD, maxTotalChargeUsd, maxItems, timeout: Math.min(APIFY_ACTOR_TIMEOUT_SECONDS, finiteNonNegativeInteger(timeoutSeconds, "actor timeout seconds")) }, body: input }); }
   async getRun(runId) { const response = await this.request(`actor-runs/${encodeURIComponent(runId)}`); return response?.data ?? response; }
-  async getDatasetItems(datasetId) { const response = await this.request(`datasets/${encodeURIComponent(datasetId)}/items`, { query: { format: "json", clean: true } }); return response?.data ?? response; }
+  async getDatasetItems(datasetId, { offset = 0, limit = APIFY_DATASET_PAGE_SIZE } = {}) { const response = await this.request(`datasets/${encodeURIComponent(datasetId)}/items`, { query: { format: "json", clean: true, desc: false, offset: finiteNonNegativeInteger(offset, "dataset offset"), limit: finiteNonNegativeInteger(limit, "dataset limit") } }); return response?.data ?? response; }
   async getAccountUsage() {
     const response = await this.request("users/me/usage/monthly");
     const data = response?.data ?? response;
-    const billedUsd = Number(data?.totalUsageCreditsUsdAfterVolumeDiscount);
-    const beforeDiscount = Number(data?.totalUsageCreditsUsdBeforeVolumeDiscount);
+    const billedUsd = data?.totalUsageCreditsUsdAfterVolumeDiscount;
+    const beforeDiscount = data?.totalUsageCreditsUsdBeforeVolumeDiscount;
     const startAt = data?.usageCycle?.startAt;
     const endAt = data?.usageCycle?.endAt;
     if (!Number.isFinite(billedUsd) || billedUsd < 0 || !Number.isFinite(beforeDiscount) || beforeDiscount < 0 || !data?.monthlyServiceUsage || typeof data.monthlyServiceUsage !== "object" || Array.isArray(data.monthlyServiceUsage) || !Array.isArray(data.dailyServiceUsages) || !Number.isFinite(Date.parse(startAt)) || !Number.isFinite(Date.parse(endAt))) throw new ApifyAdapterError("account_usage_unavailable", "Apify monthly usage response failed schema validation");
@@ -230,26 +223,45 @@ export function derivePageOutcomes(items, input) {
   });
   const mismatched = rows.filter((item) => expected.length && !rowPageIds(item).some((id) => expected.includes(id))); if (mismatched.length) outcomes.push({ pageId: null, outcome: "mismatched_identity", trustedZero: false, itemCount: mismatched.length, reason: "row_page_id_not_requested" }); return outcomes;
 }
-function eventCost(run) { const events = run?.chargedEventCounts ?? run?.accountedChargedEventCounts; if (!events || typeof events !== "object") return null; const items = Number(events["apify-default-dataset-item"]); const starts = Number(events["apify-actor-start"]); if (!Number.isFinite(items) || !Number.isFinite(starts)) return null; return money(items * APIFY_ITEM_PRICE_USD + starts * APIFY_START_PRICE_USD); }
-function runCapHit(run, itemCount, maxItems, maxTotalChargeUsd) { const text = [run?.statusMessage, run?.statusReason, run?.error, run?.errorMessage, run?.status].filter(Boolean).join(" ").toLowerCase(); const reportedCost = eventCost(run) ?? Number(run?.usageTotalUsd); return Boolean(run?.capHit || run?.budgetExceeded || /max.?total.?charge|maximum.?charge|budget.?cap|max.?items|item.?limit|charge.?limit/u.test(text) || (maxItems && itemCount >= maxItems) || (maxTotalChargeUsd && Number.isFinite(reportedCost) && reportedCost >= maxTotalChargeUsd - 1e-9)); }
-function usageCost(run) { const events = eventCost(run); if (events !== null) return events; const total = Number(run?.usageTotalUsd); return Number.isFinite(total) && total > 0 ? money(total) : null; }
-function outcomeFromRun({ run, items, input, maxItems, maxTotalChargeUsd }) {
-  const pageOutcomes = derivePageOutcomes(items, input); const capHit = runCapHit(run, items.length, maxItems, maxTotalChargeUsd); const providerFailed = run?.status && ["FAILED", "ABORTED", "TIMED-OUT", "TIMED_OUT", "KILLED"].includes(String(run.status).toUpperCase()); const missing = pageOutcomes.some((page) => page.outcome === "failure" || page.outcome === "mismatched_identity"); const paginationExhausted = String(run?.status).toUpperCase() === "SUCCEEDED" && !capHit && !missing; const coverageComplete = paginationExhausted && pageOutcomes.length > 0 && pageOutcomes.every((page) => page.outcome === "success"); const status = ((!capHit && providerFailed) || missing) ? "FAILED" : coverageComplete ? "SUCCEEDED" : "SUCCEEDED_PARTIAL"; const costUsd = usageCost(run);
-  return { runId: run?.id ?? null, provider: `apify:${APIFY_ACTOR_ID}`, status, items, itemCount: items.length, costUsd, rawDatasetId: run?.defaultDatasetId ?? null, paginationExhausted, coverageComplete, metadata: { actorId: APIFY_ACTOR_ID, actorBuild: APIFY_ACTOR_BUILD, platformUsageBillingModel: run?.platformUsageBillingModel ?? "DEVELOPER", pageOutcomes, capHit, maxItems, maxItemsWasImplicit: input.maxItems === undefined, uniqueAdCount: new Set(items.map((item) => item?.ad_archive_id).filter(Boolean)).size, chargedEventCounts: run?.chargedEventCounts ?? null, statusMessage: run?.statusMessage ?? null } };
+function eventCost(run) { const events = run?.chargedEventCounts ?? run?.accountedChargedEventCounts; if (!events || typeof events !== "object" || Array.isArray(events)) return null; const items = events["apify-default-dataset-item"]; const starts = events["apify-actor-start"]; if (typeof items !== "number" || typeof starts !== "number" || !Number.isSafeInteger(items) || !Number.isSafeInteger(starts) || items < 0 || starts < 0) return null; return money(items * APIFY_ITEM_PRICE_USD + starts * APIFY_START_PRICE_USD); }
+function billingMetadata(run) {
+  if (run?.platformUsageBillingModel !== "DEVELOPER") return { verified: false, reason: "platform_usage_billing_model_unverified" };
+  const costUsd = eventCost(run);
+  if (costUsd === null) return { verified: false, reason: "charged_event_counts_unverified" };
+  return { verified: true, costUsd };
 }
-async function waitForRun(client, runId, { pollIntervalMs = 1_000, maxPolls = 600 } = {}) { for (let poll = 0; poll < maxPolls; poll += 1) { const response = await client.getRun(runId); const run = response?.data ?? response; if (TERMINAL_STATUSES.has(String(run?.status).toUpperCase())) return run; if (poll + 1 < maxPolls) await new Promise((resolve) => setTimeout(resolve, pollIntervalMs)); } throw new ApifyAdapterError("provider_timeout", "Apify run did not reach a terminal state", { retryable: true }); }
+function runCapHit(run, itemCount, maxItems, maxTotalChargeUsd) { const text = [run?.statusMessage, run?.statusReason, run?.error, run?.errorMessage, run?.status].filter(Boolean).join(" ").toLowerCase(); const total = run?.usageTotalUsd; const reportedCost = eventCost(run) ?? (typeof total === "number" && Number.isFinite(total) && total >= 0 ? total : null); return Boolean(run?.capHit || run?.budgetExceeded || /max.*total.*charge|maximum.*charge|budget.*cap|max.*items|item.*limit|charge.*limit/u.test(text) || (maxItems && itemCount >= maxItems) || (maxTotalChargeUsd && reportedCost !== null && reportedCost >= maxTotalChargeUsd - 1e-9)); }
+function usageCost(run) { const events = eventCost(run); if (events !== null) return events; const total = run?.usageTotalUsd; return typeof total === "number" && Number.isFinite(total) && total >= 0 ? money(total) : null; }
+function outcomeFromRun({ run, items, input, maxItems, maxTotalChargeUsd }) {
+  const pageOutcomes = derivePageOutcomes(items, input); const billing = billingMetadata(run); const capHit = runCapHit(run, items.length, maxItems, maxTotalChargeUsd); const providerFailed = run?.status && ["FAILED", "ABORTED", "TIMED-OUT", "TIMED_OUT", "KILLED"].includes(String(run.status).toUpperCase()); const missing = pageOutcomes.some((page) => page.outcome === "failure" || page.outcome === "mismatched_identity"); const paginationExhausted = String(run?.status).toUpperCase() === "SUCCEEDED" && !capHit && !missing; const coverageComplete = paginationExhausted && pageOutcomes.length > 0 && pageOutcomes.every((page) => page.outcome === "success"); const status = (!billing.verified || (!capHit && providerFailed) || missing) ? "FAILED" : coverageComplete ? "SUCCEEDED" : "SUCCEEDED_PARTIAL"; const costUsd = billing.verified ? billing.costUsd : null;
+  return { runId: run?.id ?? null, provider: `apify:${APIFY_ACTOR_ID}`, status, items, itemCount: items.length, costUsd, rawDatasetId: run?.defaultDatasetId ?? null, paginationExhausted, coverageComplete, metadata: { actorId: APIFY_ACTOR_ID, actorBuild: APIFY_ACTOR_BUILD, itemPriceUsd: APIFY_ITEM_PRICE_USD, startPriceUsd: APIFY_START_PRICE_USD, platformUsageBillingModel: run?.platformUsageBillingModel ?? null, billingVerified: billing.verified, billingFailureReason: billing.reason ?? null, pageOutcomes, capHit, maxItems, maxItemsWasImplicit: input.maxItems === undefined, uniqueAdCount: new Set(items.map((item) => item?.ad_archive_id).filter(Boolean)).size, chargedEventCounts: run?.chargedEventCounts ?? null, statusMessage: run?.statusMessage ?? null } };
+}
+async function getAllDatasetItems(client, datasetId, maxItems) {
+  const items = []; let offset = 0;
+  while (items.length < maxItems) {
+    const limit = Math.min(APIFY_DATASET_PAGE_SIZE, maxItems - items.length);
+    const page = normalizeApifyDataset(await client.getDatasetItems(datasetId, { offset, limit }));
+    items.push(...page);
+    if (page.length < limit) return { items, exhausted: true };
+    offset += page.length;
+  }
+  return { items, exhausted: false };
+}
+async function waitForRun(client, runId, { pollIntervalMs = 1_000, maxPolls = APIFY_ACTOR_TIMEOUT_SECONDS } = {}) { const polls = Math.min(APIFY_ACTOR_TIMEOUT_SECONDS, finiteNonNegativeInteger(maxPolls, "max polls")); for (let poll = 0; poll < polls; poll += 1) { const response = await client.getRun(runId); const run = response?.data ?? response; if (TERMINAL_STATUSES.has(String(run?.status).toUpperCase())) return run; if (poll + 1 < polls) await new Promise((resolve) => setTimeout(resolve, finiteNonNegative(pollIntervalMs, "poll interval milliseconds"))); } throw new ApifyAdapterError("provider_timeout", "Apify run did not reach a terminal state within 600 seconds", { retryable: true }); }
 export async function runApifyFirstFill(input, dependencies) {
   const deps = dependencies ?? {}; const runKey = input.runKey ?? input.idempotencyKey ?? input.runTag; if (!runKey) throw new ApifyAdapterError("invalid_input", "runKey, idempotencyKey, or runTag is required"); const client = deps.client; if (!client) throw new Error("client is required"); const store = deps.store; if (!store) throw new Error("store is required"); const ledger = deps.ledger; if (!ledger) throw new Error("ledger is required");
-  const maxTotalChargeUsd = finiteNonNegative(input.maxTotalChargeUsd ?? 1, "maxTotalChargeUsd"); const requestedMaxItems = input.maxItems === undefined ? Number.POSITIVE_INFINITY : Math.max(1, Math.floor(Number(input.maxItems))); const affordableMaxItems = Math.floor((maxTotalChargeUsd - APIFY_START_PRICE_USD + 1e-12) / APIFY_ITEM_PRICE_USD); if (affordableMaxItems < 1) throw new ApifyAdapterError("invalid_budget", "per-run cap cannot fund one dataset item and actor start"); const maxItems = Math.min(requestedMaxItems, affordableMaxItems);
+  const maxTotalChargeUsd = finiteNonNegative(input.maxTotalChargeUsd ?? 1, "maxTotalChargeUsd"); const requestedMaxItems = input.maxItems === undefined ? Number.POSITIVE_INFINITY : finiteNonNegativeInteger(input.maxItems, "maxItems"); const affordableMaxItems = Math.floor((maxTotalChargeUsd - APIFY_START_PRICE_USD + 1e-12) / APIFY_ITEM_PRICE_USD); if (requestedMaxItems < 1 || affordableMaxItems < 1) throw new ApifyAdapterError("invalid_budget", "per-run cap cannot fund one dataset item and actor start"); const maxItems = Math.min(requestedMaxItems, affordableMaxItems);
   const fingerprint = inputFingerprint(input, maxTotalChargeUsd, maxItems); let state = await store.get(runKey); if (state?.requestFingerprint && state.requestFingerprint !== fingerprint) throw new ApifyAdapterError("run_input_conflict", `Apify run key ${runKey} was reused with different input`); if (state?.outcome) return state.outcome; if (state?.startUnknown && !state.runId) throw new ApifyAdapterError("start_reconciliation_required", "Apify start outcome is unknown; reconcile the persisted run before retrying"); const reservationId = state?.reservationId ?? `apify:${runKey}`;
   if (!state?.runId) {
     const reservation = await ledger.reserve({ reservationId, runKey, reservedUsd: maxTotalChargeUsd }); if (reservation.idempotent && reservation.status !== "settled") throw new ApifyAdapterError("run_reconciliation_required", "Apify reservation exists but run state has no run ID; reconcile before starting another run"); if (reservation.status === "settled") throw new ApifyAdapterError("run_reconciliation_required", "Apify reservation is settled but run state is missing"); const providerInput = input.providerInput ?? input.input ?? Object.fromEntries(Object.entries(input).filter(([key]) => !["runKey", "idempotencyKey", "maxTotalChargeUsd", "maxItems", "providerInput", "input", "pages"].includes(key))); state = { runKey, requestFingerprint: fingerprint, reservationId, startUnknown: false, runId: null, rawDatasetId: null, providerInput, pages: input.pages ?? input.urls ?? [], maxTotalChargeUsd, maxItems, startedAt: new Date().toISOString() };
     try { await store.put(runKey, state); } catch (error) { await ledger.settle(reservationId, 0); throw error; }
-    let started; try { started = await client.startActor({ input: providerInput, maxTotalChargeUsd, maxItems }); } catch (error) { const knownRejected = error?.code === "provider_http_error" && Number(error.httpStatus) >= 400 && Number(error.httpStatus) < 500; if (knownRejected) { await ledger.settle(reservationId, 0, { knownNoCharge: true }); await store.put(runKey, { ...state, status: "failed", error: error.message }); } else { await ledger.markUnknown(reservationId); await store.put(runKey, { ...state, startUnknown: true, status: "start_unknown", error: error.message }); } throw error; }
+    let started; try { started = await client.startActor({ input: providerInput, maxTotalChargeUsd, maxItems, timeoutSeconds: APIFY_ACTOR_TIMEOUT_SECONDS }); } catch (error) { const knownRejected = error?.code === "provider_http_error" && typeof error?.httpStatus === "number" && Number.isInteger(error.httpStatus) && error.httpStatus >= 400 && error.httpStatus < 500; if (knownRejected) { await ledger.settle(reservationId, 0, { knownNoCharge: true }); await store.put(runKey, { ...state, status: "failed", error: error.message }); } else { await ledger.markUnknown(reservationId); await store.put(runKey, { ...state, startUnknown: true, status: "start_unknown", error: error.message }); } throw error; }
     const runId = started?.data?.id ?? started?.id; if (!runId) { await ledger.markUnknown(reservationId); await store.put(runKey, { ...state, startUnknown: true, status: "start_unknown" }); throw new ApifyAdapterError("start_reconciliation_required", "Apify accepted an unidentifiable start response; reconcile before retrying"); }
     state = { ...state, runId: String(runId), rawDatasetId: started?.data?.defaultDatasetId ?? started?.defaultDatasetId ?? null, status: "running", startUnknown: false }; await store.put(runKey, state);
   }
-  const run = await waitForRun(client, state.runId, { pollIntervalMs: deps.pollIntervalMs ?? 1_000, maxPolls: deps.maxPolls ?? 600 }); const datasetId = run?.defaultDatasetId ?? state.rawDatasetId; if (!datasetId) { await ledger.markUnknown(reservationId); const outcome = { runId: state.runId, provider: `apify:${APIFY_ACTOR_ID}`, status: "FAILED", items: [], itemCount: 0, costUsd: usageCost(run), rawDatasetId: null, paginationExhausted: false, coverageComplete: false, metadata: { actorId: APIFY_ACTOR_ID, actorBuild: APIFY_ACTOR_BUILD, platformUsageBillingModel: run?.platformUsageBillingModel ?? "DEVELOPER", pageOutcomes: [], capHit: false, uniqueAdCount: 0, failureReason: "missing_dataset" } }; await store.put(runKey, { ...state, status: "FAILED", outcome, startUnknown: false, finishedAt: new Date().toISOString() }); return outcome; } let items = []; const dataset = await client.getDatasetItems(datasetId); items = normalizeApifyDataset(dataset?.data ?? dataset); const outcome = outcomeFromRun({ run: { ...run, id: state.runId, defaultDatasetId: datasetId }, items, input: { ...input, pages: state.pages }, maxItems: state.maxItems, maxTotalChargeUsd: state.maxTotalChargeUsd }); if (outcome.costUsd === null) await ledger.markUnknown(reservationId); else await ledger.settle(reservationId, outcome.costUsd); await store.put(runKey, { ...state, status: outcome.status, outcome, startUnknown: false, finishedAt: new Date().toISOString() }); return outcome;
+  const run = await waitForRun(client, state.runId, { pollIntervalMs: deps.pollIntervalMs ?? 1_000, maxPolls: deps.maxPolls ?? APIFY_ACTOR_TIMEOUT_SECONDS }); const datasetId = run?.defaultDatasetId ?? state.rawDatasetId;
+  if (!datasetId) { await ledger.markUnknown(reservationId); const outcome = { runId: state.runId, provider: `apify:${APIFY_ACTOR_ID}`, status: "FAILED", items: [], itemCount: 0, costUsd: usageCost(run), rawDatasetId: null, paginationExhausted: false, coverageComplete: false, metadata: { actorId: APIFY_ACTOR_ID, actorBuild: APIFY_ACTOR_BUILD, platformUsageBillingModel: run?.platformUsageBillingModel ?? null, pageOutcomes: [], capHit: false, uniqueAdCount: 0, failureReason: "missing_dataset" } }; await store.put(runKey, { ...state, status: "FAILED", outcome, startUnknown: false, finishedAt: new Date().toISOString() }); return outcome; }
+  const dataset = await getAllDatasetItems(client, datasetId, state.maxItems); const outcome = outcomeFromRun({ run: { ...run, id: state.runId, defaultDatasetId: datasetId }, items: dataset.items, input: { ...input, pages: state.pages }, maxItems: state.maxItems, maxTotalChargeUsd: state.maxTotalChargeUsd }); if (outcome.costUsd === null) await ledger.markUnknown(reservationId); else await ledger.settle(reservationId, outcome.costUsd); await store.put(runKey, { ...state, status: outcome.status, outcome, startUnknown: false, finishedAt: new Date().toISOString() }); return outcome;
 }
 export function createApifyFirstFillAdapter(options = {}) {
   const client = options.client ?? new ApifyClient({ token: options.token, fetchImpl: options.fetchImpl, baseUrl: options.baseUrl, timeoutMs: options.timeoutMs }); const store = options.store ?? new FileApifyRunStore(options.rawEvidenceDir); const ledger = options.ledger ?? new ApifyBudgetLedger({ rawEvidenceDir: options.rawEvidenceDir, accountHardCapUsd: options.accountHardCapUsd, priorBilledUsd: options.priorBilledUsd, accountUsageGetter: options.accountUsageGetter ?? (typeof client.getAccountUsage === "function" ? (() => client.getAccountUsage()) : (async () => { throw new ApifyAdapterError("account_usage_unavailable", "fresh Apify account usage getter is required"); })) });
