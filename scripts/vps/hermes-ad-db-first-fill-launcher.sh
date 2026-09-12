@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-fail() { echo "ad-db first-fill preflight: $" >&2; exit 1; }
+fail() { echo  ad-db first-fill preflight: $* >&2; exit 1; }
 required() { [[ -n "${!1:-}" ]] || fail "missing required environment key: $1"; }
 validate_vault_url() { local url=$1 host; [[ "$url" =~ ^https?://[^/:]+ ]] || fail "HERMES_PROVIDER_VAULT_URL must be an http(s) URL"; host=${url#*://}; host=${host%%/*}; host=${host%%:*}; [[ "$host" != *.supabase.co && "$host" != *.supabase.com ]] || fail "HERMES_PROVIDER_VAULT_URL must target the self-hosted vault"; }
 validate_billing() { local cap=${HERMES_APIFY_ACCOUNT_HARD_CAP_USD:-} run=${HERMES_APIFY_FIRST_FILL_MAX_TOTAL_CHARGE_USD:-}; [[ "$cap" =~ ^[0-9]+([.][0-9]+)?$ && "$run" =~ ^[0-9]+([.][0-9]+)?$ ]] || fail "Apify billing caps must be configured"; awk -v cap="$cap" -v run="$run" 'BEGIN { exit !(cap > 0 && cap <= 19 && run > 0 && run <= cap) }' || fail "Apify billing cap must be positive, at most USD 19, and cover the run cap"; }
