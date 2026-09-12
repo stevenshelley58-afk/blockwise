@@ -7800,14 +7800,16 @@ a.operator-file-row {
   left: 0;
   right: 0;
   z-index: 9999;
+  /* Solid, not the site's translucent nav glass: this surface carries the
+     decision, so legibility beats the blur effect. */
   background: var(--surface);
   border-top: 1px solid var(--line);
-  box-shadow: var(--shadow-float);
+  box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.08);
   padding: 16px 24px;
   padding-bottom: max(16px, env(safe-area-inset-bottom));
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
   flex-wrap: wrap;
 }
 
@@ -7820,9 +7822,16 @@ a.operator-file-row {
   line-height: 1.5;
 }
 
+/* Inline so the privacy link stays on the same line as the sentence; it only
+   becomes a block when the actions stack underneath it. */
+.consent-banner__copy {
+  display: inline;
+}
+
 .consent-banner__link {
   color: var(--accent);
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .consent-banner__actions {
@@ -7831,20 +7840,24 @@ a.operator-file-row {
   flex-shrink: 0;
 }
 
+/* Same shape and weight as every other control in the product. */
 .consent-banner__btn {
-  padding: 8px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 44px;
-  border-radius: var(--r-ctl);
+  padding: 0 20px;
+  border-radius: var(--r-chip);
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 650;
   cursor: pointer;
   border: 1px solid transparent;
-  line-height: 1.4;
+  line-height: 1.2;
 }
 
 .consent-banner__btn--primary {
   background: var(--accent);
-  color: #fff;
+  color: var(--surface);
   border-color: var(--accent);
 }
 
@@ -7854,13 +7867,13 @@ a.operator-file-row {
 }
 
 .consent-banner__btn--secondary {
-  background: transparent;
-  color: var(--muted);
+  background: var(--surface-subtle);
+  color: var(--ink);
   border-color: var(--line-heavy);
 }
 
 .consent-banner__btn--secondary:hover {
-  background: var(--surface-subtle);
+  border-color: var(--accent);
 }
 
 @media (max-width: 980px) {
@@ -7872,11 +7885,14 @@ a.operator-file-row {
     border: 1px solid var(--line);
     border-radius: var(--r-card);
     padding: 12px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    box-shadow: var(--shadow-float);
+    gap: 0;
   }
 
   .consent-banner__text {
     min-width: min(100%, 220px);
-    font-size: 0.8125rem;
+    padding-bottom: 12px;
   }
 
   .consent-banner__actions {
@@ -7885,6 +7901,18 @@ a.operator-file-row {
 
   .consent-banner__btn {
     flex: 1;
+    min-width: 0;
+    padding: 0 12px;
+  }
+
+  /* The mobile banner floats above the nav, so extend the page canvas by the
+     nav strip, the banner and a little breathing room. Reserving the space on
+     the body is what actually lengthens the scroll area; padding on a page
+     container did not (the last footer row stayed behind the card). Cleared to
+     0px the moment a choice is made, so nothing shifts once the banner is
+     gone. */
+  html.bw-consent-visible body {
+    padding-bottom: calc(var(--consent-banner-height, 0px) + 76px + env(safe-area-inset-bottom) + 16px);
   }
 }
 

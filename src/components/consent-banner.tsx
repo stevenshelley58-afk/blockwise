@@ -43,6 +43,7 @@ export function ConsentBanner() {
   const [visible, setVisible] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const bannerRef = useRef<HTMLDivElement>(null);
+  const acceptRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const open = () => setVisible(true);
@@ -68,20 +69,43 @@ export function ConsentBanner() {
 
   useEffect(() => {
     const node = bannerRef.current;
+    const root = document.documentElement;
+    const clear = () => {
+      root.style.setProperty("--consent-banner-height", "0px");
+      // Releases the page-bottom space reserved while the banner is on screen.
+      root.classList.remove("bw-consent-visible");
+    };
     if (!node || !visible || modalOpen) {
-      document.documentElement.style.setProperty("--consent-banner-height", "0px");
+      clear();
       return;
     }
     const publishHeight = () => {
-      document.documentElement.style.setProperty("--consent-banner-height", `${node.getBoundingClientRect().height}px`);
+      root.style.setProperty("--consent-banner-height", `${node.getBoundingClientRect().height}px`);
+      // Lets a page reserve space so the banner never covers the end of the page.
+      root.classList.add("bw-consent-visible");
     };
     publishHeight();
     const observer = new ResizeObserver(publishHeight);
     observer.observe(node);
     return () => {
       observer.disconnect();
-      document.documentElement.style.setProperty("--consent-banner-height", "0px");
+      clear();
     };
+  }, [modalOpen, visible]);
+
+  /**
+   * The banner renders last in the document, so tabbing to it would mean
+   * walking the whole page. Move focus to the primary choice once, on the
+   * first appearance, and never steal it back when the banner is reopened
+   * from the privacy policy. Focusing also makes a screen reader read it.
+   */
+  const focusMoved = useRef(false);
+  useEffect(() => {
+    if (!visible || modalOpen || focusMoved.current) return;
+    const button = acceptRef.current;
+    if (!button) return;
+    focusMoved.current = true;
+    button.focus({ preventScroll: true });
   }, [modalOpen, visible]);
 
   function handleAccept() {
@@ -101,13 +125,15 @@ export function ConsentBanner() {
   return (
     <div ref={bannerRef} className="consent-banner" role="region" aria-label="Cookie consent">
       <p className="consent-banner__text">
-        We use cookies to understand how visitors use Blockwise and to improve our ads.{" "}
+        <span className="consent-banner__copy">
+          We use cookies to understand how visitors use Blockwise and to improve our ads.
+        </span>{" "}
         <Link href="/privacy" className="consent-banner__link">
           Privacy policy
         </Link>
       </p>
       <div className="consent-banner__actions">
-        <button type="button" className="consent-banner__btn consent-banner__btn--primary" onClick={handleAccept}>
+        <button ref={acceptRef} type="button" className="consent-banner__btn consent-banner__btn--primary" onClick={handleAccept}>
           Accept all
         </button>
         <button type="button" className="consent-banner__btn consent-banner__btn--secondary" onClick={handleEssential}>
