@@ -5483,6 +5483,15 @@ async function runExactJob(jobId) {
 }
 
 async function runAdDbWorkerPass() {
+  // Recover purchased results before reserving money for any new page.
+  if (firstFillOnly) {
+    const deferred = await rest("research", "work_queue?select=id&queue_name=eq.research&job_type=eq.blockwise-ad-collector&status=eq.pending&last_error=eq.apify_billing_pending&available_at=lte." + encode(now()) + "&order=available_at.asc&limit=1");
+    if (deferred?.[0]) {
+      await runExactJob(deferred[0].id);
+      return { handled: 1, job_id: deferred[0].id, billing_reconciliation: true };
+    }
+  }
+
   if (adRadarEnabled && (firstFillOnly || adPageRefreshEnabled)) {
     const buildRunId = await ensureBuildRun();
     const scheduled = await enqueueDueAdPageRefreshJobs(buildRunId);

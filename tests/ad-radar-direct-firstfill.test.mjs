@@ -21,3 +21,8 @@ test('scheduler loads the ownership evidence used by its WA gate', () => {
  assert.ok(supervisor.includes('agent:agents(state,status),agency:agencies(state,status)'));
  assert.ok(supervisor.includes('log("first-fill scheduling", scheduled)'));
 });
+
+test('purchased results reconcile before scheduling fresh paid captures', () => {
+ const worker = supervisor.slice(supervisor.indexOf('async function runAdDbWorkerPass()'));
+ assert.ok(worker.indexOf('last_error=eq.apify_billing_pending') < worker.indexOf('await enqueueDueAdPageRefreshJobs'));
+});
