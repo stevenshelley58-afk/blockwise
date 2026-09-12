@@ -17,6 +17,7 @@
 import { createHash } from "node:crypto";
 import { enqueueEmail } from "../email/outbox.ts";
 import { escapeHtml } from "../email/provider.ts";
+import { resolveConfiguredOperatorRecipient } from "../email/recipient-policy.ts";
 import { createSupabaseServiceClient } from "../supabase/service.ts";
 
 export type AlertMessage = {
@@ -26,27 +27,21 @@ export type AlertMessage = {
   idempotencyKey?: string;
 };
 
-// Last-resort owner inbox so low-credit / fallback alerts still land even when no
-// alert recipient env var is configured. Override with ALERT_EMAIL_TO (or the
-// legacy DEMO_NOTIFY_TO / BLOCKWISE_OWNER_ALERT_EMAIL).
-const DEFAULT_OWNER_ALERT_EMAIL = "stevenshelley58@gmail.com";
-
-/** Resolves the owner alert recipient: explicit env first, then the owner default. */
+/** Resolves the configured owner alert recipient without external fallbacks. */
 export function resolveAlertEmailRecipient(
   env: Record<string, string | undefined> = process.env,
-): string {
-  return (
-    env.ALERT_EMAIL_TO ||
-    env.DEMO_NOTIFY_TO ||
-    env.BLOCKWISE_OWNER_ALERT_EMAIL ||
-    DEFAULT_OWNER_ALERT_EMAIL
-  );
+): string | null {
+  return resolveConfiguredOperatorRecipient(env);
 }
 
 
 export async function sendAlertEmail(message: AlertMessage): Promise<boolean> {
   const from = process.env.ALERT_EMAIL_FROM || process.env.DEMO_NOTIFY_FROM || "alerts@blockwise.sale";
   const to = resolveAlertEmailRecipient();
+  if (!to) {
+    console.error("Alert email enqueue skipped: no valid @blockwise.sale operator recipient configured");
+    return false;
+  }
   try {
     const result = await enqueueEmail(createSupabaseServiceClient(), {
       messageType: "operator_alert", templateId: "alert", templateVersion: 1,
