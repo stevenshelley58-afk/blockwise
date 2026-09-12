@@ -127,9 +127,30 @@ test("the results card holds one height in every view", async () => {
   assert.match(css, /\.rr-stage \{ --rr-stage-h: \d+px;[^}]*height: var\(--rr-stage-h\)/);
   assert.match(css, /\.rr-panel \{ flex: 1 1 auto; min-height: 0; overflow: hidden; \}/);
   assert.match(css, /\.rr-panel > \.rr-lead-email \{ max-height: 100%; overflow-y: auto/);
-  for (const width of [474, 467]) {
-    assert.ok(css.includes(`--rr-stage-h: ${width}px`), `missing the ${width}px breakpoint value`);
+  for (const height of [512, 505]) {
+    assert.ok(css.includes(`--rr-stage-h: ${height}px`), `missing the ${height}px breakpoint value`);
   }
+});
+
+test("both demo cards take one header format", async () => {
+  const results = await readFile(new URL("../src/components/homepage-concept/results-reporting.tsx", import.meta.url), "utf8");
+  const resultsCss = await readFile(new URL("../src/components/homepage-concept/results-reporting.css", import.meta.url), "utf8");
+  const workflow = await readFile(new URL("../src/components/homepage-concept/workflow-showcase.tsx", import.meta.url), "utf8");
+  const workflowCss = await readFile(new URL("../src/components/homepage-concept/workflow-showcase.css", import.meta.url), "utf8");
+  // One header bar: product on the left, the selector at the top right.
+  assert.match(results, /className="rr-stage-topbar"/);
+  assert.match(results, /<span className="rr-stage-brand">/);
+  assert.match(results, /className="rr-stage-slot"/);
+  assert.doesNotMatch(results, /rr-stage-head/);
+  // The selection control is the same pill and slider as the ad-creation card's.
+  const pill = (css, name) => css.match(new RegExp(`\\.${name} button \\{([^}]*)\\}`))[1];
+  for (const property of ["border-radius: 999px", "min-height: 32px", "font-weight: 700"]) {
+    assert.ok(pill(resultsCss, "rr-views").includes(property), `the reporting selector lost ${property}`);
+    assert.ok(pill(workflowCss, "hc-process-steps").includes(property), `the ad-creation selector lost ${property}`);
+  }
+  // One short line under the selector, on both cards.
+  assert.match(results, /className="rr-view-brief"/);
+  assert.match(workflow, /className="hc-process-brief"/);
 });
 
 test("headline and small print clear the contrast floor", async () => {

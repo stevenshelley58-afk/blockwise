@@ -2,7 +2,6 @@
 
 import { ArrowRight } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from "react";
-import { withBasePath } from "@/lib/homepage-concept/content";
 import { TRIAL_CTA_LABEL, TRIAL_SIGNUP_URL } from "@/lib/homepage-concept/pricing";
 import {
   REPORTS,
@@ -17,6 +16,12 @@ import "./results-reporting.css";
 type ReportingView = ReportRange | "email";
 const REPORT_VIEWS: readonly ReportingView[] = ["week", "month", "email"];
 const VIEW_LABELS: Record<ReportingView, string> = { week: "7 days", month: "30 days", email: "Email" };
+/* One short line under the selector, matching the ad-creation card's header. */
+const REPORT_BRIEFS: Record<ReportingView, string> = {
+  week: "Your last 7 days",
+  month: "Your last 30 days",
+  email: "The update we send you",
+};
 const CHART_MAX: Record<ReportRange, number> = { week: 4, month: 12 };
 
 /* Keep in step with --rr-draw in results-reporting.css. */
@@ -128,30 +133,27 @@ export function ResultsReporting() {
         </header>
 
         <div className="rr-stage hc-demo-card" aria-label="Interactive example report">
-          <header className="rr-stage-head">
-            <img
-              className="rr-stage-brand"
-              src={withBasePath("/brand/blockwise-logo.svg")}
-              alt="Blockwise"
-              width={110}
-              height={26}
-            />
-          </header>
+          <header className="rr-stage-topbar">
+            <span className="rr-stage-brand"><i aria-hidden="true" /> Blockwise Reporting</span>
 
-          <div className="rr-tabs" ref={tabsRef} role="group" aria-label="Example report view">
-            {indicator ? (
-              <span
-                className="rr-tab-indicator"
-                style={{ transform: `translateX(${indicator.left}px)`, width: `${indicator.width}px` }}
-                aria-hidden="true"
-              />
-            ) : null}
-            {REPORT_VIEWS.map((id) => (
-              <button type="button" key={id} data-view={id} aria-pressed={view === id} onClick={() => selectView(id)}>
-                {VIEW_LABELS[id]}
-              </button>
-            ))}
-          </div>
+            <div className="rr-stage-slot">
+              <div className="rr-views" ref={tabsRef} role="group" aria-label="Example report view">
+                {indicator ? (
+                  <span
+                    className="rr-view-indicator"
+                    style={{ transform: `translateX(${indicator.left}px)`, width: `${indicator.width}px` }}
+                    aria-hidden="true"
+                  />
+                ) : null}
+                {REPORT_VIEWS.map((id) => (
+                  <button type="button" key={id} data-view={id} aria-pressed={view === id} onClick={() => selectView(id)}>
+                    {VIEW_LABELS[id]}
+                  </button>
+                ))}
+              </div>
+              <span className="rr-view-brief">{REPORT_BRIEFS[view]}</span>
+            </div>
+          </header>
 
           <div className="rr-panel" key={view}>
             {view !== "email" ? (

@@ -18,7 +18,7 @@
    every time the tour reached it. The height is fixed rather than a minimum so
    the email view has a definite box to scroll in. Re-measure the chart views
    before changing this number. */
-.rr-stage { --rr-stage-h: 496px; position: relative; display: flex; flex-direction: column; height: var(--rr-stage-h); }
+.rr-stage { --rr-stage-h: 534px; --rr-accent: var(--hc-blue); --rr-soft: var(--hc-blue-soft); position: relative; display: flex; flex-direction: column; height: var(--rr-stage-h); }
 /* The taller email view scrolls inside the card, so the card's foot carries a
    soft edge: the reader can see the message continues. Raised above the panel
    because the panel scrolls its own content. */
@@ -26,16 +26,19 @@
 .rr-panel { flex: 1 1 auto; min-height: 0; overflow: hidden; }
 /* Taller than the card by design: the reader scrolls the rest of the message. */
 .rr-panel > .rr-lead-email { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
-.rr-stage-head { flex: 0 0 auto; }
-.rr-tabs { flex: 0 0 auto; }
-.rr-stage-head { display: flex; justify-content: center; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--hc-line); background: #fff; }
-/* The logo already is the Blockwise wordmark, so the header shows it once. */
-.rr-stage-brand { display: block; width: auto; height: 24px; }
-.rr-tabs { position: relative; display: flex; gap: 5px; padding: 11px 18px; border-bottom: 1px solid var(--hc-line); background: var(--hc-soft); }
-.rr-tabs button { position: relative; z-index: 1; min-width: 72px; min-height: 38px; border: 0; border-radius: 999px; padding: 0 13px; background: transparent; color: var(--hc-muted); font-size: 12px; font-weight: 700; cursor: pointer; transition: color .28s ease; white-space: nowrap; }
-.rr-tabs button[aria-pressed="true"] { color: var(--hc-ink); }
-.rr-tab-indicator { position: absolute; z-index: 0; top: 11px; bottom: 11px; left: 0; border: 1px solid #d3d7df; border-radius: 999px; background: #fff; box-shadow: 0 1px 2px #1012170a; transition: transform .48s cubic-bezier(.4, 0, .2, 1), width .48s cubic-bezier(.4, 0, .2, 1); pointer-events: none; }
-.rr-tabs button:focus-visible { outline: 2px solid var(--hc-ink); outline-offset: 2px; }
+/* Header bar, the same format as the ad-creation card's: product on the left,
+   the selector at the top right and one short line under it. Only the frame and
+   this bar are shared; each card keeps its own size and its own control. */
+.rr-stage-topbar { flex: 0 0 auto; display: flex; min-height: 48px; align-items: center; justify-content: space-between; gap: 20px; padding: 9px 14px 9px 18px; border-bottom: 1px solid var(--hc-line); background: #fff; }
+.rr-stage-brand { display: inline-flex; align-items: center; gap: 8px; font-family: var(--hc-display); font-size: 13px; font-weight: 700; white-space: nowrap; }
+.rr-stage-brand i { width: 7px; height: 7px; border-radius: 50%; background: var(--hc-success); }
+.rr-stage-slot { display: grid; justify-items: end; gap: 5px; }
+.rr-views { position: relative; display: flex; gap: 4px; width: fit-content; border: 1px solid var(--hc-line); border-radius: 999px; padding: 4px; background: var(--hc-soft); }
+.rr-views button { position: relative; z-index: 1; min-width: 84px; min-height: 32px; border: 0; border-radius: 999px; padding: 0 13px; background: transparent; color: var(--hc-muted); font-family: var(--hc-display); font-size: 12.5px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: color .28s ease; }
+.rr-views button[aria-pressed="true"] { color: var(--rr-accent); }
+.rr-views button:focus-visible { outline: 2px solid var(--rr-accent); outline-offset: 2px; }
+.rr-view-indicator { position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 0; border: 1px solid color-mix(in srgb, var(--rr-accent) 30%, transparent); border-radius: 999px; background: var(--rr-soft); transition: transform .48s cubic-bezier(.4, 0, .2, 1), width .48s cubic-bezier(.4, 0, .2, 1); pointer-events: none; }
+.rr-view-brief { display: block; min-height: 15px; color: var(--hc-muted); font-size: 12px; line-height: 1.25; }
 .rr-panel { animation: rr-panel-in 440ms cubic-bezier(.2, .7, .3, 1) both; }
 @keyframes rr-panel-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 .rr-dashboard { padding: 18px; }
@@ -96,11 +99,18 @@
   .rr-intro h2 { font-size: clamp(43px, 13vw, 56px); }
   .rr-intro > p { margin-top: 16px; font-size: 16px; }
   .rr-actions .hc-button { width: 100%; }
-  .rr-stage { margin-top: 32px; --rr-stage-h: 474px; }
-  .rr-stage-head { padding: 12px 14px; }
-  .rr-tabs { padding: 9px 12px; }
-  .rr-tabs button { flex: 1 1 0; min-width: 0; min-height: 44px; padding-inline: 8px; font-size: 14px; }
-  .rr-tab-indicator { top: 9px; bottom: 9px; }
+  .rr-stage { margin-top: 32px; --rr-stage-h: 512px; }
+  .rr-stage-topbar { min-height: 46px; gap: 8px; padding-inline: 14px 12px; }
+  /* The header bar stays one row: brand left, selector right. The brand keeps
+     its name here because the row has room, and the brief sits under the
+     selector at its own size rather than centring across the card. */
+  .rr-stage-topbar { min-height: 46px; gap: 8px; padding: 7px 12px; }
+  .rr-stage-brand { flex: 0 0 auto; gap: 6px; font-size: 12px; }
+  .rr-stage-brand i { width: 6px; height: 6px; }
+  .rr-stage-slot { gap: 3px; }
+  .rr-views { gap: 3px; }
+  .rr-views button { min-width: 0; min-height: 32px; padding-inline: 7px; font-size: 11px; }
+  .rr-view-brief { font-size: 11px; }
   .rr-dashboard { padding: 12px; }
   .rr-metrics > div { padding: 13px 10px; }
   .rr-metrics dt { min-height: 28px; line-height: 1.3; }
@@ -118,7 +128,11 @@
 
 @media (max-width: 360px) {
   /* The 3-up metric row is tight enough at 320px to need the shorter plot. */
-  .rr-stage { --rr-stage-h: 467px; }
+  .rr-stage { --rr-stage-h: 505px; }
+  /* At 320px the product name is the first thing to go; the dot stays. */
+  .rr-stage-brand { gap: 0; font-size: 0; }
+  .rr-stage-brand i { width: 8px; height: 8px; }
+  .rr-views button { padding-inline: 6px; font-size: 10.5px; }
   .rr-metrics dt { font-size: 11px; }
   .rr-metrics dd { font-size: 19px; }
   .rr-lead-email-card { padding: 16px 14px 18px; }
@@ -131,5 +145,5 @@
   .rr-results .rr-chart-reveal, .rr-results .rr-chart-point { animation: none !important; }
   .rr-chart-reveal { transform: none; }
   .rr-chart-point { opacity: 1; }
-  .rr-tab-indicator { transition: none; }
+  .rr-view-indicator { transition: none; }
 }
