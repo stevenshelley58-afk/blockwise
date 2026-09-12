@@ -185,7 +185,13 @@ test("narrow Ad DB worker paginates canonical jobs and filters them to its mode"
   assert.match(supervisor, /job_type=in\.\(blockwise-ad-collector,blockwise-media-collector\)/);
   assert.match(supervisor, /shouldRunAdDbJob\(candidate, firstFillOnly\)/);
   assert.match(supervisor, /const pageSize = 100;/);
-  assert.match(supervisor, /offset < pageSize \* maxQueuePages/);
+  const worker = supervisor.slice(supervisor.indexOf("async function runAdDbWorkerPass()"), supervisor.indexOf("const historicalReplayMode"));
+  // A page-count ceiling silently strands eligible jobs behind older rows.
+  // Continue until a runnable job is found or the queue is exhausted.
+  assert.match(worker, /for \(let offset = 0;; offset \+= pageSize\)/);
+  assert.match(worker, /"&offset=" \+ offset/);
+  assert.match(worker, /if \(job \|\| \(jobs \|\| \[\]\).length < pageSize\) break;/);
+  assert.doesNotMatch(worker, /maxQueuePages/);
   assert.match(supervisor, /available_at=lte\." \+ encode\(now\(\)/);
   assert.match(supervisor, /adDbWorkerPollMs/);
   assert.doesNotMatch(supervisor, /runAdDbWorkerPass[\s\S]*claimJobs\(\)/);
