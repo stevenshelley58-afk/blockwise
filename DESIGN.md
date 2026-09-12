@@ -96,7 +96,7 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 - **Trying is non-destructive.** Open a separate, recognisable trial copy. Keep the original ad and old editor available until the owner approves replacement. Never silently open a native design in the old renderer.
 - **The preview must show the edited artwork.** Feed and Story ad previews use the native editor's current exports, with the real template/brand text and native Meta CTA outside the artwork. Do not substitute the original template render after a free-form edit.
 
-The native trial gives the iframe the available canvas width. Copy assistance and Meta previews open in a shared Sheet from the header, rather than occupying a permanent third sidebar. Feed and Story dimensions are fixed; native file imports and cloud services are not exposed.
+The native trial starts on the actual edited ad preview with visible Photos and Words actions. Review & publish is primary; Save and its truthful status remain available. Adjust design reveals the stock full-width native canvas, and Done designing returns to the ad. These are two views of one continuously mounted native editor, not two implementations or a conversion. Preserve all freeform edits on transition and keep hidden design tools keyboard-inert. Copy, optional AI help and photo choices use shared Sheets rather than permanent sidebars. Secondary copy settings are disclosed when needed. Feed and Story dimensions remain fixed; native file imports and cloud services are not exposed. Original ads and the old editor remain available. See docs/architecture/adstudio-vue-editor.md for alternatives and trade-offs.
 
 ## Accessibility
 

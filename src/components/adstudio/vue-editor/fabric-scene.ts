@@ -166,7 +166,7 @@ function applyText(scene: FabricScene, values: Record<string, string>): FabricSc
   const update = (object: FabricObject): FabricObject => {
     const meta = object.metadata && typeof object.metadata === "object" ? object.metadata : null;
     const key = typeof object.inputKey === "string" ? object.inputKey : typeof meta?.inputKey === "string" ? meta.inputKey : null;
-    return { ...object, ...(key && key in values && (object.type === "textbox" || object.type === "text") ? { text: values[key] } : {}), ...(object.objects ? { objects: object.objects.map(update) } : {}) };
+    return { ...object, ...(key && key in values && (["textbox", "text", "i-text"].includes(object.type ?? "")) ? { text: values[key] } : {}), ...(object.objects ? { objects: object.objects.map(update) } : {}) };
   };
   return { ...scene, objects: scene.objects.map(update) };
 }
@@ -181,6 +181,84 @@ export function textValuesFromScenes(scenes: Pick<VueNativeEditorDocument, "feed
   scenes.feed.objects.forEach(visit); scenes.story.objects.forEach(visit);
   return values;
 }
+
+type NativeScenes = Pick<VueNativeEditorDocument, "feed" | "story">;
+
+function imageSlotKey(object: FabricObject): string | null {
+  const meta = object.metadata;
+  const key = object.inputKey ?? meta?.inputKey;
+  const image = object.type === "image" || (object.type === "rect" && ["image_slot", "logo"].includes(meta?.blockwiseType));
+  return image && typeof key === "string" && key ? key : null;
+}
+
+/** Only surviving, bound image slots. Deleting a layer in design view stays deleted. */
+export function nativeImageSlots(scenes: NativeScenes): Array<{ key: string; src: string | null; placements: Placement[] }> {
+  const slots = new Map<string, { key: string; src: string | null; placements: Placement[] }>();
+  for (const placement of ["feed", "story"] as const) {
+    const visit = (object: FabricObject) => {
+      const key = imageSlotKey(object);
+      if (key) {
+        const slot = slots.get(key) ?? { key, src: null, placements: [] };
+        if (!slot.src && typeof object.src === "string") slot.src = object.src;
+        if (!slot.placements.includes(placement)) slot.placements.push(placement);
+        slots.set(key, slot);
+      }
+      object.objects?.forEach(visit);
+    };
+    scenes[placement].objects.forEach(visit);
+  }
+  return [...slots.values()];
+}
+
+/**
+ * Replace photo pixels, not the layout. The new crop uses the old local aspect
+ * ratio; its inverse scale preserves the whole affine transform, including groups.
+ */
+export function replaceNativeImageInScenes(scenes: NativeScenes, key: string, src: string, source: { width: number; height: number }): NativeScenes {
+  if (!src.startsWith("/") || src.startsWith("//") || /[\\\u0000-\u0020]/.test(src)) throw new Error("Choose a same-origin Blockwise image.");
+  if (![source.width, source.height].every(value => Number.isFinite(value) && value > 0)) throw new Error("The photo has invalid dimensions.");
+  const replace = (object: FabricObject): FabricObject => {
+    if (imageSlotKey(object) !== key) return object.objects ? { ...object, objects: object.objects.map(replace) } : object;
+    const oldWidth = Number(object.width), oldHeight = Number(object.height);
+    if (![oldWidth, oldHeight].every(value => Number.isFinite(value) && value > 0)) throw new Error("This photo needs its size adjusted in the design tools first.");
+    const fit = Math.max(oldWidth / source.width, oldHeight / source.height);
+    const width = oldWidth / fit, height = oldHeight / fit;
+    const ratio = 1 / fit;
+    const placeholder = object.type !== "image";
+    const next: FabricObject = {
+      ...object, type: "image", src, crossOrigin: "anonymous", width, height,
+      scaleX: (object.scaleX ?? 1) * fit, scaleY: (object.scaleY ?? 1) * fit,
+      cropX: Math.max(0, (source.width - width) / 2), cropY: Math.max(0, (source.height - height) / 2),
+      // Image stroke scales with its local box unless the user set strokeUniform.
+      ...(!object.strokeUniform && object.strokeWidth ? { strokeWidth: object.strokeWidth * ratio } : {}),
+    };
+    if (object.clipPath) {
+      const clip = object.clipPath;
+      next.clipPath = clip.absolutePositioned ? clip : {
+        ...clip, left: (clip.left ?? 0) * ratio, top: (clip.top ?? 0) * ratio,
+        scaleX: (clip.scaleX ?? 1) * ratio, scaleY: (clip.scaleY ?? 1) * ratio,
+      };
+    } else if (placeholder && (object.rx || object.ry || object.metadata?.mask)) {
+      next.clipPath = object.metadata?.mask === "circle"
+        ? { type: "ellipse", originX: "center", originY: "center", left: 0, top: 0, rx: width / 2, ry: height / 2 }
+        : { type: "rect", originX: "center", originY: "center", left: 0, top: 0, width, height, rx: (object.rx ?? 0) * ratio, ry: (object.ry ?? 0) * ratio };
+    }
+    if (placeholder) {
+      delete next.rx; delete next.ry; delete next.fill;
+      if (object.stroke === "#d3d7df" && object.strokeWidth === 2) { next.stroke = null; next.strokeWidth = 0; }
+    }
+    if (object.metadata) {
+      const { targetBox: _target, blockwiseCrop: _crop, ...metadata } = object.metadata;
+      next.metadata = metadata;
+    }
+    return next;
+  };
+  return {
+    feed: { ...scenes.feed, objects: scenes.feed.objects.map(replace) },
+    story: { ...scenes.story, objects: scenes.story.objects.map(replace) },
+  };
+}
+
 function gradient(fill: any, box: Rect, colours: Record<string, string>): FabricObject {
   const angle = fill.angleDegrees * Math.PI / 180, cx = box.width / 2, cy = box.height / 2;
   const length = Math.abs(box.width * Math.cos(angle)) + Math.abs(box.height * Math.sin(angle));

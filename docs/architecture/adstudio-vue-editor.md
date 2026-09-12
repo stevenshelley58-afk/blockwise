@@ -54,3 +54,49 @@ untrusted JSON. Provider gates and workspace isolation remain unchanged.
 
 See the dated release record for the pinned application revision and observed
 checks. No live Meta action is authorised by editor installation.
+
+## Simple-first interaction decision (12 September)
+
+Audience: customers who want to get an ad ready, not learn a design tool.
+The primary job is to review a credible ad, change its photos or wording, and
+continue to the existing publish review. This is an Operate surface.
+
+| Approach | Advantage | Cost / reason not chosen alone |
+| --- | --- | --- |
+| Stock toolbar visible everywhere | Familiar and immediately powerful for designers | Exposes layers, rulers and styling decisions before the customer's actual job. |
+| Hide tools individually | Same canvas and gradually discoverable controls | Still starts with a design task; keeping a heavily modified upstream toolbar in sync adds maintenance. |
+| Separate simple/full editors | Each interface can be tailored | Two editing implementations risk lossy conversion, conflicting state, duplicated tests and diverging features. |
+| Fixed step-by-step wizard | Clear first-run sequence | Adds navigation for small repeat edits and separates words from their visual effect. |
+| Simple ad view plus optional design tools | Common tasks visible; the existing editor remains available | Requires explicit transitions, fresh previews and lossless state handling. Chosen. |
+
+The choice follows progressive disclosure, not automatic guesses about a user's
+skill. See [NN/g: Progressive Disclosure](https://www.nngroup.com/articles/progressive-disclosure/)
+and [Modes in User Interfaces](https://www.nngroup.com/articles/modes/).
+These are design rationale, not evidence that this implementation has passed
+usability testing with customers.
+
+### Contract
+
+- Start on the current native artwork in a realistic ad preview. Photos and Words
+  are labelled, visible actions; Review & publish is the primary next step.
+- Adjust design reveals the existing Vue editor. Done designing returns to the
+  preview. These are views of one document, not conversions or separate saves.
+- Keep the same iframe mounted at a nonzero size. Hidden design tools are inert,
+  so a customer cannot accidentally operate them by keyboard.
+- Snapshot before returning from the design tools, including edits inside the
+  native change-notification delay. Do not replace current scenes with an older
+  asynchronous preview export.
+- Words offers optional AI drafting and manual editing. Proposals never apply
+  themselves. Template copy restoration is a deliberate action.
+- Simple photo replacement targets a surviving template input in both formats.
+  Preserve layout transforms, masks and unrelated custom objects. A deleted slot
+  stays deleted. Replacing a photo recrops it to fill the existing frame.
+- Shared photo/text inputs are convenience controls, not a promise that freeform
+  layout changes automatically adapt to the other format.
+- Keep the native save snapshot, revision checks, permissions, original ad and
+  publish gate. No new backend, editor engine or publishing path.
+- No autosave claim: Save remains explicit and publish review saves pending
+  changes before continuing.
+
+The main trade-off is one extra click for detailed design work, in exchange for
+removing the design-tool interface from everyone else's starting screen.

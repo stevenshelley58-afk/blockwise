@@ -85,3 +85,5 @@ verification are separately recorded.
 - [Homepage reporting redesign](releases/2026-09-07-homepage-reporting.md) — personal dashboard, scheduled-email concept and release evidence.
 - [Homepage FAQ preview update](releases/2026-09-07-homepage-faq.md) — friendlier copy, account setup and data ownership.
 - [Homepage preview evidence](releases/2026-09-06-homepage-concept.md) — revision, browser checks and reapplication instructions.
+
+- [Simple-first native ad editor](releases/2026-09-12-simple-first-ad-editor.md): ad preview first, optional full design tools, preserved native state and scoped test evidence.

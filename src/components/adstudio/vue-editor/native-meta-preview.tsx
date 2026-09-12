@@ -24,7 +24,7 @@ export function NativeMetaPreview({ placement, image, copy, businessName, logoUr
     <p className="px-4 pb-3 text-[13px] leading-relaxed">{primary || "Your primary text appears here."}</p>
     <Creative image={image} ratio="aspect-[4/5]" label="Feed creative preview" />
     <div className="flex items-stretch justify-between gap-3 border-t border-border bg-muted/50 px-4 py-3">
-      <div className="min-w-0 flex-1"><p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">{domainLabel(destinationUrl) || "Destination not set"}</p><p className="mt-0.5 truncate text-[14px] font-semibold">{headline || "Your headline"}</p><p className="truncate text-[12px] text-muted-foreground">{description || "Your description"}</p></div>
+      <div className="min-w-0 flex-1"><p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">{domainLabel(destinationUrl) || "Destination not set"}</p><p className="mt-0.5 truncate text-[14px] font-semibold">{headline || "Your headline"}</p>{description ? <p className="truncate text-[12px] text-muted-foreground">{description}</p> : null}</div>
       <span className="flex shrink-0 items-center rounded-md border border-border bg-card px-3 text-[13px] font-medium">{cta}</span>
     </div>
     <div className="flex items-center justify-around border-t border-border px-3 py-2 text-[12px] font-medium text-muted-foreground" aria-label="Post actions"><span className="inline-flex items-center gap-1"><ThumbsUp className="size-4" />Like</span><span className="inline-flex items-center gap-1"><MessageCircle className="size-4" />Comment</span><span className="inline-flex items-center gap-1"><Share2 className="size-4" />Share</span></div>
