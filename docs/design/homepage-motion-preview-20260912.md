@@ -1,6 +1,6 @@
 # Homepage motion and pricing mock-up
 
-Status: preview candidate only. No approval to replace the public homepage.
+Status: working mock-up published for owner review. No approval to replace the public homepage.
 
 ## Owner direction
 
@@ -25,4 +25,32 @@ Worktree: `/worktrees/homepage-motion-preview-20260912`. Branch: `homepage-motio
 
 Candidate source checks: 28 focused homepage tests pass; typecheck, package tests, NUL scan and diff whitespace check pass. The integration root suite found one unrelated infrastructure assertion after reconciling obsolete homepage expectations. The identical assertion was reproduced directly against the retained immutable live source at `6a76cc9a381e32229dc9c31cb9368ee1cde6a7e8`: `tests/oss-product-infrastructure.test.mjs:98` expects `TRUSTED_PROXY_RANGES=172.30.0.2/32` in the example environment. No infrastructure assertion or environment was weakened or changed. This is quarantined, not a claim that the full suite is green.
 
-Pending final preview build and browser review. Baseline reported by the delivery worker: 639,042 transferred bytes across 44 entries, CLS 0, unthrottled LCP 400ms desktop and 192ms mobile. These are controlled-browser observations, not production field metrics.
+Baseline reported by the delivery worker: 639,042 transferred bytes across 44 entries, CLS 0, unthrottled LCP 400ms desktop and 192ms mobile. These are controlled-browser observations, not production field metrics.
+
+## Published preview
+
+URL: https://blockwise.sale/homepage-preview/concept
+
+Compiled UI revision: `23a03de88751e827699dc7d3a545f08efca6fb2e`. This document may be committed later than the deployed UI. The live homepage has not been replaced.
+
+Parent browser review covered desktop hero and pricing, mobile workflow selection, email selection, 30-day report and pricing at 390px and 320px. Browser review caught and resolved hidden hero selectors, a report observer starting before the card was visible, the email appearing after its companion image on phones, and a monthly total overflowing its column. The final monthly metrics have no internal overflow at either narrow width. Screen selections held their chosen state. No errors were logged in the parent review browser.
+
+The earlier homepage concept documents are historical. For this candidate, the latest owner direction above supersedes earlier requests for visible example badges or playback controls.
+
+## Final browser and speed evidence
+
+Evidence directory: `/srv/blockwise/e2e-runs/homepage-motion-preview-20260912`. Final browser artifact: `qa-final-23a03de.json`, with screenshots, page text and build/route logs. Fresh reduced-motion loading initially exposed a hydration mismatch. The final revision uses a hydration-stable preference and the fresh reduced-motion rerun has zero errors and zero running animations.
+
+Controlled mobile comparison with cache disabled, 150ms latency, 1.6Mbps download, 750Kbps upload and 4x CPU slowdown:
+
+| Observation | Baseline live | Final preview |
+| --- | --- | --- |
+| Largest visible content (LCP) | 1,628ms | 1,544ms |
+| Transferred resources | about 586.6KB | 464,831 bytes |
+| Layout shift (CLS) | 0 | 0 |
+
+This is about 21% less transferred data in these runs. The small timing difference is not a statistically established speed improvement. Preview routing, cache behavior and disabled integrations differ from live. These are laboratory observations, not real-user field metrics or a Lighthouse score. The final normal desktop run observed LCP 912ms; normal 390px observed 904ms and 320px 448ms. An earlier desktop cold-start observation was slower (4,096ms), so no universal sub-second loading claim is made.
+
+The final separate six-second throttled image trace had no failed requests and all visible hero images completed. An earlier one-off image request failure did not reproduce; its cause was not established.
+
+Final checks cover selectors, mobile reflow, complete report values, no visible playback controls, no forbidden marketing wording, and offscreen report suspension. Design detector: two intentional Arial warnings inside the Meta-style ad frames, zero actionable findings. Production health remained on revision `6a76cc9a381e32229dc9c31cb9368ee1cde6a7e8`; the preview is read-only with no-index/no-store, blocked POST requests, and stripped credentials.

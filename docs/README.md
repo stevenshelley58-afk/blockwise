@@ -75,6 +75,7 @@ verification are separately recorded.
 
 - [Approved workflow copy](releases/2026-09-08-homepage-workflow-copy.md) — exact two-line heading and subheading, responsive checks and preview release evidence.
 
+- [Homepage motion and pricing preview, 12 September](design/homepage-motion-preview-20260912.md) - current owner direction, selector-only motion, plain language and preview verification.
 - [Homepage concept](design/homepage-concept.md) — isolated mobile/desktop mockup; not a production homepage release.
 - [Reporting chart axis fix](releases/2026-09-07-homepage-reporting-axis.md) — complete point labels on desktop with a readable narrow-screen month scale.
 - [Motion-led reporting graph](releases/2026-09-07-homepage-reporting-motion.md) — full-width line graph, minimal copy and smooth reporting interactions.
