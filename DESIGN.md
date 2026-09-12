@@ -40,6 +40,7 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 - **Never hardcode a chart colour.** The data hue (--ui-data*) is overridden per niche from src/config/niche in the customer layout. Never hardcode a chart colour in a component.
 - **Customer pages contain zero niche nouns.** All surface copy flows from src/config/niche so the same shell white-labels.
 - **Data Blue is the one vivid voice.** The data hue is used only for quantitative display: charts, meters, sparklines and gauge fills. It never becomes a general accent for buttons, links, navigation or decoration.
+- **Every line is a smooth curve.** A series is drawn as a monotone cubic, never as straight segments between points: the figure cards' lines, the reporting charts and the marketing previews that show the product, on desktop and mobile alike. Monotone is the honest choice as well as the smooth one, because the curve never overshoots a value the period recorded. Hand-drawn SVG builds it with `src/lib/charts/smooth-line.ts`; a recharts series states `type="monotone"`. A new chart that draws straight segments is a regression, not a style.
 
 ## Motion
 
@@ -72,7 +73,7 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 - **One period control per surface, next to the data it slices.** Results states its range once, in the chart card above the line it changes; the heading keeps the title, the sync state and Refresh. Do not repeat the same period as chips or a second selector, and choose the chart's own metric from a menu rather than a row of buttons. That one control slices the whole page, the figure row included: the row's heading names the window the figures on screen actually cover — the payload's range, never the range a customer just picked while the fetch is still in flight — and the customer's own span says its dates rather than a label that would leave them guessing which dates it meant.
 - **The chart menu offers every metric with a daily series, most important first.** Leads, then what they cost, then spend, then delivery and response, then the rates. A figure with no daily series is not offered rather than charted as an empty axis, and a ratio that a day cannot divide leaves a gap in the line with one note saying why.
 - **One notice bar, used everywhere.** That bar is `src/components/ui/notice-bar.tsx`: the amber preview marker, the note, and the product's own call to action. Home's weekly figures, Home's example leads and Results' example report all close on it with the same sentence, so a preview is labelled the same way wherever it appears.
-- **A notice bar keeps its note and its action on one row where the note fits.** The note is sized by its own content rather than by what is left over, so a note that fits shares the row at every width, and a longer one takes the line it needs and drops the action below rather than being crushed into a column two words wide. Never truncate a note to win the space. The bar carries the gap of the section flow it was built for; a surface that lays its own gaps out states that space itself.
+- **A notice bar keeps its note and its action on one row at every width.** The action never drops to a line of its own: the note is the item that yields, sized from the space left beside the action and wrapping inside its own lane rather than being truncated. Never truncate a note to win the space. The bar carries the gap of the section flow it was built for; a surface that lays its own gaps out states that space itself.
 - **A demo workspace sees example leads, and they say so.** A workspace with no delivery of its own gets example rows where its own leads would be, labelled by the same bar and the same sentence the demo figures close on, so the empty state is a preview of the work rather than a blank. They are the one section that carries the product's call to action instead of a link of its own, because there is nowhere to go yet. A workspace with real delivery and no leads keeps saying "No leads yet".
 - **Leads are modelled on the CRM's records.** Blockwise's CRM is Frappe CRM: a lead is `CRM Lead` (lead name, territory, source, status, owner, Meta lead ids) and `source` and `status` are Link fields pointing at `CRM Lead Source` and `CRM Lead Status` records that a deployment names itself. A row prints the status record it is given rather than inventing a state, and falls back to waiting time only while no CRM state exists.
 - **One label per fact.** State a caveat once, at the level it applies to. A band that is entirely demo data says so in its one note under the figures; it does not repeat the same word as a badge beside the heading. On a page where two blocks are both demo data, each block closes on that one note, in the same words, because each block is read on its own.
@@ -100,6 +101,13 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 ---
 
 ## Changelog
+
+- 2026-09-12: every line on the customer surface is now a monotone cubic, drawn
+  by `src/lib/charts/smooth-line.ts` for hand-drawn SVG and by `type="monotone"`
+  for a recharts series: the figure cards' lines stop reading as wires, and the
+  marketing hero's preview chart follows the product. The one notice bar keeps
+  its note and its action on one row at every width, the note wrapping in its own
+  lane instead of pushing the way out onto a second line.
 
 - 2026-09-12: a demo is labelled one way everywhere. The one notice bar says
   "Demo numbers for an example account" under Home's figures, under Home's

@@ -3,6 +3,7 @@ import { Fragment, type CSSProperties } from "react";
 import { CtaLink } from "@/components/landing/cta-link";
 import { InView } from "@/components/motion";
 import { Button } from "@/components/ui/button";
+import { smoothLinePath } from "@/lib/charts/smooth-line";
 
 import {
   CHART_POINTS,
@@ -190,8 +191,8 @@ export function ControlFold() {
             </div>
             <svg viewBox="0 0 560 90" preserveAspectRatio="none" aria-hidden className="hw-dash-svg">
               <line x1="0" y1="89" x2="560" y2="89" stroke="var(--hw-inv-line)" strokeWidth="1" />
-              <polyline
-                points={CHART_POINTS}
+              <path
+                d={smoothLinePath(CHART_POINTS)}
                 fill="none"
                 stroke="#f6f7f9"
                 strokeOpacity="0.9"

@@ -219,5 +219,9 @@ export const DASH_ROWS = [
   },
 ] as const;
 
-export const CHART_POINTS =
-  "0,74 40,70 80,72 120,62 160,64 200,52 240,55 280,44 320,47 360,36 400,38 440,28 480,30 520,20 560,16";
+/** The hero dashboard's lead line, in that chart's own 560x90 units. */
+export const CHART_POINTS: ReadonlyArray<readonly [x: number, y: number]> = [
+  [0, 74], [40, 70], [80, 72], [120, 62], [160, 64], [200, 52], [240, 55],
+  [280, 44], [320, 47], [360, 36], [400, 38], [440, 28], [480, 30], [520, 20],
+  [560, 16],
+];

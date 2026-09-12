@@ -14,11 +14,12 @@ import { cn } from "@/lib/utils";
  * leaves the dot floating on its own. The action wears the product's own call
  * to action rather than a line of small text.
  *
- * The note and the action share one row whenever the note fits beside the
- * action. The note is sized by its own content rather than by what is left over
- * (`basis-auto`, not `basis-0`), so a long note drops the action to the next
- * line instead of being crushed into a column two words wide. The bar tightens
- * its own padding below `sm`; the action keeps the shared CTA's own geometry.
+ * The note and the action always share the one row. The action is the item that
+ * holds its place, and the note is the one that yields: it is sized from the
+ * space left beside the action (`basis-0`, not `basis-auto`) and wraps inside
+ * its own lane, so a longer note reads on two lines in the same row rather than
+ * pushing the way out onto a line of its own. The bar tightens its own padding
+ * below `sm`; the action keeps the shared CTA's own geometry.
  *
  * The bar carries `mt-3`, the gap it was built for in a section's flow. A
  * surface that lays its own gap out — Results' dashboard grid — passes
@@ -44,7 +45,7 @@ export function NoticeBar({
         className,
       )}
     >
-      <p className="flex min-w-0 flex-[1_1_auto] items-start gap-2.5 text-[12.5px] leading-snug text-muted-foreground">
+      <p className="flex min-w-0 flex-[1_1_0] items-start gap-2.5 text-[12.5px] leading-snug text-muted-foreground">
         {marker ? (
           <span className="mt-[6px] size-[8px] shrink-0 rounded-full bg-warning" aria-hidden />
         ) : null}
