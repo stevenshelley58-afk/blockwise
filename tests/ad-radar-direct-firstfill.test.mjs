@@ -38,3 +38,11 @@ test('media failures and assets beyond the capture batch cannot report completio
  assert.ok(supervisor.includes('const archiveComplete = failed === 0 && remaining.length === 0'));
  assert.ok(supervisor.includes('blocked_reason: archiveComplete ? null : "media_archive_incomplete"'));
 });
+
+test('release installs locked image runtime before import preflight', () => {
+ const release = readFileSync(new URL('../scripts/vps/hermes-ad-db-release.sh', import.meta.url),'utf8');
+ assert.ok(release.indexOf('npm ci --omit=dev --ignore-scripts') < release.indexOf('"$launcher" --preflight'));
+ const imports = readFileSync(new URL('../scripts/vps/hermes-ad-db-runtime-imports.mjs', import.meta.url),'utf8');
+ assert.ok(imports.includes('await import("sharp")'));
+ assert.ok(imports.includes('sharp.versions?.vips'));
+});

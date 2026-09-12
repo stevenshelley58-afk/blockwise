@@ -17,6 +17,8 @@ if [[ -e "$release_root" ]]; then :; else install -d -o hermes -g hermes /srv/he
 [[ -z "$(git -C "$release_root" symbolic-ref -q --short HEAD)" ]] || fail "release must be detached"
 clean "$release_root"
 [[ -f "$unit_template" && -x "$launcher" ]] || fail "missing immutable release inputs"
+# Runtime image validation requires sharp; install exactly the committed lock.
+(cd "$release_root" && runuser -u hermes -- npm ci --omit=dev --ignore-scripts --no-audit --no-fund)
 "$launcher" --preflight "$release_root" "$env_file"
 install -d -o root -g root -m 0755 "$render_root"
 tmp=$(mktemp "$render_root/.$commit.XXXXXX.service"); trap 'rm -f "$tmp"' EXIT
