@@ -163,6 +163,67 @@ export function createEditorBridge(canvasEditor: any) {
     if (fontPlugin) fontPlugin.cacheList = loaded;
   };
 
+  // Fit only newly converted template text using the editor's loaded fonts.
+  // Removing the transient marker preserves all later user sizing on reopen.
+  const fitTemplateText = (scene: FabricScene, placement: Placement) => {
+    const visit = (object: any) => {
+      const box = object.metadata?.templateTextBox;
+      if (object.type === 'textbox' && box) {
+        // Repeated bullets and other ornaments are artwork, not readable copy.
+        if (!/[\p{L}\p{N}]/u.test(object.text || '')) {
+          const { templateTextBox, ...metadata } = object.metadata;
+          object.metadata = metadata;
+          return;
+        }
+        const base = Number(object.fontSize);
+        const floor = Math.min(base, placement === 'feed' ? 24 : 32);
+        const tracking = Number(object.charSpacing || 0) * base / 1000;
+        let fitted: fabric.Textbox | undefined;
+        for (let size = base; size >= floor; size = Math.max(floor, size - 1)) {
+          const candidate = new fabric.Textbox(object.text || '', {
+            ...object, width: box.width, fontSize: size, charSpacing: tracking * 1000 / size,
+            splitByGrapheme: false,
+          });
+          const lines = (candidate as any)._textLines.length;
+          if (candidate.width! <= box.width + 0.1 && lines <= box.maxLines
+              && candidate.height! <= box.height + size * 0.2) {
+            fitted = candidate;
+            break;
+          }
+          if (size === floor) break;
+        }
+        // Honor the pack's existing overflow policy instead of shrinking body
+        // copy below its readability floor or letting it cover other layers.
+        if (!fitted && box.overflowBehaviour === 'truncate') {
+          let text = String(object.text || '');
+          while (text.length > 0) {
+            const shortened = text.replace(/\s+\S+$/, '');
+            text = shortened === text ? text.slice(0, -1) : shortened;
+            const candidate = new fabric.Textbox(text + '…', {
+              ...object, width: box.width, fontSize: floor,
+              charSpacing: tracking * 1000 / floor, splitByGrapheme: false,
+            });
+            if (candidate.width! <= box.width + 0.1
+                && (candidate as any)._textLines.length <= box.maxLines
+                && candidate.height! <= box.height + floor * 0.2) {
+              fitted = candidate;
+              object.text = candidate.text;
+              break;
+            }
+          }
+        }
+        if (!fitted) throw new Error('Template text does not fit: ' + object.id);
+        object.fontSize = fitted.fontSize;
+        object.charSpacing = fitted.charSpacing;
+        object.splitByGrapheme = false;
+        const { templateTextBox, ...metadata } = object.metadata;
+        object.metadata = metadata;
+      }
+      for (const child of object.objects || []) visit(child);
+    };
+    for (const object of (scene as any).objects) visit(object);
+  };
+
   const initialize = async (payload: InitializePayload, requestId?: string) => {
     if (payload.allowedOrigin && payload.allowedOrigin !== window.location.origin) {
       throw new Error('allowedOrigin must match the editor origin.');
@@ -181,6 +242,8 @@ export function createEditorBridge(canvasEditor: any) {
     hostContent.templates = payload.templates || [];
     hostContent.assets = payload.assets || [];
     await loadFonts(payload.fonts);
+    fitTemplateText(scenes.feed!, 'feed');
+    fitTemplateText(scenes.story!, 'story');
     const requested = isPlacement(payload.activePlacement) ? payload.activePlacement : 'feed';
     await loadScene(requested, scenes[requested]!);
     send('initialized', { activePlacement: requested }, requestId);

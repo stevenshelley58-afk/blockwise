@@ -37,6 +37,9 @@ test("template conversion creates full-size Fabric scenes with an editor workspa
   assert.equal(text?.type, "textbox");
   assert.equal(text?.inputKey, "headline");
   assert.equal(text?.text, "Template headline");
+  assert.equal(text?.splitByGrapheme, false);
+  assert.equal(text?.lineHeight, 1.1 / 1.13);
+  assert.deepEqual(text?.metadata.templateTextBox, { width: 920, height: 200, maxLines: 2, overflowBehaviour: "scale_down" });
   assert.equal((text?.metadata as { inputKey?: string }).inputKey, "headline");
   const image = result.feed.objects.find(object => object.layerId === "feed-photo");
   assert.equal(image?.type, "image");

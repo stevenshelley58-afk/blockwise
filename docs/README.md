@@ -45,6 +45,8 @@ guides. Third-party licence text is retained unchanged.
 
 ## Plans and historical evidence
 
+- [12 September native editor default](releases/2026-09-12-native-editor-default.md)
+
 - [12 September native ad editor trial](releases/2026-09-12-native-ad-editor-trial.md)
 
 - [8 September single application authority](releases/2026-09-08-single-authority.md)

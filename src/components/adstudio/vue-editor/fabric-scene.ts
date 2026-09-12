@@ -89,12 +89,13 @@ function convertLayer(layer: LayoutLayer, placement: Placement, dims: { width: n
     const size = effectiveTextFontSize(layer, box);
     return {
       ...shared, type: "textbox", inputKey: layer.inputKey,
-      metadata: { layerId: layer.layerId, inputKey: layer.inputKey, blockwiseType: "text" },
+      metadata: { layerId: layer.layerId, inputKey: layer.inputKey, blockwiseType: "text", templateTextBox: { width: box.width, height: box.height, maxLines: layer.maxLines, overflowBehaviour: layer.overflowBehaviour } },
       text: value.slice(0, layer.maxCharacters), width: box.width, height: box.height,
       fontFamily: `Blockwise_${encodeURIComponent(pack.templateId)}_${encodeURIComponent(layer.font.file)}`,
       fontSize: size, fontWeight: layer.fontWeight ?? 400, fontStyle: layer.italic ? "italic" : "normal",
-      lineHeight: layer.lineHeight, charSpacing: fabricCharSpacing(layer.tracking, size), textAlign: layer.alignment,
-      fill: colour(layer.colourRole), splitByGrapheme: true, editable: true,
+      // Fabric adds its own 1.13 font-height multiplier; pack leading is in ems.
+      lineHeight: layer.lineHeight / 1.13, charSpacing: fabricCharSpacing(layer.tracking, size), textAlign: layer.alignment,
+      fill: colour(layer.colourRole), splitByGrapheme: false, editable: true,
     };
   }
   if (layer.type === "vector") {
