@@ -631,7 +631,7 @@ async function enqueueDueAdPageRefreshJobs(buildRunId) {
     // A failed or interrupted first attempt changes scan_state, not the
     // first-fill obligation. initial_fill_completed_at is the only durable
     // completion marker, so no operational state is terminal here.
-    ? "advertiser_pages?select=id,page_id,page_name,status,scan_state,next_scan_at,backoff_until,consecutive_failures,has_ever_run_ads,initial_fill_completed_at&scan_enabled=eq.true&status=neq.rejected_non_real_estate&page_id=not.is.null&initial_fill_completed_at=is.null&order=backoff_until.asc.nullsfirst,next_scan_at.asc&limit=" + adPageRefreshScanLimit
+    ? "advertiser_pages?select=id,page_id,page_name,status,scan_enabled,scan_state,next_scan_at,backoff_until,consecutive_failures,has_ever_run_ads,initial_fill_completed_at,agent_id,agency_id,metadata,agent:agents(state,status),agency:agencies(state,status)&scan_enabled=eq.true&status=neq.rejected_non_real_estate&page_id=not.is.null&initial_fill_completed_at=is.null&order=backoff_until.asc.nullsfirst,next_scan_at.asc&limit=" + adPageRefreshScanLimit
     : "advertiser_pages?select=id,page_id,page_name,status,scan_state,next_scan_at,backoff_until,consecutive_failures,has_ever_run_ads,initial_fill_completed_at&scan_enabled=eq.true&status=neq.rejected_non_real_estate&page_id=not.is.null&next_scan_at=lte." + encode(now()) + "&order=next_scan_at.asc&limit=" + adPageRefreshScanLimit;
   const pages = await rest("research", pagePath);
   const capacity = Math.max(0, Math.min(adPageRefreshMaxActive - blockingCollectors.length, adPageRefreshBatchSize));
@@ -5485,7 +5485,8 @@ async function runExactJob(jobId) {
 async function runAdDbWorkerPass() {
   if (adRadarEnabled && (firstFillOnly || adPageRefreshEnabled)) {
     const buildRunId = await ensureBuildRun();
-    await enqueueDueAdPageRefreshJobs(buildRunId);
+    const scheduled = await enqueueDueAdPageRefreshJobs(buildRunId);
+    log("first-fill scheduling", scheduled);
   }
   const pageSize = 100;
   let job = null;

@@ -16,3 +16,8 @@ test('pending billing returns durable deferred work before terminal capture hand
  assert.match(supervisor, /available_at: new Date\(Date.now\(\) \+ 300_000\)/);
  assert.match(supervisor, /last_error: "apify_billing_pending"/);
 });
+
+test('scheduler loads the ownership evidence used by its WA gate', () => {
+ assert.ok(supervisor.includes('agent:agents(state,status),agency:agencies(state,status)'));
+ assert.ok(supervisor.includes('log("first-fill scheduling", scheduled)'));
+});
