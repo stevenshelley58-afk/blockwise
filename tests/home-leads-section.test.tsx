@@ -116,7 +116,14 @@ test("a demo workspace sees example leads, said as examples, with the one next a
   assert.match(html, /Scarborough · Facebook/);
   // The CRM's status record is what the row reports, not a made-up waiting time.
   assert.match(html, />New</);
+  // The bar closes the section and carries the same call to action the demo
+  // figures bar carries, so both say and offer the same thing.
   assert.match(html, /Create an ad/);
+  const lastRow = html.lastIndexOf("Marcus Bell");
+  const note = html.indexOf("Example leads, not yours.");
+  const cta = html.indexOf("Create an ad");
+  assert.ok(note > lastRow, "the example note sits under the rows");
+  assert.ok(cta > note, "the action sits in the note bar");
 
   // Nothing pretends the workspace has leads of its own: no count of leads to
   // follow up, and no way into a Leads page that would be empty.

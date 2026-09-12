@@ -17,7 +17,7 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
-import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
+import { HomeNoticeBar } from "@/components/self-serve/home-notice-bar";
 import { niche } from "@/config/niche";
 import type { HomeData } from "@/components/self-serve/home-dashboard";
 import {
@@ -212,23 +212,13 @@ export function HomeMetricsBand({
 
       {notice ? (
         // One notice, one label for the whole band: the demo tone says it once
-        // here rather than twice, and the amber dot is the same marker Results
-        // puts on the same statement.
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-(--r-card) border border-(--line) bg-(--surface-subtle) px-4 py-2.5">
-          <p className="flex min-w-0 items-start gap-2.5 text-[12.5px] leading-snug text-muted-foreground">
-            {tone === "demo" ? (
-              // Anchored to the sentence's first line rather than to the row, so
-              // a note that wraps never leaves the dot floating on its own.
-              <span className="mt-[6px] size-[8px] shrink-0 rounded-full bg-warning" aria-hidden />
-            ) : null}
-            <span>{notice.text}</span>
-          </p>
-          {/* The band's one action in these tones, wearing the product's own
-              call to action rather than a line of small text. */}
-          <ButtonArrow href={notice.href} className="shrink-0">
-            {notice.action}
-          </ButtonArrow>
-        </div>
+        // rather than twice. The dot marks a preview; the unavailable tone is a
+        // fault report and wears none.
+        <HomeNoticeBar
+          text={notice.text}
+          action={{ href: notice.href, label: notice.action }}
+          marker={tone === "demo"}
+        />
       ) : null}
     </section>
   );

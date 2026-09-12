@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import Link from "next/link";
 
 import { MetaAdTile } from "@/components/research/meta-ad-tile";
+import { HomeNoticeBar } from "@/components/self-serve/home-notice-bar";
 import { HomeMetricsBand } from "@/components/self-serve/home-metrics-band";
 import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
 import { SafeImage } from "@/components/ui/safe-image";
@@ -123,19 +124,7 @@ function LeadsSection({
         )}
       </div>
 
-      {areExamples ? (
-        <p className="mt-3 flex items-center gap-2.5 rounded-(--r-card) border border-(--line) bg-(--surface-subtle) px-4 py-2.5 text-[12.5px] leading-snug text-muted-foreground">
-          <span className="size-[8px] shrink-0 rounded-full bg-warning" aria-hidden />
-          <span>{copy.exampleNote}</span>
-        </p>
-      ) : null}
-
-      <ul
-        className={cn(
-          "list-none divide-y divide-(--line) border-y border-(--line)",
-          areExamples ? "mt-4" : "mt-3",
-        )}
-      >
+      <ul className="mt-3 list-none divide-y divide-(--line) border-y border-(--line)">
         {leads.map((lead) => {
           const state = followUp(lead);
           const row = (
@@ -182,10 +171,14 @@ function LeadsSection({
         })}
       </ul>
 
+      {/* Examples are labelled under the rows, the way the weekly figures are
+          labelled under theirs, and the bar carries the one action that would
+          replace them with the workspace's own leads. */}
       {areExamples ? (
-        <ButtonArrow href="/ad-studio" className="mt-5">
-          {copy.ctaLabel}
-        </ButtonArrow>
+        <HomeNoticeBar
+          text={copy.exampleNote}
+          action={{ href: "/ad-studio", label: copy.ctaLabel }}
+        />
       ) : null}
     </section>
   );
