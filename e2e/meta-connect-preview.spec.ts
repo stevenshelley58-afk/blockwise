@@ -31,6 +31,22 @@ async function openPreview(page: Page, width: number, height: number) {
   ).toBeVisible();
   await expect(page.getByRole("main")).toHaveAttribute("data-preview-ready", "true");
   await page.evaluate(async () => document.fonts.ready);
+  await page.locator("img").evaluateAll(async (images: HTMLImageElement[]) => {
+    await Promise.all(
+      images.map((image) => {
+        if (image.complete) return Promise.resolve();
+        return new Promise<void>((resolve) => {
+          const done = () => resolve();
+          image.addEventListener("load", done, { once: true });
+          image.addEventListener("error", done, { once: true });
+        });
+      }),
+    );
+  });
+  const imageWidths = await page.locator("img").evaluateAll((images: HTMLImageElement[]) =>
+    images.map((image) => image.naturalWidth),
+  );
+  expect(imageWidths.every((width) => width > 0), "preview images must load").toBe(true);
 
   await expect(page.getByText("Preview", { exact: true })).toBeVisible();
   await expect(
