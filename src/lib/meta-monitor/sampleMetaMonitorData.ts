@@ -17,6 +17,14 @@ const LEADS_30 = [5, 3, 6, 7, 10, 9, 6, 4, 3, 1, 4, 6, 9, 7, 6, 4, 3, 5, 6, 7, 9
 /** Keeps sample cost per click near the $0.80 the demo copy implies. */
 const SAMPLE_CLICK_SPEND_RATIO = 1.25;
 
+/**
+ * Day-to-day drift on that ratio, one entry per weekday and summing to zero so
+ * the week's own cost per click still reads $0.80. A ratio that never moved left
+ * the demo's cost per click flat, and a flat week has no line to draw: the card
+ * looked like a missing chart rather than a steady one.
+ */
+const SAMPLE_CLICK_RATIO_DRIFT = [0.06, -0.05, 0.02, -0.06, 0.05, -0.04, 0.02];
+
 const SAMPLE_BUDGET = 7500;
 
 const SUBURB_VALID: Array<[string, number]> = [
@@ -116,8 +124,19 @@ export function buildSampleMetaMonitorPayload(
       date,
       spend,
       // Derived from the day's spend so the sample stays internally consistent:
-      // Σ daily clicks equals SAMPLE_CLICK_SPEND_RATIO × Σ spend.
-      clicks: spend > 0 ? Math.max(1, Math.round(spend * SAMPLE_CLICK_SPEND_RATIO)) : 0,
+      // Σ daily clicks is SAMPLE_CLICK_SPEND_RATIO × Σ spend, give or take the
+      // weekday drift that keeps the demo cost per click moving.
+      clicks:
+        spend > 0
+          ? Math.max(
+              1,
+              Math.round(
+                spend *
+                  SAMPLE_CLICK_SPEND_RATIO *
+                  (1 + SAMPLE_CLICK_RATIO_DRIFT[index % SAMPLE_CLICK_RATIO_DRIFT.length]),
+              ),
+            )
+          : 0,
       leads: leadsSeries[index],
       validLeads: validSeries[index],
       validCpl: safeCpl(spend, validSeries[index]),

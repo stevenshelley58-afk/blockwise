@@ -49,7 +49,7 @@ function changeBetween(current: number, prior: number): Change | null {
 }
 
 type Metric = {
-  key: "spend" | "clicks" | "cpc";
+  key: "spend" | "clicks" | "cpc" | "leads";
   label: string;
   /** The trailing-week figure, or null when it cannot be reported honestly. */
   value: number | null;
@@ -62,8 +62,8 @@ type Metric = {
 type Performance = NonNullable<HomeData["performance"]>;
 
 /**
- * The three figures. Only ever called with a performance model: a workspace
- * with no reporting at all gets the band's notice instead of three empty rows.
+ * The four figures. Only ever called with a performance model: a workspace
+ * with no reporting at all gets the band's notice instead of four empty cards.
  */
 function buildMetrics(performance: Performance): Metric[] {
   const copy = niche.copy.home.kpis;
@@ -72,11 +72,12 @@ function buildMetrics(performance: Performance): Metric[] {
   const prior = previousWeekTotals(daily);
   const { weekly } = performance;
   const clicksPerDay = week.map((point) => point.clicks);
-  // A day with no clicks has no cost per click, so a week containing one draws
-  // no line rather than bridging a gap it cannot measure.
-  const cpcPerDay = clicksPerDay.every((clicks) => clicks > 0)
-    ? week.map((point) => point.spend / point.clicks)
-    : [];
+  // A day with no clicks has no cost per click to plot, so those days are left
+  // out of the line. The printed figure is the week's own spend over its own
+  // clicks, so the line only ever shapes days it could measure.
+  const cpcPerDay = week
+    .filter((point) => point.clicks > 0)
+    .map((point) => point.spend / point.clicks);
   const priorCpc = prior && prior.clicks > 0 ? prior.spend / prior.clicks : null;
 
   return [
@@ -106,6 +107,14 @@ function buildMetrics(performance: Performance): Metric[] {
         weekly.cpc != null && priorCpc != null
           ? changeBetween(weekly.cpc, priorCpc)
           : null,
+    },
+    {
+      key: "leads",
+      label: copy.weeklyLeads,
+      value: weekly.leads,
+      format: whole,
+      series: week.map((point) => point.leads),
+      change: prior ? changeBetween(weekly.leads, prior.leads) : null,
     },
   ];
 }
@@ -187,45 +196,45 @@ export function HomeMetricsBand({
       </div>
 
       {metrics.length > 0 ? (
-        // The three figures wear the shared KPI card: same surface, hairline,
-        // radius and shadow as every other card in the product, with the
-        // sparkline and the prior-week comparison inside the card they belong
-        // to. Below `sm` each card puts its label and value on one line,
-        // because three columns cannot hold a five-figure spend at a legible
-        // size on a phone.
-        <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-3.5">
+        // The four figures wear the shared KPI card: same surface, hairline,
+        // radius and shadow as every other card in the product, with each
+        // figure's sparkline and prior-week comparison inside its own card.
+        // Two up on a phone, one row from `lg`; between those the sidebar has
+        // taken its width, and four columns there would leave a card too narrow
+        // for a five-figure spend.
+        <dl className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-3.5">
           {metrics.map((metric) => (
             <div
               key={metric.key}
               data-metric={metric.key}
-              className="min-w-0 rounded-(--r-card) border border-(--line) bg-card px-4 py-3.5 shadow-card sm:px-[18px] sm:pt-[17px] sm:pb-[15px]"
+              className="min-w-0 rounded-(--r-card) border border-(--line) bg-card px-4 py-3.5 shadow-card lg:px-[18px] lg:pt-[17px] lg:pb-[15px]"
             >
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-2 sm:block">
-                <dt className="text-[12px] leading-[1.35] font-semibold text-muted-foreground">
-                  {metric.label}
-                </dt>
-                <dd
-                  className={cn(
-                    "justify-self-end font-display text-[22px] leading-none font-extrabold tracking-[-0.025em] tabular-nums sm:mt-1.5 sm:block sm:justify-self-auto sm:text-[24px]",
-                    metric.value === null ? "text-muted-foreground" : "text-foreground",
-                  )}
-                >
-                  {metric.value === null ? (
-                    <>
-                      <span aria-hidden>{copy.unavailableValue}</span>
-                      <span className="sr-only">{copy.unavailableValueSpoken}</span>
-                    </>
-                  ) : (
-                    <AnimatedNumber
-                      value={metric.value}
-                      format={metric.format}
-                      springOptions={COUNT_SPRING}
-                    />
-                  )}
-                </dd>
-              </div>
+              <dt className="text-[12px] leading-[1.35] font-semibold text-muted-foreground">
+                {metric.label}
+              </dt>
+              <dd
+                className={cn(
+                  "mt-1 font-display text-[22px] leading-none font-extrabold tracking-[-0.025em] tabular-nums lg:text-[24px]",
+                  metric.value === null ? "text-muted-foreground" : "text-foreground",
+                )}
+              >
+                {metric.value === null ? (
+                  <>
+                    <span aria-hidden>{copy.unavailableValue}</span>
+                    <span className="sr-only">{copy.unavailableValueSpoken}</span>
+                  </>
+                ) : (
+                  <AnimatedNumber
+                    value={metric.value}
+                    format={metric.format}
+                    springOptions={COUNT_SPRING}
+                  />
+                )}
+              </dd>
               {metric.series.length > 1 || metric.change ? (
-                <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 sm:min-h-[26px]">
+                // The line and the comparison stack: side by side they would
+                // squeeze the note into a column of two-word lines at two up.
+                <div className="mt-2.5 flex flex-col gap-1.5">
                   {metric.series.length > 1 ? (
                     <Sparkline
                       points={metric.series}

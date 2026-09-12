@@ -77,6 +77,7 @@ export type HomeCopy = {
     weeklySpend: string;
     weeklyClicks: string;
     weeklyCpc: string;
+    weeklyLeads: string;
     weekScope: string;
     syncedAt: (when: string) => string;
     viewPerformance: string;

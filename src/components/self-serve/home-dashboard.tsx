@@ -26,7 +26,7 @@ export type HomeData = ActivationCardData & {
     previousCpl: number | null;
     daily: Array<{ date: string; leads: number; spend: number; clicks: number }>;
     /** Trailing seven days, the window the metrics band claims. */
-    weekly: { spend: number; clicks: number; cpc: number | null };
+    weekly: { spend: number; clicks: number; cpc: number | null; leads: number };
     /** True when every number above is a labelled preview, not this workspace's delivery. */
     isSample: boolean;
     lastSyncedAt: string | null;

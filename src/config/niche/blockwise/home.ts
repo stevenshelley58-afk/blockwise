@@ -31,6 +31,7 @@ export const home: HomeCopy = {
     weeklySpend: "Spend",
     weeklyClicks: "Link clicks",
     weeklyCpc: "Cost per link click",
+    weeklyLeads: "Leads",
     weekScope: "Last 7 days",
     syncedAt: (when) => `Synced ${when}`,
     viewPerformance: "View performance",

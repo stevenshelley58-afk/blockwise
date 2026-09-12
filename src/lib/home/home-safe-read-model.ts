@@ -21,7 +21,7 @@ import type { MetaDailyPoint, MetaMonitorPayload } from "@/lib/meta-monitor/type
  * `MetaDailyPoint` and the slimmed series on `HomeData` satisfy it, so the week
  * helpers below work on either side of the read model.
  */
-export type DailyTotals = { date: string; spend: number; clicks: number };
+export type DailyTotals = { date: string; spend: number; clicks: number; leads: number };
 
 export type HomeSafeReadModel = Pick<
   HomeData,
@@ -72,6 +72,7 @@ export function homeSafeReadModelFromData(data: HomeData): HomeSafeReadModel {
 export function trailingWeekTotals(daily: DailyTotals[]): {
   spend: number;
   clicks: number;
+  leads: number;
 } {
   const ordered = [...daily].sort((a, b) => a.date.localeCompare(b.date));
   const week = ordered.slice(-7);
@@ -79,6 +80,7 @@ export function trailingWeekTotals(daily: DailyTotals[]): {
   return {
     spend: week.reduce((total, point) => total + point.spend, 0),
     clicks: week.reduce((total, point) => total + point.clicks, 0),
+    leads: week.reduce((total, point) => total + point.leads, 0),
   };
 }
 
@@ -90,7 +92,7 @@ export function trailingWeekTotals(daily: DailyTotals[]): {
  */
 export function previousWeekTotals(
   daily: DailyTotals[],
-): { spend: number; clicks: number } | null {
+): { spend: number; clicks: number; leads: number } | null {
   const ordered = [...daily].sort((a, b) => a.date.localeCompare(b.date));
   if (ordered.length < 14) return null;
   const week = ordered.slice(-14, -7);
@@ -98,6 +100,7 @@ export function previousWeekTotals(
   return {
     spend: week.reduce((total, point) => total + point.spend, 0),
     clicks: week.reduce((total, point) => total + point.clicks, 0),
+    leads: week.reduce((total, point) => total + point.leads, 0),
   };
 }
 
@@ -159,6 +162,7 @@ export function homePerformanceFromReporting(
         spend: week.spend,
         clicks: week.clicks,
         cpc: week.clicks > 0 ? week.spend / week.clicks : null,
+        leads: week.leads,
       },
       isSample,
       lastSyncedAt: summary.lastSyncedAt,

@@ -59,7 +59,8 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 
 - **Reuse the shared vocabulary.** src/components/ui/ is the shared vocabulary for buttons, cards, dialogs, sheets, tables, selects, inputs and navigation. Build from it before creating anything new.
 - **Hierarchy before containers.** Use sections, rows, hairlines and disclosures before rounded cards or chart scaffolds. Keep Home flat by default, with one named exception: the weekly metrics row below.
-- **The weekly metrics row is Home's only card row.** The three trailing-week figures (spend, link clicks, cost per link click) each render in the shared KPI card surface — `rounded-(--r-card)`, `border-(--line)`, `bg-card`, `shadow-card` — with that figure's sparkline and prior-week comparison inside its own card. Leads, local ads and everything else on Home stay flat: sections, rows and hairlines.
+- **The weekly metrics row is Home's only card row.** The four trailing-week figures — spend, link clicks, cost per link click and leads — each render in the shared KPI card surface: `rounded-(--r-card)`, `border-(--line)`, `bg-card`, `shadow-card`, with that figure's sparkline and prior-week comparison inside its own card. Two cards across on a phone, one row of four from `lg`, because the sidebar takes its width before that. Leads, local ads and everything else on Home stay flat: sections, rows and hairlines.
+- **Every figure card draws its own week, or says why it cannot.** A figure's line comes from the days it could measure: a day with no clicks contributes no cost per click to that line rather than dropping the week's shape, and fewer than two measured days draws nothing. A demo fixture whose figure never moves is a fixture that needs fixing, not a chart to fake.
 - **One label per fact.** State a caveat once, at the level it applies to. A band that is entirely demo data says so in its one note under the figures; it does not repeat the same word as a badge beside the heading.
 - **Ad Radar feeds Home's local ads, keyed on the workspace's own area.** Read the list for the postcode from the workspace's brand address, and fall back to the niche's default area until an address supplies one. Never fill the list with a card that cannot draw its own still image: prefer ads with an image and a headline, and never hand a video file to an image element.
 - **Lead with the customer's real creative.** Home leads with the customer's creative and keeps its next action linked to a server-resolved, available route.
@@ -84,6 +85,10 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 
 ## Changelog
 
+- 2026-09-12: the weekly metrics row grew its fourth figure (leads), two up on a
+  phone and one row on desktop; cost per link click now draws a line from the
+  days that had clicks, and the demo fixture's cost per click moves day to day
+  instead of sitting perfectly flat.
 - 2026-09-12: Home's weekly metrics moved into the shared KPI card surface, the
   duplicate demo badge beside the heading was removed in favour of the one note
   under the figures, and Home's local-ads list became Ad Radar results keyed on
