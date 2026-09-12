@@ -4,11 +4,12 @@ import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { AD_EXAMPLES, AD_LIBRARY, withBasePath } from "@/lib/homepage-concept/content";
 import { creativeImageSrcSet } from "@/lib/homepage-concept/creative-image";
 import { homepageMotion, useHydratedReducedMotion } from "@/lib/motion";
-
-import "./workflow-motion-study.css";
+import { studyAdMotion } from "./workflow-motion-study-geometry";
+import styles from "./workflow-motion-study.module.css";
 
 const STUDY_STEPS = [
   { label: "Choose", hint: "Pick a ready-made ad" },
@@ -18,6 +19,7 @@ type StudyStep = (typeof STUDY_STEPS)[number]["label"];
 const SELECTED_AD = { ...AD_EXAMPLES[0], id: "motion-study-selected" } as const;
 const SIDE_ADS = [AD_LIBRARY[0], AD_LIBRARY[2]] as const;
 const TIMING = homepageMotion.workflowStudy;
+const STUDY_AD_WIDTH = 300;
 
 function useNarrowStudy() {
   const [narrow, setNarrow] = useState(false);
@@ -52,44 +54,39 @@ function usePageActivity() {
 function StudyAd({ headlineChars }: { headlineChars: number }) {
   const headline = SELECTED_AD.adTitle.slice(0, headlineChars);
   return (
-    <motion.article
-      className="bw-study-selected-ad"
-      aria-label="Selected ad preview"
-      layout
-      transition={{ duration: TIMING.adMoveMs / 1000, ease: TIMING.ease }}
-    >
-      <header className="bw-study-ad-head">
-        <span className="bw-study-avatar" aria-hidden="true">AM</span>
+    <article className={styles.bwStudySelectedAd} aria-label="Selected ad preview">
+      <header className={styles.bwStudyAdHead}>
+        <span className={styles.bwStudyAvatar} aria-hidden="true">AM</span>
         <span><strong>Ad preview</strong><small>Sponsored</small></span>
-        <span className="bw-study-more" aria-hidden="true">•••</span>
+        <span className={styles.bwStudyMore} aria-hidden="true">•••</span>
       </header>
-      <p className="bw-study-ad-copy">Thinking of selling? Find out what your home could be worth.</p>
-      <div className="bw-study-ad-image">
+      <p className={styles.bwStudyAdCopy}>Thinking of selling? Find out what your home could be worth.</p>
+      <div className={styles.bwStudyAdImage}>
         <img
           src={withBasePath(SELECTED_AD.image)}
           srcSet={creativeImageSrcSet(SELECTED_AD.image)}
           alt=""
           width="1080"
           height="1350"
-          sizes="(min-width: 1000px) 700px, 560px"
+          sizes="(min-width: 1000px) 750px, 560px"
           loading="eager"
           fetchPriority="high"
           decoding="async"
         />
-        <span className="bw-study-ad-headline">
+        <span className={styles.bwStudyAdHeadline}>
           <i aria-hidden="true" />
           {headline || <em>{SELECTED_AD.adTitle}</em>}
         </span>
       </div>
-      <div className="bw-study-link"><small>BLOCKWISE.EXAMPLE</small><strong>{SELECTED_AD.linkTitle}</strong></div>
-      <div className="bw-study-actions" aria-hidden="true"><span>Like</span><span>Comment</span><span>Share</span></div>
-    </motion.article>
+      <div className={styles.bwStudyLink}><small>BLOCKWISE.EXAMPLE</small><strong>{SELECTED_AD.linkTitle}</strong></div>
+      <div className={styles.bwStudyActions} aria-hidden="true"><span>Like</span><span>Comment</span><span>Share</span></div>
+    </article>
   );
 }
 
 function SideAd({ ad }: { ad: (typeof SIDE_ADS)[number] }) {
   return (
-    <motion.div className="bw-study-side-ad" initial={{ opacity: 1 }} animate={{ opacity: 1 }} transition={{ duration: TIMING.sideFadeMs / 1000 }}>
+    <motion.div className={styles.bwStudySideAd} initial={{ opacity: 1 }} animate={{ opacity: 1 }} transition={{ duration: TIMING.sideFadeMs / 1000 }}>
       <img src={withBasePath(ad.image)} srcSet={creativeImageSrcSet(ad.image)} alt="" width="1080" height="1350" sizes="(min-width: 1000px) 250px, 30vw" loading="lazy" decoding="async" />
     </motion.div>
   );
@@ -99,16 +96,41 @@ function EditPanel({ headlineChars, reduced }: { headlineChars: number; reduced:
   const headline = SELECTED_AD.adTitle.slice(0, headlineChars);
   return (
     <motion.section
-      className="bw-study-edit-panel"
+      className={styles.bwStudyEditPanel}
       initial={reduced ? { opacity: 1 } : { opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
       transition={{ duration: reduced ? 0 : TIMING.panelRevealMs / 1000, delay: reduced ? 0 : (TIMING.adMoveMs / 1000) * 0.62, ease: TIMING.ease }}
       aria-label="Customise your ad"
     >
-      <div className="bw-study-panel-heading"><span className="bw-study-kicker">Customise</span><h2>Make it yours</h2></div>
-      <label className={headlineChars > 0 ? "is-active" : undefined}><span>Headline</span><strong>{headline || "Your headline appears here"}</strong></label>
-      <label><span>Ad text</span><strong>Thinking of selling? Find out what your home could be worth.</strong></label>
-      <label><span>Link title</span><strong>{SELECTED_AD.linkTitle}</strong></label>
+      <div className={styles.bwStudyPanelHeading}><h2>Make it yours</h2></div>
+      <motion.label
+        className={headlineChars > 0 ? styles.isActive : undefined}
+        initial={reduced ? { opacity: 1 } : { opacity: 0, y: 8 }}
+        animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
+        transition={{ duration: reduced ? 0 : TIMING.panelRevealMs / 1000, delay: reduced ? 0 : 0.02 }}
+        htmlFor="study-headline"
+      >
+        <span>Headline</span>
+        <Input id="study-headline" readOnly value={headline} placeholder="Your headline appears here" aria-label="Headline" />
+      </motion.label>
+      <motion.label
+        initial={reduced ? { opacity: 1 } : { opacity: 0, y: 8 }}
+        animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
+        transition={{ duration: reduced ? 0 : TIMING.panelRevealMs / 1000, delay: reduced ? 0 : 0.08 }}
+        htmlFor="study-ad-text"
+      >
+        <span>Ad text</span>
+        <textarea id="study-ad-text" readOnly value="Thinking of selling? See what your home could be worth." aria-label="Ad text" rows={2} />
+      </motion.label>
+      <motion.label
+        initial={reduced ? { opacity: 1 } : { opacity: 0, y: 8 }}
+        animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
+        transition={{ duration: reduced ? 0 : TIMING.panelRevealMs / 1000, delay: reduced ? 0 : 0.14 }}
+        htmlFor="study-link-title"
+      >
+        <span>Link title</span>
+        <Input id="study-link-title" readOnly value={SELECTED_AD.linkTitle} aria-label="Link title" />
+      </motion.label>
     </motion.section>
   );
 }
@@ -120,17 +142,26 @@ export function WorkflowMotionStudy() {
   const [step, setStep] = useState<StudyStep>("Choose");
   const [manual, setManual] = useState(false);
   const [headlineChars, setHeadlineChars] = useState(0);
+  const [stageSize, setStageSize] = useState({ width: 1040, height: 560 });
+  const [adSize, setAdSize] = useState({ width: STUDY_AD_WIDTH, height: 550 });
+  const stageRef = useRef<HTMLDivElement>(null);
+  const adRef = useRef<HTMLDivElement>(null);
+  const headlineIndexRef = useRef(0);
 
   const selectStep = useCallback((next: StudyStep) => {
     setManual(true);
     setStep(next);
-    if (next === "Choose") setHeadlineChars(0);
+    if (next === "Choose") {
+      headlineIndexRef.current = 0;
+      setHeadlineChars(0);
+    }
   }, []);
 
   useEffect(() => {
     if (reduced) {
       setManual(true);
       setStep("Customise");
+      headlineIndexRef.current = SELECTED_AD.adTitle.length;
       setHeadlineChars(SELECTED_AD.adTitle.length);
     }
   }, [reduced]);
@@ -143,23 +174,25 @@ export function WorkflowMotionStudy() {
 
   useEffect(() => {
     if (step !== "Customise") {
+      headlineIndexRef.current = 0;
       setHeadlineChars(0);
       return;
     }
     if (reduced) {
+      headlineIndexRef.current = SELECTED_AD.adTitle.length;
       setHeadlineChars(SELECTED_AD.adTitle.length);
       return;
     }
     if (!inView || !pageVisible) return;
-    let index = 0;
     let timer: number | null = null;
     const start = window.setTimeout(() => {
       const tick = () => {
-        index += 1;
-        setHeadlineChars(index);
-        if (index < SELECTED_AD.adTitle.length) timer = window.setTimeout(tick, TIMING.typeMs);
+        const next = Math.min(headlineIndexRef.current + 1, SELECTED_AD.adTitle.length);
+        headlineIndexRef.current = next;
+        setHeadlineChars(next);
+        if (next < SELECTED_AD.adTitle.length) timer = window.setTimeout(tick, TIMING.typeMs);
       };
-      tick();
+      if (headlineIndexRef.current < SELECTED_AD.adTitle.length) tick();
     }, TIMING.typeStartMs);
     return () => {
       window.clearTimeout(start);
@@ -167,18 +200,38 @@ export function WorkflowMotionStudy() {
     };
   }, [inView, pageVisible, reduced, step]);
 
+  useEffect(() => {
+    const stage = stageRef.current;
+    const ad = adRef.current;
+    if (!stage || !ad) return;
+    const measure = () => {
+      setStageSize({ width: stage.clientWidth, height: stage.clientHeight });
+      setAdSize({ width: ad.offsetWidth, height: ad.offsetHeight });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(stage);
+    observer.observe(ad);
+    return () => observer.disconnect();
+  }, [narrow]);
+
   const customise = step === "Customise";
-  const adMotion = narrow
-    ? customise ? { x: -54, y: -118, scale: 0.78 } : { x: 0, y: 0, scale: 1 }
-    : customise ? { x: -250, y: 12, scale: 0.78 } : { x: 0, y: 0, scale: 1 };
+  const adMotion = studyAdMotion({
+    stageWidth: stageSize.width,
+    stageHeight: stageSize.height,
+    adWidth: adSize.width,
+    adHeight: adSize.height,
+    narrow,
+    customise: customise && !reduced,
+  });
 
   return (
     <MotionConfig reducedMotion="user">
-      <main className="bw-study" ref={rootRef}>
-        <section className="bw-study-frame" aria-label="Ad Studio motion study">
-          <header className="bw-study-toolbar">
-            <span className="bw-study-title"><i aria-hidden="true" /> Ad Studio</span>
-            <div className="bw-study-selector" role="group" aria-label="Motion study screen">
+      <main className={"tw " + styles.bwStudy} ref={rootRef}>
+        <section className={styles.bwStudyFrame} aria-label="Ad Studio motion study">
+          <header className={styles.bwStudyToolbar}>
+            <span className={styles.bwStudyTitle}><i aria-hidden="true" /> Ad Studio</span>
+            <div className={styles.bwStudySelector} role="group" aria-label="Motion study screen">
               {STUDY_STEPS.map((item) => (
                 <Button key={item.label} type="button" variant="ghost-pill" size="pill" arrow={null} aria-pressed={step === item.label} onClick={() => selectStep(item.label)}>
                   {item.label}
@@ -186,16 +239,16 @@ export function WorkflowMotionStudy() {
               ))}
             </div>
           </header>
-          <div className="bw-study-stage" data-step={step.toLowerCase()}>
-            <div className="bw-study-gallery" aria-hidden={customise}>
+          <div className={styles.bwStudyStage} ref={stageRef} data-step={step.toLowerCase()}>
+            <div className={styles.bwStudyGallery} aria-hidden={customise}>
               {SIDE_ADS.map((ad) => <SideAd key={ad.id} ad={ad} />)}
             </div>
-            <motion.div className="bw-study-ad-motion" animate={adMotion} transition={{ duration: TIMING.adMoveMs / 1000, ease: TIMING.ease }}>
+            <motion.div className={styles.bwStudyAdMotion} ref={adRef} animate={adMotion} transition={{ duration: reduced ? 0 : TIMING.adMoveMs / 1000, ease: TIMING.ease }}>
               <StudyAd headlineChars={headlineChars} />
             </motion.div>
-            <AnimatePresence initial={false}>{customise ? <EditPanel key="edit" headlineChars={headlineChars} reduced={reduced} /> : null}</AnimatePresence>
+            <AnimatePresence initial={false}>{customise ? <div className={styles.bwStudyEditSlot}><EditPanel key="edit" headlineChars={headlineChars} reduced={reduced} /></div> : null}</AnimatePresence>
           </div>
-          <p className="bw-study-hint" aria-live="polite">{STUDY_STEPS.find((item) => item.label === step)?.hint}</p>
+          <p className={styles.bwStudyHint} aria-live="polite">{STUDY_STEPS.find((item) => item.label === step)?.hint}</p>
         </section>
       </main>
     </MotionConfig>

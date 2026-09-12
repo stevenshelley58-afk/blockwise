@@ -109,6 +109,12 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 - The demonstration has one quiet rounded frame, a clear top-right selector and a stable ad position across Customise and Review. The review details size to their content rather than stretching into an empty tower. The selected step remains held; there are no playback controls.
 - Keep phone composition legible rather than shrinking a whole desktop canvas. Preserve finite autoplay, offscreen suspension, stable hydration and reduced-motion handling. No additional library or hero asset download is justified by this refinement.
 
+## Standalone Ad Studio motion study, 12 September 2026
+
+- /motion-study is an isolated owner-review study, not a homepage replacement. It keeps one ad node, moves and scales that ad into a left editing position, then reveals read-only fields and holds.
+- The study uses the existing Motion runtime and shared homepage timing tokens. HyperFrames remains an authoring reference only; no player, vendor bundle or new asset is added.
+- Choose and Customise are the only controls. Reduced motion, hidden-page and offscreen states settle or suspend without adding playback controls.
+
 ## How to change this system
 
 - **Changing the system.** A new accent family, radius scale, typography system or navigation grammar is a system change: it needs the owner's decision and a DESIGN.md change in the same commit. A purpose-built surface that reuses the existing vocabulary is not a system change.
