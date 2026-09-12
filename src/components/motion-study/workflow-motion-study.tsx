@@ -153,8 +153,8 @@ export function WorkflowMotionStudy() {
   const headlineIndexRef = useRef(0);
 
   const selectStep = useCallback((next: StudyStep) => {
-    if (next === step) return;
     setManual(true);
+    if (next === step) return;
     setStep(next);
     setReviewConfirmed(next === "Review" && reduced);
     if (next === "Choose") {
