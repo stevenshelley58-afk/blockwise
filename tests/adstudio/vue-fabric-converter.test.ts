@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import type { AdTemplate } from "../../packages/ad-template-contract/src/types.ts";
-import { applyTextValuesToScenes, convertTemplateToFabricScenes, readVueNativeEditor, textValuesFromScenes } from "../../src/components/adstudio/vue-editor/fabric-scene.ts";
+import { applyTextValuesToScenes, convertTemplateToFabricScenes, nativeTemplateFonts, readVueNativeEditor, textValuesFromScenes } from "../../src/components/adstudio/vue-editor/fabric-scene.ts";
 
 function pack(): AdTemplate {
   const fixture = JSON.parse(readFileSync("tests/fixtures/ad-template/minimal-feed-story.json", "utf8")) as AdTemplate;
@@ -72,4 +72,14 @@ test("conversion refuses external image sources instead of claiming editable fid
       metaPrimaryText: "", metaHeadline: "", metaDescription: "", metaCta: "LEARN_MORE", revision: 1,
     },
   }), /same-origin/);
+});
+
+ test("native editor resolves both declared and bundled fonts instead of silently substituting", () => {
+  const template = pack();
+  template.fonts.push({ file: "/fonts/adstudio/manrope-600.woff2" });
+  const fonts = nativeTemplateFonts(template, "ad-1");
+  assert.equal(fonts.length, 2);
+  assert.match(fonts[0].url, /assets\/font\?adId=ad-1$/);
+  assert.equal(fonts[1].url, "/fonts/adstudio/manrope-600.woff2");
+  assert.equal(fonts[1].family, "Blockwise_fixture-minimal_%2Ffonts%2Fadstudio%2Fmanrope-600.woff2");
 });

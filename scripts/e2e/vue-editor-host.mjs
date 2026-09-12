@@ -83,6 +83,8 @@ try{
   const save=page.getByRole('button',{name:'Save',exact:true});
   const ready=()=>page.waitForFunction(()=>[...document.querySelectorAll('button')].some(button=>button.textContent==='Save'&&!button.disabled));
   await ready();
+  assert.equal(await page.getByText('Trial copy.').count(),0);
+  assert.equal(await page.getByRole('link',{name:'Open original ad'}).count(),0);
   await page.getByAltText('Feed creative preview').waitFor();
   assert.equal(await page.locator('iframe').isVisible(),false,'design tools hidden by default');
   assert.equal(await page.locator('iframe').evaluate(el=>el.inert || !!el.closest('[inert]')),true,'hidden editor keyboard inert');

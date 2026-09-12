@@ -147,7 +147,7 @@ export async function copyAdToNativeTrial(input: {
   if (sourceName) {
     const renamed = await input.supabase
       .from("ad_customer_ads")
-      .update({ name: `${sourceName} native trial`.slice(0, 160) })
+      .update({ name: sourceName.slice(0, 160) })
       .eq("id", trial.adId)
       .eq("workspace_id", input.workspaceId);
     if (renamed.error) throw new NativeCopyError("trial_update_failed", "The trial ad could not be named.");

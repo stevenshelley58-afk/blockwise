@@ -6,7 +6,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-const IMAGE_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+const TEMPLATE_BINARY_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "font/woff2", "font/woff", "font/ttf", "font/otf", "application/font-woff", "application/x-font-ttf", "application/x-font-opentype"]);
 
 export async function GET(
   request: NextRequest,
@@ -28,7 +28,7 @@ export async function GET(
       })
     : null);
   const declared = template?.assets[assetKey];
-  if (!template || !declared || !IMAGE_MIME_TYPES.has(declared.mimeType)) return notFoundResponse();
+  if (!template || !declared || !TEMPLATE_BINARY_MIME_TYPES.has(declared.mimeType)) return notFoundResponse();
 
   const expectedPath = templateAssetStoragePath(templateId, assetKey, declared.fileName);
   const { data: asset, error } = await service.from("ad_template_assets_direct")

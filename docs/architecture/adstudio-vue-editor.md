@@ -100,3 +100,7 @@ usability testing with customers.
 
 The main trade-off is one extra click for detailed design work, in exchange for
 removing the design-tool interface from everyone else's starting screen.
+
+## Default entry, 12 September 2026
+
+The approved simple-first editor is now the normal ad entry. The server GET remains read-only; a mounted client launcher performs the existing idempotent copy POST and replaces the URL with the native canvas. Saved native documents and server-marked native copies go directly to the canvas. Original ads remain preserved; only an explicit original-ad URL with ?editor=legacy opens the previous renderer. The trial footer is removed. New copy names retain the source name. Bundled and asset-declared fonts use the same template-scoped aliases in the converter and native bridge. Binary font delivery retains the existing workspace/template checks.

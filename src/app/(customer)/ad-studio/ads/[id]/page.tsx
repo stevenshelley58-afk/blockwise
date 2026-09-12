@@ -9,11 +9,14 @@ import { loadAdStudioBrandDefaults } from "@/lib/adstudio/brand-defaults";
 import { loadAdStudioWorkspaceLibraryAssets } from "@/lib/adstudio/assets";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
+import { loadNativeTrialIdentity } from "@/lib/adstudio/vue-native-copy";
+
 export const dynamic = "force-dynamic";
 
 /** Stable customer-ad editor URL. Reading an ad never creates or mutates data. */
-export default async function CustomerAdEditorPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CustomerAdEditorPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ editor?: string }> }) {
   const { id } = await params;
+  const { editor } = await searchParams;
   const { supabase, access } = await requirePageSurfaceAccess("adstudio");
   let ad;
   try { ad = await loadCustomerAd(supabase, access.workspaceId, id); }
@@ -25,6 +28,9 @@ export default async function CustomerAdEditorPage({ params }: { params: Promise
   // A native scene can contain freeform objects the legacy document model cannot
   // represent. Never open it here, where a legacy save would discard that work.
   if (readVueNativeEditor(ad.initialDocument)) redirect(`/ad-studio/ads/${encodeURIComponent(ad.adId)}/canvas`);
+  const nativeIdentity = await loadNativeTrialIdentity(supabase, access.workspaceId, ad.adId);
+  if (nativeIdentity) redirect("/ad-studio/ads/" + encodeURIComponent(ad.adId) + "/canvas");
+  if (editor !== "legacy") return <TryVueEditorButton adId={ad.adId} workspaceId={access.workspaceId} automatic />;
   const pack = await getTemplateForExistingCustomerAd({
     customerSupabase: supabase,
     internalSupabase: createSupabaseServiceClient(),

@@ -7,6 +7,18 @@ export type FabricObject = { type?: string; objects?: FabricObject[]; [key: stri
 export type FabricScene = { version: string; width: number; height: number; objects: FabricObject[]; [key: string]: any };
 export interface VueNativeEditorDocument { engine: "vue-fabric-editor"; version: 1; feed: FabricScene; story: FabricScene; sourceAdId?: string }
 
+/** Match template-scoped family names to the actual declared or bundled font. */
+export function nativeTemplateFonts(pack: AdTemplate, adId: string): Array<{ family: string; url: string }> {
+  return pack.fonts.map(font => {
+    const asset = Object.entries(pack.assets).find(([, value]) => value.fileName === font.file);
+    const file = font.file.split("/").pop();
+    if (!file || file === "." || file === "..") throw new Error("The template contains an invalid font file.");
+    const url = asset ? templateAssetProxyUrl(pack.templateId, asset[0], adId) : "/fonts/adstudio/" + encodeURIComponent(file);
+    if (!url) throw new Error("The template font could not be located.");
+    return { family: "Blockwise_" + encodeURIComponent(pack.templateId) + "_" + encodeURIComponent(font.file), url };
+  });
+}
+
 export function readVueNativeEditor(document: unknown): VueNativeEditorDocument | null {
   const native = document && typeof document === "object" ? (document as { nativeEditor?: unknown }).nativeEditor : null;
   if (!native || typeof native !== "object") return null;

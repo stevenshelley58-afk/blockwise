@@ -12,10 +12,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { META_COPY_CTA_VALUES } from "@/lib/adstudio/meta-copy-contract";
-import { templateAssetProxyUrl } from "@/lib/adstudio/pack-gallery";
 import { uploadCustomerImage } from "../editor/customer-image-upload";
 import { NativeMetaPreview, type NativeMetaCopy } from "./native-meta-preview";
-import { applyTextValuesToScenes, convertTemplateToFabricScenes, hydrateFabricSceneImages, isFabricScene, nativeImageSlots, readVueNativeEditor, replaceNativeImageInScenes, templateTextValues, textValuesFromScenes, type FabricScene, type VueNativeEditorDocument } from "./fabric-scene";
+import { applyTextValuesToScenes, convertTemplateToFabricScenes, hydrateFabricSceneImages, isFabricScene, nativeImageSlots, nativeTemplateFonts, readVueNativeEditor, replaceNativeImageInScenes, templateTextValues, textValuesFromScenes, type FabricScene, type VueNativeEditorDocument } from "./fabric-scene";
 
 const CHANNEL = "blockwise.vue-editor";
 const VERSION = 1;
@@ -99,11 +98,7 @@ export function VueEditorShell({ pack, adId, workspaceId, initialDocument, initi
         void Promise.all(initialDocument.nativeEditor ? [Promise.resolve(scenesRef.current.feed), Promise.resolve(scenesRef.current.story)] : [hydrateFabricSceneImages(scenesRef.current.feed), hydrateFabricSceneImages(scenesRef.current.story)])
           .then(([feed, story]) => {
             replaceScenes({ feed, story }, false);
-            const fonts = pack.fonts.flatMap(font => {
-              const asset = Object.entries(pack.assets).find(([, declaration]) => declaration.fileName === font.file);
-              const url = asset ? templateAssetProxyUrl(pack.templateId, asset[0], adId) : null;
-              return url ? [{ family: `Blockwise_${encodeURIComponent(pack.templateId)}_${encodeURIComponent(font.file)}`, url }] : [];
-            });
+            const fonts = nativeTemplateFonts(pack, adId);
             send("initialize", { placements: { feed: { width: 1080, height: 1350, scene: feed }, story: { width: 1080, height: 1920, scene: story } }, activePlacement: "feed", fonts, templates: [{ id: pack.templateId, name: "Reset to opened design", placements: { feed, story } }], assets: libraryAssets });
           })
           .catch(cause => setError(cause instanceof Error ? cause.message : "The template could not be converted for the new editor."));
@@ -296,11 +291,10 @@ export function VueEditorShell({ pack, adId, workspaceId, initialDocument, initi
   const busy = !ready || saving || transitioning || photoBusy;
   const slots = nativeImageSlots(scenesRef.current);
   const survivingText = textValuesFromScenes(scenesRef.current);
-  const sourceId = native.sourceAdId ?? sourceAdId;
   const errorAlert = error ? <Alert variant="destructive" className="shrink-0"><AlertCircle /><AlertTitle>Something needs attention</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : null;
   const formats = <Tabs value={active} onValueChange={value => choosePlacement(value as Placement)}><TabsList aria-label="Ad format"><TabsTrigger disabled={busy} value="feed">Feed</TabsTrigger><TabsTrigger disabled={busy} value="story">Story</TabsTrigger></TabsList></Tabs>;
 
-  return <div className="flex h-full min-h-0 flex-col bg-background text-foreground" role="region" aria-label="New Ad Studio editor trial">
+  return <div className="flex h-full min-h-0 flex-col bg-background text-foreground" role="region" aria-label="Ad Studio editor">
     <header className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-border bg-card px-3 py-2 sm:px-5">
       <Button type="button" variant="ghost" size="icon" disabled={busy} aria-label="Back to ads" onClick={leave}><ArrowLeft className="size-4" /></Button>
       <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{pack.metadata.title}</p><p className="text-xs text-muted-foreground" role="status" aria-live="polite">{status}</p></div>
@@ -373,7 +367,6 @@ export function VueEditorShell({ pack, adId, workspaceId, initialDocument, initi
       </div>
     </SheetContent></Sheet>
     <input ref={fileInput} type="file" aria-label="Upload a photo" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={event=>{ const file=event.target.files?.[0]; if(file) void upload(file); event.currentTarget.value=""; }} />
-    {sourceId ? <div className="shrink-0 border-t border-border bg-card px-3 py-2 text-center text-xs text-muted-foreground">Trial copy. <a className="font-medium text-foreground underline underline-offset-4" href={"/ad-studio/ads/"+encodeURIComponent(sourceId)} onClick={event=>{ if((dirty||designOpen)&&!window.confirm("You have unsaved changes. Open the original ad?")) event.preventDefault(); }}>Open original ad</a></div> : null}
   </div>;
 }
 
