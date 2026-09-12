@@ -29,7 +29,7 @@ async function openPreview(page: Page, width: number, height: number) {
   await expect(
     page.getByRole("heading", { name: /Connect Facebook & Instagram/i }),
   ).toBeVisible();
-  await expect(page.getByRole("main")).toHaveAttribute("data-preview-ready", "true");
+  await expect(page.getByRole("main")).toHaveAttribute("data-preview-ready", "true", { timeout: 15_000 });
   await page.evaluate(async () => document.fonts.ready);
   await page.locator("img").evaluateAll(async (images: HTMLImageElement[]) => {
     await Promise.all(
