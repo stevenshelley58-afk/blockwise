@@ -4704,7 +4704,9 @@ async function handleMediaCollector(job) {
       failed += 1;
     }
   }
-  return { status: "complete", result: { handler: "blockwise-media-collector", ad_creative_id: payload.adCreativeId, seeded, captured, failed, model_calls: 0 } };
+  const remaining = await load();
+  const archiveComplete = failed === 0 && remaining.length === 0;
+  return { status: archiveComplete ? "complete" : "blocked", blocked_reason: archiveComplete ? null : "media_archive_incomplete", result: { handler: "blockwise-media-collector", ad_creative_id: payload.adCreativeId, seeded, captured, failed, remaining_assets: remaining.length, archive_complete: archiveComplete, model_calls: 0 } };
 }
 
 async function loadCreativeForMediaCapture(adCreativeId) {

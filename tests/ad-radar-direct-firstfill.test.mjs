@@ -33,3 +33,8 @@ test('first-fill page registry is exhaustive and failed attempts are not silentl
  assert.ok(supervisor.includes('recyclable && firstFillOnly && input.job_type === "blockwise-ad-collector"'));
  assert.ok(supervisor.includes('status=in.(pending,claimed,failed,blocked)&limit=5000'));
 });
+
+test('media failures and assets beyond the capture batch cannot report completion', () => {
+ assert.ok(supervisor.includes('const archiveComplete = failed === 0 && remaining.length === 0'));
+ assert.ok(supervisor.includes('blocked_reason: archiveComplete ? null : "media_archive_incomplete"'));
+});
