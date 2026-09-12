@@ -97,3 +97,7 @@ test("shown values use multiline fields and match the preview", () => {
   assert.match(styles, /overflow: hidden/);
   assert.match(styles, /line-height: 1\.45/);
 });
+
+test("autoplay waits for and reacts to measured geometry", () => {
+  assert.ok(source.includes("[geometryReady, motionReady, inView, manual, pageVisible, reduced, step]"));
+});

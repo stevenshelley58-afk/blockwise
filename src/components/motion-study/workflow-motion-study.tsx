@@ -172,7 +172,7 @@ export function WorkflowMotionStudy() {
     if (!geometryReady || !motionReady || manual || reduced || step !== "Choose" || !inView || !pageVisible) return;
     const timer = window.setTimeout(() => setStep("Customise"), TIMING.autoHoldMs);
     return () => window.clearTimeout(timer);
-  }, [inView, manual, pageVisible, reduced, step]);
+  }, [geometryReady, motionReady, inView, manual, pageVisible, reduced, step]);
 
   useEffect(() => {
     if (step !== "Customise") {
