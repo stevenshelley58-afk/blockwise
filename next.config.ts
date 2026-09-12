@@ -18,6 +18,22 @@ function sentryIngestOrigin(dsn: string | undefined): string | null {
   }
 }
 
+/**
+ * Cache-Control for the non-hashed files under public/. Freshness is staggered
+ * across directory groups so a single visit does not put every one of these files
+ * on the same expiry second, and `stale-if-error` is bounded to the same week as
+ * the background revalidation so a client keeps the asset it already has if the
+ * origin fails while a release is in flight.
+ */
+function publicAssetCacheControl(maxAgeSeconds: number): { key: string; value: string }[] {
+  return [
+    {
+      key: "Cache-Control",
+      value: `public, max-age=${maxAgeSeconds}, stale-while-revalidate=604800, stale-if-error=604800`,
+    },
+  ];
+}
+
 const homepagePreview = process.env.BLOCKWISE_HOMEPAGE_PREVIEW === "true";
 const previewBasePath = homepagePreview ? "/homepage-preview" : "";
 
@@ -209,17 +225,23 @@ const nextConfig: NextConfig = {
       // Files under public/ are served with `max-age=0` by default, so every
       // visit revalidated ~2.9 MB of hero imagery and the Ad Studio webfonts
       // even though they change only at release. These filenames are not
-      // content-hashed, so a day of freshness plus a week of background
+      // content-hashed, so roughly a day of freshness plus a week of background
       // revalidation keeps repeat views free without ever pinning a stale
       // asset for long. (adstudio-thumbnails above IS content-hashed.)
+      // Three groups instead of one, with freshness offset by a couple of hours,
+      // so the assets a visit loads together do not all expire on the same
+      // second and revalidate as one burst.
       {
-        source: "/:dir(hero|home|ads|brand|icons|fonts|adstudio-samples|adstudio-fixtures)/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=86400, stale-while-revalidate=604800",
-          },
-        ],
+        source: "/:dir(hero|home)/:path*",
+        headers: publicAssetCacheControl(86_400),
+      },
+      {
+        source: "/:dir(ads|brand|icons)/:path*",
+        headers: publicAssetCacheControl(93_600),
+      },
+      {
+        source: "/:dir(fonts|adstudio-samples|adstudio-fixtures)/:path*",
+        headers: publicAssetCacheControl(100_800),
       },
     ];
   },

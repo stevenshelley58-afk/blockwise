@@ -31,6 +31,25 @@ export function resolveSupabaseServerUrl(env: SupabaseServerEnv = process.env): 
   return cleanSupabaseEnv(env.NEXT_PUBLIC_SUPABASE_URL ?? env.SUPABASE_URL).replace(/\/+$/u, "");
 }
 
+/**
+ * Rewrite a URL produced by the internal transport client for browser use.
+ *
+ * Signed URLs, transformed storage URLs and public object URLs embed the base
+ * origin of the client that produced them. The server client deliberately
+ * points at the internal router, so a URL returned to the browser would name
+ * `product-caddy`, which no customer can resolve. Swap only the origin back to
+ * the public project URL: a storage signature covers the path and query, never
+ * the host, so the token stays valid. When no internal origin is configured
+ * this is a no-op.
+ */
+export function toPublicSupabaseUrl(url: string, env: SupabaseServerEnv = process.env): string {
+  const internal = resolveSupabaseServerUrl(env);
+  const publicUrl = cleanSupabaseEnv(env.NEXT_PUBLIC_SUPABASE_URL ?? env.SUPABASE_URL).replace(/\/+$/u, "");
+  if (!publicUrl || !internal || internal === publicUrl) return url;
+  if (url !== internal && !url.startsWith(`${internal}/`)) return url;
+  return `${publicUrl}${url.slice(internal.length)}`;
+}
+
 /** The Supabase project slug that names the auth cookie (`sb-<ref>-auth-token`). */
 function supabaseProjectRef(url: string): string {
   try {

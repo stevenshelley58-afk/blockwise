@@ -27,7 +27,15 @@
 # Changing {$TRUSTED_PROXY_RANGES} to an address the edge does not use silently
 # degrades every customer to the edge's container IP for rate limiting and
 # audit attribution, with no error — it fails open, not closed.
-http://{$BLOCKWISE_PRODUCT_DOMAIN} {
+# The internal service name is a second address for the same site, so an
+# in-container caller can reach Supabase at http://product-caddy:80 without
+# leaving the host. Caddy matches a site address against the request Host, and
+# without this an in-network request carries Host: product-caddy, matches no
+# site, and Caddy answers an empty 200 that reads as a successful empty body.
+# The handle_path prefixes below are correct as written: GoTrue and PostgREST
+# serve their routes at the root, so the /rest/v1 and /auth/v1 prefixes must be
+# stripped (verified: /auth/v1/user and /user return identical 401/403 bodies).
+http://{$BLOCKWISE_PRODUCT_DOMAIN}, http://product-caddy {
 	encode zstd gzip
 
 	@health path /healthz

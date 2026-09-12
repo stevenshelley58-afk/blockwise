@@ -1,3 +1,5 @@
+import { toPublicSupabaseUrl } from "../supabase/credentials.ts";
+
 export const ADSTUDIO_MEDIA_URL_LIMIT = 100;
 export const ADSTUDIO_MEDIA_URL_TTL_SECONDS = 60 * 60;
 
@@ -71,13 +73,15 @@ export async function createAdStudioMediaUrls(input: {
       if (error || !grid.data?.signedUrl || !preview.data?.signedUrl || !full.data?.signedUrl) {
         throw new Error(error?.message ?? "A media URL could not be signed.");
       }
+      // The server client signs through the internal router, but these URLs are
+      // consumed by the browser, so hand back the public origin.
       return [
         path,
         {
           path,
-          grid: grid.data.signedUrl,
-          preview: preview.data.signedUrl,
-          full: full.data.signedUrl,
+          grid: toPublicSupabaseUrl(grid.data.signedUrl),
+          preview: toPublicSupabaseUrl(preview.data.signedUrl),
+          full: toPublicSupabaseUrl(full.data.signedUrl),
           expiresAt,
         },
       ] as const;

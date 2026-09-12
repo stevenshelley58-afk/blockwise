@@ -233,15 +233,24 @@ services:
       # Readiness must not call the public/shared edge: product-caddy waits on
       # this app's health, so that would create a startup cycle.
       BLOCKWISE_READINESS_SUPABASE_URL: http://product-rest:3000
-      # Deliberately NOT set: BLOCKWISE_SUPABASE_SERVER_URL.
-      # Pointing server-side Supabase traffic at product-caddy:80 was measured to
-      # break sessions. That router uses handle_path, which strips the /auth/v1
-      # prefix before proxying to GoTrue, so token verification gets an empty 200
-      # and every signed-in request bounces to /login. The app's own origin is
-      # cheap (the container resolves it locally and the request never leaves the
-      # host), so this stays on the public URL until the internal router can
-      # serve /auth/v1/* without stripping the prefix. lib/supabase/credentials.ts
-      # already supports the variable when that is fixed.
+      # Server-side Supabase traffic goes straight to the internal router instead
+      # of leaving the host, crossing the public TLS edge and coming back
+      # (measured ~3 ms internal versus ~39-162 ms public).
+      #
+      # The earlier attempt was blamed on handle_path stripping /auth/v1, but that
+      # was wrong. The strip is correct (GoTrue and PostgREST serve at the root:
+      # product-caddy/auth/v1/user and product-auth:9999/user return the same
+      # 401/403 bodies). The real cause was the Host header: the site address
+      # matched only blockwise.sale, so http://product-caddy:80 arrived as
+      # Host: product-caddy, matched no site, and Caddy answered an empty 200 that
+      # the client read as a successful empty body. The Caddyfile now answers that
+      # host too.
+      #
+      # Browser-facing storage URLs are rebuilt from NEXT_PUBLIC_SUPABASE_URL by
+      # toPublicSupabaseUrl (lib/supabase/credentials.ts), applied where the
+      # server signs media (lib/adstudio/media-urls.ts), so the internal origin
+      # never reaches a customer browser.
+      BLOCKWISE_SUPABASE_SERVER_URL: http://product-caddy:80
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?SUPABASE_SERVICE_ROLE_KEY is required}
       TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:?TOKEN_ENCRYPTION_KEY is required}
       # AI and Meta are opt-in providers. Core auth, Ad Studio editing and

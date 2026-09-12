@@ -22,9 +22,17 @@
  * personalised page under one of these paths; the deployed rule was verified
  * with a session cookie present and answers HIT, which confirms this shape.
  *
- * `browser_ttl` is `bypass` for the same reason: letting a browser hold the HTML
- * would be the one way a client keeps markup whose chunk URLs no longer exist,
- * while a revalidation still lands on the edge and is answered from there.
+ * `browser_ttl` is `respect_origin`, not `bypass`. `bypass` was the first choice,
+ * but Cloudflare implements it by appending `no-store` to the origin's
+ * Cache-Control (measured: origin answers `s-maxage=31536000`, the edge answers
+ * `s-maxage=31536000, no-store`), and a `no-store` document is ineligible for the
+ * back/forward cache, so every back navigation re-rendered. `respect_origin`
+ * forwards the origin header untouched: the prerendered HTML carries
+ * `s-maxage=31536000` and no `max-age` and no `Last-Modified`, so a private cache
+ * has no freshness to apply, ignores the shared-cache-only `s-maxage`, and
+ * revalidates with the ETag on every navigation. The browser still never holds
+ * the markup, which is the property this rule needs, and the ETag revalidation
+ * is answered from the edge.
  *
  * Usage (the token needs Zone -> Cache Rules -> Edit on the zone):
  *   CLOUDFLARE_API_TOKEN=... node scripts/vps/cloudflare-edge-cache.mjs apply [--dry-run]
@@ -88,7 +96,7 @@ function rule() {
     action_parameters: {
       cache: true,
       edge_ttl: { mode: "override_origin", default: EDGE_TTL_SECONDS },
-      browser_ttl: { mode: "bypass" },
+      browser_ttl: { mode: "respect_origin" },
     },
   };
 }
