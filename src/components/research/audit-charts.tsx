@@ -49,7 +49,7 @@ export function AuditCharts({ active, inactive, activeRate, advertisers, launche
             <>
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
-                  <Pie data={statusData} dataKey="value" innerRadius={62} outerRadius={88} startAngle={90} endAngle={-270} stroke="none" paddingAngle={2}>
+                  <Pie data={statusData} dataKey="value" innerRadius={62} outerRadius={88} startAngle={90} endAngle={-270} stroke="none" paddingAngle={2} isAnimationActive={false}>
                     <Cell fill={ACCENT} />
                     <Cell fill={FAINT} />
                   </Pie>
@@ -82,7 +82,7 @@ export function AuditCharts({ active, inactive, activeRate, advertisers, launche
               <XAxis type="number" hide />
               <YAxis type="category" dataKey="name" width={132} tick={{ fontSize: 12, fill: NAVY }} tickLine={false} axisLine={false} />
               <Tooltip {...tooltipProps} cursor={{ fill: "rgba(0,107,255,0.06)" }} />
-              <Bar dataKey="ads" radius={[0, 6, 6, 0]} barSize={18}>
+              <Bar dataKey="ads" radius={[0, 6, 6, 0]} barSize={18} isAnimationActive={false}>
                 {advertiserData.map((entry, index) => (
                   <Cell key={entry.fullName} fill={ADVERTISER_COLORS[index % ADVERTISER_COLORS.length]} />
                 ))}
@@ -105,7 +105,7 @@ export function AuditCharts({ active, inactive, activeRate, advertisers, launche
               <XAxis dataKey="label" tick={{ fontSize: 11, fill: MUTED }} tickLine={false} axisLine={{ stroke: FAINT }} interval={0} />
               <YAxis tick={{ fontSize: 11, fill: MUTED }} tickLine={false} axisLine={false} allowDecimals={false} />
               <Tooltip {...tooltipProps} cursor={{ fill: "rgba(0,107,255,0.06)" }} />
-              <Bar dataKey="count" fill={PRIMARY} radius={[5, 5, 0, 0]} barSize={20} />
+              <Bar dataKey="count" fill={PRIMARY} radius={[5, 5, 0, 0]} barSize={20} isAnimationActive={false} />
             </BarChart>
           </ResponsiveContainer>
         ) : (

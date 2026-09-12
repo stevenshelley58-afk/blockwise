@@ -71,6 +71,6 @@ test("advertiser autocomplete route guards, rate-limits, and delegates to the lo
   );
   assert.match(routeSource, /requireApiWorkspace\(request, "monitor"\)/);
   assert.match(routeSource, /bucket: "advertisers-autocomplete"/);
-  assert.match(routeSource, /loadCanonicalAdvertiserSuggestions\(q\)/);
+  assert.match(routeSource, /loadCanonicalAdvertiserSuggestions\(q, \{ signal: request\.signal \}\)/);
   assert.match(routeSource, /if \(q\.length < 2\)/);
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { displayDomain, MetaAdLibraryCard } from "@/components/research/meta-ad-library-card";
 import { formatLabel, MetaAdTile, runLabel } from "@/components/research/meta-ad-tile";
@@ -49,7 +49,7 @@ export function AdRadarResultsGrid({ cards }: { cards: CustomerMetaAdLibraryCard
     return () => observer.disconnect();
   }, [cards.length, visibleCount]);
 
-  const visibleCards = cards.slice(0, visibleCount);
+  const visibleCards = useMemo(() => cards.slice(0, visibleCount), [cards, visibleCount]);
   const remaining = cards.length - visibleCount;
   const viewerItems = useMemo(() => visibleCards.map(toViewerItem), [visibleCards]);
   const openViewerAt = useCallback((cardIndex: number) => setViewerIndex(cardIndex), []);
@@ -86,7 +86,7 @@ export function AdRadarResultsGrid({ cards }: { cards: CustomerMetaAdLibraryCard
       ) : (
         <div className="grid grid-cols-2 items-start gap-3">
           {visibleCards.map((card, cardIndex) => (
-            <MetaAdTile key={card.id} card={card} onOpen={() => openViewerAt(cardIndex)} />
+            <MemoTile key={card.id} card={card} index={cardIndex} onOpenAt={openViewerAt} />
           ))}
         </div>
       )}
@@ -129,6 +129,12 @@ export function AdRadarResultsGrid({ cards }: { cards: CustomerMetaAdLibraryCard
   );
 }
 
+/**
+ * One desktop grid cell. content-visibility keeps an offscreen card out of layout
+ * and paint, which is the cost that grew with every 48-card batch. The intrinsic
+ * size is the only input: `auto` remembers the real height once the card has
+ * rendered, so a second pass through the grid does not resize anything.
+ */
 function MasonryItem({ children }: { children: ReactNode }) {
   const itemRef = useRef<HTMLDivElement | null>(null);
   const [rowSpan, setRowSpan] = useState(1);
@@ -151,11 +157,36 @@ function MasonryItem({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <div ref={itemRef} style={{ gridRowEnd: `span ${rowSpan}` }}>
+    <div
+      ref={itemRef}
+      className="[content-visibility:auto] [contain-intrinsic-size:auto_820px]"
+      style={{ gridRowEnd: `span ${rowSpan}` }}
+    >
       {children}
     </div>
   );
 }
+
+/**
+ * One mobile tile. memo keeps it out of the grid's re-render path (opening the
+ * viewer or a batch arriving re-rendered every tile), and the onOpen closure is
+ * built here so a fresh arrow per render cannot defeat the prop comparison.
+ */
+const MemoTile = memo(function MemoTile({
+  card,
+  index,
+  onOpenAt,
+}: {
+  card: CustomerMetaAdLibraryCard;
+  index: number;
+  onOpenAt: (index: number) => void;
+}) {
+  return (
+    <div className="[content-visibility:auto] [contain-intrinsic-size:auto_300px]">
+      <MetaAdTile card={card} onOpen={() => onOpenAt(index)} />
+    </div>
+  );
+});
 
 /** True at >=640px. False on the server and on first paint (mobile-first). */
 function useIsDesktop(): boolean {

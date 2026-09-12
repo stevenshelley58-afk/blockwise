@@ -1,4 +1,5 @@
 import { ExternalLink } from "lucide-react";
+import { memo } from "react";
 
 import { AdCardActions } from "@/components/research/ad-card-actions";
 import {
@@ -32,7 +33,7 @@ export const STATUS_TONE: Record<string, { dot: string; label: string }> = {
 };
 export const STATUS_TONE_UNKNOWN = { dot: "bg-(--faint)", label: "text-muted-foreground" };
 
-export function MetaAdLibraryCard({ card }: { card: CustomerMetaAdLibraryCard }) {
+export const MetaAdLibraryCard = memo(function MetaAdLibraryCard({ card }: { card: CustomerMetaAdLibraryCard }) {
   const hasLongBody = Boolean(card.body && card.body.length > 320);
   const visibleBody = hasLongBody && card.body ? `${card.body.slice(0, 300).trim()}...` : card.body;
   const dateText = deliveryDateText(card.startedAt, card.stoppedAt);
@@ -144,7 +145,7 @@ export function MetaAdLibraryCard({ card }: { card: CustomerMetaAdLibraryCard })
       </div>
     </article>
   );
-}
+});
 
 function PlatformIcon({ platform }: { platform: string }) {
   const key = platform.toLowerCase();
@@ -201,7 +202,15 @@ function PageAvatar({ card }: { card: CustomerMetaAdLibraryCard }) {
   if (card.pageImageUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img className={`${avatarClass} object-cover`} src={card.pageImageUrl} alt="" loading="lazy" />
+      <img
+        className={`${avatarClass} object-cover`}
+        src={card.pageImageUrl}
+        alt=""
+        width={42}
+        height={42}
+        sizes="42px"
+        loading="lazy"
+      />
     );
   }
 
@@ -228,6 +237,7 @@ function MediaPanel({ card }: { card: CustomerMetaAdLibraryCard }) {
           media={card.media[0]}
           label={card.headline ?? card.pageName}
           className="block h-auto w-full max-w-full max-h-[min(72svh,520px)] bg-(--surface-subtle) object-contain sm:max-h-none"
+          sizes="(min-width: 640px) 360px, 100vw"
         />
       </div>
     );
@@ -245,6 +255,7 @@ function MediaPanel({ card }: { card: CustomerMetaAdLibraryCard }) {
               media={media}
               label={`${card.headline ?? card.pageName} ${index + 1}`}
               className="block h-full w-full max-w-full object-cover"
+              sizes="(min-width: 640px) 300px, 44vw"
             />
           </div>
           <figcaption className="text-center text-[11.5px] font-semibold text-muted-foreground">
@@ -260,10 +271,14 @@ function MediaAsset({
   media,
   label,
   className,
+  sizes,
 }: {
   media: CustomerMetaAdLibraryMedia;
   label: string;
   className: string;
+  /** Layout width the caller renders this asset at. Inert until the media
+   * route exposes a width parameter, but correct for the moment it does. */
+  sizes: string;
 }) {
   if (media.kind === "video") {
     return (
@@ -281,7 +296,7 @@ function MediaAsset({
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img className={className} src={media.url} alt={label} loading="lazy" />
+    <img className={className} src={media.url} alt={label} sizes={sizes} loading="lazy" />
   );
 }
 

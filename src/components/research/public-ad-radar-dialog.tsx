@@ -28,6 +28,7 @@ export function PublicAdRadarDialog({ location, open, onClose }: PublicAdRadarDi
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [finishedLoading, setFinishedLoading] = useState(false);
+  const loadedLocationRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -50,7 +51,13 @@ export function PublicAdRadarDialog({ location, open, onClose }: PublicAdRadarDi
     const controller = new AbortController();
 
     async function loadPages() {
-      setCards([]);
+      // A new location is a different market, so its ads must not appear under
+      // the old heading. A sort change is the same market reordered, so the
+      // current cards stay mounted (dimmed) instead of blanking to a skeleton.
+      if (loadedLocationRef.current !== location) {
+        loadedLocationRef.current = location;
+        setCards([]);
+      }
       setLocationLabel(location);
       setError(null);
       setFinishedLoading(false);
@@ -59,6 +66,9 @@ export function PublicAdRadarDialog({ location, open, onClose }: PublicAdRadarDi
 
       let cursor: string | null = null;
       let isFirstPage = true;
+      // Accumulated locally and published per page: the first page replaces the
+      // list, so a re-sort never stacks on top of the previous result set.
+      let accumulated: PublicAdRadarCard[] = [];
 
       try {
         do {
@@ -66,7 +76,8 @@ export function PublicAdRadarDialog({ location, open, onClose }: PublicAdRadarDi
           if (!active) return;
 
           setLocationLabel(payload.location.label || location);
-          setCards((existing) => appendCards(existing, payload.ads));
+          accumulated = appendCards(accumulated, payload.ads);
+          setCards(accumulated);
           cursor = payload.nextCursor;
 
           if (isFirstPage) {
@@ -188,7 +199,7 @@ export function PublicAdRadarDialog({ location, open, onClose }: PublicAdRadarDi
         </div>
 
         <div className="lp-adlib-body">
-          {loadingInitial ? <AdSkeletonGrid /> : null}
+          {loadingInitial && cards.length === 0 ? <AdSkeletonGrid /> : null}
 
           {!loadingInitial && error ? (
             <div className="lp-adlib-state">
@@ -205,7 +216,11 @@ export function PublicAdRadarDialog({ location, open, onClose }: PublicAdRadarDi
           ) : null}
 
           {visibleCards.length > 0 ? (
-            <div className="lp-adlib-results" aria-live="polite">
+            <div
+              className={`lp-adlib-results transition-opacity duration-250 motion-reduce:transition-none ${loadingInitial ? "opacity-55" : ""}`}
+              aria-live="polite"
+              aria-busy={loadingInitial || undefined}
+            >
               {visibleCards.map((card) => (
                 <PublicAdCard card={card} key={card.id} location={locationLabel} />
               ))}
@@ -295,7 +310,7 @@ function PageAvatar({ card }: { card: PublicAdRadarCard }) {
   if (card.pageImageUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img className="lp-adlib-avatar" src={card.pageImageUrl} alt="" loading="lazy" />
+      <img className="lp-adlib-avatar" src={card.pageImageUrl} alt="" width={42} height={42} sizes="42px" loading="lazy" />
     );
   }
 
@@ -315,7 +330,14 @@ function AdMedia({ card }: { card: PublicAdRadarCard }) {
           <video className="lp-adlib-media" src={media.url} poster={media.posterUrl ?? undefined} controls preload="none" playsInline />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
-          <img className="lp-adlib-media" src={media.url} alt={card.headline ?? card.pageName} loading="lazy" />
+          <img
+            className="lp-adlib-media"
+            src={media.url}
+            srcSet={renderWidthSrcSet(media.url)}
+            sizes="(min-width: 721px) 527px, 100vw"
+            alt={card.headline ?? card.pageName}
+            loading="lazy"
+          />
         )}
       </div>
     );
@@ -329,7 +351,14 @@ function AdMedia({ card }: { card: PublicAdRadarCard }) {
             <video className="lp-adlib-media" src={media.url} poster={media.posterUrl ?? undefined} controls preload="none" playsInline />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img className="lp-adlib-media" src={media.url} alt={`${card.headline ?? card.pageName} ${index + 1}`} loading="lazy" />
+            <img
+              className="lp-adlib-media"
+              src={media.url}
+              srcSet={renderWidthSrcSet(media.url)}
+              sizes="(min-width: 721px) 262px, 50vw"
+              alt={`${card.headline ?? card.pageName} ${index + 1}`}
+              loading="lazy"
+            />
           )}
         </div>
       ))}
@@ -505,6 +534,30 @@ function dateValue(value: string | null): number {
   if (!value) return 0;
   const timestamp = new Date(value).getTime();
   return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+/**
+ * The research renderer serves the same creative at any `width`, so the browser
+ * can pick a size that matches the box instead of the fixed 1024px the card URL
+ * carries (measured waste on a 339px mobile card). Raw creative URLs have no
+ * width parameter, so they keep a single `src` and their `sizes` stays inert.
+ */
+const RENDER_SRCSET_WIDTHS = [345, 420, 640, 828];
+
+function renderWidthSrcSet(url: string): string | undefined {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return undefined;
+  }
+  if (!parsed.pathname.includes("/storage/v1/render/image/")) return undefined;
+  if (!parsed.searchParams.has("width")) return undefined;
+  return RENDER_SRCSET_WIDTHS.map((width) => {
+    const variant = new URL(parsed.toString());
+    variant.searchParams.set("width", String(width));
+    return `${variant.toString()} ${width}w`;
+  }).join(", ");
 }
 
 function normaliseSearch(value: string): string {

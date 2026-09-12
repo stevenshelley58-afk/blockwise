@@ -10,7 +10,7 @@ const routeSource = readFileSync(
 
 test("ad search route delegates canonical filter parsing, fetch, and mapping", () => {
   assert.match(routeSource, /parseAdDbSearchParams\(request\.nextUrl\.searchParams\)/);
-  assert.match(routeSource, /searchAdDbAds\(\{ \.\.\.parsed\.input, limit: 50 \}\)/);
+  assert.match(routeSource, /searchAdDbAds\(\s*\{ \.\.\.parsed\.input, limit: 50 \},\s*\{ signal: request\.signal \},?\s*\)/);
   assert.match(routeSource, /result\.items\.map\(mapAdDbRowToCustomerMetaCard\)/);
   assert.doesNotMatch(routeSource, /searchCustomerMetaAdLibraryCards\(/);
 });

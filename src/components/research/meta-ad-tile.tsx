@@ -1,6 +1,7 @@
 "use client";
 
 import { Play } from "lucide-react";
+import { memo } from "react";
 
 import { STATUS_TONE, STATUS_TONE_UNKNOWN } from "@/components/research/meta-ad-library-card";
 
@@ -32,7 +33,7 @@ export type AdTileCard = {
   adType?: string | null;
 };
 
-export function MetaAdTile({
+export const MetaAdTile = memo(function MetaAdTile({
   card,
   onOpen,
   href,
@@ -61,7 +62,16 @@ export function MetaAdTile({
         {thumbnail ? (
           // Meta CDN URLs are short-lived signed links; next/image would break them.
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={thumbnail} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
+          <img
+            src={thumbnail}
+            alt=""
+            width={320}
+            height={400}
+            sizes="(min-width: 1024px) 25vw, 50vw"
+            loading="lazy"
+            decoding="async"
+            className="size-full object-cover"
+          />
         ) : (
           <span className="grid size-full place-items-center px-3 text-center text-[11.5px] font-bold text-muted-foreground">
             {card.adType?.toLowerCase().includes("text") ? "Text-only ad" : "Preview unavailable"}
@@ -104,7 +114,7 @@ export function MetaAdTile({
       {content}
     </button>
   );
-}
+});
 
 /** "Running 34 days · Video" — duration plus creative format. */
 export function metaLine(card: AdTileCard): string {

@@ -71,7 +71,8 @@ export function AdRadarSearchPanel({
     requestRef.current = controller;
     activeSearchTermRef.current = q;
     if (!append) {
-      setCards([]);
+      // Keep the current cards mounted while the new set loads. Clearing here
+      // blanked the grid and forced a full rebuild on every filter change.
       setNextCursor(null);
     }
     setLoading(true);
@@ -100,7 +101,6 @@ export function AdRadarSearchPanel({
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         if (controller.signal.aborted || requestRef.current !== controller) return;
-        if (!append) setCards([]);
         setSearched(true);
         setSearchError(
           error instanceof Error
@@ -204,12 +204,23 @@ export function AdRadarSearchPanel({
     [filters],
   );
 
-  const advertiserCount = unique(cards.map((c) => c.pageId ?? c.pageName)).length;
-  const newestSeenAt = cards
-    .map((c) => c.lastSeenAt)
-    .filter((v): v is string => Boolean(v))
-    .sort()
-    .at(-1);
+  // Both derivations walk the whole accumulated result set, and the panel
+  // re-renders on every loading toggle and viewer open, so they are memoised on
+  // the only input they read.
+  const advertiserCount = useMemo(
+    () => unique(cards.map((c) => c.pageId ?? c.pageName)).length,
+    [cards],
+  );
+  const newestSeenAt = useMemo(
+    () =>
+      cards
+        .map((c) => c.lastSeenAt)
+        .filter((v): v is string => Boolean(v))
+        .sort()
+        .at(-1),
+    [cards],
+  );
+  const resultsPending = loading && cards.length > 0;
 
   return (
     <>
@@ -339,7 +350,7 @@ export function AdRadarSearchPanel({
         </section>
         {cards.length > 0 ? (
           <section className="grid gap-3.5">
-            <AdRadarResultsGrid cards={cards} />
+            <PendingResultsGrid cards={cards} pending={resultsPending} />
             {nextCursor ? (
               <div className="flex justify-center">
                 <Button type="button" variant="ghost-pill" size="pill" onClick={loadMore} disabled={loading}>
@@ -366,7 +377,7 @@ export function AdRadarSearchPanel({
 
           {cards.length > 0 ? (
             <>
-              <AdRadarResultsGrid cards={cards} />
+              <PendingResultsGrid cards={cards} pending={resultsPending} />
               {nextCursor ? (
                 <div className="flex justify-center">
                   <Button type="button" variant="ghost-pill" size="pill" onClick={loadMore} disabled={loading}>
@@ -389,6 +400,28 @@ export function AdRadarSearchPanel({
         </section>
       ) : null}
     </>
+  );
+}
+
+/**
+ * Holds the previous results on screen while a new set loads, dimmed the way the
+ * monitor dashboard dims a refreshing panel. Blanking the grid on a filter change
+ * threw away painted cards and forced a full relayout for no user-visible gain.
+ */
+function PendingResultsGrid({
+  cards,
+  pending,
+}: {
+  cards: CustomerMetaAdLibraryCard[];
+  pending: boolean;
+}) {
+  return (
+    <div
+      aria-busy={pending || undefined}
+      className={`transition-opacity duration-250 motion-reduce:transition-none ${pending ? "opacity-55" : ""}`}
+    >
+      <AdRadarResultsGrid cards={cards} />
+    </div>
   );
 }
 
