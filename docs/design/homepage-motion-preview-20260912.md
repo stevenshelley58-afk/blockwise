@@ -54,3 +54,11 @@ This is about 21% less transferred data in these runs. The small timing differen
 The final separate six-second throttled image trace had no failed requests and all visible hero images completed. An earlier one-off image request failure did not reproduce; its cause was not established.
 
 Final checks cover selectors, mobile reflow, complete report values, no visible playback controls, no forbidden marketing wording, and offscreen report suspension. Design detector: two intentional Arial warnings inside the Meta-style ad frames, zero actionable findings. Production health remained on revision `6a76cc9a381e32229dc9c31cb9368ee1cde6a7e8`; the preview is read-only with no-index/no-store, blocked POST requests, and stripped credentials.
+
+## Retained preview lifecycle
+
+Active container: `blockwise-homepage-preview-23a03de88751e827699dc7d3a545f08efca6fb2e`; image: `blockwise-homepage-preview:23a03de88751e`. The delivery lane removed only its superseded preview containers. Other workers' retained previews were untouched.
+
+Final boundary evidence is `security-final-23a03de.txt`. The scoped route currently depends on the product router's preview-network attachment and host mapping; a router recreation requires restoring that attachment/mapping and reapplying the scoped route. No router restart was performed.
+
+To retire this preview, first remove only the preview route with `python3 scripts/vps/homepage-preview-route.py --remove --apply` from this worktree. Then remove only the container named above; its image can also be removed if no longer required. Do not restore a stale whole-router configuration or remove other workers' previews.
