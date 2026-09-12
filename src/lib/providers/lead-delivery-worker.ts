@@ -1,5 +1,10 @@
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 import type { ApprovalStatus } from "../publishing/readiness.ts";
+import { requestDeadline } from "./request-deadline.ts";
+
+/** Customer endpoints are retried by the worker, so a slow one fails fast
+ * instead of occupying a delivery slot. */
+const LEAD_DELIVERY_TIMEOUT_MS = 10_000;
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 
@@ -81,6 +86,7 @@ export async function executeLeadDeliveryAttemptById(input: {
     const response = await fetchImpl(endpoint, {
       method: "POST",
       headers: { "content-type": "application/json" },
+      signal: requestDeadline(LEAD_DELIVERY_TIMEOUT_MS),
       body: JSON.stringify({
         deliveryType: destination.type,
         destination: destination.label,

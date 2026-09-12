@@ -2,6 +2,7 @@ import type {
   ModelCandidate,
 } from "@/lib/ai/model-registry";
 
+import { withRequestDeadline } from "../providers/request-deadline.ts";
 import { dataUrlToUploadBytes } from "./generated-media-utils.ts";
 import { createGoogleImageProvider } from "./google-image-provider.ts";
 import { fetchProviderRequest, ProviderRequestError } from "./providers.ts";
@@ -24,6 +25,8 @@ type ProviderOptions = {
   model?: string;
   /** OpenAI image quality tier ("low" | "medium" | "high" | "auto"). */
   quality?: string;
+  /** Per-model deadline for outbound calls; 0 or absent means unbounded. */
+  maxLatencyMs?: number;
 };
 
 // Hard cap on completion tokens for copy/QA chat calls. Outputs are small
@@ -42,7 +45,7 @@ const DEFAULT_OPENAI_IMAGE_QUALITY = "high";
 function createOpenAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
   const env = options.env ?? process.env;
   const model = options.model ?? env.BLOCKWISE_OPENAI_TEXT_MODEL ?? "gpt-5.5";
-  const fetchImpl = options.fetchImpl ?? fetch;
+  const fetchImpl = options.fetchImpl ?? withRequestDeadline(fetch, options.maxLatencyMs);
 
   return {
     providerName: "openai",
@@ -81,7 +84,7 @@ function createAzureOpenAiTextProvider(options: ProviderOptions = {}): TextProvi
     env.AZURE_OPENAI_TEXT_DEPLOYMENT ??
     env.BLOCKWISE_AZURE_OPENAI_TEXT_DEPLOYMENT ??
     "";
-  const fetchImpl = options.fetchImpl ?? fetch;
+  const fetchImpl = options.fetchImpl ?? withRequestDeadline(fetch, options.maxLatencyMs);
 
   return {
     providerName: "azure",
@@ -136,7 +139,7 @@ function createOpenAiImageProvider(options: ProviderOptions = {}): ImageProvider
   const env = options.env ?? process.env;
   const model = options.model ?? env.BLOCKWISE_OPENAI_IMAGE_MODEL ?? "gpt-image-2";
   const quality = options.quality ?? env.BLOCKWISE_OPENAI_IMAGE_QUALITY ?? DEFAULT_OPENAI_IMAGE_QUALITY;
-  const fetchImpl = options.fetchImpl ?? fetch;
+  const fetchImpl = options.fetchImpl ?? withRequestDeadline(fetch, options.maxLatencyMs);
 
   return {
     providerName: "openai",
@@ -329,7 +332,7 @@ const GOOGLE_AI_CHAT_URL = "https://generativelanguage.googleapis.com/v1beta/ope
 function createGoogleAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
   const env = options.env ?? process.env;
   const model = options.model ?? env.BLOCKWISE_GOOGLE_TEXT_MODEL ?? "gemini-3.6-flash";
-  const fetchImpl = options.fetchImpl ?? fetch;
+  const fetchImpl = options.fetchImpl ?? withRequestDeadline(fetch, options.maxLatencyMs);
 
   return {
     providerName: "google",
@@ -350,7 +353,7 @@ function createGoogleAiTextProvider(options: ProviderOptions = {}): TextProvider
 function createDeepSeekTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
   const env = options.env ?? process.env;
   const model = options.model ?? env.BLOCKWISE_DEEPSEEK_TEXT_MODEL ?? "deepseek-chat";
-  const fetchImpl = options.fetchImpl ?? fetch;
+  const fetchImpl = options.fetchImpl ?? withRequestDeadline(fetch, options.maxLatencyMs);
 
   return {
     providerName: "deepseek",
@@ -369,25 +372,37 @@ function createDeepSeekTextProvider(options: ProviderOptions = {}): TextProvider
 }
 
 export function createTextProviderForCandidate(candidate: ModelCandidate, options: ProviderOptions = {}): TextProviderAdapter {
+  // maxLatencyMs is the per-model budget; it becomes the deadline on the real
+  // transport so a hung provider cannot hold the customer request open.
+  const candidateOptions: ProviderOptions = {
+    ...options,
+    model: candidate.model,
+    maxLatencyMs: candidate.maxLatencyMs,
+  };
   let provider: TextProviderAdapter;
   if (candidate.provider === "azure") {
-    provider = createAzureOpenAiTextProvider({ ...options, model: candidate.model });
+    provider = createAzureOpenAiTextProvider(candidateOptions);
   } else if (candidate.provider === "google") {
-    provider = createGoogleAiTextProvider({ ...options, model: candidate.model });
+    provider = createGoogleAiTextProvider(candidateOptions);
   } else if (candidate.provider === "deepseek") {
-    provider = createDeepSeekTextProvider({ ...options, model: candidate.model });
+    provider = createDeepSeekTextProvider(candidateOptions);
   } else {
-    provider = createOpenAiTextProvider({ ...options, model: candidate.model });
+    provider = createOpenAiTextProvider(candidateOptions);
   }
   return withAccounting(provider, candidate);
 }
 
 export function createImageProviderForCandidate(candidate: ModelCandidate, options: ProviderOptions = {}): ImageProviderAdapter {
+  const candidateOptions: ProviderOptions = {
+    ...options,
+    model: candidate.model,
+    maxLatencyMs: candidate.maxLatencyMs,
+  };
   let provider: ImageProviderAdapter;
   if (candidate.provider === "google") {
-    provider = createGoogleImageProvider(accountingForCandidate(candidate), { ...options, model: candidate.model });
+    provider = createGoogleImageProvider(accountingForCandidate(candidate), candidateOptions);
   } else {
-    provider = createOpenAiImageProvider({ ...options, model: candidate.model });
+    provider = createOpenAiImageProvider(candidateOptions);
   }
   return withAccounting(provider, candidate);
 }

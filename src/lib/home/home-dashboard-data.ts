@@ -12,6 +12,10 @@ import { sampleHomeLeads } from "@/lib/leads/sample-crm-leads";
 import { leadSourceLabel } from "@/lib/leads/rows";
 import { resolveBrandPackLocation } from "@/lib/research/brand-pack-suburb";
 import { loadPublicAdRadarCards } from "@/lib/research/public-ad-radar";
+import { requestDeadline } from "../providers/request-deadline.ts";
+
+/** A liveness probe only: a miss just hides the tile and is cached for an hour. */
+const THUMBNAIL_PROBE_TIMEOUT_MS = 5_000;
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
@@ -52,7 +56,13 @@ async function thumbnailLoads(url: string): Promise<boolean> {
 
   let loads = false;
   try {
-    loads = (await fetch(url, { method: "HEAD", cache: "no-store" })).ok;
+    loads = (
+      await fetch(url, {
+        method: "HEAD",
+        cache: "no-store",
+        signal: requestDeadline(THUMBNAIL_PROBE_TIMEOUT_MS),
+      })
+    ).ok;
   } catch {
     loads = false;
   }

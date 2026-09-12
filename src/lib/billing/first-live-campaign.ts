@@ -1,5 +1,9 @@
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 import type { StripeObject } from "./stripe-scaffold.ts";
+import { requestDeadline } from "../providers/request-deadline.ts";
+
+/** Matches the Stripe deadline used by the scaffold client. */
+const STRIPE_REQUEST_TIMEOUT_MS = 30_000;
 
 type BillingServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 
@@ -106,6 +110,7 @@ async function stripeRequest(
   if (!secret) throw new Error("Stripe billing is not configured.");
   const response = await fetch(`https://api.stripe.com${path}`, {
     method: options?.method ?? "GET",
+    signal: requestDeadline(STRIPE_REQUEST_TIMEOUT_MS),
     headers: {
       authorization: `Basic ${Buffer.from(`${secret}:`).toString("base64")}`,
       ...(options ? { "content-type": "application/x-www-form-urlencoded" } : {}),

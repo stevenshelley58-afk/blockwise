@@ -1,4 +1,5 @@
 import { dataUrlToUploadBytes } from "./generated-media-utils.ts";
+import { withRequestDeadline } from "../providers/request-deadline.ts";
 import { fetchProviderRequest, ProviderRequestError } from "./providers.ts";
 import type {
   ImageProviderAdapter,
@@ -12,6 +13,8 @@ type GoogleImageProviderOptions = {
   env?: EnvLike;
   fetchImpl?: typeof fetch;
   model?: string;
+  /** Per-model deadline for outbound calls; 0 or absent means unbounded. */
+  maxLatencyMs?: number;
 };
 
 const GOOGLE_INTERACTIONS_URL = "https://generativelanguage.googleapis.com/v1beta/interactions";
@@ -21,7 +24,7 @@ export function createGoogleImageProvider(
   options: GoogleImageProviderOptions = {},
 ): ImageProviderAdapter {
   const env = options.env ?? process.env;
-  const fetchImpl = options.fetchImpl ?? fetch;
+  const fetchImpl = options.fetchImpl ?? withRequestDeadline(fetch, options.maxLatencyMs);
   const model = options.model ?? env.BLOCKWISE_GOOGLE_IMAGE_MODEL ?? "gemini-3.1-flash-image";
 
   return {

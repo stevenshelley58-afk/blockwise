@@ -4,6 +4,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { enqueueEmail, type EmailDeliveryProjection } from "../email/outbox.ts";
 import { assertEmailProviderConfigured } from "../email/provider.ts";
 import { createSupabaseServiceClient } from "../supabase/service.ts";
+import { requestDeadline } from "../providers/request-deadline.ts";
+
+/** Operator mailbox calls are interactive; 10s bounds a stalled request. */
+const OPERATOR_EMAIL_TIMEOUT_MS = 10_000;
 const RESEND_API_BASE = "https://api.resend.com";
 const DEFAULT_MAILBOX_ADDRESS = "steven@blockwise.sale";
 const DEFAULT_MAILBOX_DOMAIN = "blockwise.sale";
@@ -289,6 +293,7 @@ async function resendRequest<T>(path: string, init: RequestInit): Promise<T> {
       ...(init.headers ?? {}),
     },
     cache: "no-store",
+    signal: requestDeadline(OPERATOR_EMAIL_TIMEOUT_MS),
   });
   const json = (await response.json().catch(() => ({}))) as T & ResendError;
 

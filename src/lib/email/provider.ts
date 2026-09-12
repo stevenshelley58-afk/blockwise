@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import nodemailer from "nodemailer";
+import { requestDeadline } from "../providers/request-deadline.ts";
+
+/** Sends are queued and retried, so a stalled provider call fails at 10s. */
+const EMAIL_SEND_TIMEOUT_MS = 10_000;
 
 export type EmailMessage = {
   /** Stable message identity, e.g. "welcome". Also the template id. */
@@ -105,6 +109,7 @@ export function makeResendProvider(env: NodeJS.ProcessEnv): EmailProvider {
       }
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
+        signal: requestDeadline(EMAIL_SEND_TIMEOUT_MS),
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",

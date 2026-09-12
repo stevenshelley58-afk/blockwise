@@ -1,6 +1,10 @@
 import { buildLeadDedupeKey, findDuplicateLeadIds } from "../leads/dedupe.ts";
 import type { MetaLeadDestination } from "./meta-execution.ts";
 import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
+import { requestDeadline } from "./request-deadline.ts";
+
+/** Lead pages are read by the sync worker; 15s bounds a stuck page. */
+const META_READ_TIMEOUT_MS = 15_000;
 
 export type RawMetaLead = {
   id: string;
@@ -194,7 +198,10 @@ async function fetchMetaLeadList(
     if (requestUrl.protocol !== "https:" || requestUrl.hostname !== "graph.facebook.com") {
       throw new Error("Meta returned an invalid lead pagination URL.");
     }
-    const response = await fetchImpl(requestUrl.toString(), { method: "GET" });
+    const response = await fetchImpl(requestUrl.toString(), {
+      method: "GET",
+      signal: requestDeadline(META_READ_TIMEOUT_MS),
+    });
     const payload = (await response.json().catch(() => ({}))) as {
       data?: RawMetaLead[];
       error?: { message?: string };

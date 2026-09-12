@@ -3,6 +3,11 @@ import type { NextRequest } from "next/server";
 import { DEFAULT_META_GRAPH_VERSION } from "@/lib/providers/meta-graph-version";
 import { fetchMetaUserIdentity } from "./meta-oauth-identity.ts";
 import { fetchMetaAdAccounts } from "@/lib/providers/meta-reporting";
+import { requestDeadline } from "./request-deadline.ts";
+
+/** The customer is waiting on a login redirect, so a stalled token exchange
+ * fails at 10s rather than holding the redirect open. */
+const OAUTH_TOKEN_TIMEOUT_MS = 10_000;
 
 export type OAuthTokenExchange = {
   accessToken: string;
@@ -167,7 +172,11 @@ function expiresInToIso(expiresIn: number | undefined): string | null {
 }
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { cache: "no-store", ...init });
+  const response = await fetch(url, {
+    cache: "no-store",
+    ...init,
+    signal: requestDeadline(OAUTH_TOKEN_TIMEOUT_MS, init?.signal),
+  });
   const payload = (await response.json()) as T;
 
   if (!response.ok) {

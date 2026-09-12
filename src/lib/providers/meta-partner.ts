@@ -1,4 +1,8 @@
 import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
+import { requestDeadline } from "./request-deadline.ts";
+
+/** Partner account reads hit the same Meta Graph endpoint as reporting. */
+const META_READ_TIMEOUT_MS = 15_000;
 
 /**
  * Meta partner access (Flow B).
@@ -108,6 +112,7 @@ export async function verifyPartnerAccountAccess(
   const response = await fetch(url.toString(), {
     cache: "no-store",
     headers: { authorization: `Bearer ${systemToken}` },
+    signal: requestDeadline(META_READ_TIMEOUT_MS),
   });
 
   return response.ok;
@@ -141,6 +146,7 @@ async function fetchPartnerAdAccounts(systemToken: string): Promise<Array<{
     const response = await fetch(nextUrl, {
       cache: "no-store",
       headers: { authorization: `Bearer ${systemToken}` },
+      signal: requestDeadline(META_READ_TIMEOUT_MS),
     });
     const payload = (await response.json().catch(() => ({}))) as {
       data?: typeof rows;

@@ -5,6 +5,11 @@ import {
   type MonitorProviderReport,
 } from "../monitor/dashboard-data.ts";
 import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
+import { requestDeadline } from "./request-deadline.ts";
+
+/** Meta Graph reads: p95 is a few seconds, so 15s bounds a stuck read while
+ * still leaving room for a paginated page to complete. */
+const META_READ_TIMEOUT_MS = 15_000;
 
 export type MetaActionMetric = {
   action_type?: string;
@@ -378,7 +383,10 @@ async function fetchMetaList<T>(path: string, accessToken: string, params: Recor
   let nextUrl: string | null = buildMetaUrl(path, accessToken, params);
 
   while (nextUrl) {
-    const response = await fetch(nextUrl, { cache: "no-store" });
+    const response = await fetch(nextUrl, {
+      cache: "no-store",
+      signal: requestDeadline(META_READ_TIMEOUT_MS),
+    });
     const payload = (await response.json()) as MetaListResponse<T> & { error?: { message?: string } };
 
     if (!response.ok) {

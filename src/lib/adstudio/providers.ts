@@ -118,13 +118,19 @@ export async function fetchProviderRequest(
   try {
     return await fetchImpl(input, init);
   } catch (cause) {
-    const aborted = init.signal?.aborted === true
-      || (typeof cause === "object" && cause !== null && "name" in cause && cause.name === "AbortError");
+    const causeNamed = (name: string) =>
+      typeof cause === "object" && cause !== null && "name" in cause && cause.name === name;
+    const timedOut = causeNamed("TimeoutError");
+    const aborted = init.signal?.aborted === true || causeNamed("AbortError");
     throw new ProviderRequestError(
-      aborted ? "Provider request was cancelled after dispatch." : "Provider transport failed after dispatch.",
+      timedOut
+        ? "Provider request exceeded its deadline."
+        : aborted ? "Provider request was cancelled after dispatch." : "Provider transport failed after dispatch.",
       {
         requestSubmitted: true,
-        retryable: !aborted,
+        // A deadline is transient, so fall back to the next candidate; a caller
+        // abort (navigation, lease loss) is final and must not retry.
+        retryable: timedOut || !aborted,
         providerRequestId: evidence.providerRequestId,
         usage: { ...evidence.usage, complete: false },
         cause,
