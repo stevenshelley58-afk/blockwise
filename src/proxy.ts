@@ -7,6 +7,17 @@ import { refreshSupabaseSession } from "@/lib/supabase/proxy";
 
 const AUTHENTICATED_API_PREFIXES = ["/api/adstudio/", "/api/operator/"] as const;
 
+// Public files that the isolated Meta-connect walkthrough may render. The
+// matcher below brings these otherwise-static WebP requests through the same
+// preview gate; do not widen this to a directory or the normal help route.
+const META_CONNECT_PREVIEW_ASSETS = new Set([
+  "/help/meta/partner-access/01-partners.webp",
+  "/help/meta/partner-access/02-give-access-crop.webp",
+  "/help/meta/partner-access/02-give-access.webp",
+  "/help/meta/partner-access/03-business-id.webp",
+  "/help/meta/partner-access/04-assets-and-permissions.webp",
+]);
+
 /** Routes that must never answer with a provider callback in their query. */
 const CALLBACK_RECOVERY_PATHS = ["/", "/login", "/signup", "/home"] as const;
 
@@ -37,7 +48,9 @@ export async function proxy(request: NextRequest) {
       url.pathname = "/concept/meta-connect";
       return NextResponse.redirect(url, { headers: previewHeaders });
     }
-    if (!allowedPage && !pathname.startsWith("/_next/")) {
+    const allowedMetaConnectAsset =
+      metaConnectPreview && META_CONNECT_PREVIEW_ASSETS.has(pathname);
+    if (!allowedPage && !allowedMetaConnectAsset && !pathname.startsWith("/_next/")) {
       return new NextResponse("Not found", { status: 404, headers: previewHeaders });
     }
 
@@ -89,5 +102,12 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff2?)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff2?)$).*)",
+    "/help/meta/partner-access/01-partners.webp",
+    "/help/meta/partner-access/02-give-access-crop.webp",
+    "/help/meta/partner-access/02-give-access.webp",
+    "/help/meta/partner-access/03-business-id.webp",
+    "/help/meta/partner-access/04-assets-and-permissions.webp",
+  ],
 };

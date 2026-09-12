@@ -23,6 +23,16 @@ test("Meta-connect preview has one isolated flag, base path and no product integ
   assert.match(layout, /!ISOLATED_PREVIEW && <ConsentBanner/);
   assert.match(layout, /\{!ISOLATED_PREVIEW && \(\s*<Script id="sidebar-theme-init"/);
   assert.match(proxy, /pathname === "\/concept\/meta-connect"/);
+  for (const screenshot of [
+    "01-partners.webp",
+    "02-give-access-crop.webp",
+    "02-give-access.webp",
+    "03-business-id.webp",
+    "04-assets-and-permissions.webp",
+  ]) {
+    assert.match(proxy, new RegExp("help/meta/partner-access/" + screenshot.replace(".", "\\.")));
+  }
+  assert.match(proxy, /META_CONNECT_PREVIEW_ASSETS\.has\(pathname\)/);
   assert.match(proxy, /request\.method !== "GET" && request\.method !== "HEAD"/);
   assert.match(proxy, /pathname === "\/" && request\.method === "GET"/);
   assert.match(proxy, /X-Preview-Revision/);
@@ -42,6 +52,16 @@ test("the image and router route are bounded to the Meta-connect preview", async
   assert.match(dockerfile, /meta-connect-preview\/concept\/meta-connect/);
   assert.doesNotMatch(dockerfile, /COPY[^\n]+public \.\/public/);
   assert.match(ignore, /!public\/brand\/blockwise-logo\.svg/);
+  for (const screenshot of [
+    "01-partners.webp",
+    "02-give-access-crop.webp",
+    "02-give-access.webp",
+    "03-business-id.webp",
+    "04-assets-and-permissions.webp",
+  ]) {
+    assert.match(dockerfile, new RegExp("partner-access/" + screenshot.replace(".", "\\.")));
+    assert.match(ignore, new RegExp("partner-access/" + screenshot.replace(".", "\\.")));
+  }
   assert.match(router, /ROUTE_ID = "blockwise-meta-connect-preview"/);
   assert.match(router, /"\/meta-connect-preview\/\*"/);
   assert.match(router, /"path": \["\/meta-connect-preview"\], "method": \["GET", "HEAD"\]/);
