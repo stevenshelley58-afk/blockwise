@@ -36,6 +36,7 @@ type ConnectionState = "idle" | "checking" | "missing" | "waiting" | "connected"
  */
 export function MetaConnectPreview({ businessId }: { businessId: string | null }) {
   const [scenario, setScenario] = useState<MetaConnectPreviewState>("setup");
+  const [hydrated, setHydrated] = useState(false);
   const [connectionState, setConnectionState] = useState<ConnectionState>("idle");
   const [checking, setChecking] = useState(false);
   const [continued, setContinued] = useState(false);
@@ -44,6 +45,10 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
   const timerRef = useRef<number | null>(null);
   const resolveCheckRef = useRef<(() => void) | null>(null);
   const checkRunRef = useRef(0);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
     setConnectionState(
@@ -170,7 +175,10 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
           : "Check my sharing";
 
   return (
-    <main className="tw min-h-screen bg-background text-foreground">
+    <main
+      className="tw min-h-screen bg-background text-foreground"
+      data-preview-ready={hydrated ? "true" : "false"}
+    >
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex min-h-[68px] w-full max-w-[1120px] items-center justify-between gap-4 px-5 sm:px-8">
           <a
@@ -218,6 +226,7 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
             </label>
             <Select
               value={scenario}
+              disabled={!hydrated}
               onValueChange={(value) =>
                 setScenario(value as MetaConnectPreviewState)
               }
@@ -310,7 +319,7 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
                       variant="outline"
                       className="h-11 min-h-11 shrink-0"
                       onClick={() => void copyBusinessId()}
-                      disabled={!businessId}
+                      disabled={!businessId || !hydrated}
                       arrow={null}
                     >
                       {copyState === "copied" ? (
@@ -406,6 +415,7 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
 
             {connectionState === "connected" ? (
               <AssetConfirmation
+                hydrated={hydrated}
                 continued={continued}
                 onContinue={() => setContinued(true)}
               />
@@ -428,7 +438,7 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
                     type="button"
                     className="h-11 min-h-11 w-full sm:w-auto"
                     onClick={() => void runCheck()}
-                    disabled={checking}
+                    disabled={checking || !hydrated}
                     arrow={null}
                   >
                     {checking ? (
@@ -471,9 +481,11 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
 }
 
 function AssetConfirmation({
+  hydrated,
   continued,
   onContinue,
 }: {
+  hydrated: boolean;
   continued: boolean;
   onContinue: () => void;
 }) {
@@ -525,6 +537,7 @@ function AssetConfirmation({
           type="button"
           className="mt-4 h-11 min-h-11 w-full"
           onClick={onContinue}
+          disabled={!hydrated}
         >
           Continue
         </Button>

@@ -14,6 +14,8 @@ test("Meta connection preview is guarded and uses the validated public Business 
   assert.match(component, /Copy ID/);
   assert.match(component, /No accounts will be changed/);
   assert.match(component, /SIMULATED/);
+  assert.match(component, /data-preview-ready=\{hydrated \? "true" : "false"\}/);
+  assert.match(component, /disabled=\{!hydrated\}/);
   assert.doesNotMatch(component, /fetch\(/);
   assert.doesNotMatch(component, /localStorage/);
 });
