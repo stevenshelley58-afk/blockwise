@@ -11,6 +11,14 @@ RUN groupadd --system --gid 1001 nodejs && useradd --system --uid 1001 nextjs
 # references it; never copy the product's complete public asset catalogue.
 COPY --chown=nextjs:nodejs public/brand/blockwise-logo.svg ./public/brand/blockwise-logo.svg
 COPY --chown=nextjs:nodejs public/brand/blockwise-icon-midnight.svg ./public/brand/blockwise-icon-midnight.svg
+# The five allowlisted instructional captures are sanitized derivatives tracked
+# by docs/evidence/meta-partner-screenshots/manifest.json. Do not copy public/help
+# wholesale: no other help media belongs in this isolated image.
+COPY --chown=nextjs:nodejs public/help/meta/partner-access/01-partners.webp ./public/help/meta/partner-access/01-partners.webp
+COPY --chown=nextjs:nodejs public/help/meta/partner-access/02-give-access-crop.webp ./public/help/meta/partner-access/02-give-access-crop.webp
+COPY --chown=nextjs:nodejs public/help/meta/partner-access/02-give-access.webp ./public/help/meta/partner-access/02-give-access.webp
+COPY --chown=nextjs:nodejs public/help/meta/partner-access/03-business-id.webp ./public/help/meta/partner-access/03-business-id.webp
+COPY --chown=nextjs:nodejs public/help/meta/partner-access/04-assets-and-permissions.webp ./public/help/meta/partner-access/04-assets-and-permissions.webp
 COPY --chown=nextjs:nodejs .next/standalone ./
 COPY --chown=nextjs:nodejs .next/static ./.next/static
 USER nextjs

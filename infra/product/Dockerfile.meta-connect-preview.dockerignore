@@ -3,6 +3,14 @@
 !public/brand
 !public/brand/blockwise-logo.svg
 !public/brand/blockwise-icon-midnight.svg
+!public/help
+!public/help/meta
+!public/help/meta/partner-access
+!public/help/meta/partner-access/01-partners.webp
+!public/help/meta/partner-access/02-give-access-crop.webp
+!public/help/meta/partner-access/02-give-access.webp
+!public/help/meta/partner-access/03-business-id.webp
+!public/help/meta/partner-access/04-assets-and-permissions.webp
 !.next
 !.next/standalone
 !.next/standalone/**
