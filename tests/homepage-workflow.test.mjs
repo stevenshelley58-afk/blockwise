@@ -343,3 +343,9 @@ test("preview text keeps a readable floor and never uses the faint token for tex
   // --hc-faint resolves to 2.95:1 on the preview surfaces, so it is border-only.
   assert.doesNotMatch(styles, /(?:^|[\s;{])color:\s*var\(--hc-faint\)/m);
 });
+
+
+test("phone review details leave breathing room inside the stable frame", () => {
+  assert.match(styles, /\.hc-story-review-panel dl \{ margin-block: 12px; \}/);
+  assert.match(styles, /\.hc-story-review-panel dl > div \{ min-height: 36px; \}/);
+});

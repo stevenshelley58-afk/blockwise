@@ -757,7 +757,8 @@
   .hc-story-review { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 16px; }
   .hc-story-ad.is-review { width: min(100%, 224px); }
   .hc-story-review-panel { padding: 16px; }
-  .hc-story-review-panel dl > div { min-height: 44px; }
+  .hc-story-review-panel dl { margin-block: 12px; }
+  .hc-story-review-panel dl > div { min-height: 36px; }
 }
 
 @media (max-width: 420px) {
