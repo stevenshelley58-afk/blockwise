@@ -119,8 +119,8 @@ schedule `0 */2 * * *`.
 - **Sentry**: use built-in quota/billing alerts; enable them in org settings.
 - **Google Places API**: Google Cloud Console > Billing > Budgets & alerts -
   create a budget with 80%/95% email thresholds.
-- **Meta / Google Ads APIs**: rate-limited rather than billed; failures surface
-  through provider-sync job errors, not spend.
+- **Meta API**: rate-limited rather than billed; failures surface through
+  provider-sync job errors, not spend.
 
 ## Responding to an alert
 

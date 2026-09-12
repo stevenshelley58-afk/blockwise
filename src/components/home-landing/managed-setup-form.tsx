@@ -3,9 +3,6 @@
 import { useState } from "react";
 
 import { trackLead } from "@/lib/analytics/pixel";
-import { gtagConversionDemoForm } from "@/lib/analytics/gtag";
-
-const GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID;
 
 type Status = "idle" | "submitting" | "success" | "error";
 
@@ -87,7 +84,6 @@ export function ManagedSetupForm({ idPrefix, variant }: ManagedSetupFormProps) {
 
       // Fire conversion events only on a confirmed save.
       trackLead({ form_type: "managed_setup" });
-      if (GOOGLE_ADS_ID) gtagConversionDemoForm(GOOGLE_ADS_ID);
       form.reset();
       setStatus("success");
     } catch (err) {

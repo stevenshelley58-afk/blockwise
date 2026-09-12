@@ -35,7 +35,7 @@ test("Meta OAuth identity lookup requires a non-empty app-scoped user id", async
 test("OAuth state validates provider, workspace, user, and expiry", () => {
   const state = signOAuthState(
     {
-      provider: "google",
+      provider: "meta",
       workspaceId: "workspace_demo",
       userId: "user_demo",
       returnPath: "/monitor",
@@ -46,7 +46,7 @@ test("OAuth state validates provider, workspace, user, and expiry", () => {
   );
 
   const verified = verifyOAuthState(state, {
-    expectedProvider: "google",
+    expectedProvider: "meta",
     expectedUserId: "user_demo",
     nowSeconds: 1_779_840_300,
     secret: stateSecret,
@@ -80,7 +80,9 @@ test("OAuth state rejects tampering and wrong providers", () => {
   );
   assert.equal(
     verifyOAuthState(state, {
-      expectedProvider: "google",
+      // A valid string that is not the issuing provider: this state is a Meta
+      // grant, so any other provider must fail verification.
+      expectedProvider: "not_meta" as never,
       expectedUserId: "user_demo",
       nowSeconds: 1_779_840_300,
       secret: stateSecret,

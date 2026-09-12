@@ -10,13 +10,12 @@ export const REQUIRED_ENV_KEYS = [
 ] as const;
 
 // Provider integrations have their own readiness gates so the top-level
-// deployment can report ready even when an optional provider (e.g. Google
-// Ads) has not been wired up yet. This is also what Meta App Review expects
-// to see on /api/health.
+// deployment can report ready even when an optional provider has not been
+// wired up yet. This is also what Meta App Review expects to see on
+// /api/health.
 export const PROVIDER_ENV_KEYS = {
   ai: ["OPENAI_API_KEY"],
   meta: ["META_APP_ID", "META_APP_SECRET"],
-  google: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_ADS_DEVELOPER_TOKEN"],
 } as const;
 
 export type ProviderKey = keyof typeof PROVIDER_ENV_KEYS;

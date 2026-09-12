@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       campaignId,
     }),
   );
-  const authorizationUrl = buildProviderAuthorizationUrl("meta", request, state);
+  const authorizationUrl = buildProviderAuthorizationUrl(request, state);
 
   if (!authorizationUrl) {
     return NextResponse.redirect(providerReturnUrl(returnPath, request.nextUrl.origin, { error: "missing_config" }, campaignId));

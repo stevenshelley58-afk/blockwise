@@ -24,9 +24,10 @@ test("operator console exposes control-plane queues", async ({ page }) => {
 test("results shows zero-safe provider reporting", async ({ page }) => {
   await page.goto("/results");
 
-  await expect(page.getByRole("heading", { name: "Meta Ads Overview" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Results" })).toBeVisible();
   await expect(page.getByText("Meta")).toBeVisible();
-  await expect(page.getByText("Google")).toBeVisible();
+  // Meta is the only ad provider the product connects.
+  await expect(page.getByText("Google")).toHaveCount(0);
 });
 
 test("self-serve includes campaign drafting workflow", async ({ page }) => {

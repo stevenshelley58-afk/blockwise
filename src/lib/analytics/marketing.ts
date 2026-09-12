@@ -1,6 +1,15 @@
 import { getConsentStatus } from "./consent.ts";
 import { isAnalyticsExcludedPath } from "./events.ts";
 
+// The GA4 tag installed by MarketingAnalytics owns these globals. They are
+// typed here because every consumer of window.gtag imports this module.
+declare global {
+  interface Window {
+    gtag?: (...args: unknown[]) => void;
+    dataLayer?: unknown[];
+  }
+}
+
 type MarketingValue = string | number | boolean | undefined;
 type MarketingProperties = Record<string, MarketingValue>;
 
@@ -39,7 +48,6 @@ export function marketingPageLocation(origin: string, pathname: string): string 
 }
 
 export function validGa4Id(value?: string): value is string { return /^G-[A-Z0-9]{4,20}$/.test(value ?? ""); }
-export function validGoogleAdsId(value?: string): value is string { return /^AW-[0-9]+$/.test(value ?? ""); }
 export function validClarityId(value?: string): value is string { return /^[a-z0-9]{8,32}$/.test(value ?? ""); }
 
 function pageType(pathname: string): string {

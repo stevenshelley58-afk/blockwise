@@ -10,6 +10,7 @@ test("demo seed replaces reporting snapshots before inserting fixed demo rows", 
   assert.ok(deleteIndex >= 0, "expected reporting snapshot cleanup");
   assert.ok(insertIndex > deleteIndex, "expected cleanup before reporting snapshot insert");
   assert.match(sql, /workspace_id = demo_workspace_id/i);
-  assert.match(sql, /provider in \('meta', 'google'\)/i);
+  assert.match(sql, /and provider = 'meta'/i);
+  assert.doesNotMatch(sql, /google/i);
   assert.match(sql, /date_range = daterange\('2026-04-26', '2026-05-26', '\[\]'\)/i);
 });

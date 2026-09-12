@@ -11,7 +11,7 @@ test("resolveAdStudioPublishReadiness uses real approval and provider status", (
     resolveAdStudioPublishReadiness({
       approvalStatus: "requested",
       complianceStatus: "approved",
-      providerStatuses: { meta: "connected", google: "connected" },
+      providerStatuses: { meta: "connected" },
       hasDraftPayload: true,
     }),
     {
@@ -24,26 +24,30 @@ test("resolveAdStudioPublishReadiness uses real approval and provider status", (
     resolveAdStudioPublishReadiness({
       approvalStatus: "approved",
       complianceStatus: "approved",
-      providerStatuses: { meta: "connected", google: "connected" },
+      providerStatuses: { meta: "connected" },
       hasDraftPayload: true,
     }),
     { ready: true, blockers: [] },
   );
 });
 
-test("buildAdStudioPublishRequests prepares server-owned Meta and Google payloads", () => {
+test("buildAdStudioPublishRequests prepares the server-owned Meta payload", () => {
   const requests = buildAdStudioPublishRequests({
     exportPackageId: "export_1",
     workspaceId: "workspace_1",
     metaAccountId: "act_123",
-    googleCustomerId: "customers/456",
     metaPayload: { primaryText: ["Seller checklist"], headlines: ["Checklist"] },
-    googlePayload: { headlines: ["Seller Checklist"], keywords: ["sell house subiaco"] },
   });
 
-  assert.deepEqual(requests.map((request) => request.provider), ["meta", "google"]);
+  assert.deepEqual(requests.map((request) => request.provider), ["meta"]);
   assert.equal(requests[0].endpoint, "/act_123/campaigns");
   assert.equal(requests[0].method, "POST");
-  assert.equal(requests[1].endpoint, "/customers/456/googleAds:mutate");
-  assert.equal(requests[1].body.validateOnly, false);
+  assert.deepEqual(requests[0].body.special_ad_categories, ["HOUSING"]);
+  // No ad account means nothing is published, not an empty Meta request.
+  assert.deepEqual(buildAdStudioPublishRequests({
+    exportPackageId: "export_1",
+    workspaceId: "workspace_1",
+    metaAccountId: null,
+    metaPayload: { primaryText: ["Seller checklist"] },
+  }), []);
 });

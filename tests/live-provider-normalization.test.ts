@@ -7,7 +7,6 @@ import {
   fetchMetaInsightRows,
   normalizeMetaInsightRows,
 } from "../src/lib/providers/meta-reporting.ts";
-import { normalizeGoogleAdsRows } from "../src/lib/providers/google-reporting.ts";
 
 test("Meta lead actions are normalized into lead counts", () => {
   assert.equal(
@@ -119,29 +118,4 @@ test("Meta ad set entity reads include daily budget for inline management", asyn
   } finally {
     globalThis.fetch = originalFetch;
   }
-});
-
-test("Google Ads rows normalize micros, conversions, CTR, and campaign labels", () => {
-  const report = normalizeGoogleAdsRows([
-    {
-      campaign: { id: "123", name: "Appraisal search" },
-      adGroup: { id: "456", name: "Subiaco" },
-      metrics: {
-        costMicros: "50000000",
-        impressions: "2000",
-        clicks: "100",
-        conversions: 12,
-        ctr: 0.05,
-        averageCpc: 500000,
-      },
-      segments: { date: "2026-05-27" },
-    },
-  ]);
-
-  assert.equal(report.metrics.spendAud, 50);
-  assert.equal(report.metrics.clicks, 100);
-  assert.equal(report.metrics.leads, 12);
-  assert.equal(report.rows[0].name, "Appraisal search / Subiaco");
-  assert.equal(report.rows[0].ctr, 0.05);
-  assert.equal(report.rows[0].cpcAud, 0.5);
 });

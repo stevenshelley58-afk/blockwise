@@ -5,21 +5,18 @@ import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useState } from "react";
 
 import { getConsentStatus } from "@/components/consent-banner";
-import { isMarketingPath, marketingPageLocation, setGa4Collection, trackMarketingPageView, validGa4Id, validGoogleAdsId } from "@/lib/analytics/marketing";
+import { isMarketingPath, marketingPageLocation, setGa4Collection, trackMarketingPageView, validGa4Id } from "@/lib/analytics/marketing";
 
 export function MarketingAnalytics({
   metaPixelId,
-  googleAdsId,
   ga4MeasurementId,
 }: {
   metaPixelId: string;
-  googleAdsId?: string;
   ga4MeasurementId?: string;
 }) {
   const [enabled, setEnabled] = useState(false);
   const [googleReady, setGoogleReady] = useState(false);
   const pathname = usePathname();
-  const googleTagId = validGa4Id(ga4MeasurementId) ? ga4MeasurementId : validGoogleAdsId(googleAdsId) ? googleAdsId : undefined;
 
   useEffect(() => {
     const sync = () => setEnabled(getConsentStatus() === "granted");
@@ -40,7 +37,7 @@ export function MarketingAnalytics({
   }, [enabled, ga4MeasurementId, googleReady, pathname]);
 
   if (!enabled || !pathname || !isMarketingPath(pathname)) return null;
-  const googleIds = [validGa4Id(ga4MeasurementId) ? ga4MeasurementId : undefined, validGoogleAdsId(googleAdsId) ? googleAdsId : undefined].filter(Boolean);
+  const googleTagId = validGa4Id(ga4MeasurementId) ? ga4MeasurementId : undefined;
   const googleConfig = { send_page_view: false, page_location: marketingPageLocation(window.location.origin, pathname), page_referrer: "", page_title: "Blockwise", allow_google_signals: false, allow_ad_personalization_signals: false };
 
   return (
@@ -52,7 +49,7 @@ export function MarketingAnalytics({
         <>
           <Script id="gtag-base" src={`https://www.googletagmanager.com/gtag/js?id=${googleTagId}`} strategy="afterInteractive" onReady={() => setGoogleReady(true)} />
           <Script id="gtag-init" strategy="afterInteractive">
-            {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;gtag('js',new Date());gtag('consent','default',{ad_storage:'granted',ad_user_data:'granted',ad_personalization:'granted',analytics_storage:'granted'});${googleIds.map((id) => `gtag('config',${JSON.stringify(id)},${JSON.stringify(googleConfig)});`).join('')}`}
+            {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}window.gtag=gtag;gtag('js',new Date());gtag('consent','default',{ad_storage:'granted',ad_user_data:'granted',ad_personalization:'granted',analytics_storage:'granted'});${`gtag('config',${JSON.stringify(googleTagId)},${JSON.stringify(googleConfig)});`}`}
           </Script>
         </>
       ) : null}

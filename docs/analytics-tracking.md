@@ -11,7 +11,7 @@ configuration, not secrets, but must not be committed into environment files.
 
 ## Consent and privacy
 
-- GA4, Clarity, Meta Pixel, and Google Ads load only after **Accept all**.
+- GA4, Clarity and the Meta Pixel load only after **Accept all**.
 - **Essential only** keeps third-party providers disabled and updates Google
   Consent Mode v2 to denied if a Google tag is present.
 - The existing first-party page counter remains separate: it is cookie-free,

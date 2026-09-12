@@ -80,7 +80,7 @@ async function handleCallback(request: NextRequest) {
 
   let exchanged: Awaited<ReturnType<typeof exchangeProviderCode>>;
   try {
-    exchanged = await exchangeProviderCode("meta", request, code);
+    exchanged = await exchangeProviderCode(request, code);
   } catch (error) {
     // Duplicate callback requests (double navigation, browser re-requests)
     // re-exchange an already-used code, which Meta rejects. The first request

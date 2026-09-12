@@ -40,7 +40,6 @@ const jetbrainsMono = JetBrains_Mono({
 
 const META_PIXEL_ID = "1699948581050851";
 const META_APP_ID = process.env.META_APP_ID;
-const GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID;
 const GA4_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID;
 const CLARITY_PROJECT_ID = process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID;
 
@@ -107,7 +106,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </Script>
       </head>
       <body>
-        {!HOMEPAGE_PREVIEW && <MarketingAnalytics metaPixelId={META_PIXEL_ID} googleAdsId={GOOGLE_ADS_ID} ga4MeasurementId={GA4_MEASUREMENT_ID} />}
+        {!HOMEPAGE_PREVIEW && <MarketingAnalytics metaPixelId={META_PIXEL_ID} ga4MeasurementId={GA4_MEASUREMENT_ID} />}
         {!HOMEPAGE_PREVIEW && <ClarityAnalytics projectId={CLARITY_PROJECT_ID} />}
         {children}
         {!HOMEPAGE_PREVIEW && <ServiceWorkerRegistrar />}

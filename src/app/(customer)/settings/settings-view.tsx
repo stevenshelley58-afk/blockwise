@@ -126,14 +126,11 @@ export function SettingsView(props: SettingsViewProps) {
             {/* Ad accounts lead the tab: the connection state decides whether the
                 rest of the workspace setup can publish anything. */}
             <ConnectionsSection
-              supabase={supabase}
               router={router}
               canManage={props.canManage}
               workspaceId={props.workspace.id}
               connections={props.connections}
-              googleAdsEnabled={props.googleAdsEnabled}
               metaConnectHref={props.metaConnectHref}
-              googleConnectHref={props.googleConnectHref}
             />
             <WorkspaceSection supabase={supabase} router={router} workspace={props.workspace} />
             <TeamSection

@@ -1,7 +1,6 @@
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { resolveCustomerActivation } from "@/lib/activation/customer-activation";
 import { niche } from "@/config/niche";
-import { GOOGLE_ADS_ENABLED } from "@/lib/config/feature-flags";
 import { listProviderConnections } from "@/lib/providers/provider-connections";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -263,9 +262,7 @@ export default async function SettingsPage() {
         role={access.role}
         isOperator={access.isOperator}
         canManage={canManage}
-        googleAdsEnabled={GOOGLE_ADS_ENABLED}
         metaConnectHref={`/connect-meta?workspaceId=${wsQuery}`}
-        googleConnectHref={`/api/integrations/google/connect?workspaceId=${wsQuery}`}
       />
     </section>
   );

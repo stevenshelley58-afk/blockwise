@@ -1,7 +1,5 @@
 import type { NextRequest } from "next/server";
 
-import type { MonitorProvider } from "@/lib/monitor/dashboard-data";
-import { fetchGoogleAccessibleCustomers } from "@/lib/providers/google-reporting";
 import { DEFAULT_META_GRAPH_VERSION } from "@/lib/providers/meta-graph-version";
 import { fetchMetaUserIdentity } from "./meta-oauth-identity.ts";
 import { fetchMetaAdAccounts } from "@/lib/providers/meta-reporting";
@@ -38,57 +36,32 @@ const META_SCOPES = [
   "pages_show_list",
   "pages_read_engagement",
 ];
-const GOOGLE_SCOPES = ["https://www.googleapis.com/auth/adwords"];
 
-export function buildProviderAuthorizationUrl(provider: MonitorProvider, request: NextRequest, state: string): string | null {
-  if (provider === "meta") {
-    const appId = process.env.META_APP_ID;
+export function buildProviderAuthorizationUrl(request: NextRequest, state: string): string | null {
+  const appId = process.env.META_APP_ID;
 
-    if (!appId) {
-      return null;
-    }
-
-    const url = new URL(`https://www.facebook.com/${DEFAULT_META_GRAPH_VERSION}/dialog/oauth`);
-    url.searchParams.set("client_id", appId);
-    url.searchParams.set("redirect_uri", getOAuthRedirectUri(request, "meta"));
-    url.searchParams.set("state", state);
-    url.searchParams.set("response_type", "code");
-    url.searchParams.set("scope", META_SCOPES.join(","));
-
-    return url.toString();
-  }
-
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-
-  if (!clientId) {
+  if (!appId) {
     return null;
   }
 
-  const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-  url.searchParams.set("client_id", clientId);
-  url.searchParams.set("redirect_uri", getOAuthRedirectUri(request, "google"));
+  const url = new URL(`https://www.facebook.com/${DEFAULT_META_GRAPH_VERSION}/dialog/oauth`);
+  url.searchParams.set("client_id", appId);
+  url.searchParams.set("redirect_uri", getOAuthRedirectUri(request));
   url.searchParams.set("state", state);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", GOOGLE_SCOPES.join(" "));
-  url.searchParams.set("access_type", "offline");
-  url.searchParams.set("prompt", "consent");
-  url.searchParams.set("include_granted_scopes", "true");
+  url.searchParams.set("scope", META_SCOPES.join(","));
 
   return url.toString();
 }
 
-export async function exchangeProviderCode(
-  provider: MonitorProvider,
-  request: NextRequest,
-  code: string,
-): Promise<OAuthTokenExchange> {
-  return provider === "meta" ? exchangeMetaCode(request, code) : exchangeGoogleCode(request, code);
+export async function exchangeProviderCode(request: NextRequest, code: string): Promise<OAuthTokenExchange> {
+  return exchangeMetaCode(request, code);
 }
 
-export function getOAuthRedirectUri(request: NextRequest, provider: MonitorProvider): string {
+export function getOAuthRedirectUri(request: NextRequest): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || request.nextUrl.origin;
 
-  return `${appUrl.replace(/\/$/, "")}/api/integrations/${provider}/callback`;
+  return `${appUrl.replace(/\/$/, "")}/api/integrations/meta/callback`;
 }
 
 async function exchangeMetaCode(request: NextRequest, code: string): Promise<OAuthTokenExchange> {
@@ -102,7 +75,7 @@ async function exchangeMetaCode(request: NextRequest, code: string): Promise<OAu
   const tokenUrl = new URL(`https://graph.facebook.com/${DEFAULT_META_GRAPH_VERSION}/oauth/access_token`);
   tokenUrl.searchParams.set("client_id", appId);
   tokenUrl.searchParams.set("client_secret", appSecret);
-  tokenUrl.searchParams.set("redirect_uri", getOAuthRedirectUri(request, "meta"));
+  tokenUrl.searchParams.set("redirect_uri", getOAuthRedirectUri(request));
   tokenUrl.searchParams.set("code", code);
 
   const shortLived = await fetchJson<{ access_token?: string; expires_in?: number; error?: { message?: string } }>(tokenUrl.toString());
@@ -185,49 +158,6 @@ function defaultPrivacyPolicyUrl(): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
 
   return appUrl ? `${appUrl.replace(/\/$/, "")}/privacy` : "";
-}
-
-async function exchangeGoogleCode(request: NextRequest, code: string): Promise<OAuthTokenExchange> {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-
-  if (!clientId || !clientSecret) {
-    throw new Error("Google OAuth credentials are not configured.");
-  }
-
-  const token = await fetchJson<{
-    access_token?: string;
-    refresh_token?: string;
-    scope?: string;
-    error_description?: string;
-    error?: string;
-  }>("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      code,
-      client_id: clientId,
-      client_secret: clientSecret,
-      redirect_uri: getOAuthRedirectUri(request, "google"),
-      grant_type: "authorization_code",
-    }),
-  });
-
-  if (!token.access_token) {
-    throw new Error(token.error_description ?? token.error ?? "Google OAuth did not return an access token.");
-  }
-
-  const accounts = await fetchGoogleAccessibleCustomers(token.access_token).catch(() => []);
-  const account = accounts[0];
-
-  return {
-    accessToken: token.access_token,
-    refreshToken: token.refresh_token ?? null,
-    scopes: token.scope?.split(/\s+/).filter(Boolean) ?? GOOGLE_SCOPES,
-    externalAccountId: account?.id ?? "google_ads_account_pending",
-    externalAccountName: account?.name ?? "Google Ads account",
-    status: account ? "connected" : "needs_attention",
-  };
 }
 
 function expiresInToIso(expiresIn: number | undefined): string | null {

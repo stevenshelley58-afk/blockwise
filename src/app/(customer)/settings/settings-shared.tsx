@@ -107,9 +107,7 @@ export type SettingsViewProps = {
   role: string;
   isOperator: boolean;
   canManage: boolean;
-  googleAdsEnabled: boolean;
   metaConnectHref: string;
-  googleConnectHref: string;
 };
 
 export type SB = ReturnType<typeof createSupabaseBrowserClient>;

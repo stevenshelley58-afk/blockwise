@@ -12,7 +12,8 @@ test("the ad-accounts card offers one Meta action and never asks for a separate 
   // Connect when disconnected, Disconnect when connected. No Save button and
   // no second Reconnect button competing with the connection action. The word
   // may still appear in an error message; only a Reconnect control is banned.
-  assert.match(connections, /startLabel: "Connect your Meta account"/);
+  // The card has one provider, so the connect action is the only one on it.
+  assert.match(connections, /<a href=\{metaConnectHref\}>Connect your Meta account<\/a>/);
   assert.match(connections, /Disconnect/);
   assert.doesNotMatch(connections, />\s*Reconnect\s*</);
   assert.doesNotMatch(connections, /Save Meta setup/);

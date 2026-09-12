@@ -20,7 +20,6 @@ test("the external task runner is absent and background work uses the VPS queue"
     "reporting.refresh",
     "reconcile.customer.activation",
     "check.meta.token-health",
-    "sync.provider.reports",
   ]) {
     assert.match(worker, new RegExp(kind.replaceAll(".", "\\.")));
   }

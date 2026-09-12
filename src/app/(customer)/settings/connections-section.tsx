@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { niche } from "@/config/niche";
 
-import { Feedback, REGION_CURRENCY, Section, selectClass, type Connection, type Msg, type RT, type SB } from "./settings-shared";
+import { Feedback, REGION_CURRENCY, Section, selectClass, type Connection, type Msg, type RT } from "./settings-shared";
 
 type MetaLeadDestinationType = "webhook" | "crm" | "manual";
 
@@ -61,116 +61,89 @@ function statusTone(status: string): "green" | "amber" | "rose" | "blue" {
   return "blue";
 }
 
+const META_PROVIDER_LABEL = "Meta (Facebook & Instagram)";
+
 export function ConnectionsSection({
-  supabase,
   router,
   canManage,
   workspaceId,
   connections,
-  googleAdsEnabled,
   metaConnectHref,
-  googleConnectHref,
 }: {
-  supabase: SB;
   router: RT;
   canManage: boolean;
   workspaceId: string;
   connections: Connection[];
-  googleAdsEnabled: boolean;
   metaConnectHref: string;
-  googleConnectHref: string;
 }) {
   const [message, setMessage] = useState<Msg>(null);
-  const [busyProvider, setBusyProvider] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const providers: Array<{ key: string; label: string; connectHref: string; enabled: boolean; startLabel?: string }> = [
-    { key: "meta", label: "Meta (Facebook & Instagram)", connectHref: metaConnectHref, enabled: true, startLabel: "Connect your Meta account" },
-    { key: "google", label: "Google Ads", connectHref: googleConnectHref, enabled: googleAdsEnabled },
-  ];
+  const conn = connections.find((c) => c.provider === "meta");
+  const connected = conn && conn.status !== "revoked" && conn.status !== "not_connected";
 
-  async function disconnect(provider: string, label: string) {
-    setBusyProvider(provider);
+  async function disconnect() {
+    setBusy(true);
     setMessage(null);
     try {
-      if (provider === "meta") {
-        // Use the server-side route so the Meta app grant is also revoked.
-        const res = await fetch("/api/integrations/meta/disconnect", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ workspaceId }),
-        });
-        if (!res.ok) {
-          const data = (await res.json().catch(() => ({}))) as { error?: string };
-          throw new Error(data.error ?? `Couldn't disconnect ${label}.`);
-        }
-      } else {
-        const { error } = await supabase
-          .from("provider_connections")
-          .update({ status: "revoked", updated_at: new Date().toISOString() })
-          .eq("workspace_id", workspaceId)
-          .eq("provider", provider);
-        if (error) throw error;
+      // Use the server-side route so the Meta app grant is also revoked.
+      const res = await fetch("/api/integrations/meta/disconnect", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ workspaceId }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error ?? `Couldn't disconnect ${META_PROVIDER_LABEL}.`);
       }
-      setMessage({ tone: "success", text: `${label} disconnected.` });
+      setMessage({ tone: "success", text: `${META_PROVIDER_LABEL} disconnected.` });
       router.refresh();
     } catch (error) {
       setMessage({
         tone: "error",
-        text: error instanceof Error ? error.message : `Couldn't disconnect ${label}.`,
+        text: error instanceof Error ? error.message : `Couldn't disconnect ${META_PROVIDER_LABEL}.`,
       });
     } finally {
-      setBusyProvider(null);
+      setBusy(false);
     }
   }
 
   return (
     <Section id="connections" title={niche.copy.settings.sections.connections}>
-      {providers.map((prov) => {
-        const conn = connections.find((c) => c.provider === prov.key);
-        const connected = conn && conn.status !== "revoked" && conn.status !== "not_connected";
-        return (
-          <div className="flex flex-col gap-3" key={prov.key}>
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex flex-col gap-1">
-                <strong className="text-sm font-medium">{prov.label}</strong>
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  {conn?.accountName ? <span>{conn.accountName} ·</span> : null}
-                  {conn ? <StatusPill tone={statusTone(conn.status)}>{STATUS_LABELS[conn.status] ?? conn.status.replace(/_/g, " ")}</StatusPill> : null}
-                </div>
-              </div>
-              {!prov.enabled ? (
-                <Button variant="outline" type="button" disabled>
-                  Not enabled yet
-                </Button>
-              ) : !canManage ? (
-                <Button variant="outline" type="button" disabled>
-                  Owner or admin connects this
-                </Button>
-              ) : connected ? (
-                <Button variant="outline" type="button" onClick={() => disconnect(prov.key, prov.label)} disabled={busyProvider === prov.key}>
-                  {busyProvider === prov.key ? "Working" : "Disconnect"}
-                </Button>
-              ) : (
-                <Button asChild>
-                  <a href={prov.connectHref}>{prov.startLabel ?? "Connect"}</a>
-                </Button>
-              )}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-col gap-1">
+            <strong className="text-sm font-medium">{META_PROVIDER_LABEL}</strong>
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              {conn?.accountName ? <span>{conn.accountName} ·</span> : null}
+              {conn ? <StatusPill tone={statusTone(conn.status)}>{STATUS_LABELS[conn.status] ?? conn.status.replace(/_/g, " ")}</StatusPill> : null}
             </div>
-            {/* Nothing is configured until an account is connected, so the
-                empty state stays one button and one line instead of a form
-                full of fields that cannot be saved yet. */}
-            {prov.key === "meta" && connected && canManage ? (
-              <MetaSetupForm workspaceId={workspaceId} canManage={canManage} />
-            ) : null}
-            {prov.key === "meta" && connected && !canManage ? (
-              <p className="text-sm text-muted-foreground">An owner or admin can view and change Meta publishing assets.</p>
-            ) : null}
-            {prov.key === "meta" && !connected ? (
-              <p className="text-sm text-muted-foreground">Connect to publish lead ads from your own ad account and Facebook Page.</p>
-            ) : null}
           </div>
-        );
-      })}
+          {!canManage ? (
+            <Button variant="outline" type="button" disabled>
+              Owner or admin connects this
+            </Button>
+          ) : connected ? (
+            <Button variant="outline" type="button" onClick={disconnect} disabled={busy}>
+              {busy ? "Working" : "Disconnect"}
+            </Button>
+          ) : (
+            <Button asChild>
+              <a href={metaConnectHref}>Connect your Meta account</a>
+            </Button>
+          )}
+        </div>
+        {/* Nothing is configured until an account is connected, so the
+            empty state stays one button and one line instead of a form
+            full of fields that cannot be saved yet. */}
+        {connected && canManage ? <MetaSetupForm workspaceId={workspaceId} canManage={canManage} /> : null}
+        {connected && !canManage ? (
+          <p className="text-sm text-muted-foreground">An owner or admin can view and change Meta publishing assets.</p>
+        ) : null}
+        {!connected ? (
+          <p className="text-sm text-muted-foreground">Connect to publish lead ads from your own ad account and Facebook Page.</p>
+        ) : null}
+      </div>
       <Feedback message={message} />
     </Section>
   );

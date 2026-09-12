@@ -6,7 +6,7 @@ import type { createSupabaseServerClient } from "../supabase/server.ts";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
-type ProviderKey = "meta" | "google";
+type ProviderKey = "meta";
 
 type CampaignRow = {
   id: string;
@@ -177,7 +177,7 @@ export function buildCampaignReadinessRows(input: {
   );
 
   return input.campaigns.map((campaign) => {
-    const provider = normalizeProvider(campaign.provider);
+    const provider: ProviderKey = "meta";
     const approvalStatus = latestApprovalByCampaign.get(campaign.id) ?? "draft";
     const complianceStatus =
       latestComplianceByCampaign.get(campaign.id) ??
@@ -192,8 +192,8 @@ export function buildCampaignReadinessRows(input: {
     return {
       id: campaign.id,
       name: campaign.name,
-      provider: formatProvider(provider),
-      channel: provider === "meta" ? "Lead ad" : "Search",
+      provider: "Meta",
+      channel: "Lead ad",
       status: campaign.status ?? "draft",
       approvalStatus,
       complianceStatus,
@@ -378,7 +378,7 @@ export function buildOperatorOverview(input: {
     .map((connection) => ({
       id: connection.id ?? `${connection.workspace_id ?? "workspace"}-${connection.provider ?? "provider"}`,
       workspace: one(connection.workspaces)?.name ?? "Workspace",
-      provider: formatProviderLabel(connection.provider),
+      provider: connection.provider ? String(connection.provider) : "Provider",
       status: connection.status === "needs_attention" ? "Needs attention" : "Not connected",
       tone: connection.status === "needs_attention" ? "rose" : "amber",
       lastSync: connection.last_sync_at ? formatRelativeDate(connection.last_sync_at) : "No sync yet",
@@ -657,26 +657,8 @@ function toResearchSignalRow(row: ResearchSignalRow): ResearchSignalRow {
   };
 }
 
-function normalizeProvider(provider: CampaignRow["provider"]): ProviderKey {
-  return provider === "google" ? "google" : "meta";
-}
-
-function formatProvider(provider: ProviderKey) {
-  return provider === "meta" ? "Meta" : "Google";
-}
-
-function formatProviderLabel(provider: ProviderConnectionRow["provider"]) {
-  if (provider === "meta" || provider === "google") {
-    return formatProvider(provider);
-  }
-
-  return provider ? String(provider) : "Provider";
-}
-
 function sourceLabel(provider: LeadRow["provider"]) {
-  if (provider === "meta") return "Meta lead form";
-  if (provider === "google") return "Google lead form";
-  return "Manual import";
+  return provider === "meta" ? "Meta lead form" : "Manual import";
 }
 
 export function normalizeLeadQualityLabel(value: string | null | undefined): LeadQualityLabel | null {

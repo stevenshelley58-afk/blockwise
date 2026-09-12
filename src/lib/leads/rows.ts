@@ -32,9 +32,7 @@ type LeadDedupeRow = {
 };
 
 export function leadSourceLabel(provider: LeadRow["provider"]) {
-  if (provider === "meta") return "Meta lead form";
-  if (provider === "google") return "Google lead form";
-  return "Manual import";
+  return provider === "meta" ? "Meta lead form" : "Manual import";
 }
 
 export function buildLeadRowsWithDedupe(input: {

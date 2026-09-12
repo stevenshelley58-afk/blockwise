@@ -136,25 +136,6 @@ export async function resolveHandler(kind: string): Promise<Handler | null> {
         return health;
       };
     }
-    case "sync.provider.reports": {
-      const { resolveMonitorDateRange } = await import("../src/lib/monitor/dashboard-data.ts");
-      const { syncProviderWorkspace } = await import("../src/lib/providers/provider-sync.ts");
-      return (payload, supabase) => {
-        const workspaceId = String(payload.workspaceId ?? "");
-        const provider = String(payload.provider ?? "");
-        if (!workspaceId || provider !== "google") {
-          throw new Error("Provider report-sync payload is invalid.");
-        }
-        return syncProviderWorkspace({
-          supabase: supabase as never,
-          serviceSupabase: supabase,
-          workspaceId,
-          provider,
-          range: resolveMonitorDateRange("last_30"),
-          jobKey: "sync-provider-reports",
-        });
-      };
-    }
     case "publish.meta.execute": {
       const { executeMetaPublishPlanById } = await import("../src/lib/providers/meta-publish-worker.ts");
       return (payload, supabase, context) =>

@@ -37,7 +37,6 @@ begin
   )
   values
     (demo_workspace_id, 'meta', 'connected', array['ads_read', 'leads_retrieval'], 'act_demo_meta', 'Northstar Meta Ads', now(), operator_user_id),
-    (demo_workspace_id, 'google', 'needs_attention', array['adwords'], 'customers/demo_google', 'Northstar Google Ads', now() - interval '18 hours', operator_user_id)
   on conflict do nothing;
 
   insert into public.campaigns (id, workspace_id, provider, name, status, draft_payload, created_by)
@@ -59,16 +58,14 @@ begin
   insert into public.leads (workspace_id, provider, external_id, email, phone, full_name, suburb, raw_payload)
   values
     (demo_workspace_id, 'meta', 'meta_lead_001', 'amelia@example.com', '0400 111 222', 'Amelia Hart', 'Subiaco', '{"source":"demo"}'),
-    (demo_workspace_id, 'google', 'google_lead_002', 'daniel@example.com', '0400 333 444', 'Daniel Ng', 'Leederville', '{"source":"demo"}')
   on conflict do nothing;
 
   delete from public.reporting_snapshots
   where workspace_id = demo_workspace_id
-    and provider in ('meta', 'google')
+    and provider = 'meta'
     and date_range = daterange('2026-04-26', '2026-05-26', '[]');
 
   insert into public.reporting_snapshots (workspace_id, provider, date_range, metrics)
   values
     (demo_workspace_id, 'meta', daterange('2026-04-26', '2026-05-26', '[]'), '{"spendAud":1840,"leads":92,"cplAud":20}'),
-    (demo_workspace_id, 'google', daterange('2026-04-26', '2026-05-26', '[]'), '{"spendAud":1245,"leads":30,"cplAud":41.5}');
 end $$;

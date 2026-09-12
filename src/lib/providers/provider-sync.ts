@@ -1,6 +1,5 @@
 import type { MonitorDateRange, MonitorProvider, MonitorProviderReport } from "../monitor/dashboard-data.ts";
 import { listProviderConnections, loadStoredProviderTokens } from "./provider-connections.ts";
-import { fetchGoogleAdsReporting, refreshGoogleAccessToken } from "./google-reporting.ts";
 import { fetchMetaReporting } from "./meta-reporting.ts";
 import type { createSupabaseServerClient } from "../supabase/server.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
@@ -98,37 +97,17 @@ export async function syncProviderWorkspace(input: {
     }
 
     const tokens = await loadStoredProviderTokens(input.serviceSupabase, connection.id);
-    let report: MonitorProviderReport;
 
-    if (input.provider === "meta") {
-      if (!tokens.accessToken || !connection.externalAccountId) {
-        throw new Error("Meta provider connection is missing an access token or account id.");
-      }
-
-      report = await fetchMetaReporting({
-        accessToken: tokens.accessToken,
-        accountId: connection.externalAccountId,
-        accountName: connection.externalAccountName ?? undefined,
-        range: input.range,
-      });
-    } else {
-      if ((!tokens.accessToken && !tokens.refreshToken) || !connection.externalAccountId) {
-        throw new Error("Google provider connection is missing token material or customer id.");
-      }
-
-      const accessToken = tokens.refreshToken ? await refreshGoogleAccessToken(tokens.refreshToken) : tokens.accessToken;
-
-      if (!accessToken) {
-        throw new Error("Google provider connection is missing an access token.");
-      }
-
-      report = await fetchGoogleAdsReporting({
-        accessToken,
-        customerId: connection.externalAccountId,
-        accountName: connection.externalAccountName ?? undefined,
-        range: input.range,
-      });
+    if (!tokens.accessToken || !connection.externalAccountId) {
+      throw new Error("Meta provider connection is missing an access token or account id.");
     }
+
+    const report: MonitorProviderReport = await fetchMetaReporting({
+      accessToken: tokens.accessToken,
+      accountId: connection.externalAccountId,
+      accountName: connection.externalAccountName ?? undefined,
+      range: input.range,
+    });
 
     const { error: snapshotError } = await input.serviceSupabase
       .from("reporting_snapshots")

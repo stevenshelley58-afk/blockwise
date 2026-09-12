@@ -93,49 +93,27 @@ export async function queueScheduledProviderMaintenance(service: ServiceSupabase
     failed += results.filter((result) => result.status === "rejected").length;
   };
 
-  const [metaScanned, googleScanned] = await Promise.all([
-    scanScheduledRowsById<ScheduledConnectionRow>({
-      fetchPage: async (afterId, limit) => {
-        let query = service
-          .from("provider_connections")
-          .select("id,workspace_id")
-          .eq("provider", "meta")
-          .in("status", ["connected", "needs_attention"])
-          .order("id", { ascending: true })
-          .limit(limit);
-        if (afterId) query = query.gt("id", afterId);
-        return await query as unknown as ScheduledPage<ScheduledConnectionRow>;
-      },
-      handlePage: async (rows) => recordResults(await Promise.allSettled(rows.map((row) => enqueueQueuedJob({
-        workspaceId: row.workspace_id,
-        kind: "check.meta.token-health",
-        payload: { workspaceId: row.workspace_id, connectionId: row.id },
-        maxAttempts: 3,
-        dedupeKey: `meta-token-health:${row.workspace_id}:${row.id}:${bucket}`,
-      })))),
-    }),
-    scanScheduledRowsById<ScheduledConnectionRow>({
-      fetchPage: async (afterId, limit) => {
-        let query = service
-          .from("provider_connections")
-          .select("id,workspace_id")
-          .eq("provider", "google")
-          .eq("status", "connected")
-          .order("id", { ascending: true })
-          .limit(limit);
-        if (afterId) query = query.gt("id", afterId);
-        return await query as unknown as ScheduledPage<ScheduledConnectionRow>;
-      },
-      handlePage: async (rows) => recordResults(await Promise.allSettled(rows.map((row) => enqueueQueuedJob({
-        workspaceId: row.workspace_id,
-        kind: "sync.provider.reports",
-        payload: { workspaceId: row.workspace_id, provider: "google" },
-        maxAttempts: 3,
-        dedupeKey: `provider-report-sync:${row.workspace_id}:google:${bucket}`,
-      })))),
-    }),
-  ]);
-  scanned = metaScanned + googleScanned;
+  const metaScanned = await scanScheduledRowsById<ScheduledConnectionRow>({
+    fetchPage: async (afterId, limit) => {
+      let query = service
+        .from("provider_connections")
+        .select("id,workspace_id")
+        .eq("provider", "meta")
+        .in("status", ["connected", "needs_attention"])
+        .order("id", { ascending: true })
+        .limit(limit);
+      if (afterId) query = query.gt("id", afterId);
+      return await query as unknown as ScheduledPage<ScheduledConnectionRow>;
+    },
+    handlePage: async (rows) => recordResults(await Promise.allSettled(rows.map((row) => enqueueQueuedJob({
+      workspaceId: row.workspace_id,
+      kind: "check.meta.token-health",
+      payload: { workspaceId: row.workspace_id, connectionId: row.id },
+      maxAttempts: 3,
+      dedupeKey: `meta-token-health:${row.workspace_id}:${row.id}:${bucket}`,
+    })))),
+  });
+  scanned = metaScanned;
   return { scanned, queued, failed };
 }
 

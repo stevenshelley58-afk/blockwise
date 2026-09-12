@@ -29,7 +29,7 @@ test("buildLeadRowsWithDedupe maps live leads, labels, attribution, and duplicat
         email: "daniel@example.com",
         phone: "0400 333 444",
         suburb: "Leederville",
-        provider: "google",
+        provider: null,
         created_at: "2026-05-27T02:00:00.000Z",
       },
     ],

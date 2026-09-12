@@ -20,28 +20,11 @@ test("external AI and Meta credentials are optional provider readiness gates", (
   assert.equal(REQUIRED_ENV_KEYS.includes("META_APP_SECRET" as never), false);
   assert.deepEqual(PROVIDER_ENV_KEYS.ai, ["OPENAI_API_KEY"]);
   assert.deepEqual(PROVIDER_ENV_KEYS.meta, ["META_APP_ID", "META_APP_SECRET"]);
-});
-
-test("Google Ads keys are tracked as provider-scoped, not core required, so a Meta-only deploy can report ready", () => {
-  assert.equal(REQUIRED_ENV_KEYS.includes("GOOGLE_CLIENT_ID" as never), false);
-  assert.equal(REQUIRED_ENV_KEYS.includes("GOOGLE_ADS_DEVELOPER_TOKEN" as never), false);
-
-  assert.deepEqual(PROVIDER_ENV_KEYS.google, [
-    "GOOGLE_CLIENT_ID",
-    "GOOGLE_CLIENT_SECRET",
-    "GOOGLE_ADS_DEVELOPER_TOKEN",
-  ]);
-
+  // A provider whose credentials are absent is a readiness gate, not a
+  // deployment blocker: /api/health still reports ready.
   assert.equal(getProviderReadiness("ai", {} as NodeJS.ProcessEnv).ok, false);
   assert.equal(getProviderReadiness("meta", {} as NodeJS.ProcessEnv).ok, false);
-
-  const readiness = getProviderReadiness("google", {} as NodeJS.ProcessEnv);
-  assert.equal(readiness.ok, false);
-  assert.deepEqual(readiness.missing, [
-    "GOOGLE_CLIENT_ID",
-    "GOOGLE_CLIENT_SECRET",
-    "GOOGLE_ADS_DEVELOPER_TOKEN",
-  ]);
+  assert.deepEqual(Object.keys(PROVIDER_ENV_KEYS), ["ai", "meta"]);
 });
 
 test("recommended security environment keys cover Turnstile and Cloudflare gateway", () => {
@@ -124,7 +107,6 @@ test(".env.example documents app-read env vars and omits retired ones", () => {
     "CLOUDFLARE_AI_GATEWAY_TOKEN",
     "OPERATOR_EMAILS",
     "BLOCKWISE_DEV_PASSWORD",
-    "GOOGLE_ADS_ENABLED",
     "META_MONITOR_BUDGET_AUD",
     "NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA",
     "SUPABASE_SECRET_KEY",
@@ -135,6 +117,8 @@ test(".env.example documents app-read env vars and omits retired ones", () => {
   assert.doesNotMatch(example, /^SUPABASE_(?:DB_URL|JWT_SECRET)=/m);
   assert.doesNotMatch(example, new RegExp(`^${"SENTRY"}_${"AUTH_TOKEN"}=`, "m"));
   assert.doesNotMatch(example, /^NEXT_PUBLIC_POSTHOG_/m);
+  // The retired ad provider must not come back as documentation either.
+  assert.doesNotMatch(example, /GOOGLE_ADS/i);
   assert.doesNotMatch(example, /^(?:AGENT_ALLOWED|SECURITY_AUDIT)_/m);
 });
 
