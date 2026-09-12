@@ -121,4 +121,13 @@ export const homepageMotion = {
     chartHoldMs: 3000,
     emailHoldMs: 2200,
   },
+  workflowStudy: {
+    autoHoldMs: 2600,
+    adMoveMs: 680,
+    panelRevealMs: 360,
+    sideFadeMs: 220,
+    typeStartMs: 760,
+    typeMs: 28,
+    ease: [0.2, 0.82, 0.28, 1] as const,
+  },
 } as const;
