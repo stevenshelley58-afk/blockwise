@@ -86,6 +86,15 @@ function pageHasExplicitFailure(decision) {
   const text = asText(decision.rationale) + " " + asText(d.status) + " " + asText(d.outcome) + " " + asText(e.status) + " " + asText(e.outcome);
   return /\b(?:fail(?:ed|ure)?|error|timeout|unavailable)\b/iu.test(text);
 }
+function pageHasExplicitNegative(decision) {
+  if (!decision) return false;
+  const d = object(decision.decision);
+  const e = object(decision.evidence);
+  const resolvedNegative = [d.resolved, e.resolved].some((value) => value === false || value === "false" || value === 0);
+  if (resolvedNegative) return true;
+  const text = asText(decision.rationale) + " " + asText(d.status) + " " + asText(d.outcome) + " " + asText(e.status) + " " + asText(e.outcome);
+  return /\b(?:no[_\s-]?verified[_\s-]?match|no[_\s-]?match|not[_\s-]?found|unresolved|negative|rejected)\b/iu.test(text);
+}
 
 function pageIsAmbiguous(decision) {
   if (!decision) return false;
@@ -115,8 +124,17 @@ function validPageEvidence(page, decision) {
   if (!isNumericPageId(page.page_id) || asText(page.status) === "rejected_non_real_estate") return false;
   // A current terminal page row remains valid evidence even if an older
   // resolver decision is superseded by a generic negative decision.
-  if (["resolved_collectable", "no_ads_confirmed"].includes(asText(page.status))) return true;
-  if (decision) return truthy(object(decision.decision).resolved) && isNumericPageId(object(decision.decision).page_id);
+  if (["resolved_collectable", "no_ads_confirmed"].includes(asText(page.status))) {
+    const resolvedPageId = object(decision?.decision).page_id;
+    if (decision && truthy(object(decision.decision).resolved)) {
+      return isNumericPageId(resolvedPageId) && asText(resolvedPageId) === asText(page.page_id);
+    }
+    return true;
+  }
+  if (decision) {
+    const resolvedPageId = object(decision.decision).page_id;
+    return truthy(object(decision.decision).resolved) && isNumericPageId(resolvedPageId) && asText(resolvedPageId) === asText(page.page_id);
+  }
   // Older collected pages predate resolution_decision_id. Their terminal page
   // status is still controlled evidence, but unresolved/paused pages are not.
   return ["resolved_collectable", "no_ads_confirmed"].includes(asText(page.status));
@@ -137,11 +155,11 @@ function classifyIdentity(entity, pages, allDecisions) {
     const d = object(currentDecision.decision);
     const e = object(currentDecision.evidence);
     const marker = asText(d.status || d.outcome || e.status || e.outcome).toLowerCase();
-    if (truthy(d.resolved) && isNumericPageId(d.page_id)) return "page_found";
     if (pageIsAmbiguous(currentDecision)) return "ambiguous";
     if (pageHasExplicitFailure(currentDecision)) return "failed";
     if (marker === "attempted" || marker === "in_progress") return "attempted";
-    return "no_verified_match";
+    if (pageHasExplicitNegative(currentDecision)) return "no_verified_match";
+    return "unchecked";
   }
   if (enrichmentAttempted(entity)) return "attempted";
   return "unchecked";
@@ -160,7 +178,9 @@ function classifyPageScan(pages, runsByPage) {
   const eligible = pages.filter((page) => page.scan_enabled !== false && isNumericPageId(page.page_id) && pageHasCandidateEvidence(page, page._resolution));
   if (eligible.length === 0) return pages.some((page) => asText(page.status) === "rejected_non_real_estate" || page.scan_enabled === false) ? "excluded" : "pending_identity";
   const complete = eligible.filter((page) => scanComplete(page, runsByPage));
-  if (complete.length === eligible.length) return "full_complete";
+  const additionalPendingIdentity = pages.some((page) =>
+    page.scan_enabled !== false && asText(page.status) !== "rejected_non_real_estate" && !pageHasCandidateEvidence(page, page._resolution));
+  if (complete.length === eligible.length) return additionalPendingIdentity ? "pending_identity" : "full_complete";
   if (eligible.some((page) => ["needs_first_fill", "queued", "scanning"].includes(asText(page.scan_state)))) return "pending";
   if (complete.length > 0) return "partial";
   if (eligible.some((page) => asText(page.scan_state) === "failing")) return "failed";

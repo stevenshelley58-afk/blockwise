@@ -153,3 +153,35 @@ test("first-fill denominator is numeric enabled pages, not known pages", () => {
   assert.equal(report.roster.find((row) => row.id === "a7").pages_full_complete, 1);
   assert.match(report.first_fill.note, /never known pages alone/);
 });
+
+test("generic resolver decisions do not become negative matches and page IDs must match exactly", () => {
+  const snapshot = fixture();
+  const a2 = snapshot.agents.find((row) => row.id === "a2");
+  snapshot.pages.push(page("p7", a2, { page_id: "666", status: "verified_real_estate_unresolved", resolution_decision_id: "d7-mismatch" }));
+  snapshot.decisions.push(decision("d7-mismatch", "agent", "a2", { resolved: true, page_id: "999" }));
+  const a8 = entity("a8", "agent");
+  snapshot.agents.push(a8);
+  snapshot.pages.push(page("p6", a8, { page_id: "555", status: "verified_real_estate_unresolved", resolution_decision_id: "d6-generic" }));
+  snapshot.decisions.push(decision("d6-generic", "agent", "a8", {}));
+  const report = buildAccountabilityReport(snapshot);
+  const row = report.roster.find((item) => item.id === "a2");
+  assert.equal(row.identity_status, "unchecked");
+  assert.equal(row.page_scan_status, "pending_identity");
+  assert.equal(row.page_found, false);
+  const generic = report.roster.find((item) => item.id === "a8");
+  assert.equal(generic.identity_status, "unchecked");
+  assert.equal(generic.page_scan_status, "pending_identity");
+  assert.equal(generic.page_found, false);
+});
+
+test("full completion does not hide an additional identity-linked pending page", () => {
+  const snapshot = fixture();
+  snapshot.runs.push({
+    id: "run-p4", advertiser_page_id: "p4", scan_mode: "initial_fill", status: "success",
+    coverage_complete: true, pagination_exhausted: true, completed_at: "2026-09-04T00:00:00Z",
+  });
+  const a7 = snapshot.agents.find((row) => row.id === "a7");
+  snapshot.pages.push(page("p6", a7, { page_id: "555", status: "verified_real_estate_unresolved", scan_state: "healthy" }));
+  const report = buildAccountabilityReport(snapshot);
+  assert.equal(report.roster.find((row) => row.id === "a7").page_scan_status, "pending_identity");
+});
