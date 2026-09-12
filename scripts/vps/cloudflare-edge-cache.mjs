@@ -6,13 +6,14 @@
  * repository, so it cannot ride the release. It is idempotent, it verifies
  * itself, and it records the reasoning that a dashboard click would lose.
  *
- * Why the TTL is 300 seconds and not the origin's `s-maxage=31536000`: the
- * prerendered HTML names release-specific `/_next/static/chunks/*` files, and a
- * release serves them from a fresh immutable checkout, so the previous hashes
- * stop existing the moment a release lands. Caching HTML for a year would serve
- * markup whose scripts 404. A short edge TTL bounds the damage to one window
- * after a release; a `Cache Purge` token in `product-release.sh` is the way to
- * raise it, which is deliberately not wired here.
+ * Why a day and not the origin's `s-maxage=31536000`: the prerendered HTML names
+ * release-specific `/_next/static/chunks/*` files and a release serves them from a
+ * fresh checkout, so the previous hashes stop existing the moment a release
+ * lands. `scripts/vps/product-edge-purge.sh` clears these URLs on every release,
+ * which is what makes a long TTL safe; a day is the backstop for the case where
+ * that purge fails, so the damage heals by itself within a day instead of a year.
+ * A short TTL was the earlier compromise and it cost nearly every hit on a site
+ * whose traffic is spread out.
  *
  * The expression does not exclude requests that carry a session cookie. All five
  * pages are prerendered per release and hold nothing visitor-specific, so a
@@ -32,12 +33,14 @@
 
 const ZONE_NAME = process.env.CLOUDFLARE_ZONE_NAME ?? "blockwise.sale";
 const API = "https://api.cloudflare.com/client/v4";
-const RULE_DESCRIPTION = "blockwise: edge cache prerendered marketing HTML";
+// Must match the rule's name in the dashboard exactly: the tool merges by
+// description, and a mismatch appends a second, overlapping rule instead.
+const RULE_DESCRIPTION = "marketing html";
 
 /** Prerendered public pages. Each one is identical for every visitor. */
 const CACHED_PATHS = ["/", "/pricing", "/privacy", "/terms", "/data-deletion"];
 
-const EDGE_TTL_SECONDS = 300;
+const EDGE_TTL_SECONDS = 86_400;
 
 const requiredPermission = "Zone -> Cache Rules -> Edit (zone: " + ZONE_NAME + ")";
 
@@ -80,10 +83,7 @@ function rule() {
   return {
     description: RULE_DESCRIPTION,
     enabled: true,
-    expression: [
-      `(http.request.method eq "GET"`,
-      ` and http.request.uri.path in {${CACHED_PATHS.map((path) => `"${path}"`).join(" ")}})`,
-    ].join(""),
+    expression: `(http.request.uri.path in {${CACHED_PATHS.map((path) => `"${path}"`).join(" ")}})`,
     action: "set_cache_settings",
     action_parameters: {
       cache: true,

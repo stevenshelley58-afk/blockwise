@@ -207,6 +207,13 @@ deploy() {
   guard "$TARGET" --image "$IMAGE" --check-live
   BLOCKWISE_PRODUCT_ENV_FILE="$ENV" "$RELEASE/scripts/vps/product-health.sh" "$TARGET"
   trap - ERR
+  # The edge cache holds the marketing HTML for a day and that HTML names
+  # content-hashed chunk files, so the previous copy has to go the moment this
+  # release is live. Best effort: a healthy release is not rolled back over a
+  # purge, but a silent failure would serve stale markup until the TTL expires,
+  # so it is reported loudly enough to find in the release log.
+  "$RELEASE/scripts/vps/product-edge-purge.sh" \
+    || printf 'warning: edge cache purge failed; the previous marketing HTML stays cached until its TTL expires\n' >&2
   printf 'deployed %s with receipt %s\n' "$TARGET" "$(basename "$RECEIPT")"
 }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
