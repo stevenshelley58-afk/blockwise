@@ -31,7 +31,7 @@ test("homepage composition explains the product, flow, pricing and final signup"
   const component = await readFile(new URL("../src/components/homepage-concept/homepage-concept.tsx", import.meta.url), "utf8");
   for (const copy of [
     "More leads.", "Less ad management.", "real estate agents",
-    "HeroAdShowcase", "<WorkflowShowcase />", "<ResultsReporting />", "<HomepagePricing />",
+    "HeroAdShowcase", "<WorkflowMotionStudy />", "<ResultsReporting />", "<HomepagePricing />",
     "Ready to make your next ad?", "Start with three Feed and Story packs.",
   ]) assert.ok(component.includes(copy), `missing composition content: ${copy}`);
   assert.match(component, /TRIAL_SIGNUP_URL/);
