@@ -41,6 +41,6 @@ Retain the named preview container, image and worktree until accepted or decline
   no material fixes.
 - Build and image evidence: `/srv/blockwise/previews/meta-connect/{build-v2-final.log,image-build-v2-final.log}`.
 - Detector v2: `[]` (single run). Focused tests `4/4`, typecheck and build
-  passed. Final public E2E is pending due to the known intermittent
-  `net::ERR_NETWORK_CHANGED` condition; no app/page errors were observed.
+  passed. Final public E2E: `11/11` pass in `31.0s`, all first attempts with
+  no retries; no app/page errors were observed.
 - Browser diagnosis: `/srv/blockwise/previews/meta-connect/browser-network-diagnosis-v3.log`.
