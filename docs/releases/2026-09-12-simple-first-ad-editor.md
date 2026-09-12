@@ -55,3 +55,18 @@ Deployment uses the standard main watcher and immutable product release path.
 The source is based on 3c53dae898686b59dd32a7f9cbd8c297b6799ad8. Read live
 /api/health and the autodeploy log to identify the actual serving revision; this
 record alone is not deployment proof.
+
+## Tool placement follow-up
+
+Moved Photos, Words and Adjust design to a 112px left tool rail at desktop
+widths. Below the desktop breakpoint, the same controls occupy one equal-width
+bottom row. Shared buttons use arrow={null} for compact icon-and-text controls.
+No editing, saving or publishing logic changed.
+
+The component browser harness now asserts the desktop column geometry and a
+single mobile row at both 390px and 320px, alongside the existing interaction
+checks. Production build (including TypeScript), full repository tests, NUL
+check and layout detector passed. Desktop and 320px screenshots were inspected.
+Evidence: /root/work/adstudio-rail-{build,tests,browser}.log and
+/root/work/adstudio-rail-browser/. The authenticated-live-test limitation above
+is unchanged.

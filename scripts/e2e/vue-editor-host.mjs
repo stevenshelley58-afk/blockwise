@@ -89,6 +89,11 @@ try{
   await page.getByRole('button',{name:'Photos',exact:true}).waitFor();
   await page.getByRole('button',{name:'Words',exact:true}).waitFor();
   await page.evaluate(()=>window.firstFrame=document.querySelector('iframe'));
+  const toolsBox=await page.getByRole('group',{name:'Ad editing tools'}).boundingBox();
+  const previewBox=await page.getByRole('region',{name:'Ad preview',exact:true}).boundingBox();
+  assert.ok(toolsBox.x+toolsBox.width<=previewBox.x+.5,'desktop tools form a left column');
+  const desktopTools=await Promise.all(['Photos','Words','Adjust design'].map(name=>page.getByRole('button',{name,exact:true}).boundingBox()));
+  assert.ok(desktopTools[0].y<desktopTools[1].y&&desktopTools[1].y<desktopTools[2].y,'desktop tools stack vertically');
   await page.screenshot({path:resolve(output,'desktop.png'),fullPage:true});
 
   // Return immediately after a real native insertion, before delayed changed.
@@ -143,7 +148,10 @@ try{
     await page.setViewportSize({width,height:844});await page.reload();await ready();
     await page.getByAltText('Feed creative preview').waitFor();
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no mobile page overflow');
-    for(const name of ['Photos','Words','Review & publish']){
+    const mobileTools=await Promise.all(['Photos','Words','Adjust design'].map(name=>page.getByRole('button',{name,exact:true}).boundingBox()));
+    assert.ok(mobileTools.every(box=>Math.abs(box.y-mobileTools[0].y)<1),'mobile tools stay in one row');
+    assert.ok(mobileTools[0].x<mobileTools[1].x&&mobileTools[1].x<mobileTools[2].x);
+    for(const name of ['Photos','Words','Adjust design','Review & publish']){
       const box=await page.getByRole('button',{name,exact:true}).boundingBox();
       assert.ok(box && box.x>=0 && box.x+box.width<=width+.5 && box.y+box.height<=844,name+' reachable at '+width);
     }

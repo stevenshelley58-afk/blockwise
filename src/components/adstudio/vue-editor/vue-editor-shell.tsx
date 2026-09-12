@@ -320,15 +320,15 @@ export function VueEditorShell({ pack, adId, workspaceId, initialDocument, initi
           <iframe ref={iframe} src="/vue-ad-editor/" title="Vue Fabric ad editor" tabIndex={designOpen ? 0 : -1} className="min-h-0 w-full flex-1 border-0" sandbox="allow-scripts allow-same-origin allow-downloads" />
         </div>
       </div>
-      {!designOpen ? <div className="relative flex h-full min-h-0 flex-col">
-        <div className="flex shrink-0 items-center justify-center border-b border-border bg-card px-3 py-2">{formats}</div>
-        <div className="min-h-0 flex-1 overflow-y-auto bg-muted/40 p-4 sm:p-6" role="region" aria-label="Ad preview" tabIndex={0} aria-busy={!ready || transitioning}>
-          {!ready ? <p className="py-12 text-center text-sm text-muted-foreground" role="status">Preparing your ad…</p> : <NativeMetaPreview placement={active} image={preview[active]} copy={copy} businessName={businessName} logoUrl={logoUrl} destinationUrl={initialDocument.destinationUrl} />}
+      {!designOpen ? <div className="relative grid h-full min-h-0 grid-cols-1 grid-rows-[auto_minmax(0,1fr)_auto] md:grid-cols-[112px_minmax(0,1fr)] md:grid-rows-[auto_minmax(0,1fr)]">
+        <div role="group" aria-label="Ad editing tools" className="col-start-1 row-start-3 grid grid-cols-3 gap-1 border-t border-border bg-card p-2 md:row-start-1 md:row-span-2 md:flex md:flex-col md:justify-start md:gap-2 md:border-t-0 md:border-r md:pt-4">
+          <Button type="button" variant="ghost" arrow={null} className="h-14 min-w-0 rounded-(--r-ctl) px-1 text-xs md:h-18" disabled={busy} onClick={() => { setError(null); setPhotoSlot(null); setPhotosOpen(true); }}><span className="flex flex-col items-center gap-1"><ImagePlus className="size-5" /><span>Photos</span></span></Button>
+          <Button type="button" variant="ghost" arrow={null} className="h-14 min-w-0 rounded-(--r-ctl) px-1 text-xs md:h-18" disabled={busy} onClick={() => { setError(null); setCopyOpen(true); }}><span className="flex flex-col items-center gap-1"><Type className="size-5" /><span>Words</span></span></Button>
+          <Button type="button" variant="ghost" arrow={null} className="h-14 min-w-0 rounded-(--r-ctl) px-1 text-xs md:h-18" disabled={busy} onClick={() => void toggleDesign()}><span className="flex flex-col items-center gap-1"><SlidersHorizontal className="size-5" /><span>{transitioning ? "Updating…" : "Adjust design"}</span></span></Button>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center justify-center gap-2 border-t border-border bg-card px-3 py-3">
-          <Button type="button" variant="outline" disabled={busy} onClick={() => { setError(null); setPhotoSlot(null); setPhotosOpen(true); }}><ImagePlus className="size-4" />Photos</Button>
-          <Button type="button" variant="outline" disabled={busy} onClick={() => { setError(null); setCopyOpen(true); }}><Type className="size-4" />Words</Button>
-          <Button type="button" variant="ghost" size="sm" className="basis-full sm:basis-auto" disabled={busy} onClick={() => void toggleDesign()}><SlidersHorizontal className="size-3.5" />{transitioning ? "Updating…" : "Adjust design"}</Button>
+        <div className="col-start-1 row-start-1 flex items-center justify-center border-b border-border bg-card px-3 py-2 md:col-start-2">{formats}</div>
+        <div className="col-start-1 row-start-2 min-h-0 min-w-0 overflow-y-auto bg-muted/40 p-4 sm:p-6 md:col-start-2" role="region" aria-label="Ad preview" tabIndex={0} aria-busy={!ready || transitioning}>
+          {!ready ? <p className="py-12 text-center text-sm text-muted-foreground" role="status">Preparing your ad…</p> : <NativeMetaPreview placement={active} image={preview[active]} copy={copy} businessName={businessName} logoUrl={logoUrl} destinationUrl={initialDocument.destinationUrl} />}
         </div>
       </div> : null}
     </div>
