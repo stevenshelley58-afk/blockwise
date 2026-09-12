@@ -49,7 +49,7 @@ test("homepage composition explains the product, flow, pricing and final signup"
 test("hero restores the previous animated ad deck without fabricated proof metrics", async () => {
   const showcase = await readFile(new URL("../src/components/homepage-concept/hero-ad-showcase.tsx", import.meta.url), "utf8");
   assert.match(showcase, /IntersectionObserver/);
-  assert.match(showcase, /useReducedMotion/);
+  assert.match(showcase, /useHydratedReducedMotion/);
   // The front card is held long enough to be read before the deck advances.
   assert.match(showcase, /const DECK_HOLD_MS = homepageMotion\.hero\.holdMs/);
   assert.match(showcase, /const DECK_VISIBLE_COUNT = 3/);

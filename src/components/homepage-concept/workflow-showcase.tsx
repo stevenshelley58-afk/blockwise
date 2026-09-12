@@ -9,13 +9,13 @@ import {
   ShieldCheck,
   ThumbsUp,
 } from "lucide-react";
-import { AnimatePresence, LayoutGroup, MotionConfig, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 
 import { Button } from "@/components/ui/button";
 import { creativeImageSrcSet } from "@/lib/homepage-concept/creative-image";
 import { AD_EXAMPLES, AD_LIBRARY, withBasePath } from "@/lib/homepage-concept/content";
-import { durations, homepageMotion } from "@/lib/motion";
+import { durations, homepageMotion, useHydratedReducedMotion } from "@/lib/motion";
 
 import "./demo-card.css";
 import "./workflow-showcase.css";
@@ -662,7 +662,7 @@ function ReviewScene({
 export function WorkflowShowcase() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const hasStarted = useRef(false);
-  const reduceMotion = Boolean(useReducedMotion());
+  const reduceMotion = useHydratedReducedMotion();
   const narrow = useNarrowLibrary();
   const [phase, setPhase] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -738,7 +738,7 @@ export function WorkflowShowcase() {
         if (still.current || hasStarted.current || start !== null) return;
         start = window.setTimeout(() => {
           start = null;
-          if (hasStarted.current) return;
+          if (still.current || hasStarted.current) return;
           hasStarted.current = true;
           setManualSelection(false);
           setPhase(0);

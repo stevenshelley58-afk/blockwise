@@ -7,9 +7,23 @@
  * Reduced = opacity-only, no transforms, numbers render their final value
  * instantly. Nothing loops; nothing exceeds the entrance duration.
  */
+import { useReducedMotion as motionUseReducedMotion } from "motion/react";
 import type { Transition, Variants } from "motion/react";
+import { useEffect, useState } from "react";
 
 export { useReducedMotion } from "motion/react";
+
+/**
+ * Match the server and the first client render before applying the browser motion preference.
+ * Motion resolves matchMedia synchronously in its hook, so reading it directly in markup can
+ * make reduced-motion clients hydrate a different tree than the server rendered.
+ */
+export function useHydratedReducedMotion() {
+  const preference = motionUseReducedMotion();
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+  return hydrated && preference === true;
+}
 
 /**
  * Spring presets (values re-typed from tuned references, never pasted):

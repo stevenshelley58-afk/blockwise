@@ -1,14 +1,14 @@
 "use client";
 
 import { ChevronRight, Globe2, MessageCircle, MoreHorizontal, Send, Share2, ThumbsUp } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
 import { creativeImageSrcSet } from "@/lib/homepage-concept/creative-image";
 import { SHOWCASE_ADS, withBasePath, type ShowcaseAd } from "@/lib/homepage-concept/content";
-import { homepageMotion } from "@/lib/motion";
+import { homepageMotion, useHydratedReducedMotion } from "@/lib/motion";
 
 type DeckPose = { x: string; y: number; scale: number; rotate: number; opacity: number };
 
@@ -104,7 +104,7 @@ function transformFor(pose: DeckPose) {
 
 export function HeroAdShowcase() {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const reduceMotion = Boolean(useReducedMotion());
+  const reduceMotion = useHydratedReducedMotion();
   const [order, setOrder] = useState(() => SHOWCASE_ADS.map((_, index) => index));
   const [inView, setInView] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
