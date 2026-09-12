@@ -17,10 +17,13 @@ import type { MetaMonitorPayload, MonitorRange } from "./types.ts";
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 
-export const REPORTING_SNAPSHOT_VERSION = 1 as const;
+// v2 added per-day impressions and reach, which the chart menu reads. A stored
+// v1 payload is ignored and rebuilt rather than served with two metrics that
+// would chart as an empty axis.
+export const REPORTING_SNAPSHOT_VERSION = 2 as const;
 export const REPORTING_SNAPSHOT_TTL_MS = 15 * 60 * 1000;
 
-export type ReportingSnapshotV1 = {
+export type ReportingSnapshot = {
   version: typeof REPORTING_SNAPSHOT_VERSION;
   workspaceId: string;
   rangeKey: string;
@@ -53,7 +56,7 @@ export async function loadReportingSnapshot(input: {
   range: MonitorRange;
   customRange?: MonitorCustomRange;
   now?: Date;
-}): Promise<{ snapshot: ReportingSnapshotV1; needsRefresh: boolean; persisted: boolean }> {
+}): Promise<{ snapshot: ReportingSnapshot; needsRefresh: boolean; persisted: boolean }> {
   const now = input.now ?? new Date();
   const rangeKey = reportingRangeKey(input.range, input.customRange);
 
@@ -111,7 +114,7 @@ export async function refreshReportingSnapshot(input: {
   range: MonitorRange;
   customRange?: MonitorCustomRange;
   now?: Date;
-}): Promise<ReportingSnapshotV1> {
+}): Promise<ReportingSnapshot> {
   const now = input.now ?? new Date();
   const rangeKey = reportingRangeKey(input.range, input.customRange);
   const payload = await Sentry.startSpan(
@@ -136,7 +139,7 @@ export async function refreshReportingSnapshot(input: {
   const generatedAt = now.toISOString();
   const staleAt = new Date(now.getTime() + REPORTING_SNAPSHOT_TTL_MS).toISOString();
   const etag = payloadEtag(payload);
-  const snapshot: ReportingSnapshotV1 = {
+  const snapshot: ReportingSnapshot = {
     version: REPORTING_SNAPSHOT_VERSION,
     workspaceId: input.workspaceId,
     rangeKey,
@@ -197,7 +200,7 @@ export function isMatchingEtag(headerValue: string | null | undefined, etag: str
     .some((value) => value === etag || value === "*");
 }
 
-function toSnapshot(row: ReportingSnapshotRow | null): ReportingSnapshotV1 | null {
+function toSnapshot(row: ReportingSnapshotRow | null): ReportingSnapshot | null {
   if (
     !row ||
     row.snapshot_version !== REPORTING_SNAPSHOT_VERSION ||
@@ -225,7 +228,7 @@ async function buildReportingFallback(input: {
   range: MonitorRange;
   customRange?: MonitorCustomRange;
   now: Date;
-}): Promise<ReportingSnapshotV1> {
+}): Promise<ReportingSnapshot> {
   const { data } = await input.supabase
     .from("provider_connections")
     .select("status")

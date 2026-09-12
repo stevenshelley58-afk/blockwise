@@ -17,6 +17,12 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { niche } from "@/config/niche";
 import { formatCurrency, formatPercent, safeRate } from "@/lib/meta-monitor/calculations";
+import {
+  CHART_METRICS,
+  chartSeries,
+  DEFAULT_CHART_METRIC,
+  type ChartMetricKey,
+} from "@/lib/meta-monitor/chart-metrics";
 import { hasNoMetaConnection } from "@/lib/meta-monitor/payload-state";
 import {
   buildResultsHierarchy,
@@ -52,10 +58,6 @@ const DATA_HUE = "var(--ui-data)";
 const panelClass = "min-w-0 rounded-(--r-panel) border border-(--line) bg-(--surface) p-5 shadow-card";
 const panelTitleClass = "font-display text-[15.5px] font-extrabold tracking-[-0.015em]";
 const thClass = "font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase";
-
-type ChartMetric = "spend" | "leads" | "cpl";
-
-const CHART_METRICS: ChartMetric[] = ["spend", "leads", "cpl"];
 
 const wholeNumber = (value: number) => Math.round(value).toLocaleString("en-AU");
 
@@ -407,12 +409,10 @@ function Dashboard({
   const days = payload.range.days;
   const compareLabel = `previous ${days} day${days === 1 ? "" : "s"}`;
   const focusedCampaignVisible = Boolean(focusCampaignId && hierarchy.some((campaign) => campaign.campaignId === focusCampaignId));
-  const [chartMetric, setChartMetric] = useState<ChartMetric>("spend");
-  const chartConfig = {
-    spend: { title: copy.charts.spend, data: payload.daily.map((point) => ({ date: point.date, value: point.spend })), format: (value: number) => formatCurrency(value) },
-    leads: { title: copy.charts.leads, data: payload.daily.map((point) => ({ date: point.date, value: point.validLeads })), format: (value: number) => String(Math.round(value)) },
-    cpl: { title: copy.charts.cpl, data: payload.daily.map((point) => ({ date: point.date, value: point.validCpl })), format: (value: number) => formatCurrency(value) },
-  }[chartMetric];
+  const [chartMetricKey, setChartMetricKey] = useState<ChartMetricKey>(DEFAULT_CHART_METRIC);
+  const chartMetric =
+    CHART_METRICS.find((metric) => metric.key === chartMetricKey) ?? CHART_METRICS[0];
+  const chartData = chartSeries(payload.daily, chartMetric);
   const rangeOptions: Array<{ value: MonitorRange; label: string }> = [
     { value: "today", label: copy.ranges.d1 },
     { value: "last_7", label: copy.ranges.d7 },
@@ -468,7 +468,7 @@ function Dashboard({
 
       <section className={panelClass}>
         <div className="flex flex-wrap items-center justify-between gap-2.5">
-          <Select value={chartMetric} onValueChange={(value) => setChartMetric(value as ChartMetric)}>
+          <Select value={chartMetricKey} onValueChange={(value) => setChartMetricKey(value as ChartMetricKey)}>
             <SelectTrigger
               aria-label={copy.chartMetricLabel}
               className="h-9 w-fit cursor-pointer rounded-full border-(--line-heavy) bg-(--surface) px-3.5 font-display text-[13.5px] font-extrabold text-foreground shadow-none"
@@ -477,8 +477,8 @@ function Dashboard({
             </SelectTrigger>
             <SelectContent>
               {CHART_METRICS.map((metric) => (
-                <SelectItem key={metric} value={metric} className="text-[13px] font-semibold">
-                  {copy.charts[metric]}
+                <SelectItem key={metric.key} value={metric.key} className="text-[13px] font-semibold">
+                  {copy.charts[metric.key]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -528,10 +528,19 @@ function Dashboard({
             ) : null}
           </div>
         </div>
-        {chartMetric === "cpl" ? <p className="mt-2.5 text-[11.5px] text-(--faint)">{copy.cplGapNote}</p> : null}
+        {chartMetric.gap ? (
+          <p className="mt-2.5 text-[11.5px] text-(--faint)">{copy.chartGaps[chartMetric.gap]}</p>
+        ) : null}
         <div className="mt-3">
           {payload.daily.length > 1 ? (
-            <SmoothAreaChart id={chartMetric} label={chartConfig.title} color={DATA_HUE} data={chartConfig.data} valueFormatter={chartConfig.format} />
+            <SmoothAreaChart
+              id={chartMetric.key}
+              label={copy.charts[chartMetric.key]}
+              color={DATA_HUE}
+              data={chartData}
+              valueFormatter={chartMetric.format}
+              axisFormatter={chartMetric.axisFormat}
+            />
           ) : (
             // One day is a figure, not a trend: an empty axis would read as a
             // broken chart rather than a short range.

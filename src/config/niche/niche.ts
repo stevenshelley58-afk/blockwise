@@ -185,8 +185,20 @@ export type PerformanceCopy = {
   subtitle: string;
   /** The only ranges Results offers: one day, a week, a month, or the customer's own span. */
   ranges: { d1: string; d7: string; d30: string };
-  charts: { spend: string; leads: string; cpl: string };
-  cplGapNote: string;
+  charts: {
+    leads: string;
+    validLeads: string;
+    cpl: string;
+    spend: string;
+    reach: string;
+    impressions: string;
+    clicks: string;
+    cpc: string;
+    ctr: string;
+    validRate: string;
+  };
+  /** What a day with nothing to divide by leaves out of the line. */
+  chartGaps: { cpl: string; cpc: string; ctr: string; validRate: string };
   /** Accessible names for the two chart controls. */
   chartMetricLabel: string;
   rangeLabel: string;

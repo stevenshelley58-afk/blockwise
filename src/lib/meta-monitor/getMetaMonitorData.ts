@@ -550,8 +550,20 @@ function buildAnglePerformance(ads: MetaAdPerformance[]): AnglePerformance[] {
     .sort((a, b) => b.validLeads - a.validLeads || b.spend - a.spend);
 }
 
-function buildDaily(insightRows: MetaInsightRow[], leadFacts: LeadFacts, range: MonitorDateRange): MetaDailyPoint[] {
-  const spendByDate = new Map<string, { spend: number; clicks: number; platformLeads: number }>();
+/**
+ * The daily series every chart on Results reads. Exported for the reporting
+ * tests: the delivery figures here are what the chart menu needs, and a quiet
+ * day has to stay a zero rather than a missing point.
+ */
+export function buildDaily(
+  insightRows: MetaInsightRow[],
+  leadFacts: Pick<LeadFacts, "validByDate" | "leadsByDate">,
+  range: MonitorDateRange,
+): MetaDailyPoint[] {
+  const spendByDate = new Map<
+    string,
+    { spend: number; clicks: number; impressions: number; reach: number; platformLeads: number }
+  >();
 
   for (const row of insightRows) {
     const date = range.days === 1 ? range.since : row.date_start;
@@ -560,10 +572,12 @@ function buildDaily(insightRows: MetaInsightRow[], leadFacts: LeadFacts, range: 
       continue;
     }
 
-    const existing = spendByDate.get(date) ?? { spend: 0, clicks: 0, platformLeads: 0 };
+    const existing = spendByDate.get(date) ?? { spend: 0, clicks: 0, impressions: 0, reach: 0, platformLeads: 0 };
 
     existing.spend += toNumber(row.spend);
     existing.clicks += Math.round(toNumber(row.clicks));
+    existing.impressions += Math.round(toNumber(row.impressions));
+    existing.reach += Math.round(toNumber(row.reach));
     existing.platformLeads += Math.round(extractMetaLeadCount(row.actions));
     spendByDate.set(date, existing);
   }
@@ -580,6 +594,8 @@ function buildDaily(insightRows: MetaInsightRow[], leadFacts: LeadFacts, range: 
       date,
       spend,
       clicks: Math.max(0, insights?.clicks ?? 0),
+      impressions: Math.max(0, insights?.impressions ?? 0),
+      reach: Math.max(0, insights?.reach ?? 0),
       leads: Math.max(insights?.platformLeads ?? 0, leadFacts.leadsByDate.get(date) ?? 0),
       validLeads,
       validCpl: safeCpl(spend, validLeads),

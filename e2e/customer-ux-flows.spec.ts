@@ -88,11 +88,25 @@ test.describe("customer UX flows", () => {
     // metric chips: both drive the same example payload.
     const metric = page.getByLabel("Chart metric");
     const range = page.getByLabel("Date range");
-    await expect(metric).toHaveText(/Spend over time/);
+    await expect(metric).toHaveText(/Enquiries over time/);
     await expect(range).toHaveText(/30 days/);
     await metric.click();
-    await page.getByRole("option", { name: "Cost per lead over time" }).click();
-    await expect(metric).toHaveText(/Cost per lead over time/);
+    // Every metric with a daily series is offered, most important first.
+    await expect(page.getByRole("option")).toHaveText([
+      "Enquiries over time",
+      "Valid leads over time",
+      "Cost per lead over time",
+      "Spend over time",
+      "Reach over time",
+      "Impressions over time",
+      "Link clicks over time",
+      "Cost per link click over time",
+      "Click-through rate over time",
+      "Valid lead rate over time",
+    ]);
+    await page.getByRole("option", { name: "Click-through rate over time" }).click();
+    await expect(metric).toHaveText(/Click-through rate over time/);
+    await expect(page.getByText("Days with no impressions show no click-through rate.")).toBeVisible();
     await range.click();
     await page.getByRole("option", { name: "7 days" }).click();
     await expect(range).toHaveText(/7 days/);

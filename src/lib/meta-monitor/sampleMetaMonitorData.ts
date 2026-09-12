@@ -25,6 +25,13 @@ const SAMPLE_CLICK_SPEND_RATIO = 1.25;
  */
 const SAMPLE_CLICK_RATIO_DRIFT = [0.06, -0.05, 0.02, -0.06, 0.05, -0.04, 0.02];
 
+/**
+ * The same weekday drift for delivery. Reach and impressions follow spend, so
+ * without it both lines would be a copy of the spend chart; keeping the two in
+ * step holds the demo's frequency steady, which is what a real week looks like.
+ */
+const SAMPLE_DELIVERY_RATIO_DRIFT = [0.04, -0.03, 0.02, -0.04, 0.03, -0.02, 0];
+
 const SAMPLE_BUDGET = 7500;
 
 const SUBURB_VALID: Array<[string, number]> = [
@@ -116,9 +123,16 @@ export function buildSampleMetaMonitorPayload(
   const validSeries = VALID_30.slice(30 - days);
   const leadsSeries = LEADS_30.slice(30 - days);
   const scale = sum(spendSeries) / sum(SPEND_30);
+  const spend = sum(spendSeries);
+  // Delivery per dollar, taken from the ads' own totals so a chart of
+  // impressions or reach lands near the figure the summary reports.
+  const impressionsPerDollar = (sum(SAMPLE_ADS.map((ad) => ad.impressions)) * scale) / spend;
+  const reachPerDollar = (sum(SAMPLE_ADS.map((ad) => ad.reach)) * scale) / spend;
 
   const daily: MetaDailyPoint[] = spendSeries.map((spend, index) => {
     const date = addDays(seriesStart, index);
+    const drift = 1 + SAMPLE_DELIVERY_RATIO_DRIFT[index % SAMPLE_DELIVERY_RATIO_DRIFT.length];
+    const impressions = spend > 0 ? Math.max(1, Math.round(spend * impressionsPerDollar * drift)) : 0;
 
     return {
       date,
@@ -137,13 +151,15 @@ export function buildSampleMetaMonitorPayload(
               ),
             )
           : 0,
+      impressions,
+      // Reach can never exceed impressions on the same day.
+      reach: impressions > 0 ? Math.min(impressions, Math.max(1, Math.round(spend * reachPerDollar * drift))) : 0,
       leads: leadsSeries[index],
       validLeads: validSeries[index],
       validCpl: safeCpl(spend, validSeries[index]),
     };
   });
 
-  const spend = sum(spendSeries);
   const leads = sum(leadsSeries);
   const validLeads = sum(validSeries);
 

@@ -29,6 +29,9 @@ export type MetaDailyPoint = {
   spend: number;
   /** Link clicks for the day, aggregated the same way spend is. */
   clicks: number;
+  /** Impressions and reach for the day, aggregated the same way spend is. */
+  impressions: number;
+  reach: number;
   leads: number;
   validLeads: number;
   validCpl: number | null;

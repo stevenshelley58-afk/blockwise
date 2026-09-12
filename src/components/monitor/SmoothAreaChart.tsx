@@ -48,10 +48,17 @@ export function SmoothAreaChart(props: {
   data: SmoothAreaPoint[];
   color: string;
   valueFormatter: (value: number) => string;
+  /**
+   * Ticks stay inside the axis gutter. The printed value (tooltip, hidden
+   * table) keeps its full figure, so a six-figure impression count is not
+   * clipped to "0,000" beside the line.
+   */
+  axisFormatter?: (value: number) => string;
   label?: string;
 }) {
   const gradientId = `mm-area-${props.id}`;
   const points = props.data.filter((point) => typeof point.value === "number");
+  const axisFormatter = props.axisFormatter ?? props.valueFormatter;
 
   return (
     <figure className="m-0">
@@ -79,7 +86,7 @@ export function SmoothAreaChart(props: {
             tick={{ fontSize: 10, fill: "var(--faint)" }}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(value: number) => props.valueFormatter(value)}
+            tickFormatter={(value: number) => axisFormatter(value)}
           />
           <Tooltip
             cursor={{ stroke: "var(--faint)", strokeWidth: 1, strokeDasharray: "3 3" }}
