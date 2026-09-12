@@ -11,7 +11,6 @@ repo=/projects/blockwise; release_root=/srv/hermes/ad-db/releases/$commit; rende
 git -C "$repo" rev-parse --verify "$commit^{commit}" >/dev/null
 if [[ "$mode" == --plan ]]; then printf 'release=%s\nsource=%s\nworking_directory=%s\nrendered_unit=%s\n' "$release_root" "$commit" "$release_root/hermes/tools/research-runtime" "$rendered_unit"; exit 0; fi
 [[ "$(git -C "$repo" branch --show-current)" == main ]] || fail "prepare/install requires canonical main"
-clean "$repo"
 git -C "$repo" merge-base --is-ancestor "$commit" main || fail "prepare/install commit must be reachable from canonical main"
 if [[ -e "$release_root" ]]; then :; else install -d -o hermes -g hermes /srv/hermes/ad-db/releases; git -C "$repo" worktree add --detach "$release_root" "$commit"; chown -R hermes:hermes "$release_root"; fi
 [[ "$(git -C "$release_root" rev-parse HEAD)" == "$commit" ]] || fail "release HEAD is not requested commit"
