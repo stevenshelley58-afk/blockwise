@@ -1,16 +1,27 @@
-# Meta connection preview
+# Meta connection preview surface brief
 
-The `/concept/meta-connect` surface is an explicitly synthetic interaction preview for the proposed Meta partner-access flow. It is not a customer connection screen and never calls a provider route, writes browser storage, or changes account data.
+## Scope
 
-## Guard and scope
-
-- The route renders only when `BLOCKWISE_META_CONNECT_PREVIEW=true`; otherwise it returns `notFound()`.
-- The page reads the public, validated `META_BUSINESS_ID` through `getMetaPartnerBusinessId()`. It does not invent a Business ID when that setting is absent.
-- The normal `/connect-meta`, OAuth, settings, operator queue and provider routes are untouched.
-- Preview state is local to the page. The selector demonstrates Setup, Missing access, Waiting for approval and Connected. The check is bounded and labelled `SIMULATED`.
+This scoped record covers the shipped `/meta-connect-preview` concept. It does
+not replace the binding root `DESIGN.md`. The surface extends the existing
+Blockwise language: neutral surfaces, near-black ink actions, Manrope display
+headings, Inter body/UI text, shared shadcn controls and incumbent radii.
 
 ## Composition
 
-The page follows the existing Blockwise customer tokens and shadcn controls. It uses a compact two-column desktop layout and a single-column mobile layout. The left side carries three short steps, the Business ID copy control, the minimum Page and ad-account permissions, optional Instagram guidance, conversion-only Pixel guidance, and an official Meta Help disclosure. The right side carries the check result, named fictional example assets, an explicit absent Instagram identity, retry states and a Continue action that renders an in-page next-step confirmation.
+- Three-step task flow beside a result/check panel on desktop, one column on narrow screens.
+- Step one opens external Meta Business Settings; step two exposes the public Business ID with copy; step three names minimum Page/ad-account access, with Instagram and pixel optional.
+- Result states are Not checked, Checking, Missing access, Waiting and Connected. Connected shows fictional Harbour & Home assets and a local-only Continue transition.
 
-The preview deliberately does not draw a fake Meta interface or use screenshots. The external settings and Help links are ordinary links with a persistent preview disclaimer in the header and result copy.
+## Durable surface rules
+
+- Keep provider terminology exact where the user follows Meta's external screen; keep surrounding instruction plain and concise.
+- Make one next action explicit per state. Keep waiting, missing and connected truthful.
+- Preserve labelled controls, live status feedback, visible focus, reachable 44px-class targets and reduced-motion-safe feedback.
+- Keep the preview visibly synthetic. It has no Meta API, provider write, storage, auth or analytics.
+
+## Boundary
+
+The public route is no-index/no-store and isolated from production. It uses only the existing brand SVG and no route-local token system. Future real integration must separately verify workspace asset correlation, capability checks, system-user assignment, lead access and the Meta app gate.
+
+See `docs/releases/2026-09-12-meta-connect-preview.md` for immutable release evidence.
