@@ -13,6 +13,9 @@ export const REGION_NAMES: Record<string, string> = {
 
 export const ASSIGNABLE_ROLES = ["owner", "admin", "member", "viewer"];
 
+/** Where a Meta lead form sends its leads. */
+export type LeadDestinationType = "webhook" | "crm" | "manual";
+
 export type Msg = { tone: "success" | "error"; text: string } | null;
 
 export type Connection = {
@@ -67,6 +70,15 @@ export type SettingsViewProps = {
     brandPackStatus: string | null;
     marketBound: boolean;
     approvalRequiredByDefault: boolean;
+    /** Lead-form privacy policy set once on the Workspace card; null until set. */
+    privacyPolicyUrl: string | null;
+    /** Mirrored from the connected Meta ad account; null until one is connected. */
+    publishingCurrency: string | null;
+    publishingTimezone: string | null;
+    /** Lead delivery the owner chose on the Workspace card; null until set. */
+    leadDestinationType: LeadDestinationType | null;
+    leadDestinationLabel: string | null;
+    leadDestinationEndpoint: string | null;
     billingEmail: string;
     stripeCustomerId: string | null;
     subscriptionStatus: string | null;

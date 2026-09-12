@@ -63,6 +63,10 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 - **Guides are content-first.** Lead with the useful content, use rounded panels only when they improve grouping, and keep promotion subtle and secondary.
 - **Help owns the walkthrough.** `/help` is the customer destination for provider walkthroughs, screenshots, tips and edge cases. A working screen keeps only the instruction its next action needs, plus one link to Help; it never carries the manual. The Meta sharing steps in `src/components/meta/partner-steps.ts` are the single source shared by `/connect-meta` and Help, so the checklist and the walkthrough cannot drift apart.
 - **The customer never transcribes provider IDs.** A customer confirms what they shared in the provider's own screens; the operator reads the resulting asset IDs from the provider and records them. Never ask a customer to find and type an account, Page or pixel ID.
+- **A connection row carries one action.** A provider row offers Connect while disconnected and Disconnect while connected, and nothing else. Never place a Save button, a second Reconnect control or a settings form beside the connection action on the same card.
+- **Provider values are shown, not typed.** A value the provider owns (Meta ad-account currency and timezone, Meta asset IDs) renders read-only with a one-line note naming its source, and reads blank with a note about where it will come from until the provider is connected. Never pre-fill it with a default the provider would reject, and never let the customer edit it.
+- **Asset choices save themselves.** A choice whose options come from the provider saves as it is picked, so there is no Save button to forget and no half-saved state. Workspace facts the customer owns keep an explicit Save.
+- **A waiting state always has a way out.** A screen waiting on a person or an external check offers the customer the action that moves it forward, and never traps them behind a status they cannot change.
 
 ## Accessibility
 
@@ -77,6 +81,11 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 
 ## Changelog
 
+- 2026-09-12: ad-account connection simplified. Added four rules: one action per
+  connection row, provider values shown read-only with their source named, asset
+  choices that save themselves, and a way out of every waiting state. The
+  Workspace card now owns the privacy policy, lead destination and the mirrored
+  currency and timezone.
 - 2026-09-11: condensed to binding rules. Reference material, worked examples and
   route inventories moved out; token values, the motion vocabulary and the owner
   preferences kept verbatim from the previous version.

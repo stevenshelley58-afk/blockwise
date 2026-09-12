@@ -9,6 +9,7 @@ import {
   type MetaAssetCatalog,
 } from "@/lib/providers/meta-assets";
 import {
+  loadWorkspacePublishingDefaults,
   resolveMetaConnectionSetup,
   validateMetaConnectionSetup,
   type MetaConnectionSetup,
@@ -55,7 +56,12 @@ export async function GET(request: NextRequest) {
   }
 
   const tokens = await loadStoredProviderTokens(serviceSupabase, connection.id);
-  const storedSetup = resolveMetaConnectionSetup(connection.metadata_json ?? {}, connection.external_account_id);
+  const workspaceDefaults = await loadWorkspacePublishingDefaults(serviceSupabase, access.workspaceId);
+  const storedSetup = resolveMetaConnectionSetup(
+    connection.metadata_json ?? {},
+    connection.external_account_id,
+    workspaceDefaults,
+  );
   const health = await checkMetaConnectionHealth({
     accessToken: tokens.accessToken ?? "",
     tokenExpiresAt: connection.token_expires_at,
@@ -88,6 +94,8 @@ export async function GET(request: NextRequest) {
   }
   const setup = mergeSetupWithAssetDefaults(storedSetup, assets ? pickDefaultMetaSetupFromAssets(assets) : null);
   const blockers = validateMetaConnectionSetup(setup);
+
+  await syncWorkspacePublishingDefaults(serviceSupabase, access.workspaceId, setup, assets);
 
   await serviceSupabase
     .from("provider_connections")
@@ -132,7 +140,11 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Meta account is not connected." }, { status: 404 });
   }
 
-  const currentSetup = resolveMetaConnectionSetup(connection.metadata_json ?? {}, connection.external_account_id);
+  const currentSetup = resolveMetaConnectionSetup(
+    connection.metadata_json ?? {},
+    connection.external_account_id,
+    await loadWorkspacePublishingDefaults(serviceSupabase, access.workspaceId),
+  );
   const nextSetup = mergeSetup(currentSetup, body.setup ?? {});
   const blockers = validateMetaConnectionSetup(nextSetup);
   const accountChanged = Boolean(nextSetup.metaAdAccountId) && nextSetup.metaAdAccountId !== connection.external_account_id;
@@ -233,6 +245,8 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  await syncWorkspacePublishingDefaults(serviceSupabase, access.workspaceId, nextSetup, assets);
+
   return NextResponse.json({
     connectionId: connection.id,
     setup: nextSetup,
@@ -310,4 +324,39 @@ function mergeSetup(current: MetaConnectionSetup, patch: Partial<MetaConnectionS
     },
     patch.metaAdAccountId ?? current.metaAdAccountId,
   );
+}
+
+/**
+ * Publishing defaults now live on the workspace: the owner sets the privacy
+ * policy on the Workspace card, and the currency/timezone mirror the connected
+ * ad account, which Meta re-checks live at publish time. Write the mirror
+ * without ever clearing a value the owner set, so a transient asset-catalog
+ * failure cannot blank the Workspace card.
+ */
+async function syncWorkspacePublishingDefaults(
+  serviceSupabase: ReturnType<typeof createSupabaseServiceClient>,
+  workspaceId: string,
+  setup: MetaConnectionSetup,
+  assets: MetaAssetCatalog | null,
+): Promise<void> {
+  const account = assets?.adAccounts.find((item) => item.id === setup.metaAdAccountId);
+  const patch: Record<string, string> = {};
+
+  const currency = account?.currency?.trim() || setup.currency.trim();
+  const timezone = account?.timezone?.trim() || setup.timezone.trim();
+
+  if (currency) patch.publishing_currency = currency;
+  if (timezone) patch.publishing_timezone = timezone;
+  if (Object.keys(patch).length === 0) return;
+
+  const { error } = await serviceSupabase
+    .from("workspaces")
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq("id", workspaceId);
+
+  if (error) {
+    // The mirror is a convenience copy, not the publish source, so a failed
+    // sync must not fail the request the owner actually made.
+    console.error("[meta-setup] workspace publishing default sync failed:", error.message);
+  }
 }

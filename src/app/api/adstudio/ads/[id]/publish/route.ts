@@ -18,6 +18,7 @@ import {
   createMetaExecutionAdapter,
   claimMetaPublishExecution,
   loadMetaPublishPlan,
+  loadWorkspacePublishingDefaults,
   persistMetaPublishPlan,
   releaseMetaPublishExecutionLease,
   renewMetaPublishExecutionLease,
@@ -126,7 +127,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "meta_not_connected", message: "Connect Meta before publishing." }, { status: 400 });
     }
 
-    const setup = resolveMetaConnectionSetup(connection.metadata_json ?? {}, connection.external_account_id);
+    const setup = resolveMetaConnectionSetup(
+      connection.metadata_json ?? {},
+      connection.external_account_id,
+      await loadWorkspacePublishingDefaults(serviceSupabase, access.access.workspaceId),
+    );
     const setupBlockers = validateMetaConnectionSetup(setup);
     if (setupBlockers.length > 0) {
       return NextResponse.json({ error: "setup_incomplete", blockers: setupBlockers }, { status: 400 });

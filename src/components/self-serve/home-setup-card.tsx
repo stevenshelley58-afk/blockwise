@@ -52,7 +52,7 @@ export function HomeSetupCard({
 
   const steps: StepState[] = [
     { key: "brand", href: "/ad-studio/brand", done: hasBrand },
-    { key: "connect", href: "/settings#connections", done: hasProvider },
+    { key: "connect", href: "/connect-meta", done: hasProvider },
     { key: "publish", href: "/ad-studio?newAd=1", done: adsCreated > 0 },
   ];
 

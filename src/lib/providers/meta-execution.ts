@@ -740,15 +740,45 @@ export async function releaseMetaPublishExecutionLease(serviceSupabase: Supabase
   return data === true || (Array.isArray(data) && data[0]?.released === true);
 }
 
+/**
+ * Workspace-level publishing defaults that now live on `public.workspaces`
+ * instead of inside the Meta connection metadata: the owner sets the privacy
+ * policy once on the Workspace card, and the currency/timezone are mirrored
+ * from the connected ad account.
+ */
+export type WorkspacePublishingDefaults = {
+  privacyPolicyUrl?: string | null;
+  currency?: string | null;
+  timezone?: string | null;
+  leadDestinationType?: string | null;
+  leadDestinationLabel?: string | null;
+  leadDestinationEndpoint?: string | null;
+};
+
 export function resolveMetaConnectionSetup(
   metadata: Record<string, unknown>,
   fallbackAccountId: string | null | undefined,
+  workspaceDefaults?: WorkspacePublishingDefaults | null,
 ): MetaConnectionSetup {
   const meta = metadata.meta && typeof metadata.meta === "object" ? (metadata.meta as Record<string, unknown>) : metadata;
-  const leadDestination =
+  const storedLeadDestination =
     meta.leadDestination && typeof meta.leadDestination === "object"
       ? (meta.leadDestination as MetaLeadDestination)
       : ({ type: "manual", label: String(meta.leadDestinationLabel ?? "Manual review"), config: { endpoint: "" } } as MetaLeadDestination);
+
+  // The workspace columns are authoritative: the ad account mirrors its
+  // currency and timezone there, and the owner sets the privacy policy and lead
+  // destination there. Connection metadata stays as the fallback so a
+  // connection created before the move keeps working, and a workspace that
+  // never connected reads blank rather than inheriting an invented currency
+  // Meta would reject on publish.
+  const leadDestination: MetaLeadDestination = workspaceDefaults?.leadDestinationType
+    ? {
+        type: workspaceDefaults.leadDestinationType as MetaLeadDestination["type"],
+        label: workspaceDefaults.leadDestinationLabel?.trim() || "Manual review",
+        config: { endpoint: workspaceDefaults.leadDestinationEndpoint ?? "" },
+      }
+    : storedLeadDestination;
 
   return normalizeMetaConnectionSetup({
     metaAdAccountId: String(meta.metaAdAccountId ?? fallbackAccountId ?? ""),
@@ -756,10 +786,47 @@ export function resolveMetaConnectionSetup(
     instagramActorId: optionalString(meta.instagramActorId),
     pixelId: optionalString(meta.pixelId),
     leadDestination,
-    privacyPolicyUrl: String(meta.privacyPolicyUrl ?? ""),
-    currency: String(meta.currency ?? "AUD"),
-    timezone: String(meta.timezone ?? "Australia/Perth"),
+    privacyPolicyUrl: String(workspaceDefaults?.privacyPolicyUrl ?? meta.privacyPolicyUrl ?? ""),
+    currency: String(workspaceDefaults?.currency ?? meta.currency ?? ""),
+    timezone: String(workspaceDefaults?.timezone ?? meta.timezone ?? ""),
   });
+}
+
+/**
+ * Read the workspace-level publishing defaults that moved out of the Meta
+ * connection metadata. Nulls stay null: a workspace that has never connected
+ * (or never set a privacy policy) must read as blank rather than inherit an
+ * invented currency or timezone Meta would reject at publish time.
+ */
+export async function loadWorkspacePublishingDefaults(
+  serviceSupabase: SupabaseServiceClient,
+  workspaceId: string,
+): Promise<WorkspacePublishingDefaults> {
+  const { data } = await serviceSupabase
+    .from("workspaces")
+    .select(
+      "privacy_policy_url,publishing_currency,publishing_timezone,lead_destination_type,lead_destination_label,lead_destination_endpoint",
+    )
+    .eq("id", workspaceId)
+    .maybeSingle();
+
+  const row = data as {
+    privacy_policy_url: string | null;
+    publishing_currency: string | null;
+    publishing_timezone: string | null;
+    lead_destination_type: string | null;
+    lead_destination_label: string | null;
+    lead_destination_endpoint: string | null;
+  } | null;
+
+  return {
+    privacyPolicyUrl: row?.privacy_policy_url ?? null,
+    currency: row?.publishing_currency ?? null,
+    timezone: row?.publishing_timezone ?? null,
+    leadDestinationType: row?.lead_destination_type ?? null,
+    leadDestinationLabel: row?.lead_destination_label ?? null,
+    leadDestinationEndpoint: row?.lead_destination_endpoint ?? null,
+  };
 }
 
 async function publishWithMarketingApi(

@@ -72,9 +72,11 @@ const STATUS: Record<RequestStatus, { title: string; body: string }> = {
 export function ConnectMetaGuide({
   workspaceId,
   canManage,
+  isConnected,
 }: {
   workspaceId: string;
   canManage: boolean;
+  isConnected: boolean;
 }) {
   const [phase, setPhase] = useState<Phase>("share");
   const [request, setRequest] = useState<PartnerAccessRequest | null>(null);
@@ -221,6 +223,7 @@ export function ConnectMetaGuide({
         <StatusCard
           request={request}
           headingRef={headingRef}
+          canRestart={!isConnected}
           onRefresh={() => void loadRequest(true)}
           onRestart={() => {
             setRequest(null);
@@ -275,9 +278,8 @@ function Share({
             tabIndex={-1}
             className="font-display text-[17px] font-extrabold outline-none"
           >
-            Share your Meta assets
-          </h2>
-          <p className="mt-1 text-[13.5px] text-muted-foreground">
+            Connect your Meta account
+          </h2>          <p className="mt-1 text-[13.5px] text-muted-foreground">
             Four screens in Meta Business Settings. About two minutes.
           </p>
         </div>
@@ -348,18 +350,27 @@ function Share({
 function StatusCard({
   request,
   headingRef,
+  canRestart,
   onRefresh,
   onRestart,
 }: {
   request: PartnerAccessRequest;
   headingRef: React.RefObject<HTMLHeadingElement | null>;
+  /** True while the workspace has no live Meta connection. */
+  canRestart: boolean;
   onRefresh: () => void;
   onRestart: () => void;
 }) {
   const copy = STATUS[request.status];
   const waiting = ["requested", "verifying"].includes(request.status);
+  // A workspace with no live connection can always restart the sharing check.
+  // Without this, a customer who disconnects and comes back lands on an old
+  // pending request and the share checklist stays unreachable until an operator
+  // happens to change its status.
   const restart =
-    request.status === "needs_changes" || request.status === "cancelled";
+    canRestart ||
+    request.status === "needs_changes" ||
+    request.status === "cancelled";
   const shared = [
     request.adAccountId
       ? { key: "ad", label: "Ad account", value: request.adAccountId, icon: <Megaphone size={14} /> }

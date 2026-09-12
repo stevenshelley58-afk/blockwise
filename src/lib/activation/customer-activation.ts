@@ -364,7 +364,7 @@ function stageConfiguration(
     connect_meta: {
       nextAction: record.meta_help_path === "setup_guide" ? "Finish setting up Meta" : "Connect Meta",
       allowedActions: ["connect_meta", "book_onboarding"],
-      resumePath: "/settings#connections",
+      resumePath: "/connect-meta",
     },
     complete_checkout: { nextAction: "Add a payment method", allowedActions: ["start_checkout"], resumePath: "/settings#billing" },
     launch_first_campaign: { nextAction: "Run your first ad", allowedActions: ["publish"], resumePath: "/ad-studio" },

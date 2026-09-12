@@ -31,15 +31,21 @@ test("Meta setup API captures concrete lead delivery endpoint config", () => {
 });
 
 test("Meta settings offers only real lead delivery destinations", () => {
-  // The settings view is a thin composer; the Meta setup form (and its
-  // destination types) lives in the connections section.
-  const splitSettings = readFileSync("src/app/(customer)/settings/connections-section.tsx", "utf8");
+  // The lead destination moved to the Workspace card when the ad-accounts card
+  // was reduced to one CTA, so the type and its option list live there now.
+  const shared = readFileSync("src/app/(customer)/settings/settings-shared.tsx", "utf8");
+  const workspaceSection = readFileSync("src/app/(customer)/settings/workspace-section.tsx", "utf8");
+  const publishingDefaultsRoute = readFileSync("src/app/api/workspace/publishing-defaults/route.ts", "utf8");
   const execution = readFileSync("src/lib/providers/meta-execution.ts", "utf8");
-  const splitDestinationTypesLine = splitSettings.match(/const META_LEAD_DESTINATION_TYPES: MetaLeadDestinationType\[\] = \[[^\n]+\];/)?.[0] ?? "";
+  const destinationTypesLine = workspaceSection.match(/const LEAD_DESTINATION_TYPES[^\n]+\n(?:[^\n]*\n){0,4}/)?.[0] ?? "";
 
-  assert.match(splitSettings, /type MetaLeadDestinationType = "webhook" \| "crm" \| "manual"/);
-  assert.match(splitSettings, /META_LEAD_DESTINATION_TYPES: MetaLeadDestinationType\[\] = \["manual", "webhook", "crm"\]/);
-  assert.doesNotMatch(splitDestinationTypesLine, /"email"/);
+  assert.match(shared, /type LeadDestinationType = "webhook" \| "crm" \| "manual"/);
+  assert.match(workspaceSection, /value: "manual"/);
+  assert.match(workspaceSection, /value: "webhook"/);
+  assert.match(workspaceSection, /value: "crm"/);
+  assert.doesNotMatch(destinationTypesLine, /"email"/);
+  // The save route must reject anything outside the same three values.
+  assert.match(publishingDefaultsRoute, /LEAD_DESTINATION_TYPES = \["manual", "webhook", "crm"\]/);
   assert.match(execution, /type: "webhook" \| "crm" \| "manual"/);
   assert.match(execution, /normalizeMetaLeadDestinationType/);
 });

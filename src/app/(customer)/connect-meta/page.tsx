@@ -22,7 +22,8 @@ export default async function ConnectMetaPage() {
     .limit(1);
 
   const latest = (data?.[0] ?? null) as MetaConnectionRow | null;
-  if (latest && latest.status === "connected") {
+  const isConnected = latest?.status === "connected";
+  if (isConnected) {
     redirect("/settings#connections");
   }
 
@@ -30,12 +31,13 @@ export default async function ConnectMetaPage() {
 
   return (
     <main
-      aria-label="Share Meta assets"
+      aria-label="Connect your Meta account"
       className="mx-auto w-full max-w-[760px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16"
     >
       <ConnectMetaGuide
         workspaceId={access.workspaceId}
         canManage={canManage}
+        isConnected={isConnected}
       />
     </main>
   );

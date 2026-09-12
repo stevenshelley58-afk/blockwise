@@ -34,6 +34,12 @@ type WorkspaceRow = {
   stripe_latest_invoice_amount_paid?: number | null;
   trial_state?: string | null;
   trial_ends_at?: string | null;
+  privacy_policy_url?: string | null;
+  publishing_currency?: string | null;
+  publishing_timezone?: string | null;
+  lead_destination_type?: string | null;
+  lead_destination_label?: string | null;
+  lead_destination_endpoint?: string | null;
 };
 
 type PlanRow = {
@@ -193,6 +199,15 @@ export default async function SettingsPage() {
           currency: w?.billing_currency ?? (w?.country_code === "US" ? "USD" : "AUD"),
           website: brand?.source_url ?? "",
           brandPackStatus: brand?.review_status ?? null,
+          privacyPolicyUrl: w?.privacy_policy_url ?? null,
+          publishingCurrency: w?.publishing_currency ?? null,
+          publishingTimezone: w?.publishing_timezone ?? null,
+          leadDestinationType:
+            w?.lead_destination_type === "webhook" || w?.lead_destination_type === "crm" || w?.lead_destination_type === "manual"
+              ? w.lead_destination_type
+              : null,
+          leadDestinationLabel: w?.lead_destination_label ?? null,
+          leadDestinationEndpoint: w?.lead_destination_endpoint ?? null,
           marketBound: Boolean(w?.billing_checkout_completed_at || w?.stripe_customer_id || metaIsBound),
           approvalRequiredByDefault: Boolean(w?.approval_required_by_default),
           billingEmail: w?.billing_email ?? "",

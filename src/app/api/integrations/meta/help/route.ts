@@ -16,7 +16,7 @@ type MetaHelpBody = {
 };
 
 const RESUME_PATHS: Record<MetaHelpPath, string> = {
-  setup_guide: "/settings#connections",
+  setup_guide: "/connect-meta",
   book_onboarding: "/settings#onboarding",
   pre_purchase_call: "/settings#onboarding",
 };
