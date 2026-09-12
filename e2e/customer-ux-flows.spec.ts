@@ -96,7 +96,10 @@ test.describe("customer UX flows", () => {
     await range.click();
     await page.getByRole("option", { name: "7 days" }).click();
     await expect(range).toHaveText(/7 days/);
-    await expect(page.getByText(/vs previous 7 days/).first()).toBeVisible();
+    // The comparison names the new period (the card keeps that phrase off the
+    // phone layout, so its presence is what is asserted) and the figures follow.
+    await expect(page.getByText(/vs previous 7 days/).first()).toBeAttached();
+    await expect(page.getByText("$5,940", { exact: true })).toHaveCount(0);
 
     // Pacing and location moved inside the details card, which stays shut until
     // asked for; the campaign table and the ad cards open with the page.
