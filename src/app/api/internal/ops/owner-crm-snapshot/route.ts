@@ -10,6 +10,8 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const NO_STORE_HEADERS = { "Cache-Control": "no-store" };
+
 /**
  * Internal Hermes-facing observation endpoint. It is read-only and requires
  * scoped HMAC headers. Customer and legacy bearer credentials are rejected.
@@ -17,7 +19,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const auth = await verifyOwnerCrmSnapshotRequest(request);
   if (!auth.ok) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
+    return NextResponse.json({ error: auth.error }, { status: auth.status, headers: NO_STORE_HEADERS });
   }
 
   let pageRequest;
@@ -26,15 +28,15 @@ export async function GET(request: Request) {
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "invalid_snapshot_request" },
-      { status: 400 },
+      { status: 400, headers: NO_STORE_HEADERS },
     );
   }
 
   try {
     const snapshot = await readOwnerCrmCustomerSnapshotPage(createSupabaseServiceClient(), pageRequest);
-    return NextResponse.json(snapshot, { status: 200 });
-  } catch (error) {
-    console.error("[owner-crm-snapshot] read failed", error instanceof Error ? error.message : error);
-    return NextResponse.json({ error: "owner_crm_snapshot_unavailable" }, { status: 503 });
+    return NextResponse.json(snapshot, { status: 200, headers: NO_STORE_HEADERS });
+  } catch {
+    console.error("[owner-crm-snapshot] read failed");
+    return NextResponse.json({ error: "owner_crm_snapshot_unavailable" }, { status: 503, headers: NO_STORE_HEADERS });
   }
 }

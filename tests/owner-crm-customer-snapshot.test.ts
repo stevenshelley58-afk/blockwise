@@ -132,3 +132,15 @@ test("snapshot RPC rejects null limits and remains service-role-only", () => {
   assert.match(migration, /to service_role/);
   assert.doesNotMatch(migration, /grant execute[\s\S]+to authenticated/);
 });
+
+
+test("snapshot route forces no-store and does not log raw errors", () => {
+  const route = readFileSync(
+    new URL("../src/app/api/internal/ops/owner-crm-snapshot/route.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(route, /const NO_STORE_HEADERS = \{ "Cache-Control": "no-store" \}/);
+  assert.equal((route.match(/headers: NO_STORE_HEADERS/g) ?? []).length, 4);
+  assert.match(route, /console\.error\("\[owner-crm-snapshot\] read failed"\)/);
+  assert.doesNotMatch(route, /console\.error\([^\n]*error\.message/);
+});
