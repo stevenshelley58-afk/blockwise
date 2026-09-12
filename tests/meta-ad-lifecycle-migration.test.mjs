@@ -180,11 +180,12 @@ test("per-job ScrapingBee credit caps are propagated to every reservation and re
   assert.match(supervisor, /assertBudgetWithinConfiguredCap\(runCreditCap, scrapingBeeMaxCostPerCapture\)/);
 });
 
-test("narrow Ad DB worker only selects marked collector/media jobs", () => {
+test("narrow Ad DB worker paginates canonical jobs and filters them to its mode", () => {
   assert.match(supervisor, /--ad-db-worker/);
-  assert.match(supervisor, /dedupe_key=like\.ad-radar:%25/);
   assert.match(supervisor, /job_type=in\.\(blockwise-ad-collector,blockwise-media-collector\)/);
-  assert.match(supervisor, /candidate\.payload\?\.ad_db_child === true/);
+  assert.match(supervisor, /shouldRunAdDbJob\(candidate, firstFillOnly\)/);
+  assert.match(supervisor, /const pageSize = 100;/);
+  assert.match(supervisor, /offset < pageSize \* maxQueuePages/);
   assert.match(supervisor, /available_at=lte\." \+ encode\(now\(\)/);
   assert.match(supervisor, /adDbWorkerPollMs/);
   assert.doesNotMatch(supervisor, /runAdDbWorkerPass[\s\S]*claimJobs\(\)/);

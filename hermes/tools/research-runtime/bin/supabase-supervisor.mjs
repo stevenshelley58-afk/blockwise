@@ -24,7 +24,7 @@ import { resolveAdRadarRuntime } from "./ad-radar-runtime-gate.mjs";
 import { createApifyFirstFillAdapter, normalizeApifyDataset } from "./ad-radar-apify-adapter.mjs";
 import { loadRuntimeProviderToken } from "./runtime-provider-token.mjs";
 import { cardMediaValues } from "./ad-radar-media.mjs";
-import { isFirstFillPage, shouldRunAdDbJob } from "./ad-radar-first-fill-scheduling.mjs";
+import { adRadarCollectorDedupeKey, initialFillAvailableAt, isFirstFillPage, shouldRunAdDbJob } from "./ad-radar-first-fill-scheduling.mjs";
 import { classifyMetaAdLibraryPayload } from "./meta-ad-library-parser.mjs";
 import {
   assertBudgetWithinConfiguredCap,
@@ -626,14 +626,17 @@ async function enqueueDueAdPageRefreshJobs(buildRunId) {
   // (maintained by research.schedule_page_after_scan / the collector); a
   // never-scanned page is immediately due (first-fill queue). Postcode
   // refresh policies are no longer a scheduler input.
-  const pages = await rest(
-    "research",
-    "advertiser_pages?select=id,page_id,page_name,status,scan_state,next_scan_at,backoff_until,consecutive_failures,has_ever_run_ads,initial_fill_completed_at&scan_enabled=eq.true&status=neq.rejected_non_real_estate&page_id=not.is.null&next_scan_at=lte." + encode(now()) + (firstFillOnly ? "&scan_state=eq.needs_first_fill&initial_fill_completed_at=is.null" : "") + "&order=next_scan_at.asc&limit=" + adPageRefreshScanLimit,
-  );
+  const pagePath = firstFillOnly
+    // A failed or interrupted first attempt changes scan_state, not the
+    // first-fill obligation. initial_fill_completed_at is the only durable
+    // completion marker, so no operational state is terminal here.
+    ? "advertiser_pages?select=id,page_id,page_name,status,scan_state,next_scan_at,backoff_until,consecutive_failures,has_ever_run_ads,initial_fill_completed_at&scan_enabled=eq.true&status=neq.rejected_non_real_estate&page_id=not.is.null&initial_fill_completed_at=is.null&order=backoff_until.asc.nullsfirst,next_scan_at.asc&limit=" + adPageRefreshScanLimit
+    : "advertiser_pages?select=id,page_id,page_name,status,scan_state,next_scan_at,backoff_until,consecutive_failures,has_ever_run_ads,initial_fill_completed_at&scan_enabled=eq.true&status=neq.rejected_non_real_estate&page_id=not.is.null&next_scan_at=lte." + encode(now()) + "&order=next_scan_at.asc&limit=" + adPageRefreshScanLimit;
+  const pages = await rest("research", pagePath);
   const capacity = Math.max(0, Math.min(adPageRefreshMaxActive - blockingCollectors.length, adPageRefreshBatchSize));
   let queuedFirstFillPageIds = new Set();
   if (firstFillOnly) {
-    const queued = await rest("research", "work_queue?select=advertiser_page_id,payload,status&queue_name=eq.research&job_type=eq.blockwise-ad-collector&status=in.(pending,claimed,failed,blocked)&limit=5000");
+    const queued = await rest("research", "work_queue?select=advertiser_page_id,payload,status&queue_name=eq.research&job_type=eq.blockwise-ad-collector&status=in.(pending,claimed)&limit=5000");
     queuedFirstFillPageIds = new Set((queued || []).filter((job) => {
       const payload = job.payload || {};
       return payload.scanMode === "initial_fill" || payload.scan_mode === "initial_fill" || payload.initialFill === true;
@@ -643,16 +646,16 @@ async function enqueueDueAdPageRefreshJobs(buildRunId) {
     if (!page.page_id || String(page.page_id).startsWith("slug:")) return false;
     if (firstFillOnly && !isFirstFillPage(page, queuedFirstFillPageIds)) return false;
     if (activePageIds.has(page.id)) return false;
-    if ((page.consecutive_failures || 0) >= adPageRefreshMaxConsecutiveFailures && page.backoff_until && Date.parse(page.backoff_until) > Date.now()) return false;
+    if (!firstFillOnly && (page.consecutive_failures || 0) >= adPageRefreshMaxConsecutiveFailures && page.backoff_until && Date.parse(page.backoff_until) > Date.now()) return false;
     return true;
   }).slice(0, capacity);
   let enqueued = 0;
   for (const [index, page] of candidates.entries()) {
-    const scanMode = page.scan_state === "needs_first_fill" || !page.has_ever_run_ads ? "initial_fill" : "refresh";
+    const scanMode = firstFillOnly || page.scan_state === "needs_first_fill" || !page.has_ever_run_ads ? "initial_fill" : "refresh";
     const queued = await enqueueFollowUp({
       queue_name: "research",
       job_type: "blockwise-ad-collector",
-      dedupe_key: `ad-scan:${page.id}:${scanMode}:${Math.floor(Date.now() / 60_000)}`,
+      dedupe_key: adRadarCollectorDedupeKey(page.id),
       advertiser_page_id: page.id,
       priority: adRefreshPriorityForPage(page),
       payload: {
@@ -665,7 +668,7 @@ async function enqueueDueAdPageRefreshJobs(buildRunId) {
         resultsLimit: metaCaptureResultsLimit,
       },
       status: "pending",
-      available_at: new Date(Date.now() + index * 2_000).toISOString(),
+      available_at: firstFillOnly ? initialFillAvailableAt(page) : new Date(Date.now() + index * 2_000).toISOString(),
       max_attempts: 3,
     }, null);
     if (queued) {
@@ -3777,20 +3780,33 @@ function creativeFromMetaAd(ad) {
 }
 
 async function insertFetchRun(job, buildRunId, input, provider) {
+  const pageId = input.advertiserPageId || null;
+  const [existingForQueue, runningForPage] = await Promise.all([
+    rest("research", "ad_fetch_runs?select=id,work_queue_id,advertiser_page_id,status,started_at&work_queue_id=eq." + encode(job.id) + "&order=started_at.desc&limit=5"),
+    pageId
+      ? rest("research", "ad_fetch_runs?select=id,work_queue_id,advertiser_page_id,status,started_at&advertiser_page_id=eq." + encode(pageId) + "&status=eq.running&order=started_at.desc&limit=5")
+      : Promise.resolve([]),
+  ]);
+  const reusable = (existingForQueue || []).find((row) => row.id && String(row.advertiser_page_id || "") === String(pageId || ""));
+  if (reusable) return { id: reusable.id, reused: true, concurrentRunId: null };
+
+  const concurrent = (runningForPage || []).find((row) => String(row.work_queue_id || "") !== String(job.id));
+  if (concurrent) return { id: null, reused: false, concurrentRunId: concurrent.id };
+
   const scanMode = ["initial_fill", "refresh", "manual"].includes(payloadString(job.payload?.scanMode))
     ? payloadString(job.payload.scanMode)
     : job.payload?.initialFill === true ? "initial_fill" : "refresh";
   const row = {
     build_run_id: buildRunId,
     work_queue_id: job.id,
-    advertiser_page_id: input.advertiserPageId || null,
+    advertiser_page_id: pageId,
     scan_mode: scanMode,
-    idempotency_key: `ad-collector:${job.id}:${input.advertiserPageId || "unknown"}`,
+    idempotency_key: `ad-collector:${job.id}:${pageId || "unknown"}`,
     source_provider: provider,
     role: "primary",
     trigger: scanMode === "manual" ? "manual" : "scheduled",
     target_kind: "advertiser_page",
-    target_value: input.advertiserPageId,
+    target_value: pageId,
     input_payload: input,
     input_hash: hash(json(input)),
     status: "running",
@@ -3800,7 +3816,7 @@ async function insertFetchRun(job, buildRunId, input, provider) {
     method: "POST",
     headers: { Prefer: "return=representation" },
   }, row);
-  return created?.[0]?.id;
+  return { id: created?.[0]?.id || null, reused: false, concurrentRunId: null };
 }
 
 function payloadString(value) {
@@ -4352,7 +4368,7 @@ async function handleAdCollector(job) {
   }
   const pageRows = await rest(
     "research",
-    "advertiser_pages?select=id,page_id,page_name,status,scan_enabled,scan_state&id=eq." + encode(String(payload.advertiserPageId)) + "&page_id=eq." + encode(String(payload.metaPageId)) + "&limit=1",
+    "advertiser_pages?select=id,page_id,page_name,status,scan_enabled,scan_state,initial_fill_completed_at&id=eq." + encode(String(payload.advertiserPageId)) + "&page_id=eq." + encode(String(payload.metaPageId)) + "&limit=1",
   );
   const pageRow = pageRows?.[0];
   if (!pageRow?.id) {
@@ -4362,6 +4378,13 @@ async function handleAdCollector(job) {
     return { status: "blocked", blocked_reason: "collector_scan_disabled", result: { handler: "blockwise-ad-collector", advertiser_page_id: pageRow.id, collection_started: false } };
   }
   payload.advertiserPageId = pageRow.id;
+  const requestedInitialFill = payloadString(payload.scanMode) === "initial_fill" || payload.initialFill === true;
+  if (firstFillOnly && !requestedInitialFill) {
+    return { status: "complete", result: { handler: "blockwise-ad-collector", advertiser_page_id: pageRow.id, collection_started: false, skipped_reason: "first_fill_worker_scope" } };
+  }
+  if (requestedInitialFill && pageRow.initial_fill_completed_at) {
+    return { status: "complete", result: { handler: "blockwise-ad-collector", advertiser_page_id: pageRow.id, collection_started: false, skipped_reason: "initial_fill_already_completed" } };
+  }
   const ingestTables = ["ad_fetch_runs", "observed_ads", "ad_snapshots", "ad_creatives", "media_assets"];
   const input = captureInput(payload);
   input.workQueueJobId = job.id;
@@ -4371,9 +4394,17 @@ async function handleAdCollector(job) {
     : scrapingBeeEnabled && scrapingBeeOrder === "primary"
       ? META_SCRAPINGBEE_SOURCE_PROVIDER
       : metaOfficialApiEnabled ? META_OFFICIAL_SOURCE_PROVIDER : configuredMetaFallbackSourceProvider();
-  const adFetchRunId = await insertFetchRun(job, buildRunId, input, initialSourceProvider);
+  const fetchRun = await insertFetchRun(job, buildRunId, input, initialSourceProvider);
+  if (fetchRun.concurrentRunId) {
+    return {
+      status: "blocked",
+      blocked_reason: "collector_page_capture_already_running",
+      result: { handler: "blockwise-ad-collector", advertiser_page_id: pageRow.id, collection_started: false, concurrent_fetch_run_id: fetchRun.concurrentRunId },
+    };
+  }
+  const adFetchRunId = fetchRun.id;
   if (!adFetchRunId) throw new Error("ad_fetch_run insert did not return an id");
-  await markAdvertiserPageScanStarted(pageRow.id);
+  if (!fetchRun.reused) await markAdvertiserPageScanStarted(pageRow.id);
   // Link provider attempts back to the run row.
   input.adFetchRunId = adFetchRunId;
   const capture = await runMetaPageCapture(input);
@@ -5448,16 +5479,26 @@ async function runAdDbWorkerPass() {
     const buildRunId = await ensureBuildRun();
     await enqueueDueAdPageRefreshJobs(buildRunId);
   }
-  const jobs = await rest(
-    "research",
-    "work_queue?select=*&queue_name=eq.research&status=eq.pending&available_at=lte." + encode(now())
-      + "&job_type=in.(blockwise-ad-collector,blockwise-media-collector)&dedupe_key=like.ad-radar:%25"
-      + "&order=priority.asc,available_at.asc,created_at.asc&limit=100",
-  );
-  const job = (jobs || []).find((candidate) => shouldRunAdDbJob(candidate, firstFillOnly));
-  if (!job) return { handled: 0, skipped_unmarked_media: (jobs || []).filter((candidate) => candidate.job_type === "blockwise-media-collector").length };
+  const pageSize = 100;
+  const maxQueuePages = 20;
+  let job = null;
+  let skippedUnmarkedMedia = 0;
+  let pagesScanned = 0;
+  for (let offset = 0; offset < pageSize * maxQueuePages; offset += pageSize) {
+    const jobs = await rest(
+      "research",
+      "work_queue?select=*&queue_name=eq.research&status=eq.pending&available_at=lte." + encode(now())
+        + "&job_type=in.(blockwise-ad-collector,blockwise-media-collector)"
+        + "&order=priority.asc,available_at.asc,created_at.asc&limit=" + pageSize + "&offset=" + offset,
+    );
+    pagesScanned += 1;
+    skippedUnmarkedMedia += (jobs || []).filter((candidate) => candidate.job_type === "blockwise-media-collector" && !shouldRunAdDbJob(candidate, firstFillOnly)).length;
+    job = (jobs || []).find((candidate) => shouldRunAdDbJob(candidate, firstFillOnly)) || null;
+    if (job || (jobs || []).length < pageSize) break;
+  }
+  if (!job) return { handled: 0, skipped_unmarked_media: skippedUnmarkedMedia, queue_pages_scanned: pagesScanned };
   await runExactJob(job.id);
-  return { handled: 1, job_id: job.id, job_type: job.job_type };
+  return { handled: 1, job_id: job.id, job_type: job.job_type, queue_pages_scanned: pagesScanned };
 }
 
 const historicalReplayMode = process.argv.includes("--historical-replay");

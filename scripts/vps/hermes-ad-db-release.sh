@@ -19,14 +19,15 @@ commit=$2
 
 repo=/projects/blockwise
 release_root=/srv/hermes/ad-db/releases/$commit
-unit_template=$repo/infra/hermes/ad-db-worker.service.template
+render_root=/srv/hermes/ad-db/units
+unit_template=$release_root/infra/hermes/ad-db-worker.service.template
+rendered_unit=$render_root/$commit.service
 unit_path=/etc/systemd/system/hermes-ad-db-worker.service
 
 git -C "$repo" rev-parse --verify "$commit^{commit}" >/dev/null
-[[ -f "$unit_template" ]] || { echo "missing unit template: $unit_template" >&2; exit 1; }
 
 if [[ $mode == --plan ]]; then
-  printf 'release=%s\nsource=%s\nworking_directory=%s\nunit=%s\n' "$release_root" "$commit" "$release_root/hermes/tools/research-runtime" "$unit_path"
+  printf 'release=%s\nsource=%s\nworking_directory=%s\nrendered_unit=%s\nunit=%s\n' "$release_root" "$commit" "$release_root/hermes/tools/research-runtime" "$rendered_unit" "$unit_path"
   exit 0
 fi
 
@@ -40,15 +41,17 @@ if [[ $mode == --prepare || $mode == --install ]]; then
     git -C "$repo" worktree add --detach "$release_root" "$commit"
     chown -R hermes:hermes "$release_root"
   fi
-  rendered=$(mktemp)
+  [[ -f "$unit_template" ]] || { echo "missing unit template in immutable release: $unit_template" >&2; exit 1; }
+  install -d -o root -g root -m 0755 "$render_root"
+  rendered=$(mktemp "$render_root/.${commit}.XXXXXX")
   trap 'rm -f "$rendered"' EXIT
   sed "s|@RELEASE_ROOT@|$release_root|g" "$unit_template" > "$rendered"
-  install -o root -g root -m 0644 "$rendered" "$release_root/worker.service"
+  install -o root -g root -m 0644 "$rendered" "$rendered_unit"
   if [[ $mode == --prepare ]]; then
     echo "prepared $release_root"
     exit 0
   fi
-  install -o root -g root -m 0644 "$rendered" "$unit_path"
+  install -o root -g root -m 0644 "$rendered_unit" "$unit_path"
   systemctl daemon-reload
   systemctl enable --now hermes-ad-db-worker.service
 fi

@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isFirstFillPage, shouldRunAdDbJob } from "../hermes/tools/research-runtime/bin/ad-radar-first-fill-scheduling.mjs";
+import {
+  adRadarCollectorDedupeKey,
+  initialFillAvailableAt,
+  isFirstFillPage,
+  shouldRunAdDbJob,
+} from "../hermes/tools/research-runtime/bin/ad-radar-first-fill-scheduling.mjs";
 
 test("first-fill page eligibility excludes completed, queued, and invalid pages", () => {
   const base = { id: "page-1", page_id: "123", scan_state: "needs_first_fill", initial_fill_completed_at: null };
@@ -8,6 +13,23 @@ test("first-fill page eligibility excludes completed, queued, and invalid pages"
   assert.equal(isFirstFillPage({ ...base, initial_fill_completed_at: "2026-09-12T00:00:00Z" }, new Set()), false);
   assert.equal(isFirstFillPage(base, new Set(["page-1"])), false);
   assert.equal(isFirstFillPage({ ...base, page_id: "slug:foo" }, new Set()), false);
+});
+
+
+test("failed first fills retain queue eligibility and expose their backoff", () => {
+  const now = new Date("2026-09-12T00:00:00.000Z");
+  const page = { id: "page-1", page_id: "123", scan_enabled: true, scan_state: "failing", initial_fill_completed_at: null };
+  assert.equal(isFirstFillPage(page, new Set()), true);
+  assert.equal(initialFillAvailableAt({ ...page, backoff_until: "2026-09-12T03:00:00.000Z" }, now), "2026-09-12T03:00:00.000Z");
+  assert.equal(initialFillAvailableAt({ ...page, backoff_until: "2026-09-11T03:00:00.000Z" }, now), now.toISOString());
+  assert.equal(adRadarCollectorDedupeKey("page-1"), "ad-radar:collector:page-1");
+  assert.equal(isFirstFillPage({ ...page, scan_enabled: false }, new Set()), false);
+});
+test("first-fill eligibility treats scan state as operational, not completion", () => {
+  const base = { id: "page-1", page_id: "123", scan_enabled: true, initial_fill_completed_at: null };
+  for (const scan_state of ["needs_first_fill", "queued", "scanning", "failing", "zero_ads", "healthy", null]) {
+    assert.equal(isFirstFillPage({ ...base, scan_state }, new Set()), true);
+  }
 });
 
 test("first-fill-only worker admits only initial-fill collectors and their media children", () => {
