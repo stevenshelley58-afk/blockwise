@@ -51,7 +51,9 @@ test("hero restores the previous animated ad deck without fabricated proof metri
   assert.match(showcase, /Example ads/);
   assert.match(showcase, /IntersectionObserver/);
   assert.match(showcase, /useReducedMotion/);
-  assert.match(showcase, /1850/);
+  // The front card is held long enough to be read before the deck advances.
+  assert.match(showcase, /const DECK_HOLD_MS = 3400/);
+  assert.doesNotMatch(showcase, /, 1850\)/);
   assert.doesNotMatch(showcase, /reactions|comments/);
 });
 

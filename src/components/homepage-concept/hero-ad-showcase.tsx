@@ -9,6 +9,9 @@ import { SHOWCASE_ADS, withBasePath, type ShowcaseAd } from "@/lib/homepage-conc
 
 type DeckPose = { x: string; y: number; scale: number; rotate: number; opacity: number };
 
+/** How long the front card is held before the deck advances. */
+const DECK_HOLD_MS = 3400;
+
 const DECK_POSES: readonly DeckPose[] = [
   { x: "0%", y: 0, scale: 1, rotate: 0, opacity: 1 },
   { x: "28%", y: 18, scale: 0.91, rotate: 3, opacity: 0.66 },
@@ -123,7 +126,8 @@ export function HeroAdShowcase() {
 
   useEffect(() => {
     if (!shouldPlay) return;
-    const timer = window.setTimeout(() => setOrder((current) => [current[current.length - 1], ...current.slice(0, -1)]), 1850);
+    /* Long enough that the card on top can actually be read before it moves. */
+    const timer = window.setTimeout(() => setOrder((current) => [current[current.length - 1], ...current.slice(0, -1)]), DECK_HOLD_MS);
     return () => window.clearTimeout(timer);
   }, [order, shouldPlay]);
 

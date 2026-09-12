@@ -34,7 +34,11 @@ const SELECTED_PHASE = 3;
  * How long each phase holds. `null` means the phase waits for the visitor to
  * watch the text being written, so typing sets the pace rather than a timer.
  */
-const STORY_HOLDS: ReadonlyArray<number | null> = [760, 700, 700, 1000, 620, null, null, 1750, 2100];
+const STORY_HOLDS: ReadonlyArray<number | null> = [700, 950, 950, 1700, 900, null, null, 2400, 3600];
+/** The section must be this much on screen before the story is allowed to run. */
+const STORY_START_THRESHOLD = 0.6;
+/** And the reader gets this long to take the section in before it moves. */
+const STORY_START_DELAY_MS = 1200;
 /* The button is pressed here, and the ad is live by the time it lands. */
 const PRESS_PHASE = STORY_HOLDS.length - 1;
 const STORY_STEP_PHASES = [0, 4, 7] as const;
@@ -674,30 +678,39 @@ export function WorkflowShowcase() {
   const resetCopy = copy.reset;
   const resetLink = link.reset;
 
+  const still = useRef(true);
+  still.current = reduceMotion;
+
   useEffect(() => {
     const syncVisibility = () => setPageVisible(document.visibilityState === "visible");
+    let start: number | null = null;
     const observer = new IntersectionObserver(
       ([entry]) => {
         setInView(entry.isIntersecting);
-        if (entry.isIntersecting && !reduceMotion && !hasStarted.current) {
+        /* Start once the reader has actually arrived, then give them a beat to
+           take the section in before the first frame moves. Without the wait the
+           story runs while they are still reading the headline. */
+        if (!entry.isIntersecting || still.current || hasStarted.current || start !== null) return;
+        start = window.setTimeout(() => {
+          start = null;
+          if (hasStarted.current) return;
           hasStarted.current = true;
           setPhase(0);
           setPlaying(true);
-        }
+        }, STORY_START_DELAY_MS);
       },
-      /* A phone viewport is shorter than this section, so 0.3 of it can never
-         be on screen there and the story would never start. */
-      { threshold: 0.12 },
+      { threshold: STORY_START_THRESHOLD },
     );
 
     syncVisibility();
     if (sectionRef.current) observer.observe(sectionRef.current);
     document.addEventListener("visibilitychange", syncVisibility);
     return () => {
+      if (start !== null) window.clearTimeout(start);
       observer.disconnect();
       document.removeEventListener("visibilitychange", syncVisibility);
     };
-  }, [reduceMotion]);
+  }, []);
 
   /* Reduced motion gets the finished state with no timers at all. */
   useEffect(() => {

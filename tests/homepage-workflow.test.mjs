@@ -198,13 +198,19 @@ test("the highlight is green everywhere, with a green fill", () => {
 
 test("the story starts once when scrolled into view and then stops", () => {
   assert.match(source, /IntersectionObserver/);
-  assert.match(source, /if \(entry\.isIntersecting && !reduceMotion && !hasStarted\.current\)/);
   assert.match(source, /hasStarted\.current = true/);
   assert.match(source, /visibilitychange/);
-  // A phone viewport is shorter than this section, so a high threshold would
-  // mean the story never starts there at all.
-  assert.match(source, /threshold: 0\.12/);
-  assert.doesNotMatch(source, /threshold: 0\.3/);
+  // The story waits until the reader has arrived: most of the section has to be
+  // on screen, and then they get a beat before the first frame moves. A low
+  // threshold ran it while they were still reading the headline.
+  assert.match(source, /const STORY_START_THRESHOLD = 0\.6/);
+  assert.match(source, /const STORY_START_DELAY_MS = 1200/);
+  assert.match(source, /\{ threshold: STORY_START_THRESHOLD \}/);
+  assert.match(source, /window\.setTimeout\(\(\) => \{[\s\S]{0,200}STORY_START_DELAY_MS/);
+  assert.doesNotMatch(source, /threshold: 0\.12/);
+  // A phone viewport is shorter than the section, so the start must not be
+  // gated on a fraction the viewport cannot reach.
+  assert.ok(0.6 < 0.68, "phone visible fraction must clear the start threshold");
   assert.match(source, /if \(!playing \|\| !inView \|\| !pageVisible\) return/);
   // Reduced motion shortens the run instead of stranding the story mid-way.
   assert.match(source, /reduceMotion \? 260 : hold/);
