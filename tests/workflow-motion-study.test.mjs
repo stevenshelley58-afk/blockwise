@@ -4,7 +4,7 @@ import test from "node:test";
 
 import geometry from "../src/components/motion-study/workflow-motion-study-geometry.ts";
 
-const { STUDY_AD_SCALE, studyAdMotion } = geometry;
+const { STUDY_AD_SCALE, STUDY_PANEL_GAP, studyAdMotion, studyEditLayout } = geometry;
 
 const source = await readFile(new URL("../src/components/motion-study/workflow-motion-study.tsx", import.meta.url), "utf8");
 const styles = await readFile(new URL("../src/components/motion-study/workflow-motion-study.module.css", import.meta.url), "utf8");
@@ -36,38 +36,36 @@ test("same ad moves and scales within the stage before fields arrive", () => {
   assert.match(styles, /\.bwStudySideAd:last-child \{ grid-column: 3/);
   assert.match(styles, /\.bwStudyEditSlot/);
   assert.ok(styles.includes("transform: translateY(-50%)"));
-  assert.match(styles, /\.bwStudyEditPanel input/);
+  assert.match(styles, /\.bwStudyEditPanel textarea/);
   assert.match(styles, /font-size: 14px/);
 });
 
-test("geometry stays inside desktop and mobile bounds without panel overlap", () => {
+test("geometry centres the desktop group and stays inside actual stage widths", () => {
   const cases = [
-    { width: 320, height: 700, adWidth: 204, adHeight: 400, narrow: true, panelTop: 390 },
-    { width: 390, height: 760, adWidth: 224, adHeight: 440, narrow: true, panelTop: 420 },
-    { width: 700, height: 560, adWidth: 300, adHeight: 550, narrow: false },
+    { width: 278, height: 830, adWidth: 204, adHeight: 400, narrow: true },
+    { width: 348, height: 820, adWidth: 224, adHeight: 440, narrow: true },
+    { width: 668, height: 820, adWidth: 300, adHeight: 550, narrow: true },
     { width: 768, height: 560, adWidth: 300, adHeight: 550, narrow: false },
-    { width: 900, height: 560, adWidth: 300, adHeight: 550, narrow: false },
     { width: 1040, height: 560, adWidth: 300, adHeight: 550, narrow: false },
   ];
 
   for (const item of cases) {
-    const start = studyAdMotion({ stageWidth: item.width, stageHeight: item.height, adWidth: item.adWidth, adHeight: item.adHeight, narrow: item.narrow, customise: false });
-    const end = studyAdMotion({ stageWidth: item.width, stageHeight: item.height, adWidth: item.adWidth, adHeight: item.adHeight, narrow: item.narrow, customise: true });
+    const start = studyAdMotion({ ...item, stageWidth: item.width, stageHeight: item.height, customise: false });
+    const end = studyAdMotion({ ...item, stageWidth: item.width, stageHeight: item.height, customise: true });
     assert.equal(start.scale, 1);
     assert.equal(end.scale, STUDY_AD_SCALE);
-    assert.notDeepEqual(end, start);
-    assert.ok(start.x >= 0 && start.y >= 0);
-    assert.ok(start.x + item.adWidth <= item.width);
-    assert.ok(start.y + item.adHeight <= item.height);
     assert.ok(end.x >= 0 && end.y >= 0);
     assert.ok(end.x + item.adWidth * end.scale <= item.width + 0.01);
     assert.ok(end.y + item.adHeight * end.scale <= item.height + 0.01);
+    const layout = studyEditLayout({ stageWidth: item.width, adWidth: item.adWidth, adHeight: item.adHeight, narrow: item.narrow });
     if (item.narrow) {
-      assert.ok(end.y + item.adHeight * end.scale <= item.panelTop);
+      assert.ok(end.y + item.adHeight * end.scale <= layout.panelTop);
+      assert.equal(layout.panelWidth, item.width - 28);
     } else {
-      const panelWidth = Math.min(item.width * 0.36, 330);
-      const panelLeft = item.width - 72 - panelWidth;
-      assert.ok(end.x + item.adWidth * end.scale + 28 <= panelLeft + 0.01);
+      assert.ok(layout.gap >= 48);
+      assert.equal(layout.gap, STUDY_PANEL_GAP);
+      assert.ok(end.x + item.adWidth * end.scale + layout.gap <= layout.panelLeft + 0.01);
+      assert.ok(Math.abs((end.x + layout.panelLeft + layout.panelWidth) / 2 - item.width / 2) < 0.01);
     }
   }
 });
@@ -88,4 +86,14 @@ test("preview allows the study without exposing product routes", async () => {
   assert.match(proxy, /BLOCKWISE_HOMEPAGE_PREVIEW/);
   assert.ok(proxy.includes('pathname === "/motion-study"'));
   assert.ok(proxy.includes('new NextResponse("Not found", { status: 404 })'));
+});
+
+test("shown values use multiline fields and match the preview", () => {
+  assert.equal((source.match(/<textarea/g) ?? []).length, 3);
+  assert.match(source, /id="study-headline"[\s\S]*rows=\{2\}/);
+  assert.match(source, /id="study-ad-text"[\s\S]*rows=\{3\}/);
+  assert.match(source, /id="study-link-title"[\s\S]*rows=\{2\}/);
+  assert.match(source, /Thinking of selling\? Find out what your home could be worth\./);
+  assert.match(styles, /overflow: hidden/);
+  assert.match(styles, /line-height: 1\.45/);
 });

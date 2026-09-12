@@ -104,9 +104,10 @@
 .bwStudyAdMotion {
   position: absolute;
   top: 0;
-  left: 0;
+  left: 50%;
   z-index: 2;
   width: 300px;
+  transform: translateX(-50%);
   transform-origin: top left;
 }
 .bwStudySelectedAd {
@@ -159,8 +160,8 @@
 .bwStudyEditSlot {
   position: absolute;
   top: 50%;
-  right: 72px;
-  width: min(36%, 330px);
+  left: var(--study-panel-left);
+  width: var(--study-panel-width);
   transform: translateY(-50%);
 }
 .bwStudyEditPanel {
@@ -179,24 +180,12 @@
 .bwStudyPanelHeading h2 { margin: 0; font-family: var(--font-manrope), Manrope, sans-serif; font-size: 23px; letter-spacing: -.035em; line-height: 1.04; }
 .bwStudyEditPanel label { display: grid; gap: 5px; }
 .bwStudyEditPanel label > span { color: var(--study-muted); font-size: 11px; font-weight: 700; }
-.bwStudyEditPanel input,
 .bwStudyEditPanel textarea {
-  min-height: 42px;
-  color: var(--study-ink);
-  font-size: 14px;
-  font-weight: 650;
+  width: 100%; min-height: calc(2 * 1.45em + 18px); overflow: hidden; resize: none;
+  border: 1px solid var(--study-line); border-radius: 10px; padding: 9px 12px; background: #fff;
+  color: var(--study-ink); font-size: 14px; font-weight: 650; font-family: inherit; line-height: 1.45;
 }
-.bwStudyEditPanel textarea {
-  min-height: 68px;
-  width: 100%;
-  resize: none;
-  border: 1px solid var(--study-line);
-  border-radius: 10px;
-  padding: 9px 12px;
-  background: #fff;
-  line-height: 1.35;
-}
-.bwStudyEditPanel label.isActive input,
+.bwStudyEditPanel textarea[rows="3"] { min-height: calc(3 * 1.45em + 18px); }
 .bwStudyEditPanel label.isActive textarea { border-color: var(--study-ink); background: #f1f3f5; box-shadow: 0 0 0 2px rgba(22,24,29,.12); }
 .bwStudyHint { min-height: 34px; padding: 8px 18px; border-top: 1px solid var(--study-line); color: var(--study-muted); font-size: 12px; text-align: center; }
 
@@ -211,17 +200,17 @@
   .bwStudy { padding: 12px; }
   .bwStudyFrame { border-radius: 18px; }
   .bwStudyToolbar { min-height: 56px; gap: 8px; padding: 8px 10px 8px 14px; }
-  .bwStudyTitle { font-size: 0; gap: 0; }
+  .bwStudyTitle { font-size: 14px; }
   .bwStudyTitle i { width: 7px; height: 7px; }
   .bwStudySelector button { min-height: 44px; padding-inline: 10px; font-size: 11.5px; }
-  .bwStudyStage { min-height: 760px; }
+  .bwStudyStage { min-height: 820px; }
   .bwStudyGallery { grid-template-columns: repeat(3, minmax(0,1fr)); align-items: start; gap: 8px; padding: 36px 16px; }
   .bwStudySideAd { max-width: 104px; border-radius: 12px; }
   .bwStudySideAd:first-child, .bwStudySideAd:last-child { justify-self: stretch; }
   .bwStudyAdMotion { width: 224px; }
-  .bwStudyEditSlot { top: 420px; right: 14px; left: 14px; width: auto; transform: none; }
+  .bwStudyEditSlot { top: var(--study-panel-top); left: var(--study-panel-left); width: var(--study-panel-width); transform: none; }
   .bwStudyEditPanel { min-height: 0; padding: 18px; }
-  .bwStudyEditPanel input, .bwStudyEditPanel textarea { font-size: 16px; }
+  .bwStudyEditPanel textarea { font-size: 16px; }
   .bwStudyPanelHeading h2 { font-size: 21px; }
   .bwStudyAdCopy { min-height: 44px; }
   .bwStudyAdHeadline { font-size: 14px; }
@@ -230,5 +219,5 @@
 @media (max-width: 360px) {
   .bwStudySelector button { padding-inline: 7px; font-size: 11px; }
   .bwStudyAdMotion { width: 204px; }
-  .bwStudyEditSlot { top: 390px; }
+  .bwStudyStage { min-height: 830px; }
 }
