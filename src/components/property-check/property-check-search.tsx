@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 
+import { Button } from "@/components/ui/button";
 import { niche } from "@/config/niche";
 import type { PropertyAddressPrediction } from "@/lib/property-check/address-autocomplete";
 import {
@@ -229,14 +230,15 @@ export function PropertyCheckSearch({ initialChecks }: { initialChecks: Property
               ) : null}
             </div>
           ) : null}
-          <button
-            className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-full bg-(--ink) text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.95] disabled:cursor-default disabled:opacity-40"
+          <Button
+            size="icon"
+            className="active:scale-[0.95]"
             type="submit"
             disabled={!canSubmit}
             aria-label="Run property check"
           >
             <ArrowUp aria-hidden size={20} />
-          </button>
+          </Button>
         </form>
 
         <span className="sr-only" aria-live="polite">
@@ -259,10 +261,17 @@ export function PropertyCheckSearch({ initialChecks }: { initialChecks: Property
         ) : null}
 
         <div className="flex flex-wrap gap-2">
-          <button type="button" className={chipClass(false)} onClick={fillSample} disabled={submitting}>
+          <Button
+            type="button"
+            variant="outline"
+            size="pill"
+            className="h-[34px]"
+            onClick={fillSample}
+            disabled={submitting}
+          >
             <MapPin aria-hidden size={14} />
             Try an address
-          </button>
+          </Button>
           {SITUATION_CHIPS.map((chip) => (
             <button
               type="button"

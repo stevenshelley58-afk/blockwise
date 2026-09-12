@@ -12,6 +12,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
+import { Button } from "@/components/ui/button";
 import { niche } from "@/config/niche";
 import { springs, useReducedMotion } from "@/lib/motion";
 
@@ -98,12 +99,9 @@ export function HomeSetupCard({
               <ButtonArrow href="/ad-studio?newAd=1" className="h-11 text-[13px]">
                 {niche.copy.home.states.ready.ctaLabel}
               </ButtonArrow>
-              <Link
-                href="/ad-studio"
-                className="inline-flex h-11 items-center rounded-full border border-(--line-heavy) bg-card px-5 text-[13px] font-bold text-foreground transition-colors duration-150 hover:bg-(--surface-subtle)"
-              >
-                {copy.adLibrary}
-              </Link>
+              <Button asChild variant="ghost-pill" className="min-h-11">
+                <Link href="/ad-studio">{copy.adLibrary}</Link>
+              </Button>
             </div>
             <Link
               href="/results"

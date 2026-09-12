@@ -22,10 +22,16 @@
  * Tailwind utility on the rebuilt customer surface: an `<h1 class="text-[24px]
  * font-extrabold">` rendered at the legacy 32px/700, not the Premium v2 ramp.
  *
- * Importing the legacy sheets into a lower layer fixes the customer surface
- * without touching operator/monitor, which use only legacy classes: relative
- * order and specificity inside the layer are preserved, so those surfaces
- * cascade exactly as before.
+ * Importing the legacy sheets into a lower layer fixes that surface without
+ * touching operator/monitor, which use only legacy classes: relative order and
+ * specificity inside the layer are preserved, so those surfaces cascade exactly
+ * as before.
+ *
+ * audit.css stays unlayered and imported by its own route. Its `.lp-*` rules
+ * carry the audit campaign palette, which would lose to the differently valued
+ * same-named tokens in globals.css the moment it joined this layer. Its
+ * `.audit-page a` element rule therefore outranks a Tailwind utility on an
+ * anchor, so a container that holds the shared Button must not restyle links.
  *
  * theme-monochrome.css deliberately stays unlayered (imported after this file
  * in layout.tsx) — it is the token override that must keep winning, and its
@@ -192,6 +198,16 @@
   --ui-sidebar-border: var(--side-line);
   --ui-sidebar-ring: var(--ui-ring);
 
+  /* The CTA pill surface (DESIGN.md §Components). A semantic alias of the ink
+     accent rather than a second colour: the one accent family still owns every
+     primary action, and a theme retunes both together. theme-monochrome.css
+     restates it beside the --accent it follows. */
+  --ui-cta: var(--accent);
+  --ui-cta-foreground: #ffffff;
+  /* The disc surface for CTAs that rest on a light background, where the plain
+     cta-foreground disc would disappear. */
+  --ui-cta-soft: #f1f2f4;
+
   /* Premium v2: the one vivid data voice (charts, meters, sparklines only —
      never UI chrome or text). Defaults to the Blockwise hue; the customer
      layout overrides these three from src/config/niche for white-labeling. */
@@ -248,6 +264,9 @@
   --color-sidebar-accent-foreground: var(--ui-sidebar-accent-foreground);
   --color-sidebar-border: var(--ui-sidebar-border);
   --color-sidebar-ring: var(--ui-sidebar-ring);
+
+  --color-cta: var(--ui-cta);
+  --color-cta-foreground: var(--ui-cta-foreground);
 
   --color-data: var(--ui-data);
   --color-data-soft: var(--ui-data-soft);

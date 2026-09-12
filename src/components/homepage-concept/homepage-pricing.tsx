@@ -1,5 +1,6 @@
-import { ArrowRight, Check } from "lucide-react";
+import { Check } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { HOMEPAGE_PLANS } from "@/lib/homepage-concept/pricing";
 
 import "./homepage-pricing.css";
@@ -25,10 +26,16 @@ export function HomepagePricing() {
               <ul className="hp-plan-included">
                 {plan.included.map((item) => <li key={item}><Check size={16} aria-hidden="true" /><span>{item}</span></li>)}
               </ul>
-              <a className={`hp-plan-cta${plan.featured ? "" : " hp-plan-cta--quiet"}`} href={plan.cta.href} data-cta-location={plan.cta.location}>
-                {plan.cta.label}
-                <ArrowRight size={17} aria-hidden="true" />
-              </a>
+              <Button
+                asChild
+                size="lg"
+                variant={plan.featured ? "default" : "outline"}
+                className="mt-[18px] max-[760px]:col-span-2 max-[760px]:mt-[15px]"
+              >
+                <a href={plan.cta.href} data-cta-location={plan.cta.location}>
+                  {plan.cta.label}
+                </a>
+              </Button>
               {plan.note ? <p className="hp-plan-note">{plan.note}</p> : null}
               <details className="hp-plan-details">
                 <summary>More plan details</summary>

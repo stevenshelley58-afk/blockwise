@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import Link from "next/link";
 import * as Sentry from "@sentry/nextjs";
 
+import { Button } from "@/components/ui/button";
+
 /*
  * Root error boundary. Rendered on every surface including customer routes, so
  * it is built on the token bridge rather than globals.css — `.tw` supplies the
@@ -38,19 +40,12 @@ export default function AppError({
             : "The requested workspace view could not be loaded."}
         </p>
         <div className="mt-6 flex flex-wrap gap-2.5">
-          <button
-            type="button"
-            onClick={() => reset()}
-            className="inline-flex min-h-11 cursor-pointer items-center rounded-full bg-(--ink) px-5 text-[13px] font-bold text-white shadow-card transition-colors duration-150 hover:bg-(--accent-strong)"
-          >
+          <Button type="button" onClick={() => reset()}>
             Retry
-          </button>
-          <Link
-            href="/self-serve"
-            className="inline-flex min-h-11 items-center rounded-full border border-(--line-heavy) bg-(--surface) px-5 text-[13px] font-bold text-foreground transition-colors duration-150 hover:bg-(--surface-subtle)"
-          >
-            Go to dashboard
-          </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/self-serve">Go to dashboard</Link>
+          </Button>
         </div>
       </section>
     </main>

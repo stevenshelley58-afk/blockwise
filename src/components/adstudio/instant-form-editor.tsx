@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { z } from "zod";
 
+import { Button } from "@/components/ui/button";
 import { validateInstantForm, type ValidationIssue } from "@/lib/adstudio/instant-form-generator";
 import {
   ACTION_TYPES,
@@ -285,14 +286,13 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
           <p className="max-w-sm text-sm text-muted-foreground">
             No form yet. Create a draft from your saved ad, then review every field before publishing.
           </p>
-          <button
+          <Button
             type="button"
             onClick={generate}
             disabled={status === "generating"}
-            className="min-h-11 rounded-(--r-ctl) bg-(--ui-primary) px-5 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
           >
             {status === "generating" ? "Generating..." : "Generate draft"}
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="space-y-6 p-4 sm:p-5">
@@ -359,24 +359,25 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
                     placeholder={`Question ${index + 1}`}
                     maxLength={200}
                   />
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="xs"
                     onClick={() => removeQuestion(index)}
-                    className="min-h-11 shrink-0 rounded-(--r-ctl) px-3 py-2 text-xs text-muted-foreground outline-none hover:bg-(--surface-subtle) hover:text-red-600 focus-visible:ring-2 focus-visible:ring-(--ui-primary)"
                     aria-label={`Remove question ${index + 1}`}
                   >
                     Remove
-                  </button>
+                  </Button>
                 </div>
               ))}
               {form.customQuestions.length < 5 && (
-                <button
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={addQuestion}
-                    className="min-h-11 rounded-(--r-ctl) border border-dashed border-(--line) px-4 py-2 text-sm text-muted-foreground outline-none transition hover:border-(--ui-primary) hover:text-(--ui-primary) focus-visible:ring-2 focus-visible:ring-(--ui-primary)"
                 >
                   + Add question
-                </button>
+                </Button>
               )}
             </div>
           </Field>
@@ -424,22 +425,21 @@ export function InstantFormEditor({ adId, workspaceId, onPinStateChange }: Insta
 
           {/* Footer actions */}
           <div className="flex items-center justify-end gap-3 border-t border-(--line) pt-4">
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={generate}
               disabled={status === "generating"}
-              className="min-h-11 rounded-(--r-ctl) px-4 py-2 text-sm text-muted-foreground transition hover:bg-(--surface-subtle) hover:text-foreground disabled:opacity-50"
             >
               {status === "generating" ? "Generating..." : "Regenerate draft"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={save}
               disabled={status === "saving" || errorIssues.length > 0 || !dirty}
-              className="min-h-11 rounded-(--r-ctl) bg-(--ui-primary) px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
             >
               {status === "saving" ? "Saving..." : "Save form"}
-            </button>
+            </Button>
           </div>
         </div>
       )}

@@ -454,12 +454,11 @@ export function PublishFlow({
           <p className="text-sm text-amber-800">
             Save this ad in the editor before you choose where it should be created.
           </p>
-          <a
-            href={`/ad-studio/templates/${encodeURIComponent(templateId)}`}
-            className="mt-4 inline-flex min-h-11 items-center rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            Go to editor
-          </a>
+          <Button asChild className="mt-4">
+            <a href={`/ad-studio/templates/${encodeURIComponent(templateId)}`}>
+              Go to editor
+            </a>
+          </Button>
         </div>
       </div>
     );
@@ -500,7 +499,7 @@ export function PublishFlow({
 
         <section hidden={activeStage !== 1} aria-labelledby="publish-stage-1">
         {/* Saved creative */}
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 id="publish-stage-1" tabIndex={-1} className="scroll-mt-4 text-base font-semibold focus:outline-none">1. Creative & copy</h2><Link href={`/ad-studio/ads/${encodeURIComponent(adId)}`} className="min-h-11 inline-flex items-center rounded-full border border-border px-3 text-xs font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Edit creative and copy</Link></div>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 id="publish-stage-1" tabIndex={-1} className="scroll-mt-4 text-base font-semibold focus:outline-none">1. Creative & copy</h2><Button asChild variant="outline" size="sm"><Link href={`/ad-studio/ads/${encodeURIComponent(adId)}`}>Edit creative and copy</Link></Button></div>
         <div className="mb-6 rounded-(--r-card) border border-(--line) bg-(--surface) p-4">
           <h3 className="mb-2 text-sm font-semibold">Saved creative</h3>
           {initialState ? (
@@ -1314,7 +1313,7 @@ function ReceiptCard({ receipt }: { receipt: PublishReceipt }) {
       <div className="mt-6 rounded-(--r-card) border border-green-200 bg-green-50 p-4" role="status">
         <h3 className="mb-1 text-sm font-semibold text-green-800">Published — active on Meta</h3>
         <p className="text-sm text-green-700">{receipt.message}</p>
-        <a className="mt-3 inline-flex min-h-11 items-center rounded-full border border-green-300 px-4 text-sm font-semibold text-green-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href={`/results?planId=${encodeURIComponent(receipt.planId ?? "")}`}>View results</a>
+        <Button asChild variant="outline" className="mt-3"><a href={`/results?planId=${encodeURIComponent(receipt.planId ?? "")}`}>View results</a></Button>
         <MetaReferenceDetails className="text-green-800" receipt={receipt} objects={objects} />
         <PublishedSourceReceipt receipt={receipt} />
       </div>

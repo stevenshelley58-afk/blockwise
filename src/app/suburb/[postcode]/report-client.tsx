@@ -4,6 +4,8 @@ import { trackMarketingEvent } from "@/lib/analytics/marketing";
 
 import Link from "next/link";
 
+import { Button } from "@/components/ui/button";
+
 function fireSafe(event: string, properties: Record<string, string | number>) {
   try { const w = window as Window & { fbq?: (...args: unknown[]) => void; gtag?: (...args: unknown[]) => void }; w.fbq?.("trackCustom", event, properties); trackMarketingEvent(event, properties); } catch {}
 }
@@ -67,8 +69,10 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
           <Link className="sr-logo" href="/">blockwise</Link>
           <span className="sr-live-chip"><span />{reportLabel}{coverageLabel ? "" : ` ${postcode}`} · live</span>
           <div className="sr-topbar-actions">
-            <button className="sr-button sr-button-ghost" type="button" onClick={() => setEmailOpen(true)}>Email me this audit</button>
-            <GateLink href={trialHref} intent="trial" postcode={postcode} className="sr-button sr-button-dark">Create three ads free</GateLink>
+            <Button variant="outline" size="lg" className="max-[760px]:hidden" type="button" onClick={() => setEmailOpen(true)}>Email me this audit</Button>
+            <Button asChild size="lg">
+              <GateLink href={trialHref} intent="trial" postcode={postcode}>Create three ads free</GateLink>
+            </Button>
           </div>
         </div>
       </header>
@@ -130,7 +134,9 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
                     <span className="sr-concept-label">{concept.label}</span>
                     <div className="sr-concept-preview"><span>Your photo or logo</span><div><h2>{concept.headline}</h2><p>{concept.body}</p><b>{concept.cta}</b></div></div>
                     <p>{concept.rationale}</p>
-                    <GateLink href={gateHref(postcode, "remix")} intent="remix" postcode={postcode} className="sr-button sr-button-ghost sr-button-wide">Make this yours in AdStudio →</GateLink>
+                    <Button asChild size="lg" variant="outline" className="w-full">
+                      <GateLink href={gateHref(postcode, "remix")} intent="remix" postcode={postcode}>Make this yours in AdStudio</GateLink>
+                    </Button>
                   </article>
                 ))}
               </div>
@@ -150,14 +156,14 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
               <div className="sr-ad-grid">
                 {ads.slice(0, visibleCount).map((ad) => <ReportAdCard key={ad.id} ad={ad} postcode={postcode} suburb={suburb} longestId={insights.longestRunningAd?.id ?? null} longestDays={insights.longestRunningDays} />)}
               </div>
-              {visibleCount < ads.length ? <div className="sr-load-more"><button className="sr-button sr-button-ghost" type="button" onClick={() => setVisibleCount((count) => Math.min(count + 9, ads.length))}>Show more ads</button><p>Showing {Math.min(visibleCount, ads.length)} of {ads.length}, all free to browse</p></div> : null}
+              {visibleCount < ads.length ? <div className="sr-load-more"><Button variant="outline" size="lg" type="button" onClick={() => setVisibleCount((count) => Math.min(count + 9, ads.length))}>Show more ads</Button><p>Showing {Math.min(visibleCount, ads.length)} of {ads.length}, all free to browse</p></div> : null}
             </section>
 
             <AuditGenerator postcode={postcode} suburb={suburb} />
 
             <section className="sr-cta-band">
               <div><h2>{reportLabel} changes every week. Keep watching it.</h2><p>This report stays free. A free trial adds tools on top:</p><ul><li>Alerts when a new advertiser appears in {reportLabel}</li><li>Track each advertiser's launches and changes</li><li>Use an observed ad as an AdStudio starting point</li></ul></div>
-              <div className="sr-cta-actions"><GateLink href={trialHref} intent="trial" postcode={postcode} className="sr-button sr-button-light">Start your free trial →</GateLink><button type="button" onClick={() => setEmailOpen(true)}>Or just email me this audit</button><small>14 days free · No credit card · Your audit stays free either way</small></div>
+              <div className="sr-cta-actions"><Button asChild size="lg" variant="outline"><GateLink href={trialHref} intent="trial" postcode={postcode}>Start your free trial</GateLink></Button><button type="button" onClick={() => setEmailOpen(true)}>Or just email me this audit</button><small>14 days free · No credit card · Your audit stays free either way</small></div>
             </section>
           </>
         )}
@@ -182,7 +188,7 @@ function ReportAdCard({ ad, postcode, suburb, longestId, longestDays }: { ad: Pu
 }
 
 function EmptyState({ suburb, postcode, nearby, trialHref }: { suburb: string; postcode: string; nearby: NearbyArea[]; trialHref: string }) {
-  return <section className="sr-empty"><h2>No live ads were observed for {suburb} today.</h2><p>That does not mean nobody is advertising. It means the current public dataset did not return a match for {postcode} or its surrounds.</p>{nearby.length ? <div><h3>Try a nearby report</h3>{nearby.map((area) => <Link key={area.postcode} href={`/suburb/${area.postcode}`}>{area.suburb} {area.postcode}<span>{area.count} ads</span></Link>)}</div> : null}<GateLink href={trialHref} intent="trial" postcode={postcode} className="sr-button sr-button-dark">Create three ads free</GateLink></section>;
+  return <section className="sr-empty"><h2>No live ads were observed for {suburb} today.</h2><p>That does not mean nobody is advertising. It means the current public dataset did not return a match for {postcode} or its surrounds.</p>{nearby.length ? <div><h3>Try a nearby report</h3>{nearby.map((area) => <Link key={area.postcode} href={`/suburb/${area.postcode}`}>{area.suburb} {area.postcode}<span>{area.count} ads</span></Link>)}</div> : null}<Button asChild size="lg"><GateLink href={trialHref} intent="trial" postcode={postcode}>Create three ads free</GateLink></Button></section>;
 }
 
 function GateLink({ href, intent, postcode, className, children }: { href: string; intent: string; postcode: string; className?: string; children: React.ReactNode }) {
@@ -194,7 +200,7 @@ function EmailReportDialog({ open, onClose, postcode, suburb }: { open: boolean;
   const [state, action, pending] = useActionState(emailSuburbReport, initialEmailState);
   useEffect(() => { const dialog = ref.current; if (!dialog) return; if (open && !dialog.open) dialog.showModal(); else if (!open && dialog.open) dialog.close(); }, [open]);
   useEffect(() => { if (state.ok) fireSafe("report_email_submitted", { postcode }); }, [postcode, state.ok]);
-  return <dialog className="sr-email-dialog" ref={ref} onCancel={onClose} onClose={onClose}><button className="sr-dialog-close" type="button" onClick={onClose} aria-label="Close">×</button>{state.ok ? <div className="sr-email-success"><span>✓</span><h2>Sent. It's yours.</h2><p>PS: a free account adds alerts and tracking while this audit stays free.</p><button className="sr-button sr-button-dark" type="button" onClick={onClose}>Back to the audit</button></div> : <><h2>Send this audit to your inbox</h2><p>One email with a live link to your {suburb} audit. No drip sequence.</p><form action={action}><input type="hidden" name="postcode" value={postcode} /><input type="hidden" name="suburb" value={suburb} /><label htmlFor="report-email">Email address</label><div><input id="report-email" name="email" type="email" autoComplete="email" required placeholder="you@business.com.au" /><button className="sr-button sr-button-dark" disabled={pending} type="submit">{pending ? "Sending…" : "Send it"}</button></div>{state.error ? <p className="sr-form-error" role="alert">{state.error}</p> : null}</form><small>The link remains available as the observed ad set changes.</small></>}</dialog>;
+  return <dialog className="sr-email-dialog" ref={ref} onCancel={onClose} onClose={onClose}><button className="sr-dialog-close" type="button" onClick={onClose} aria-label="Close">×</button>{state.ok ? <div className="sr-email-success"><span>✓</span><h2>Sent. It's yours.</h2><p>PS: a free account adds alerts and tracking while this audit stays free.</p><Button size="lg" type="button" onClick={onClose}>Back to the audit</Button></div> : <><h2>Send this audit to your inbox</h2><p>One email with a live link to your {suburb} audit. No drip sequence.</p><form action={action}><input type="hidden" name="postcode" value={postcode} /><input type="hidden" name="suburb" value={suburb} /><label htmlFor="report-email">Email address</label><div><input id="report-email" name="email" type="email" autoComplete="email" required placeholder="you@business.com.au" /><Button size="lg" className="max-[760px]:w-full" disabled={pending} type="submit">{pending ? "Sending…" : "Send it"}</Button></div>{state.error ? <p className="sr-form-error" role="alert">{state.error}</p> : null}</form><small>The link remains available as the observed ad set changes.</small></>}</dialog>;
 }
 
 function gateHref(postcode: string, intent: "track" | "remix" | "trial") { return `/signup?src=suburb-report&postcode=${postcode}&intent=${intent}`; }
@@ -287,7 +293,7 @@ function AuditGenerator({ postcode, suburb }: { postcode: string; suburb: string
       <form className="sr-audit-form" onSubmit={handleGenerate}>
         <input type="text" name="website" autoComplete="url" placeholder="https://youragency.com.au" aria-label="Agency website" value={website} onChange={(event) => setWebsite(event.target.value)} />
         <input type="text" name="name" autoComplete="organization" placeholder="Or your agency name" aria-label="Agency name" value={name} onChange={(event) => setName(event.target.value)} />
-        <button className="sr-button sr-button-dark" type="submit" disabled={busy}>{busy ? "Building your ads…" : "Generate my 3 ads"}</button>
+        <Button size="lg" type="submit" disabled={busy}>{busy ? "Building your ads…" : "Generate my 3 ads"}</Button>
       </form>
       {error ? <p className="sr-form-error" role="alert">{error}</p> : null}
       {bundle ? (
@@ -300,7 +306,7 @@ function AuditGenerator({ postcode, suburb }: { postcode: string; suburb: string
             </div>
           ))}
           <div className="sr-cta-block">
-            <button className="sr-button sr-button-light" type="button" onClick={handleClaim} disabled={claiming}>{claiming ? "Saving…" : "Free trial — run these 3 ads today in under 5 mins"}</button>
+            <Button size="lg" variant="outline" type="button" onClick={handleClaim} disabled={claiming}>{claiming ? "Saving…" : "Free trial — run these 3 ads today in under 5 mins"}</Button>
             <p className="sr-note">No credit card required. Ads saved to your Ad Studio library.</p>
           </div>
           <div className="sr-pricing-block">

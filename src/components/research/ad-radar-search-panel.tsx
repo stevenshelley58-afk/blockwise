@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { AdRadarLocationForm } from "@/components/research/ad-radar-location-form";
 import { AdRadarResultsGrid } from "@/components/research/ad-radar-results-grid";
+import { Button } from "@/components/ui/button";
 import { mergeCards } from "@/lib/research/ad-radar-pagination";
 import { niche } from "@/config/niche";
 import type { CustomerMetaAdLibraryCard } from "@/lib/research/customer-meta-card";
@@ -20,8 +21,6 @@ const EMPTY_FILTERS: Filters = { agency: "", agent: "" };
 const fieldLabelClass = "font-mono text-[9.5px] font-medium tracking-[0.12em] text-(--faint) uppercase";
 const controlClass =
   "h-9 w-full appearance-none rounded-(--r-card) border border-(--line) bg-(--surface) px-2.5 pr-7 text-[12.5px] font-semibold text-foreground outline-none transition-[border-color] duration-150 focus:border-(--ink)";
-const ghostButtonClass =
-  "inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border border-(--line-heavy) bg-card px-3.5 text-[12.5px] font-bold text-foreground transition-[background,box-shadow] duration-150 hover:bg-(--surface-subtle) hover:shadow-card";
 
 type Props = {
   initialQuery: string;
@@ -229,11 +228,12 @@ export function AdRadarSearchPanel({
         {/* Search actions and current result freshness. */}
         <div className="grid gap-2.5 border-t border-(--line) pt-4 sm:grid-cols-[auto_1fr] sm:items-center">
           <div className="flex min-w-0 items-center gap-2.5">
-            <button
+            <Button
               type="button"
+              variant="ghost-pill"
+              size="pill"
               aria-expanded={filtersOpen}
               onClick={() => setFiltersOpen((open) => !open)}
-              className={ghostButtonClass}
             >
               <SlidersHorizontal size={15} aria-hidden />
               Filters
@@ -247,12 +247,14 @@ export function AdRadarSearchPanel({
                 aria-hidden
                 className={`text-(--faint) transition-transform duration-150 ${filtersOpen ? "rotate-180" : ""}`}
               />
-            </button>
+            </Button>
 
-            <Link href="/ad-radar/swipe-file" className={ghostButtonClass}>
-              <Bookmark size={13} aria-hidden />
-              Saved inspiration
-            </Link>
+            <Button asChild variant="ghost-pill" size="pill">
+              <Link href="/ad-radar/swipe-file">
+                <Bookmark size={13} aria-hidden />
+                Saved inspiration
+              </Link>
+            </Button>
 
             <span className="ml-auto flex min-w-0 items-center gap-1.5 text-[11.5px] text-(--faint) sm:hidden">
               <Clock3 size={13} aria-hidden className="shrink-0" />
@@ -290,14 +292,15 @@ export function AdRadarSearchPanel({
               </label>
             </div>
             <div className="mt-3 flex justify-end">
-              <button
+              <Button
                 type="button"
+                variant="ghost-pill"
+                size="pill"
                 onClick={onClearFilters}
                 disabled={activeFilterCount === 0}
-                className={`${ghostButtonClass} disabled:cursor-default disabled:opacity-50 disabled:hover:bg-card disabled:hover:shadow-none`}
               >
                 Clear all
-              </button>
+              </Button>
             </div>
           </div>
         ) : null}
@@ -323,24 +326,25 @@ export function AdRadarSearchPanel({
               <p className="mt-1 text-xs leading-5">{searchError} Your search is still here.</p>
             </div>
           </div>
-          <button
+          <Button
             type="button"
-            className="inline-flex min-h-11 w-fit cursor-pointer items-center gap-2 rounded-full bg-(--ink) px-4 text-[12.5px] font-bold text-white hover:opacity-85"
+            size="pill"
+            className="w-fit"
             onClick={() => doSearch(activeSearchTermRef.current, filters, Boolean(cards.length && nextCursor))}
             disabled={loading}
           >
             <RotateCw size={14} aria-hidden />
             {loading ? "Trying again…" : "Try again"}
-          </button>
+          </Button>
         </section>
         {cards.length > 0 ? (
           <section className="grid gap-3.5">
             <AdRadarResultsGrid cards={cards} />
             {nextCursor ? (
               <div className="flex justify-center">
-                <button type="button" className={ghostButtonClass} onClick={loadMore} disabled={loading}>
+                <Button type="button" variant="ghost-pill" size="pill" onClick={loadMore} disabled={loading}>
                   {loading ? "Loading more..." : "Load more"}
-                </button>
+                </Button>
               </div>
             ) : null}
           </section>
@@ -365,9 +369,9 @@ export function AdRadarSearchPanel({
               <AdRadarResultsGrid cards={cards} />
               {nextCursor ? (
                 <div className="flex justify-center">
-                  <button type="button" className={ghostButtonClass} onClick={loadMore} disabled={loading}>
+                  <Button type="button" variant="ghost-pill" size="pill" onClick={loadMore} disabled={loading}>
                     {loading ? "Loading more..." : "Load more"}
-                  </button>
+                  </Button>
                 </div>
               ) : null}
             </>

@@ -2,6 +2,7 @@
 
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 export default function ResetPasswordPage() {
@@ -78,7 +79,9 @@ export default function ResetPasswordPage() {
           <div className="signup-success" role="status" aria-live="polite">
             <strong>Password updated</strong>
             <p>You can now sign in with your new password.</p>
-            <a className="button" href="/login">Sign in</a>
+            <Button asChild>
+              <a href="/login">Sign in</a>
+            </Button>
           </div>
         ) : !isReady && expired ? (
           <p className="login-copy">
@@ -112,9 +115,9 @@ export default function ResetPasswordPage() {
               />
             </label>
             {error ? <p className="form-error">{error}</p> : null}
-            <button className="button" type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Updating" : "Update password"}
-            </button>
+            </Button>
           </form>
         )}
       </section>

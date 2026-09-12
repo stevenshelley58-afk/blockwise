@@ -3,6 +3,7 @@
 import { FileText, Image as ImageIcon, Upload, X } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ClipboardEvent, type DragEvent, type RefObject } from "react";
 
+import { Button } from "@/components/ui/button";
 import {
   formatUploadFileSize,
   inferAssetMimeType,
@@ -189,9 +190,9 @@ export function AssetUploadDropzone({
           </span>
         </button>
         {onClear && selected ? (
-          <button type="button" className="asset-upload-clear" aria-label={`Clear ${label}`} disabled={disabled} onClick={onClear}>
+          <Button type="button" variant="ghost" size="icon-sm" aria-label={`Clear ${label}`} disabled={disabled} onClick={onClear}>
             <X aria-hidden size={16} />
-          </button>
+          </Button>
         ) : null}
       </div>
       {localError ? (

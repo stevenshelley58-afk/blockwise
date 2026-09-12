@@ -2,6 +2,7 @@ import { ArrowRight, Clock3, FolderOpen, Image as ImageIcon, LayoutTemplate, Pal
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { LibraryAdModel } from "@/lib/adstudio/library-read-model";
+import { Button } from "@/components/ui/button";
 import { SafeImage } from "@/components/ui/safe-image";
 
 type HomeCommandProps = {
@@ -19,28 +20,20 @@ export function HomeCommand({ ads, adsError, timeZone, dateLocale, hasAvailableT
       <header className="flex min-h-11 items-center justify-between gap-4">
         <h1 className="font-display text-[clamp(26px,4vw,34px)] font-extrabold tracking-[-.025em]">Ads</h1>
         {templatesLoadError ? (
-          <a
-            href="/ad-studio/templates"
-            className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-(--ui-error)/30 bg-(--ui-error-soft) px-4 text-[12.5px] font-bold text-(--ui-error) transition hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            Refresh templates
-          </a>
+          <Button asChild variant="destructive" className="min-h-11 shrink-0">
+            <a href="/ad-studio/templates">Refresh templates</a>
+          </Button>
         ) : hasAvailableTemplates ? (
-          <Link
-            href="/ad-studio/templates"
-            aria-label="Create a new ad from a reviewed template"
-            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-primary px-4 text-[12.5px] font-bold text-primary-foreground shadow-card transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <Plus className="size-4" aria-hidden />
-            New ad
-          </Link>
+          <Button asChild className="min-h-11 shrink-0">
+            <Link href="/ad-studio/templates" aria-label="Create a new ad from a reviewed template">
+              <Plus className="size-4" aria-hidden />
+              New ad
+            </Link>
+          </Button>
         ) : (
-          <Link
-            href="/ad-studio/brand"
-            className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-border bg-card px-4 text-[12.5px] font-bold text-foreground transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            Review Brand Pack
-          </Link>
+          <Button asChild variant="outline" className="min-h-11 shrink-0">
+            <Link href="/ad-studio/brand">Review Brand Pack</Link>
+          </Button>
         )}
       </header>
 
@@ -59,11 +52,11 @@ export function HomeCommand({ ads, adsError, timeZone, dateLocale, hasAvailableT
           <div className="mt-3 rounded-(--r-card) border border-dashed border-(--line-heavy) bg-(--surface-subtle)/50 p-5 text-center">
             <h3 className="font-display text-[15.5px] font-extrabold">No saved ads yet</h3>
             {templatesLoadError ? (
-              <a href="/ad-studio/templates" className="mt-3 inline-flex min-h-11 items-center rounded-full border border-(--ui-error)/30 bg-(--ui-error-soft) px-4 text-[12.5px] font-bold text-(--ui-error) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Refresh templates</a>
+              <Button asChild variant="destructive" className="mt-3 min-h-11"><a href="/ad-studio/templates">Refresh templates</a></Button>
             ) : hasAvailableTemplates ? (
-              <Link href="/ad-studio/templates" className="mt-3 inline-flex min-h-11 items-center rounded-full bg-primary px-4 text-[12.5px] font-bold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">New ad</Link>
+              <Button asChild className="mt-3 min-h-11"><Link href="/ad-studio/templates">New ad</Link></Button>
             ) : (
-              <Link href="/ad-studio/brand" className="mt-3 inline-flex min-h-11 items-center rounded-full border border-border bg-card px-4 text-[12.5px] font-bold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Review Brand Pack</Link>
+              <Button asChild variant="outline" className="mt-3 min-h-11"><Link href="/ad-studio/brand">Review Brand Pack</Link></Button>
             )}
           </div>
         )}
@@ -80,10 +73,12 @@ export function HomeCommand({ ads, adsError, timeZone, dateLocale, hasAvailableT
 
 function SecondaryLink({ href, icon, children }: { href: string; icon: ReactNode; children: ReactNode }) {
   return (
-    <Link href={href} className="flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-(--r-ctl) border border-border bg-card px-2 text-center text-[11px] font-semibold transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&>svg]:size-4">
-      {icon}
-      <span className="truncate">{children}</span>
-    </Link>
+    <Button asChild variant="outline" className="min-h-11 min-w-0">
+      <Link href={href}>
+        {icon}
+        <span className="truncate">{children}</span>
+      </Link>
+    </Button>
   );
 }
 
@@ -101,8 +96,12 @@ function RecentAd({ ad, timeZone, dateLocale }: { ad: LibraryAdModel; timeZone: 
         <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-muted-foreground"><Clock3 className="size-3.5 shrink-0" aria-hidden />{formatLastEdited(ad.updatedAt, timeZone, dateLocale)} · {ad.format}</p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <Link href={editorHref} className="inline-flex min-h-11 items-center rounded-full border border-border px-3 text-[12px] font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Edit</Link>
-        <Link href={reviewHref} className="hidden min-h-11 items-center rounded-full bg-primary px-3 text-[12px] font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:inline-flex">Review</Link>
+        <Button asChild variant="outline" className="min-h-11">
+          <Link href={editorHref}>Edit</Link>
+        </Button>
+        <Button asChild className="hidden min-h-11 sm:inline-flex">
+          <Link href={reviewHref}>Review</Link>
+        </Button>
       </div>
     </article>
   );

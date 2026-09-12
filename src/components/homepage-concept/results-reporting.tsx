@@ -1,7 +1,8 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import { Button } from "@/components/ui/button";
+import { withBasePath } from "@/lib/homepage-concept/content";
 import { TRIAL_CTA_LABEL, TRIAL_SIGNUP_URL } from "@/lib/homepage-concept/pricing";
 import {
   REPORTS,
@@ -128,7 +129,7 @@ export function ResultsReporting() {
           <h2 id="results-heading">See your leads. Know your costs.</h2>
           <p>Track leads, cost per lead and Meta ad spend, then choose how often you want an email update.</p>
           <div className="rr-actions">
-            <a className="hc-button hc-button--primary" href={TRIAL_SIGNUP_URL}>{TRIAL_CTA_LABEL}<ArrowRight size={17} aria-hidden="true" /></a>
+            <Button asChild size="lg" variant="outline" className="max-[760px]:w-full"><a href={TRIAL_SIGNUP_URL}>{TRIAL_CTA_LABEL}</a></Button>
           </div>
         </header>
 

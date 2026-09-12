@@ -6,6 +6,7 @@ import { SiteFooter, SiteHeader } from "@/components/home-landing/site-chrome";
 import { MarketPricing } from "@/components/pricing/market-pricing";
 import { PricingFaq } from "@/components/pricing/pricing-faq";
 import { CtaLink } from "@/components/landing/cta-link";
+import { Button } from "@/components/ui/button";
 
 import "../homepage.css";
 import "./pricing.css";
@@ -82,23 +83,19 @@ export default function PricingPage() {
               </p>
             </div>
             <div className="pricing-final-actions">
-              <CtaLink
-                href="/signup?offer=self-serve"
-                location="pricing-final-start-free"
-                className="hw-btn hw-btn--dark"
-              >
-                Start free
-              </CtaLink>
-              <CtaLink
-                href="/#managed-setup"
-                location="pricing-final-managed-call"
-                className="hw-btn hw-btn--outline"
-              >
-                Book a call
-              </CtaLink>
-              <a className="hw-btn hw-btn--outline" href={PERTH_MEETING_HREF}>
-                Arrange a Perth meeting
-              </a>
+              <Button asChild size="lg" variant="outline" className="max-[760px]:w-full">
+                <CtaLink href="/signup?offer=self-serve" location="pricing-final-start-free">
+                  Start free
+                </CtaLink>
+              </Button>
+              <Button asChild size="lg" variant="ghost" className="max-[760px]:w-full">
+                <CtaLink href="/#managed-setup" location="pricing-final-managed-call">
+                  Book a call
+                </CtaLink>
+              </Button>
+              <Button asChild size="lg" variant="ghost" className="max-[760px]:w-full">
+                <a href={PERTH_MEETING_HREF}>Arrange a Perth meeting</a>
+              </Button>
             </div>
           </div>
         </section>

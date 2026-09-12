@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import type { Rect, ImageInput } from "../../../../packages/ad-template-contract/src/types";
 
 // ---------------------------------------------------------------------------
@@ -377,19 +378,18 @@ export function CropDialog({
             )}
           </p>
           <div className="flex gap-2">
-            <button
+            <Button
               ref={cancelButtonRef}
+              variant="ghost"
               onClick={onCancel}
-              className="min-h-11 rounded-full px-4 text-sm text-muted-foreground hover:bg-muted"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => onConfirm(crop)}
-              className="min-h-11 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground hover:opacity-90"
             >
               Apply crop
-            </button>
+            </Button>
           </div>
         </footer>
       </div>

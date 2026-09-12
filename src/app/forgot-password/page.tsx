@@ -5,6 +5,7 @@ import { type FormEvent, useMemo, useState } from "react";
 
 import { ButtonSpinner } from "@/components/app/button-spinner";
 import { hasTurnstileSiteKey, TurnstileVerification } from "@/components/auth/turnstile-verification";
+import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 export default function ForgotPasswordPage() {
@@ -81,15 +82,14 @@ export default function ForgotPasswordPage() {
               onError={() => setError("Verification failed. Please try again.")}
             />
             {error ? <p className="form-error">{error}</p> : null}
-            <button
-              className="button"
+            <Button
               type="submit"
               disabled={isSubmitting}
               aria-busy={isSubmitting || undefined}
             >
               {isSubmitting ? <ButtonSpinner size={16} label="Sending reset link" /> : null}
               {isSubmitting ? "Sending…" : "Send reset link"}
-            </button>
+            </Button>
           </form>
         )}
 

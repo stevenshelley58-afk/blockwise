@@ -31,6 +31,9 @@
   --accent-press: #000000;
   --accent-tint: #f1f2f4;
   --blue: #16181d;
+  /* Restated so the CTA pill resolves without depending on layer order. */
+  --ui-cta: #16181d;
+  --ui-cta-soft: #f1f2f4;
 
   /* Softer, rounder shapes */
   --r-card: 16px;

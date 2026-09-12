@@ -12,6 +12,7 @@ import {
   TrackedDetails,
 } from "@/components/research/audit-conversion";
 import { AuditLeadForm } from "@/components/research/audit-lead-form";
+import { Button } from "@/components/ui/button";
 import { niche } from "@/config/niche";
 import {
   buildAdAudit,
@@ -280,8 +281,16 @@ function Hero({
           <h1>{headline}</h1>
           <p className="hero-lede">{lede}</p>
           <div className="cta-row">
-            <TrackedAnchor href="#lead" event="primary_cta_clicked" data={{ ...analytics, placement: "hero" }} className="lp-btn lp-btn-primary lp-btn-big">Build my {area} campaign plan</TrackedAnchor>
-            <TrackedAnchor href={hasData ? "#evidence" : "#plan"} event="secondary_cta_clicked" data={{ ...analytics, placement: "hero" }} className="lp-btn lp-btn-ghost lp-btn-big">{hasData ? "See competitor evidence" : "See the campaign pack"}</TrackedAnchor>
+            <Button asChild size="lg" className="max-[760px]:w-full">
+              <TrackedAnchor href="#lead" event="primary_cta_clicked" data={{ ...analytics, placement: "hero" }}>
+                Build my {area} campaign plan
+              </TrackedAnchor>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="max-[760px]:w-full">
+              <TrackedAnchor href={hasData ? "#evidence" : "#plan"} event="secondary_cta_clicked" data={{ ...analytics, placement: "hero" }}>
+                {hasData ? "See competitor evidence" : "See the campaign pack"}
+              </TrackedAnchor>
+            </Button>
           </div>
           <div className="trust-row">
             <span className="trust-item"><span className="trust-dot" />Three ads before Checkout</span>
@@ -437,7 +446,11 @@ function LeadSection({
             <li>The free creation allowance includes six renders for three complete Feed + Story ads.</li>
           </ul>
           <div className="cta-row">
-            <AuditCtaButton href={href} event="signup_clicked" data={analytics} className="lp-btn lp-btn-light">Create three ads free</AuditCtaButton>
+            <Button asChild variant="outline" className="max-[760px]:w-full">
+              <AuditCtaButton href={href} event="signup_clicked" data={analytics}>
+                Create three ads free
+              </AuditCtaButton>
+            </Button>
           </div>
         </aside>
       </div>

@@ -1,6 +1,7 @@
 import Image from "next/image";
 
 import { CtaLink } from "@/components/landing/cta-link";
+import { Button } from "@/components/ui/button";
 
 import "./workspace-hero.css";
 
@@ -64,12 +65,11 @@ export function WorkspaceHero() {
           <p className="hw-ws__lede">
             More listings, less marketing stress.
           </p>
-          <CtaLink location="hero" href="/signup" className="hw-btn hw-btn--light hw-ws__cta">
-            Start free trial
-            <svg className="hw-ws__cta-icon" viewBox="0 0 16 16" aria-hidden focusable="false">
-              <path d="M3 8h9M9 4.5 12.5 8 9 11.5" />
-            </svg>
-          </CtaLink>
+          <Button asChild size="lg" variant="outline" className="hw-ws__cta">
+            <CtaLink location="hero" href="/signup">
+              Start free trial
+            </CtaLink>
+          </Button>
         </div>
 
         <div className="hw-ws-product" aria-hidden>

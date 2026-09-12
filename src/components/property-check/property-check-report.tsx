@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowLeft, CheckCircle2, Copy, ExternalLink, Printer } f
 import Link from "next/link";
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { buildPropertySnapshot } from "@/lib/property-check/presentation";
 import {
   PROPERTY_CHECK_CLIENT_SITUATION_LABELS,
@@ -17,10 +18,6 @@ import {
 
 const cardClass = "rounded-(--r-panel) border border-(--line) bg-(--surface) p-5 shadow-card";
 const cardTitleClass = "font-display text-[15.5px] font-extrabold tracking-[-0.015em]";
-const ghostButtonClass =
-  "inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border border-(--line-heavy) bg-card px-3.5 text-[12.5px] font-bold text-foreground transition-[background,box-shadow] duration-150 hover:bg-(--surface-subtle) hover:shadow-card";
-const inkButtonClass =
-  "inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full bg-(--ink) px-4 text-[12.5px] font-bold text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.97]";
 
 export function PropertyCheckReport({ check }: { check: PropertyCheckRecord }) {
   const [copied, setCopied] = useState(false);
@@ -64,14 +61,14 @@ export function PropertyCheckReport({ check }: { check: PropertyCheckRecord }) {
           </span>
           {ready ? (
             <>
-              <button type="button" className={ghostButtonClass} onClick={() => void copySummary()}>
+              <Button type="button" variant="ghost-pill" size="pill" onClick={() => void copySummary()}>
                 <Copy aria-hidden size={14} />
                 {copied ? "Copied" : "Copy summary"}
-              </button>
-              <button type="button" className={inkButtonClass} onClick={() => window.print()}>
+              </Button>
+              <Button type="button" size="pill" onClick={() => window.print()}>
                 <Printer aria-hidden size={14} />
                 Print / PDF
-              </button>
+              </Button>
             </>
           ) : null}
         </div>

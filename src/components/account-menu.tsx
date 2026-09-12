@@ -4,6 +4,7 @@ import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { purgeLocalReadModels } from "@/lib/read-models/browser-store";
 
@@ -34,9 +35,9 @@ export function AccountMenu({ email, name, role }: AccountMenuProps) {
           {role} - {email}
         </span>
       </div>
-      <button className="icon-button" type="button" onClick={signOut} disabled={isSigningOut} aria-label="Log out">
+      <Button variant="ghost" size="icon-sm" type="button" onClick={signOut} disabled={isSigningOut} aria-label="Log out">
         <LogOut aria-hidden size={18} />
-      </button>
+      </Button>
     </div>
   );
 }

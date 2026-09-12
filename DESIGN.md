@@ -59,6 +59,12 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 ## Components
 
 - **Reuse the shared vocabulary.** src/components/ui/ is the shared vocabulary for buttons, cards, dialogs, sheets, tables, selects, inputs and navigation. Build from it before creating anything new.
+- **Every button is the CTA.** One button exists on the customer surface: the Blockwise CTA in src/components/ui/button.tsx. A text button renders a full pill in ink with a circular disc on the trailing edge carrying an up-right arrow; the disc is the inverse of the pill (a cta-foreground circle with an ink arrow), sized `height − 6px` so a 3px ink ring is visible at every size. On the quiet variants the disc takes a soft ink wash, because a white disc on a near-white surface disappears. Icon-only controls render the pill with no disc. `arrow={null}` or `disc="none"` removes the disc for a control that is genuinely not a CTA, and `variant="link"` is never a pill.
+- **The CTA variant ladder.** `default` is the ink pill with the disc and is the only primary action on a screen. `outline` is the same pill in surface white with a Control Line boundary, for the secondary action beside it. `ghost` and `ghost-pill` are quiet toolbar and page-head controls. `destructive` stays on the ink pill with error text. Never hand-roll a button, a pill-shaped link or a second primary action; `<Button asChild>` wraps a link and renders it as the same CTA.
+- **CTA colour has one source.** `--ui-cta`, `--ui-cta-foreground` and `--ui-cta-soft` in src/app/tailwind.css bridge onto the ink accent, and theme-monochrome.css restates `--ui-cta` and `--ui-cta-soft` beside the `--accent` they follow. The disc colours are set on the button, never restated per call site.
+- **CTA motion is contained.** On hover the disc's arrow turns 45 degrees to point up and the disc lifts a touch, both transform-only over 500ms, and both still under reduced motion. Nothing in the CTA changes the pill's width or height on hover or focus, so a row of actions cannot shift under the pointer.
+- **The CTA survives the legacy sheets.** `audit.css` and `suburb-report.css` are unlayered, so their `.audit-page a` and `.sr-page button` element rules outrank every Tailwind utility. Their resets exclude the CTA's `bw-cta` marker class, which travels in `className` because that is the one prop every wrapper component forwards. A wrapper that renders its own element must forward the rest of its props, or the CTA loses the markers and padding the button merges onto it.
+- **Every button is a real control.** The CTA renders a `<button>` with its own type, or the caller's link, and never a clickable `div`. Keep accessible names, `aria-pressed`, `aria-expanded` and disabled state on it.
 - **Hierarchy before containers.** Use sections, rows, hairlines and disclosures before rounded cards or chart scaffolds. Keep Home flat by default, with one named exception: the weekly metrics row below.
 - **The weekly metrics row is Home's only card row.** The four trailing-week figures — spend, link clicks, cost per link click and leads — each render in the shared KPI card surface: `rounded-(--r-card)`, `border-(--line)`, `bg-card`, `shadow-card`, with that figure's sparkline and prior-week comparison inside its own card. Two cards across on a phone, one row of four from `lg`, because the sidebar takes its width before that. Leads, local ads and everything else on Home stay flat: sections, rows and hairlines.
 - **Every figure card draws its own week, or says why it cannot.** A figure's line comes from the days it could measure: a day with no clicks contributes no cost per click to that line rather than dropping the week's shape, and fewer than two measured days draws nothing. A demo fixture whose figure never moves is a fixture that needs fixing, not a chart to fake.
@@ -104,6 +110,14 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
   phone and one row on desktop; cost per link click now draws a line from the
   days that had clicks, and the demo fixture's cost per click moves day to day
   instead of sitting perfectly flat.
+- 2026-09-12: one button on the customer surface. src/components/ui/button.tsx
+  now renders the CTA itself: an ink pill with a trailing circular disc carrying
+  the up-right arrow, added automatically to every text button and link CTA, and
+  omitted for icon-only controls. Added `--ui-cta` / `--ui-cta-foreground` /
+  `--ui-cta-soft` tokens and the `bw-cta` marker that exempts the CTA from the
+  unlayered audit and suburb-report element resets, grew the size scale to `lg`
+  48px / `default` 40px / `sm` 32px, and replaced the per-surface pills and the
+  separate `ButtonArrow` markup.
 - 2026-09-12: Home's weekly metrics moved into the shared KPI card surface, the
   duplicate demo badge beside the heading was removed in favour of the one note
   under the figures, and Home's local-ads list became Ad Radar results keyed on

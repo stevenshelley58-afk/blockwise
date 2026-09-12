@@ -7,6 +7,7 @@ import { type FormEvent, useMemo, useState } from "react";
 import { ButtonSpinner } from "@/components/app/button-spinner";
 import { hasTurnstileSiteKey, TurnstileVerification } from "@/components/auth/turnstile-verification";
 import { SSOButtons } from "@/components/auth/sso-buttons";
+import { Button } from "@/components/ui/button";
 import { HOME_PATH } from "@/lib/auth/home";
 import { testUsers } from "@/lib/auth/test-users";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -125,15 +126,14 @@ export function LoginForm({ showTestProfiles = false, testProfilePassword = "" }
           onError={() => setError("Verification failed. Please try again.")}
         />
         {error ? <p className="form-error" id="login-error" role="alert">{error}</p> : null}
-        <button
-          className="button"
+        <Button
           type="submit"
           disabled={isSubmitting}
           aria-busy={isSubmitting || undefined}
         >
           {isSubmitting ? <ButtonSpinner size={16} label="Signing in" /> : null}
           {isSubmitting ? "Signing in…" : "Sign in"}
-        </button>
+        </Button>
       </form>
     </div>
   );

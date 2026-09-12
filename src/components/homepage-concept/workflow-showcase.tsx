@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ArrowRight,
   Check,
   Globe2,
   MessageCircle,
@@ -13,6 +12,7 @@ import {
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { creativeImageSrcSet } from "@/lib/homepage-concept/creative-image";
 import { AD_EXAMPLES, AD_LIBRARY, withBasePath } from "@/lib/homepage-concept/content";
 
@@ -786,10 +786,9 @@ export function WorkflowShowcase() {
         </motion.h2>
 
         <motion.div className="hc-process-actions" variants={COPY_ITEM}>
-          <a className="hc-button hc-button--primary" href="#trial">
-            Start free trial
-            <ArrowRight aria-hidden="true" size={17} />
-          </a>
+          <Button asChild size="lg" className="max-[600px]:w-full">
+            <a href="#trial">Start free trial</a>
+          </Button>
           <small className="hc-process-note">Free trial · No card required · Cancel anytime</small>
         </motion.div>
       </motion.div>

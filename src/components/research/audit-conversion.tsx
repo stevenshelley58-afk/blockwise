@@ -3,7 +3,9 @@
 import { trackMarketingEvent } from "@/lib/analytics/marketing";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
+
+import { Button } from "@/components/ui/button";
 
 type AnalyticsProps = Record<string, string | number | boolean>;
 
@@ -35,6 +37,12 @@ export function AuditAnalytics({ data }: { data: AnalyticsProps }) {
   return null;
 }
 
+/*
+ * Both tracked links render their own element, so they forward the rest of their
+ * props through. `<Button asChild>` merges the pill's data attributes and padding
+ * onto whichever element it wraps, and dropping them here would leave the anchor
+ * with the CTA classes but none of the markers this page's unlayered resets test.
+ */
 /** In-page anchor that fires a tracking event on click. */
 export function TrackedAnchor({
   href,
@@ -42,15 +50,16 @@ export function TrackedAnchor({
   data,
   className,
   children,
+  ...rest
 }: {
   href: string;
   event: string;
   data?: AnalyticsProps;
   className?: string;
   children: ReactNode;
-}) {
+} & Omit<ComponentProps<"a">, "href" | "className" | "children" | "onClick">) {
   return (
-    <a href={href} className={className} onClick={() => fire(event, data)}>
+    <a href={href} className={className} onClick={() => fire(event, data)} {...rest}>
       {children}
     </a>
   );
@@ -63,15 +72,16 @@ export function AuditCtaButton({
   data,
   className,
   children,
+  ...rest
 }: {
   href: string;
   event?: string;
   data?: AnalyticsProps;
   className?: string;
   children: ReactNode;
-}) {
+} & Omit<ComponentProps<typeof Link>, "href" | "className" | "children" | "onClick">) {
   return (
-    <Link href={href} className={className} onClick={() => fire(event, data)}>
+    <Link href={href} className={className} onClick={() => fire(event, data)} {...rest}>
       {children}
     </Link>
   );
@@ -166,13 +176,14 @@ export function MobileCta({
   if (hidden) return null;
   return (
     <div className="mobile-cta">
-      <a
-        className="lp-btn lp-btn-primary lp-btn-wide"
-        href={href}
-        onClick={() => fire("primary_cta_clicked", { ...data, placement: "mobile_sticky" })}
-      >
-        {label}
-      </a>
+      <Button asChild className="w-full">
+        <a
+          href={href}
+          onClick={() => fire("primary_cta_clicked", { ...data, placement: "mobile_sticky" })}
+        >
+          {label}
+        </a>
+      </Button>
     </div>
   );
 }

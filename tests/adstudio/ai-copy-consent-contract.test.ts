@@ -24,6 +24,10 @@ test("copy changes happen only through explicit field or apply-all actions", () 
   assert.match(source, /onClick=\{onUseAll\}[^>]*>Use all/);
   assert.match(source, /onUse=\{\(\) => onUseText\(key, value\)\}/);
   assert.match(source, /onUse=\{\(\) => onUseMeta\(field, value\)\}/);
-  assert.match(source, /function ProposalRow[\s\S]*onClick=\{onUse\}[^>]*>Use<\/button>/);
-  assert.match(source, /onClick=\{onUseAll\} className="min-h-11/);
+  // The per-field control is the shared CTA now, so the guard reads the button
+  // element rather than the raw tag: the row still offers only an explicit Use.
+  assert.match(source, /function ProposalRow[\s\S]*?<Button[\s\S]*?onClick=\{onUse\}[^>]*>Use<\/Button>/);
+  // Apply-all is the shared CTA too, still full width on a phone.
+  assert.match(source, /<Button[\s\S]*?onClick=\{onUseAll\}[\s\S]*?>Use all<\/Button>/);
+  assert.match(source, /className="w-full sm:w-auto">Use all<\/Button>/);
 });

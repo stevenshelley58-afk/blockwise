@@ -3,6 +3,8 @@
 import { Download, Loader2, X } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
+import { Button } from "@/components/ui/button";
+
 const READY_EVENT = "blockwise:audit-suggestions-ready";
 
 type AuditPdfButtonProps = {
@@ -78,17 +80,17 @@ export function AuditPdfButton({ location, className, label = "Download PDF repo
 
   return (
     <>
-      <button type="button" className={className ?? "lp-btn lp-btn-primary"} onClick={() => setOpen(true)} disabled={!ready} data-audit-pdf>
+      <Button type="button" className={className} onClick={() => setOpen(true)} disabled={!ready} data-audit-pdf>
         {ready ? <Download size={16} aria-hidden /> : <Loader2 size={16} aria-hidden className="audit-spin" />}
         {ready ? label : "Preparing report…"}
-      </button>
+      </Button>
 
       {open ? (
         <div className="audit-modal-overlay" onMouseDown={(event) => event.target === event.currentTarget && setOpen(false)}>
           <div className="audit-modal" role="dialog" aria-modal="true" aria-labelledby="audit-modal-title">
-            <button type="button" className="audit-modal-close" onClick={() => setOpen(false)} aria-label="Close">
+            <Button type="button" variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close">
               <X size={18} aria-hidden />
-            </button>
+            </Button>
             <p className="audit-modal-kicker">Free PDF report</p>
             <h3 id="audit-modal-title">Where should we send your audit?</h3>
             <p className="audit-modal-sub">
@@ -109,10 +111,10 @@ export function AuditPdfButton({ location, className, label = "Download PDF repo
               </label>
               <input type="text" name="company_website" tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }} />
               {error ? <p className="audit-modal-error">{error}</p> : null}
-              <button type="submit" className="lp-btn lp-btn-primary lp-btn-wide" disabled={submitting}>
+              <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting ? <Loader2 size={16} aria-hidden className="audit-spin" /> : <Download size={16} aria-hidden />}
                 {submitting ? "Preparing…" : "Get the PDF"}
-              </button>
+              </Button>
               <p className="audit-modal-fineprint">
                 We&rsquo;ll open your browser&rsquo;s print dialog — choose &ldquo;Save as PDF&rdquo;. By continuing you agree to be contacted about Blockwise.
               </p>

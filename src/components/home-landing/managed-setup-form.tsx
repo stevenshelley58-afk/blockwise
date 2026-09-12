@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { trackLead } from "@/lib/analytics/pixel";
 
 type Status = "idle" | "submitting" | "success" | "error";
@@ -199,10 +200,9 @@ export function ManagedSetupForm({ idPrefix, variant }: ManagedSetupFormProps) {
             {error}
           </p>
         ) : null}
-        <button type="submit" className="hw-btn hw-btn--dark hwm-ms-submit" disabled={status === "submitting"}>
-          {status === "submitting" ? "Sending…" : "Book a 15-minute walkthrough"}{" "}
-          <span className="hw-arr">→</span>
-        </button>
+        <Button type="submit" size="lg" className="hwm-ms-submit" disabled={status === "submitting"}>
+          {status === "submitting" ? "Sending…" : "Book a 15-minute walkthrough"}
+        </Button>
         <div className="hwm-ms-fineprint">No obligation. We&rsquo;ll never share your details.</div>
       </form>
     );
@@ -232,10 +232,9 @@ export function ManagedSetupForm({ idPrefix, variant }: ManagedSetupFormProps) {
         </p>
       ) : null}
       <div className="hw-ms-actions">
-        <button type="submit" className="hw-btn hw-btn--dark hw-ms-submit" disabled={status === "submitting"}>
-          {status === "submitting" ? "Sending…" : "Book a 15-minute walkthrough"}{" "}
-          <span className="hw-arr">→</span>
-        </button>
+        <Button type="submit" size="lg" className="hw-ms-submit" disabled={status === "submitting"}>
+          {status === "submitting" ? "Sending…" : "Book a 15-minute walkthrough"}
+        </Button>
         <span className="hw-ms-fineprint">No obligation. We&rsquo;ll never share your details.</span>
       </div>
     </form>

@@ -24,7 +24,10 @@ test("customer mobile navigation keeps the five permanent destinations", () => {
 });
 
 test("mobile navigation is one customer bar in every workspace", () => {
-  assert.doesNotMatch(mobileNav, /variant/);
+  // The bar itself has no per-workspace variant. The shared Button's own
+  // `variant` prop is not one: the More sheet's actions use it to pick a
+  // treatment, and no `variant` value can select a destination.
+  assert.doesNotMatch(mobileNav, /variant\s*=\s*["']/);
   assert.doesNotMatch(mobileNav, /monitorItems|itemsForVariant/);
   assert.match(mobileNav, /const allItems = navByVariant\.self_serve/);
   assert.equal(canAccessSurface({ role: "owner", workspaceMode: "monitor" }, "self_serve"), true);

@@ -1,6 +1,8 @@
 import { ArrowRight, Check, ChevronDown } from "lucide-react";
 import Link from "next/link";
 
+import { Button } from "@/components/ui/button";
+
 export type ActivationCardData = {
   activation: {
     currentStage: string;
@@ -75,10 +77,12 @@ export function ActivationCard({ data }: { data: ActivationCardData }) {
         </div>
       ) : null}
 
-      <Link href={ctaHref} className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-(--r-ctl) bg-primary px-5 text-[15px] font-bold text-primary-foreground md:w-auto md:min-w-[240px] transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-        {ctaLabel}
-        <ArrowRight size={15} aria-hidden />
-      </Link>
+      <Button asChild size="lg" className="mt-4 w-full md:w-auto md:min-w-[240px]">
+        <Link href={ctaHref}>
+          {ctaLabel}
+          <ArrowRight size={15} aria-hidden />
+        </Link>
+      </Button>
 
       <details className="group mt-5 border-t border-(--line) pt-2">
         <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-[12.5px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">

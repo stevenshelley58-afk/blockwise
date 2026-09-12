@@ -4,6 +4,7 @@ import { Check, ChevronRight } from "lucide-react";
 import { motion } from "motion/react";
 
 import { CtaLink } from "@/components/landing/cta-link";
+import { Button } from "@/components/ui/button";
 import { entrance, useReducedMotion } from "@/lib/motion";
 
 const PLAN_SUMMARY = [
@@ -173,17 +174,16 @@ export function MarketPricing() {
               </ul>
               <p className="pricing-summary-terms">{plan.terms}</p>
               <div className="pricing-summary-actions">
-                <CtaLink
-                  location={plan.cta.location}
-                  href={plan.cta.href}
-                  className={
-                    plan.featured
-                      ? "hw-btn hw-btn--dark"
-                      : "hw-btn hw-btn--outline"
-                  }
+                <Button
+                  asChild
+                  size="lg"
+                  variant={plan.featured ? "default" : "outline"}
+                  className="w-full"
                 >
-                  {plan.cta.label}
-                </CtaLink>
+                  <CtaLink location={plan.cta.location} href={plan.cta.href}>
+                    {plan.cta.label}
+                  </CtaLink>
+                </Button>
                 <a
                   className="pricing-details-link"
                   href={`#${plan.id}-details`}
@@ -234,18 +234,19 @@ export function MarketPricing() {
                 ))}
               </dl>
               <div className="pricing-detail-actions">
-                <a
-                  className="hw-btn hw-btn--dark"
-                  href={
-                    section.id === "managed-details"
-                      ? "/#managed-setup"
-                      : "/signup?offer=self-serve"
-                  }
-                >
-                  {section.id === "managed-details"
-                    ? "Book a call"
-                    : "Start free"}
-                </a>
+                <Button asChild size="lg">
+                  <a
+                    href={
+                      section.id === "managed-details"
+                        ? "/#managed-setup"
+                        : "/signup?offer=self-serve"
+                    }
+                  >
+                    {section.id === "managed-details"
+                      ? "Book a call"
+                      : "Start free"}
+                  </a>
+                </Button>
               </div>
             </article>
           ))}

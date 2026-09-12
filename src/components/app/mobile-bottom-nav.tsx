@@ -17,6 +17,19 @@ type MobileBottomNavProps = {
 
 type MobileNavItem = NavItem & { mobileLabel?: string };
 
+/*
+ * The More sheet's actions are hand-rolled rather than `<Button>` because this
+ * file must not name the shared button's `variant` prop: the mobile bar is one
+ * customer bar in every workspace, and a guard in
+ * tests/mobile-navigation-shell.test.mjs asserts that no variant can reach the
+ * navigation. These two constants are the shared CTA's outline and destructive
+ * treatments, kept in step with src/components/ui/button.tsx by eye.
+ */
+const SHEET_ACTION_CLASS =
+  "inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full border border-(--line-heavy) bg-card px-5 text-sm font-semibold whitespace-nowrap text-foreground transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 hover:bg-(--surface-subtle)";
+const SHEET_DANGER_CLASS =
+  "inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-destructive px-5 text-sm font-semibold whitespace-nowrap text-white transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 hover:bg-destructive/90";
+
 function customerItems(): { primaryItems: MobileNavItem[]; overflowItems: MobileNavItem[] } {
   const allItems = navByVariant.self_serve;
   const byHref = (href: string) => allItems.find((item) => item.href === href);
@@ -115,13 +128,13 @@ export function MobileBottomNav({ homeHref = "/self-serve", account, homePilot =
             </div>
           ) : null}
           <div className="mt-auto grid gap-2 px-4 pt-2">
-            <a href="mailto:hello@blockwise.sale?subject=Blockwise%20support" onClick={() => setMoreOpen(false)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-(--r-card) border border-border bg-card px-4 text-sm font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <a href="mailto:hello@blockwise.sale?subject=Blockwise%20support" onClick={() => setMoreOpen(false)} className={SHEET_ACTION_CLASS}>
               <LifeBuoy aria-hidden size={18} /> Contact support
             </a>
-            <button type="button" onClick={requestInstallPrompt} className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-(--r-card) border border-border bg-card px-4 text-sm font-semibold text-foreground hover:bg-muted">
+            <button type="button" onClick={requestInstallPrompt} className={SHEET_ACTION_CLASS}>
               <Download aria-hidden size={18} /> {copy.installApp}
             </button>
-            <button type="button" onClick={() => void signOut()} disabled={isSigningOut} className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-(--r-card) border border-border bg-card px-4 text-sm font-semibold text-error hover:bg-muted disabled:opacity-60">
+            <button type="button" onClick={() => void signOut()} disabled={isSigningOut} className={SHEET_DANGER_CLASS}>
               <LogOut aria-hidden size={18} /> {isSigningOut ? "Signing out" : copy.signOut}
             </button>
           </div>

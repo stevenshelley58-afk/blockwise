@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { CtaLink } from "@/components/landing/cta-link";
 import { SignInLink } from "@/components/landing/sign-in-link";
+import { Button } from "@/components/ui/button";
 
 /** N9 edge-aligned minimal header — static, hairline bottom, no hamburger. */
 export function SiteHeader() {
@@ -19,9 +20,11 @@ export function SiteHeader() {
         </nav>
         <div className="hw-header-actions">
           <SignInLink className="hw-login" />
-          <CtaLink location="header" href="/signup" className="hw-btn hw-btn--dark">
-            Free trial
-          </CtaLink>
+          <Button asChild size="lg" variant="outline">
+            <CtaLink location="header" href="/signup">
+              Free trial
+            </CtaLink>
+          </Button>
         </div>
       </div>
     </header>
@@ -34,9 +37,11 @@ export function SiteFooter() {
     <footer className="hw-footer">
       <div className="hw-wide hw-footer-statement-block">
         <p className="hw-footer-statement">Your competitors are advertising. Are you?</p>
-        <CtaLink location="footer" href="/signup" className="hw-btn hw-btn--light">
-          Start free trial <span className="hw-arr">→</span>
-        </CtaLink>
+        <Button asChild size="lg" variant="outline">
+          <CtaLink location="footer" href="/signup">
+            Start free trial
+          </CtaLink>
+        </Button>
       </div>
       <div className="hw-wide">
         <div className="hw-footer-rule" aria-hidden />

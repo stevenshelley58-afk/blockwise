@@ -5,6 +5,7 @@ import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import Image from "next/image";
 
 import { CtaLink } from "@/components/landing/cta-link";
+import { Button } from "@/components/ui/button";
 
 import { START_TEMPLATES } from "./data";
 import { FbAdCard } from "./fb-ad-card";
@@ -135,13 +136,11 @@ export function StartStudio() {
                 </motion.div>
               </AnimatePresence>
 
-              <CtaLink
-                location="start_studio"
-                href="/signup"
-                className="hw-btn hw-btn--dark hw-studio-cta"
-              >
-                Create three ads free <span className="hw-arr">→</span>
-              </CtaLink>
+              <Button asChild size="lg" className="hw-studio-cta">
+                <CtaLink location="start_studio" href="/signup">
+                  Create three ads free
+                </CtaLink>
+              </Button>
               <p className="hw-note">Nothing spends until you approve.</p>
             </motion.div>
           </div>

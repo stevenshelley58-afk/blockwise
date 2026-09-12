@@ -4,6 +4,8 @@ import { trackMarketingEvent } from "@/lib/analytics/marketing";
 
 import { useRef, useState, type FormEvent } from "react";
 
+import { Button } from "@/components/ui/button";
+
 type Metrics = {
   detected: number;
   active: number;
@@ -78,7 +80,9 @@ export function AuditLeadForm({ area, label, signupHref, metrics, analytics }: A
       <div className="audit-lead-done">
         <h3>Your {area} campaign plan is on the way.</h3>
         <p>Check your inbox shortly. Want to start building it now?</p>
-        <a className="lp-btn lp-btn-primary lp-btn-big" href={signupHref} onClick={() => fireSafe("signup_clicked", analytics)}>Start your free trial</a>
+        <Button asChild size="lg">
+          <a href={signupHref} onClick={() => fireSafe("signup_clicked", analytics)}>Start your free trial</a>
+        </Button>
       </div>
     );
   }
@@ -124,9 +128,9 @@ export function AuditLeadForm({ area, label, signupHref, metrics, analytics }: A
         style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
       />
       {error ? <p className="audit-lead-error">{error}</p> : null}
-      <button className="lp-btn lp-btn-primary lp-btn-big lp-btn-wide" type="submit" disabled={submitting}>
+      <Button className="w-full" type="submit" disabled={submitting}>
         {submitting ? "Sending..." : `Send my ${area} campaign plan`}
-      </button>
+      </Button>
       <p className="fine-print">No spam. We email the plan and follow up about a trial or a 15-minute setup call.</p>
     </form>
   );

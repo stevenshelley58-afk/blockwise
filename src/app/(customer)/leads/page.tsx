@@ -3,6 +3,7 @@ import { Clock } from "lucide-react";
 
 import { LeadStats } from "@/components/leads/lead-stats";
 import { LeadsTable, type LeadListItem } from "@/components/leads/leads-table";
+import { Button } from "@/components/ui/button";
 import { niche } from "@/config/niche";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { listLeadRowsWithDedupe } from "@/lib/operator/overview";
@@ -94,13 +95,13 @@ export default async function LeadsPage() {
           {/* Only an owner or admin can share the business's Meta assets, so
               other members get the next safe action instead of a dead end. */}
           {canManageMeta ? (
-            <Link href="/connect-meta" className="mt-5 inline-flex h-10 items-center rounded-full bg-(--ink) px-5 text-[13px] font-bold text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.97]">
-              {copy.disconnected.connectCta}
-            </Link>
+            <Button asChild className="mt-5">
+              <Link href="/connect-meta">{copy.disconnected.connectCta}</Link>
+            </Button>
           ) : (
-            <Link href="/help" className="mt-5 inline-flex h-10 items-center rounded-full bg-(--ink) px-5 text-[13px] font-bold text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.97]">
-              Ask an owner or admin to share Meta access
-            </Link>
+            <Button asChild className="mt-5">
+              <Link href="/help">Ask an owner or admin to share Meta access</Link>
+            </Button>
           )}
         </section>
       ) : (

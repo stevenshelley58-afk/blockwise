@@ -3,6 +3,7 @@
 import { ExternalLink, Search, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
+import { Button } from "@/components/ui/button";
 import type { PublicAdRadarCard, PublicAdRadarResponse, PublicAdRadarSort } from "@/lib/research/public-ad-radar";
 
 type PublicAdRadarDialogProps = {
@@ -136,9 +137,9 @@ export function PublicAdRadarDialog({ location, open, onClose }: PublicAdRadarDi
               {loadingMore ? " while more results load." : finishedLoading ? "." : "."}
             </p>
           </div>
-          <button className="lp-adlib-close" onClick={onClose} ref={closeButtonRef} type="button" aria-label="Close ad results">
+          <Button variant="ghost" size="icon" onClick={onClose} ref={closeButtonRef} type="button" aria-label="Close ad results">
             <X size={18} aria-hidden />
-          </button>
+          </Button>
         </header>
 
         <div className="lp-adlib-tools" aria-label="Filter ad results">
@@ -214,9 +215,9 @@ export function PublicAdRadarDialog({ location, open, onClose }: PublicAdRadarDi
 
         <footer className="lp-adlib-foot">
           <span>{loadingMore ? "Loading more scraped ads in the background..." : "Create an account to save ads and turn an angle into a campaign."}</span>
-          <a className="lp-btn lp-btn-primary" href={signupHref({ location: locationLabel })}>
-            Start from this market
-          </a>
+          <Button asChild className="max-[720px]:w-full">
+            <a href={signupHref({ location: locationLabel })}>Start from this market</a>
+          </Button>
         </footer>
       </div>
     </div>
@@ -283,9 +284,9 @@ function PublicAdCard({ card, location }: { card: PublicAdRadarCard; location: s
         </div>
       ) : null}
 
-      <a className="lp-adlib-angle" href={signupHref({ location, card })}>
-        Use this angle
-      </a>
+      <Button asChild className="m-3.5">
+        <a href={signupHref({ location, card })}>Use this angle</a>
+      </Button>
     </article>
   );
 }

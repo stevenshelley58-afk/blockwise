@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight, Volume2, VolumeX, X } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+
 /*
  * Fullscreen creative viewer.
  *
@@ -260,22 +262,24 @@ function PageButton({ side, onClick }: { side: "left" | "right"; onClick: () => 
 }
 
 function ActionButton({ action, tone }: { action: CreativeViewerAction; tone: "primary" | "secondary" }) {
-  const className = `inline-flex h-11 flex-1 cursor-pointer items-center justify-center rounded-full px-4 text-[13.5px] font-extrabold transition-opacity duration-150 hover:opacity-90 disabled:cursor-default disabled:opacity-50 ${
-    tone === "primary" ? "bg-white text-(--ink)" : "bg-white/14 text-white"
-  }`;
+  // The viewer is a dark overlay, so the primary action is the light pill from
+  // the CTA ladder and the secondary one stays quiet beside it.
+  const variant = tone === "primary" ? "outline" : "ghost";
 
   if (action.href) {
     const external = /^https?:/iu.test(action.href);
     return (
-      <a className={className} href={action.href} {...(external ? { target: "_blank", rel: "noreferrer" } : {})}>
-        {action.label}
-      </a>
+      <Button asChild variant={variant} className="h-11 flex-1">
+        <a href={action.href} {...(external ? { target: "_blank", rel: "noreferrer" } : {})}>
+          {action.label}
+        </a>
+      </Button>
     );
   }
 
   return (
-    <button type="button" className={className} onClick={action.onClick} disabled={action.disabled}>
+    <Button type="button" variant={variant} className="h-11 flex-1" onClick={action.onClick} disabled={action.disabled}>
       {action.label}
-    </button>
+    </Button>
   );
 }

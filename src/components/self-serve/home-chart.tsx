@@ -21,6 +21,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { Button } from "@/components/ui/button";
 import { niche } from "@/config/niche";
 
 export type HomeDailyPoint = { date: string; leads: number };
@@ -72,12 +73,9 @@ export function HomePerformanceChart({ daily }: { daily: HomeDailyPoint[] | null
           </h2>
           <p className="mt-0.5 text-[12.5px] text-muted-foreground">{copy.subtitle}</p>
         </div>
-        <Link
-          href="/results"
-          className="inline-flex h-9 shrink-0 cursor-pointer items-center rounded-full border border-(--line-heavy) bg-card px-3.5 text-[12.5px] font-bold text-foreground transition-[background,box-shadow] duration-150 hover:bg-(--surface-subtle) hover:shadow-card"
-        >
-          {copy.viewPerformance}
-        </Link>
+        <Button asChild variant="ghost-pill" size="pill" className="shrink-0">
+          <Link href="/results">{copy.viewPerformance}</Link>
+        </Button>
       </div>
 
       <div className="px-5 pt-4 pb-5 md:px-[22px]">

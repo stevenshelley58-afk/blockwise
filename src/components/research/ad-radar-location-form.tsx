@@ -3,6 +3,7 @@
 import { MapPin, Search, Users } from "lucide-react";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { niche } from "@/config/niche";
 import type { AdRadarSearchSuggestion } from "@/lib/research/ad-radar-search-suggestions";
 
@@ -322,18 +323,24 @@ export function AdRadarLocationForm({
           {note}
         </p>
       ) : null}
-      <button
-        className={
-          isLanding
-            ? "lp-btn lp-btn-primary lp-btn-wide"
-            : "inline-flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-(--ink) px-5 text-[13px] font-bold text-white transition-[opacity,transform] duration-150 hover:opacity-85 active:scale-[0.97] disabled:cursor-default disabled:opacity-50"
-        }
-        disabled={isSubmitting}
-        type="submit"
-      >
-        <Search size={14} aria-hidden />
-        {isSubmitting ? "Scanning..." : buttonLabel}
-      </button>
+      {isLanding ? (
+        <button
+          className="lp-btn lp-btn-primary lp-btn-wide"
+          disabled={isSubmitting}
+          type="submit"
+        >
+          <Search size={14} aria-hidden />
+          {isSubmitting ? "Scanning..." : buttonLabel}
+        </button>
+      ) : (
+        <Button
+          disabled={isSubmitting}
+          type="submit"
+        >
+          <Search size={14} aria-hidden />
+          {isSubmitting ? "Scanning..." : buttonLabel}
+        </Button>
+      )}
     </form>
   );
 }

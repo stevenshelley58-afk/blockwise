@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { Button } from "@/components/ui/button";
+
 /*
  * Root 404. Rendered on every surface including customer routes, so it is
  * built on the token bridge rather than globals.css — `.tw` supplies the
@@ -15,18 +17,12 @@ export default function NotFoundPage() {
         </h1>
         <p className="mt-1.5 text-[13.5px] text-muted-foreground">The link you followed might be broken, or the page may have moved.</p>
         <div className="mt-6 flex flex-wrap gap-2.5">
-          <Link
-            href="/"
-            className="inline-flex min-h-11 items-center rounded-full bg-(--ink) px-5 text-[13px] font-bold text-white shadow-card transition-colors duration-150 hover:bg-(--accent-strong)"
-          >
-            Back to home
-          </Link>
-          <Link
-            href="/self-serve"
-            className="inline-flex min-h-11 items-center rounded-full border border-(--line-heavy) bg-(--surface) px-5 text-[13px] font-bold text-foreground transition-colors duration-150 hover:bg-(--surface-subtle)"
-          >
-            Go to dashboard
-          </Link>
+          <Button asChild>
+            <Link href="/">Back to home</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/self-serve">Go to dashboard</Link>
+          </Button>
         </div>
       </section>
     </main>

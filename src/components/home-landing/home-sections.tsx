@@ -2,6 +2,7 @@ import { Fragment, type CSSProperties } from "react";
 
 import { CtaLink } from "@/components/landing/cta-link";
 import { InView } from "@/components/motion";
+import { Button } from "@/components/ui/button";
 
 import {
   CHART_POINTS,
@@ -136,13 +137,11 @@ export function WorkflowBand() {
               </div>
             ))}
           </dl>
-          <CtaLink
-            location="done_for_you_approve"
-            href="/signup"
-            className="hw-btn hw-btn--dark hw-wf-approve"
-          >
-            Approve
-          </CtaLink>
+          <Button asChild size="lg" className="hw-wf-approve">
+            <CtaLink location="done_for_you_approve" href="/signup">
+              Approve
+            </CtaLink>
+          </Button>
           <p className="hw-note">Nothing spends before approval.</p>
         </div>
       </InView>
@@ -178,9 +177,11 @@ export function ControlFold() {
               <span className="hw-dash-title">Control dashboard</span>
               <span className="hw-dash-sub">Every ad in one place · Example data</span>
             </span>
-            <CtaLink location="control_dashboard" href="/signup" className="hw-btn hw-btn--light">
-              Create ad
-            </CtaLink>
+            <Button asChild size="lg" variant="outline">
+              <CtaLink location="control_dashboard" href="/signup">
+                Create ad
+              </CtaLink>
+            </Button>
           </div>
           <div className="hw-dash-chart">
             <div className="hw-dash-chart-labels">
@@ -352,9 +353,11 @@ export function FreeTrial() {
         Start with only your email — no card required. Build and review three Feed + Story ad packs
         before connecting Meta.
       </p>
-      <CtaLink location="free_trial" href="/signup" className="hw-btn hw-btn--dark">
-        Continue with email <span className="hw-arr">→</span>
-      </CtaLink>
+      <Button asChild size="lg">
+        <CtaLink location="free_trial" href="/signup">
+          Continue with email
+        </CtaLink>
+      </Button>
       <div className="hw-trial-facts">
         <div className="hw-trial-fact">
           <h3>Three complete ads</h3>

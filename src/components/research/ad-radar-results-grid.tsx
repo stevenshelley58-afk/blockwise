@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 
 import { displayDomain, MetaAdLibraryCard } from "@/components/research/meta-ad-library-card";
 import { formatLabel, MetaAdTile, runLabel } from "@/components/research/meta-ad-tile";
+import { Button } from "@/components/ui/button";
 import { CreativeViewer, type CreativeViewerItem } from "@/components/ui/creative-viewer";
 import type { CustomerMetaAdLibraryCard } from "@/lib/research/customer-meta-card";
 
@@ -114,13 +115,14 @@ export function AdRadarResultsGrid({ cards }: { cards: CustomerMetaAdLibraryCard
       />
       {remaining > 0 ? (
         <div ref={sentinelRef} className="flex justify-center pt-2 pb-1">
-          <button
-            className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border border-(--line-heavy) bg-card px-3.5 text-[12.5px] font-bold text-foreground transition-[background,box-shadow] duration-150 hover:bg-(--surface-subtle) hover:shadow-card"
+          <Button
+            variant="ghost-pill"
+            size="pill"
             type="button"
             onClick={() => setVisibleCount((current) => Math.min(current + BATCH_SIZE, cards.length))}
           >
             Show more ({remaining} remaining)
-          </button>
+          </Button>
         </div>
       ) : null}
     </>

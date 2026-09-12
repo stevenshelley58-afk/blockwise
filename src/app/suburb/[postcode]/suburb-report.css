@@ -17,8 +17,12 @@
 body:has(.sr-page) { background: var(--sr-bg); }
 .sr-page *, .sr-page *::before, .sr-page *::after { box-sizing: border-box; }
 .sr-page :focus-visible { outline: 3px solid rgba(49,95,155,.45); outline-offset: 3px; }
-.sr-page a { color: inherit; text-decoration: none; }
-.sr-page button, .sr-page input { font: inherit; }
+/* Link and control resets for this page's own markup. This sheet is unlayered,
+   so an element rule here outranks every Tailwind utility; the shared Button
+   renders as an anchor or a button here and carries its own label colour and
+   type ramp, so it is excluded from both. */
+.sr-page :where(a):not(.bw-cta) { color: inherit; text-decoration: none; }
+.sr-page :where(button, input):not(.bw-cta) { font: inherit; }
 .sr-shell, .sr-topbar-inner { width: min(1120px, calc(100% - 40px)); margin-inline: auto; }
 .sr-topbar { position: sticky; top: 0; z-index: 20; border-bottom: 1px solid var(--sr-hairline); background: rgba(255,255,255,.96); }
 .sr-topbar-inner { min-height: 64px; display: flex; align-items: center; gap: 14px; }
@@ -99,7 +103,9 @@ body:has(.sr-page) { background: var(--sr-bg); }
 .sr-cta-band li { margin-top: 8px; }
 .sr-cta-band li::before { content: "✓"; margin-right: 10px; color: #74a9eb; }
 .sr-cta-actions { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 13px; }
-.sr-cta-actions > button { border: 0; padding: 0; background: none; color: #fff; cursor: pointer; text-decoration: underline; }
+/* The underline-text button this band was built around. The shared Button is
+   excluded: it brings its own surface, padding and label colour. */
+.sr-cta-actions > button:not(.bw-cta) { border: 0; padding: 0; background: none; color: #fff; cursor: pointer; text-decoration: underline; }
 .sr-cta-actions small { color: #9eabb9; font-size: 10px; }
 .sr-empty { max-width: 720px; margin: 20px 0 90px; padding: 38px; border: 1px solid var(--sr-hairline); border-radius: 18px; background: #fff; }
 .sr-empty h2 { margin: 0; font-size: 30px; }
@@ -168,7 +174,7 @@ body:has(.sr-page) { background: var(--sr-bg); }
   .sr-cta-band { grid-template-columns: 1fr; gap: 28px; margin: 38px 0 52px; padding: 30px 24px; }
   .sr-cta-band h2 { font-size: 29px; }
   .sr-cta-actions { align-items: stretch; }
-  .sr-cta-actions > button, .sr-cta-actions small { text-align: center; }
+  .sr-cta-actions > button:not(.bw-cta), .sr-cta-actions small { text-align: center; }
   .sr-scan { grid-template-columns: 1fr; align-content: center; padding: 22px; }
   .sr-scan-map { display: none; }
   .sr-scan h1 { font-size: 38px; }

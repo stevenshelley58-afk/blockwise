@@ -1,27 +1,25 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button, ButtonDisc, ButtonLabel, type ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /*
- * button-01 (shadcn-dashboard) — the signature Blockwise CTA.
- *
- * A pill button with a circular arrow disc that slides across and rotates on
- * hover. Used for the primary "next action" on a screen. Pass `href` to render
- * it as a Next.js Link while keeping the same structure and animation.
+ * ButtonArrow (shadcn-dashboard) — the signature Blockwise CTA, now the system
+ * default: `<Button>` renders the same ink pill with the trailing arrow disc on
+ * its own. This stays as a thin, named entry point for the primary "next
+ * action" slots, and as the `asChild` composition for link CTAs, where the disc
+ * has to be placed inside the anchor by hand.
  */
-
-const BUTTON_ARROW_CLASSES =
-  "group relative h-12 w-fit overflow-hidden rounded-full p-1 ps-6 pe-14 text-sm font-medium transition-all duration-500 hover:pe-6 hover:ps-14";
 
 type ButtonArrowProps = {
   children: React.ReactNode;
   /** When set, the CTA renders as a Next.js Link. */
   href?: string;
-  /** Override the arrow icon (defaults to ArrowUpRight). */
+  /** Override the disc icon (defaults to the up-right arrow). */
   arrow?: React.ReactNode;
   className?: string;
+  variant?: ButtonProps["variant"];
+  size?: ButtonProps["size"];
   type?: "button" | "submit" | "reset";
   disabled?: boolean;
   onClick?: React.MouseEventHandler<HTMLElement>;
@@ -33,40 +31,31 @@ export function ButtonArrow({
   arrow,
   className,
   children,
-  type,
-  disabled,
-  onClick,
-  "aria-label": ariaLabel,
+  variant,
+  size,
+  ...props
 }: ButtonArrowProps) {
-  const inner = (
-    <>
-      <span className="relative z-10 inline-flex items-center gap-2 transition-all duration-500">
-        {children}
-      </span>
-      <span
-        aria-hidden
-        className="absolute right-1 flex size-10 items-center justify-center rounded-full bg-background text-foreground transition-all duration-500 group-hover:right-[calc(100%-44px)] group-hover:rotate-45"
-      >
-        {arrow ?? <ArrowUpRight size={16} />}
-      </span>
-    </>
-  );
-
-  const classes = cn(BUTTON_ARROW_CLASSES, className);
-
   if (href) {
     return (
-      <Button asChild className={classes}>
-        <Link href={href} onClick={onClick} aria-label={ariaLabel}>
-          {inner}
+      <Button
+        asChild
+        variant={variant}
+        size={size}
+        arrow={arrow}
+        className={cn("group/button", className)}
+      >
+        <Link href={href} {...props}>
+          <ButtonLabel>{children}</ButtonLabel>
+          {/* Mirrors the Button's own rule: no disc on a link variant. */}
+          {arrow === null || variant === "link" ? null : <ButtonDisc arrow={arrow} />}
         </Link>
       </Button>
     );
   }
 
   return (
-    <Button className={classes} type={type} disabled={disabled} onClick={onClick} aria-label={ariaLabel}>
-      {inner}
+    <Button variant={variant} size={size} arrow={arrow} className={className} {...props}>
+      {children}
     </Button>
   );
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { BlockwiseLogo } from "@/components/blockwise-logo";
+import { Button } from "@/components/ui/button";
 
 export default function LegalLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
@@ -11,9 +12,11 @@ export default function LegalLayout({ children }: Readonly<{ children: React.Rea
         </Link>
         <nav className="site-nav-actions" aria-label="Account">
           <Link href="/login">Client sign in</Link>
-          <a className="button" href="mailto:hello@blockwise.sale?subject=Blockwise%20demo">
-            Request access
-          </a>
+          <Button asChild>
+            <a href="mailto:hello@blockwise.sale?subject=Blockwise%20demo">
+              Request access
+            </a>
+          </Button>
         </nav>
       </header>
 

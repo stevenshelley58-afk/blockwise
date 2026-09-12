@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { SearchField, SearchFilterPanel, SearchFilterRow, filterChipClassName } from "@/components/adstudio/search-filter-controls";
 import { TemplateGallery } from "@/components/adstudio/template-gallery";
+import { Button } from "@/components/ui/button";
 import { getTemplate, listTemplates, type TemplateLeadType } from "@/lib/adstudio/pack-gallery";
 import { createCustomerAd } from "@/lib/adstudio/create-customer-ad";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
@@ -44,7 +45,7 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Se
     <div className="mx-auto w-full max-w-[1120px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
       <Link href="/ad-studio" className="inline-flex min-h-11 items-center gap-2 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><ArrowLeft className="size-4" aria-hidden />Ad Studio home</Link>
       <header className="mt-5 max-w-[700px]"><h1 className="font-display text-[clamp(26px,4vw,34px)] font-extrabold tracking-[-.025em]">Choose a template</h1><p className="mt-2 text-sm leading-6 text-muted-foreground">Compare the finished Feed and Story designs, then open the one that fits your ad.</p></header>
-      {templates.length > 0 ? <form action="/ad-studio/templates" method="get" role="search" className="mt-7"><SearchFilterPanel label="Template search and filters"><SearchField id="template-search" name="q" type="search" defaultValue={query} label="Search templates" placeholder="Search templates by name or goal…" action={<button type="submit" className="inline-flex min-h-11 shrink-0 items-center rounded-full bg-primary px-4 text-[12.5px] font-bold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Search</button>} />{lead !== "all" ? <input type="hidden" name="lead" value={lead} /> : null}<SearchFilterRow>{LEAD_FILTERS.map((item) => <FilterLink key={item.value} href={filterHref(query, item.value)} label={item.label} active={lead === item.value} />)}</SearchFilterRow></SearchFilterPanel></form> : null}
+      {templates.length > 0 ? <form action="/ad-studio/templates" method="get" role="search" className="mt-7"><SearchFilterPanel label="Template search and filters"><SearchField id="template-search" name="q" type="search" defaultValue={query} label="Search templates" placeholder="Search templates by name or goal…" action={<Button type="submit">Search</Button>} />{lead !== "all" ? <input type="hidden" name="lead" value={lead} /> : null}<SearchFilterRow>{LEAD_FILTERS.map((item) => <FilterLink key={item.value} href={filterHref(query, item.value)} label={item.label} active={lead === item.value} />)}</SearchFilterRow></SearchFilterPanel></form> : null}
       <div className="mt-6"><TemplateGallery templates={filtered} query={query} lead={lead} createAction={createAdAction} hasAvailableTemplates={templates.length > 0} /></div>
     </div>
   );

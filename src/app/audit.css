@@ -9,7 +9,10 @@
     var(--lp-surface, #f8fafc);
 }
 .audit-page * { box-sizing: border-box; }
-.audit-page a { color: inherit; text-decoration: none; }
+/* Link reset for the campaign page's own anchors. This sheet is unlayered, so an
+   element rule here outranks every Tailwind utility; the shared Button renders as
+   an anchor on this page and carries its own label colour, so it is excluded. */
+.audit-page :where(a, button):not(.bw-cta) { color: inherit; text-decoration: none; }
 .audit-page h1, .audit-page h2, .audit-page h3, .audit-page h4 { margin-top: 0; font-family: var(--font-manrope), var(--font-inter), sans-serif; font-weight: 800; letter-spacing: -0.025em; color: var(--lp-ink, #0f172a); }
 .audit-page p { margin-top: 0; }
 .audit-page .container { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }

@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { navByVariant } from "@/components/sidebar-nav";
+import { Button } from "@/components/ui/button";
 import {
   CommandDialog,
   CommandEmpty,
@@ -47,18 +48,21 @@ export function CommandMenu() {
 
   return (
     <>
-      <button
+      <Button
         type="button"
+        variant="ghost-pill"
+        size="pill"
+        arrow={null}
         onClick={() => setOpen(true)}
         aria-label={copy.placeholder}
-        className="hidden h-9 w-[190px] cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-3 text-[12.5px] font-medium text-muted-foreground transition-[box-shadow,border-color] duration-200 hover:border-(--line-heavy) hover:shadow-card md:inline-flex"
+        className="hidden w-[190px] md:inline-flex"
       >
         <Search aria-hidden size={14} />
         {niche.copy.shell.searchButton}
         <kbd className="ml-auto rounded-[5px] border border-border bg-(--surface-subtle) px-1.5 py-px font-mono text-[10px] text-muted-foreground">
           ⌘K / Ctrl K
         </kbd>
-      </button>
+      </Button>
 
       <CommandDialog
         open={open}

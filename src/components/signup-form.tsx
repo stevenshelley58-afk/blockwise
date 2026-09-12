@@ -9,6 +9,7 @@ import {
   TurnstileVerification,
 } from "@/components/auth/turnstile-verification";
 import { SSOButtons } from "@/components/auth/sso-buttons";
+import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { validateEmail } from "@/lib/auth/form-validation";
 import { adRadarSignupMetadata } from "@/lib/research/ad-radar-signup";
@@ -241,8 +242,7 @@ export function SignupForm({ auditId }: { auditId?: string | null }) {
           </p>
         ) : null}
 
-        <button
-          className="button"
+        <Button
           type="submit"
           disabled={isSubmitting}
           aria-busy={isSubmitting || undefined}
@@ -255,7 +255,7 @@ export function SignupForm({ auditId }: { auditId?: string | null }) {
             : mode === "magic"
               ? "Continue with email"
               : "Create account"}
-        </button>
+        </Button>
       </form>
     </>
   );

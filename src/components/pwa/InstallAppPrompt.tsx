@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
@@ -84,15 +86,18 @@ export function InstallAppPrompt({ className }: InstallAppPromptProps) {
         <strong>{hasNativePrompt ? "Install Blockwise" : "Add Blockwise to your phone"}</strong>
         <p>{hasNativePrompt ? "Add it to your home screen for direct mobile access." : manualInstallCopy}</p>
       </div>
+      {/* The banner holds its copy and its controls on one row, so these two
+          drop the CTA disc: its trailing lane would squeeze the copy on a
+          phone, which is the only place this prompt appears. */}
       <div className="pwa-install-actions">
         {hasNativePrompt ? (
-          <button className="pwa-install-primary" type="button" onClick={install}>
+          <Button type="button" arrow={null} onClick={install}>
             Install
-          </button>
+          </Button>
         ) : null}
-        <button className="pwa-install-dismiss" type="button" onClick={() => setHidden(true)} aria-label="Dismiss install app prompt">
+        <Button variant="outline" type="button" arrow={null} onClick={() => setHidden(true)} aria-label="Dismiss install app prompt">
           Dismiss
-        </button>
+        </Button>
       </div>
     </div>
   );
