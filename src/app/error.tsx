@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import * as Sentry from "@sentry/nextjs";
 
 import { Button } from "@/components/ui/button";
 
@@ -19,7 +18,10 @@ export default function AppError({
   reset: () => void;
 }) {
   useEffect(() => {
-    Sentry.captureException(error);
+    // Loaded on demand. The SDK is ~132 KB Brotli and this boundary renders on
+    // every route, so a static import put it on the critical path of the whole
+    // app to report an error that is rare by definition.
+    void import("@sentry/nextjs").then((Sentry) => Sentry.captureException(error));
   }, [error]);
 
   return (
