@@ -22,6 +22,7 @@ function readTree(dir: string, extensions = [".ts", ".tsx"]): string[] {
 // Only the components the homepage actually renders, so an unrendered file in
 // the same directory can never satisfy a homepage guard.
 const HOMEPAGE_CONCEPT_FILES = [
+  "homepage-booking.tsx",
   "homepage-concept.tsx",
   "hero-ad-showcase.tsx",
   "homepage-pricing.tsx",
