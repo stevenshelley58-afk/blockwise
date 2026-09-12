@@ -200,7 +200,7 @@ export function createEditorBridge(canvasEditor: any) {
             const shortened = text.replace(/\s+\S+$/, '');
             text = shortened === text ? text.slice(0, -1) : shortened;
             const candidate = new fabric.Textbox(text + '…', {
-              ...object, width: box.width, fontSize: floor,
+              ...object, text: text + '…', width: box.width, fontSize: floor,
               charSpacing: tracking * 1000 / floor, splitByGrapheme: false,
             });
             if (candidate.width! <= box.width + 0.1

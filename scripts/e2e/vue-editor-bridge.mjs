@@ -11,6 +11,7 @@ const scene = (height, text) => ({ version: '5.3.0', width: 1080, height, object
   { type: 'rect', id: 'workspace', left: 0, top: 0, originX: 'left', originY: 'top', width: 1080, height, fill: '#fbf7ef', selectable: false, evented: false },
   { type: 'rect', id: 'shape', left: 80, top: 90, originX: 'left', originY: 'top', width: 920, height: 650, fill: '#244c43' },
   { type: 'textbox', id: 'headline', inputKey: 'headline', metadata: { inputKey: 'headline' }, text, left: 80, top: 800, originX: 'left', originY: 'top', width: 920, fontFamily: 'Arial', fontSize: 78, fill: '#244c43' },
+  { type: 'textbox', id: 'bounded-copy', text: 'A long template description that must honor its single line limit', left: 80, top: 1050, width: 180, height: 90, fontFamily: 'Arial', fontSize: 32, lineHeight: 1, metadata: { templateTextBox: { width: 180, height: 90, maxLines: 1, overflowBehaviour: 'truncate' } } },
 ] });
 const initial = { feed: scene(1350, 'Template headline'), story: scene(1920, 'Story headline') };
 const parent = `<!doctype html><html><head><style>html,body{margin:0;height:100%;font-family:Arial}iframe{border:0;width:100%;height:100%}</style></head><body><iframe id="editor" title="Editor" src="/vue-ad-editor/index.html"></iframe><script>
@@ -59,6 +60,10 @@ try {
   await page.evaluate(() => window.send('snapshot', undefined, 'first'));
   const first = (await message('snapshot', 'first')).payload;
   for (const placement of ['feed', 'story']) {
+    const bounded=first[placement].scene.objects.find(object=>object.id==='bounded-copy');
+    assert.ok(bounded.text.endsWith('…'),'declared truncation fits the visible text');
+    assert.ok(!bounded.metadata.templateTextBox,'saved user typography has no initial-fit marker');
+    assert.equal(bounded.splitByGrapheme,false,'words are not broken into letters');
     assert.equal(first[placement].scene.width, 1080);
     assert.equal(first[placement].scene.height, placement === 'feed' ? 1350 : 1920);
     const png = Buffer.from(first[placement].pngDataUrl.split(',')[1], 'base64');
