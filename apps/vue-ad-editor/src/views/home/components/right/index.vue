@@ -27,7 +27,9 @@ import attributeTextFloat from '@/components/attributeTextFloat.vue';
 import attributeColor from '@/components/attributeColor.vue';
 import attributeBarcode from '@/components/attributeBarcode.vue';
 import attributeQrCode from '@/components/attributeQrCode.vue';
-import cropperImg from '@/components/cropperImg.vue';
+import clipImage from '@/components/clipImage.vue';
+import attributeTextContent from '@/components/attributeTextContent.vue';
+import edit from '@/components/edit.vue';
 // hooks
 import useSelectListen from '@/hooks/useSelectListen';
 
@@ -85,7 +87,6 @@ const switchAttrBar = () => {
         <!-- 替换图片 -->
         <replaceImg v-if="mixinState.mSelectOneType === 'image'"></replaceImg>
         <!-- 裁剪 -->
-        <cropperImg></cropperImg>
         <!-- 图片裁切 -->
         <clip-image></clip-image>
         <!-- 翻转 -->
@@ -97,7 +98,6 @@ const switchAttrBar = () => {
         <!-- 图片滤镜 -->
         <filters></filters>
         <!-- 图片描边 -->
-        <imgStroke />
         <!-- 颜色 -->
         <attributeColor></attributeColor>
         <!-- 字体属性 -->
@@ -115,10 +115,8 @@ const switchAttrBar = () => {
         <!-- 圆角 -->
         <attributeRounded></attributeRounded>
         <!-- 关联数据 -->
-        <attributeId></attributeId>
 
         <!-- 新增字体样式使用 -->
-        <Button @click="canvasEditor.getFontJson()" size="small">获取元素数据</Button>
       </div>
     </div>
     <!-- <attribute v-if="state.show"></attribute> -->

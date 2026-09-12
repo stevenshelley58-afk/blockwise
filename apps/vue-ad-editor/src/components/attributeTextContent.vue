@@ -3,7 +3,7 @@ import useSelect from '@/hooks/select';
 import InputNumber from '@/components/inputNumber';
 
 const update = getCurrentInstance();
-const { canvasEditor, isOne, isMatchType } = useSelect(['i-text']);
+const { canvasEditor, isOne, isMatchType } = useSelect(['i-text', 'textbox', 'text']);
 const baseAttr = reactive({
   text: '',
   strokeWidth: 1,
@@ -61,7 +61,7 @@ onBeforeUnmount(() => {
     <Divider plain orientation="left"><h4>Text</h4></Divider>
 
     <Form :label-width="40" class="form-wrap">
-      <FormItem :label="$t('attributes.id')">
+      <FormItem label="Text">
         <Input
           v-model="baseAttr.text"
           @on-change="changeCommon('text', baseAttr.text)"

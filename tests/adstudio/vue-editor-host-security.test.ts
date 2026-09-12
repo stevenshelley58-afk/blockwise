@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import config from "../../next.config.ts";
@@ -15,4 +16,12 @@ test("only the bundled Vue editor can be embedded and it cannot call upstream se
   assert.match(policy, /connect-src 'self' blob:/);
   assert.doesNotMatch(policy, /https?:|unsafe-eval/);
   assert.equal(value(editor, "Cache-Control"), "no-cache");
+});
+
+
+test("the product Docker context includes the editor builder but not nested dependencies", () => {
+  const rules = readFileSync("infra/product/Dockerfile.dockerignore", "utf8");
+  assert.match(rules, /!scripts\/build-vue-editor\.mjs/);
+  assert.match(rules, /\*\*\/node_modules/);
+  assert.match(rules, /\*\*\/dist/);
 });

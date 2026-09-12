@@ -223,5 +223,18 @@
       "x": "Flip horizontally",
       "y": "Flip vertically"
     }
+  },
+  "createClip": "Crop or mask image",
+  "removeClip": "Remove crop",
+  "polygonClip": "Polygon",
+  "rectClip": "Rectangle",
+  "circleClip": "Circle",
+  "triangleClip": "Triangle",
+  "polygonClipInverted": "Outside polygon",
+  "rectClipInverted": "Outside rectangle",
+  "circleClipInverted": "Outside circle",
+  "triangleClipInverted": "Outside triangle",
+  "quick": {
+    "editPoly": "Edit polygon"
   }
 }

@@ -128,6 +128,8 @@ export function createEditorBridge(canvasEditor: any) {
   };
 
   const snapshotCurrent = () => {
+    // Finish the upstream crop handle before serializing its final clip path.
+    if ((canvas.getActiveObject() as any)?.clip) canvas.discardActiveObject();
     scenes[activePlacement] = sceneFromCanvas();
     return scenes[activePlacement]!;
   };

@@ -42,3 +42,11 @@ hermes/*
 !hermes/data/
 hermes/data/*
 !hermes/data/au-postcodes.json
+
+# The only build-time script required for the pinned editor bundle.
+!scripts/
+scripts/*
+!scripts/build-vue-editor.mjs
+**/node_modules
+**/dist
+public/vue-ad-editor
