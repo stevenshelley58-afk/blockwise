@@ -9,6 +9,7 @@ import {
   APIFY_ACCOUNT_HARD_CAP_USD,
   APIFY_PRIOR_TRIAL_BILLED_USD,
   ApifyAdapterError,
+  ApifyClient,
   ApifyBudgetLedger,
   createApifyFirstFillAdapter,
   derivePageOutcomes,
@@ -38,11 +39,11 @@ test("normalization preserves every row, canonicalizes ad_archive_id and snake-c
 
 test("page outcomes never turn ADS_NOT_FOUND or mismatched identity into trusted zero", () => {
   const outcomes = derivePageOutcomes([
-    { ad_archive_id: "a", page_id: "1" },
+    { ad_archive_id: "1", page_id: "1", is_active: true, snapshot: { page_id: "1" }, pageInfo: { page_id: "1" } },
     { error_code: "ADS_NOT_FOUND", url: "https://www.facebook.com/2" },
     { ad_archive_id: "foreign", page_id: "9" },
   ], { urls: [{ url: "https://www.facebook.com/1" }, { url: "https://www.facebook.com/2" }, { url: "https://www.facebook.com/3" }] });
-  assert.deepEqual(outcomes.map((item) => item.outcome), ["success", "ads_not_found", "failure", "mismatched_identity"]);
+  assert.deepEqual(outcomes.map((item) => item.outcome), ["success", "mismatched_identity", "failure", "mismatched_identity"]);
   assert.equal(outcomes.every((item) => item.trustedZero === false), true);
   assert.equal(outcomes.find((item) => item.pageId === "3").reason, "missing_page");
 });
@@ -52,7 +53,7 @@ test("successful first fill returns the stable integration outcome and provider-
   const client = {
     async startActor(args) { starts.push(args); return { id: "run-1", defaultDatasetId: "dataset-1" }; },
     async getRun() { return { id: "run-1", status: "SUCCEEDED", defaultDatasetId: "dataset-1", usageTotalUsd: 0.24305, platformUsageBillingModel: "DEVELOPER", chargedEventCounts: { "apify-default-dataset-item": 324, "apify-actor-start": 1 } }; },
-    async getDatasetItems() { return [{ ad_archive_id: "a", page_id: "1", snapshot: { pageName: "One" } }]; },
+    async getDatasetItems() { return [{ ad_archive_id: "1", page_id: "1", is_active: true, snapshot: { page_id: "1", pageName: "One" }, pageInfo: { page_id: "1" } }]; },
   };
   const adapter = createApifyFirstFillAdapter({ client, store: { get: async (key) => store.get(key) ?? null, put: async (key, value) => { store.set(key, value); } }, ledger, pollIntervalMs: 0 });
   const result = await adapter.run({ runKey: "fill-1", maxTotalChargeUsd: 0.5, maxItems: 666, urls: [{ url: "https://www.facebook.com/1" }], providerInput: { urls: [{ url: "https://www.facebook.com/1" }] } });
@@ -61,7 +62,7 @@ test("successful first fill returns the stable integration outcome and provider-
   assert.equal(starts[0].maxItems, 666);
   assert.equal(result.runId, "run-1");
   assert.equal(result.provider, `apify:${APIFY_ACTOR_ID}`);
-  assert.equal(result.status, "succeeded");
+  assert.equal(result.status, "SUCCEEDED");
   assert.equal(result.coverageComplete, true);
   assert.equal(result.costUsd, 0.24305);
   assert.equal(result.metadata.platformUsageBillingModel, "DEVELOPER");
@@ -70,9 +71,9 @@ test("successful first fill returns the stable integration outcome and provider-
 test("unknown actor start is persisted and a retry never posts a second run", async () => {
   const dir = await tempDir();
   try {
-    const ledger = new ApifyBudgetLedger({ rawEvidenceDir: dir, accountUsageGetter: async () => 0 }); let starts = 0;
+    const ledger = new ApifyBudgetLedger({ rawEvidenceDir: dir, accountUsageGetter: async () => ({ billedUsd: 0, verifiedAt: new Date().toISOString() }) }); let starts = 0;
     const client = { async startActor() { starts += 1; throw new Error("socket reset"); } };
-    const adapter = createApifyFirstFillAdapter({ rawEvidenceDir: dir, client });
+    const adapter = createApifyFirstFillAdapter({ rawEvidenceDir: dir, client, accountUsageGetter: async () => ({ billedUsd: 0, verifiedAt: new Date().toISOString() }) });
     await assert.rejects(adapter.run({ runKey: "unknown-1", maxTotalChargeUsd: 0.5, providerInput: {} }), /socket reset/);
     await assert.rejects(adapter.run({ runKey: "unknown-1", maxTotalChargeUsd: 0.5, providerInput: {} }), (error) => error.code === "start_reconciliation_required");
     assert.equal(starts, 1);
@@ -86,7 +87,7 @@ test("unknown actor start is persisted and a retry never posts a second run", as
 test("account reservations include prior trial spend and reject cap overflow", async () => {
   const dir = await tempDir();
   try {
-    const ledger = new ApifyBudgetLedger({ rawEvidenceDir: dir, accountHardCapUsd: APIFY_ACCOUNT_HARD_CAP_USD, priorBilledUsd: APIFY_PRIOR_TRIAL_BILLED_USD, accountUsageGetter: async () => 18.6 });
+    const ledger = new ApifyBudgetLedger({ rawEvidenceDir: dir, accountHardCapUsd: APIFY_ACCOUNT_HARD_CAP_USD, priorBilledUsd: APIFY_PRIOR_TRIAL_BILLED_USD, accountUsageGetter: async () => ({ billedUsd: 18.6, verifiedAt: new Date().toISOString() }) });
     await ledger.reserve({ reservationId: "r1", runKey: "one", reservedUsd: 0.3 });
     await assert.rejects(ledger.reserve({ reservationId: "r2", runKey: "two", reservedUsd: 0.2 }), (error) => error.code === "account_budget_exceeded");
     const snapshot = await ledger.snapshot();
@@ -98,7 +99,7 @@ test("account reservations include prior trial spend and reject cap overflow", a
 test("known spend keeps the full reservation until fresh account billing catches up", async () => {
   const dir = await tempDir(); let billed = 0;
   try {
-    const ledger = new ApifyBudgetLedger({ rawEvidenceDir: dir, priorBilledUsd: 0, accountUsageGetter: async () => billed });
+    const ledger = new ApifyBudgetLedger({ rawEvidenceDir: dir, priorBilledUsd: 0, accountUsageGetter: async () => ({ billedUsd: billed, verifiedAt: new Date().toISOString() }) });
     await ledger.reserve({ reservationId: "r1", runKey: "one", reservedUsd: 0.5 });
     await ledger.settle("r1", 0.2);
     assert.equal((await ledger.snapshot()).reservedUsd, 0.5);
@@ -109,12 +110,73 @@ test("known spend keeps the full reservation until fresh account billing catches
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 
+test("account usage is fail-closed for absent, malformed, and stale receipts", async () => {
+  const dir = await tempDir();
+  try {
+    for (const getter of [async () => undefined, async () => ({}), async () => ({ billedUsd: 1 }), async () => ({ billedUsd: 1, verifiedAt: "2020-01-01T00:00:00Z" })]) {
+      const ledger = new ApifyBudgetLedger({ rawEvidenceDir: dir, accountUsageGetter: getter });
+      await assert.rejects(ledger.reserve({ reservationId: `x-${Math.random()}`, runKey: "x", reservedUsd: 0.1 }), /account usage|fresh Apify|billed/);
+    }
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test("overlapping reservations require aggregate billing confirmation before either releases", async () => {
+  const dir = await tempDir(); let billed = 0;
+  try {
+    const ledger = new ApifyBudgetLedger({ rawEvidenceDir: dir, priorBilledUsd: 0, accountUsageGetter: async () => ({ billedUsd: billed, verifiedAt: new Date().toISOString() }) });
+    await ledger.reserve({ reservationId: "a", runKey: "a", reservedUsd: 0.5 });
+    await ledger.reserve({ reservationId: "b", runKey: "b", reservedUsd: 0.5 });
+    await ledger.settle("a", 0.2); await ledger.settle("b", 0.3);
+    billed = 0.2; assert.equal((await ledger.snapshot()).reservedUsd, 1);
+    billed = 0.5; assert.equal((await ledger.snapshot()).reservedUsd, 0);
+    await ledger.reserve({ reservationId: "c", runKey: "c", reservedUsd: 0.5 });
+    await ledger.settle("c", 0.2);
+    billed = 0.5; assert.equal((await ledger.snapshot()).reservedUsd, 0.5);
+    billed = 0.7; assert.equal((await ledger.snapshot()).reservedUsd, 0);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test("reusing a run key with changed input is rejected and a reached item cap is incomplete", async () => {
+  const store = new Map(); const ledger = fakeLedger(); let starts = 0;
+  const client = { async startActor() { starts += 1; return { id: "run-limit", defaultDatasetId: "d" }; }, async getRun() { return { id: "run-limit", status: "SUCCEEDED", defaultDatasetId: "d", usageTotalUsd: 0.001 }; }, async getDatasetItems() { return [{ ad_archive_id: "1", page_id: "1", is_active: true, snapshot: { page_id: "1" }, pageInfo: { page_id: "1" } }]; } };
+  const adapter = createApifyFirstFillAdapter({ client, store: { get: async (key) => store.get(key) ?? null, put: async (key, value) => store.set(key, value) }, ledger, pollIntervalMs: 0 });
+  const first = await adapter.run({ runKey: "same", maxTotalChargeUsd: 0.5, maxItems: 1, providerInput: { q: "a" }, urls: [{ url: "https://www.facebook.com/1" }] });
+  assert.equal(first.status, "SUCCEEDED_PARTIAL"); assert.equal(first.metadata.capHit, true);
+  await assert.rejects(adapter.run({ runKey: "same", maxTotalChargeUsd: 0.5, maxItems: 1, providerInput: { q: "changed" }, urls: [{ url: "https://www.facebook.com/1" }] }), (error) => error.code === "run_input_conflict");
+  assert.equal(starts, 1);
+});
+
+test("a successful provider run without a dataset is a failed outcome", async () => {
+  const store = new Map(); const ledger = fakeLedger();
+  const adapter = createApifyFirstFillAdapter({ client: { async startActor() { return { id: "no-dataset" }; }, async getRun() { return { id: "no-dataset", status: "SUCCEEDED", usageTotalUsd: 0.001 }; } }, store: { get: async (key) => store.get(key) ?? null, put: async (key, value) => store.set(key, value) }, ledger, pollIntervalMs: 0 });
+  const result = await adapter.run({ runKey: "missing-dataset", providerInput: {}, urls: [{ url: "https://www.facebook.com/1" }] });
+  assert.equal(result.status, "FAILED"); assert.equal(result.metadata.failureReason, "missing_dataset");
+});
+
+test("account usage uses Apify's documented monthly usage endpoint and schema", async () => {
+  const urls = [];
+  const client = new ApifyClient({ token: "test-token", fetchImpl: async (url) => { urls.push(String(url)); return new Response(JSON.stringify({ data: { usageCycle: { startAt: "2026-09-01T00:00:00.000Z", endAt: "2026-10-01T00:00:00.000Z" }, monthlyServiceUsage: {}, dailyServiceUsages: [], totalUsageCreditsUsdBeforeVolumeDiscount: 1.2, totalUsageCreditsUsdAfterVolumeDiscount: 1.1 } }), { status: 200, headers: { "content-type": "application/json" } }); } });
+  const receipt = await client.getAccountUsage();
+  assert.match(urls[0], /\/v2\/users\/me\/usage\/monthly$/);
+  assert.equal(receipt.billedUsd, 1.1); assert.match(receipt.verifiedAt, /^20/);
+});
+
+test("file run store serializes concurrent writes without dropping a run", async () => {
+  const dir = await tempDir();
+  try {
+    const { FileApifyRunStore } = await import("./ad-radar-apify-adapter.mjs");
+    const store = new FileApifyRunStore(dir, { lockRetryMs: 1 });
+    await Promise.all([store.put("a", { runId: "a" }), store.put("b", { runId: "b" })]);
+    assert.deepEqual(await store.get("a"), { runId: "a" }); assert.deepEqual(await store.get("b"), { runId: "b" });
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
 test("run cap is treated as incomplete even when the provider reports success-like data", async () => {
   const store = new Map(); const ledger = fakeLedger();
-  const client = { async startActor() { return { id: "run-cap", defaultDatasetId: "d" }; }, async getRun() { return { id: "run-cap", status: "ABORTED", statusMessage: "Maximum total charge reached", defaultDatasetId: "d", usageTotalUsd: 0.5 }; }, async getDatasetItems() { return [{ ad_archive_id: "a", page_id: "1" }]; } };
+  const client = { async startActor() { return { id: "run-cap", defaultDatasetId: "d" }; }, async getRun() { return { id: "run-cap", status: "ABORTED", statusMessage: "Maximum total charge reached", defaultDatasetId: "d", usageTotalUsd: 0.5 }; }, async getDatasetItems() { return [{ ad_archive_id: "1", page_id: "1", is_active: true, snapshot: { page_id: "1" }, pageInfo: { page_id: "1" } }]; } };
   const adapter = createApifyFirstFillAdapter({ client, store: { get: async (key) => store.get(key) ?? null, put: async (key, value) => store.set(key, value) }, ledger, pollIntervalMs: 0 });
   const result = await adapter.run({ runKey: "cap-1", maxTotalChargeUsd: 0.5, providerInput: {}, urls: [{ url: "https://www.facebook.com/1" }] });
-  assert.equal(result.status, "succeeded_partial");
+  assert.equal(result.status, "SUCCEEDED_PARTIAL");
   assert.equal(result.paginationExhausted, false);
   assert.equal(result.coverageComplete, false);
   assert.equal(result.metadata.capHit, true);

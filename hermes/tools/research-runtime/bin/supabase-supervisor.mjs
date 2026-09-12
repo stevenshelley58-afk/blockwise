@@ -23,6 +23,8 @@ import { runAdRadarAccuracyAudit } from "./ad-radar-accuracy-audit.mjs";
 import { resolveAdRadarRuntime } from "./ad-radar-runtime-gate.mjs";
 import { createApifyFirstFillAdapter, normalizeApifyDataset } from "./ad-radar-apify-adapter.mjs";
 import { loadRuntimeProviderToken } from "./runtime-provider-token.mjs";
+import { cardMediaValues } from "./ad-radar-media.mjs";
+import { isFirstFillPage, shouldRunAdDbJob } from "./ad-radar-first-fill-scheduling.mjs";
 import { classifyMetaAdLibraryPayload } from "./meta-ad-library-parser.mjs";
 import {
   assertBudgetWithinConfiguredCap,
@@ -626,11 +628,20 @@ async function enqueueDueAdPageRefreshJobs(buildRunId) {
   // refresh policies are no longer a scheduler input.
   const pages = await rest(
     "research",
-    `advertiser_pages?select=id,page_id,page_name,status,scan_state,next_scan_at,backoff_until,consecutive_failures,has_ever_run_ads&scan_enabled=eq.true&status=neq.rejected_non_real_estate&page_id=not.is.null&next_scan_at=lte.${now()}&order=next_scan_at.asc&limit=${adPageRefreshScanLimit}`,
+    "advertiser_pages?select=id,page_id,page_name,status,scan_state,next_scan_at,backoff_until,consecutive_failures,has_ever_run_ads,initial_fill_completed_at&scan_enabled=eq.true&status=neq.rejected_non_real_estate&page_id=not.is.null&next_scan_at=lte." + encode(now()) + (firstFillOnly ? "&scan_state=eq.needs_first_fill&initial_fill_completed_at=is.null" : "") + "&order=next_scan_at.asc&limit=" + adPageRefreshScanLimit,
   );
   const capacity = Math.max(0, Math.min(adPageRefreshMaxActive - blockingCollectors.length, adPageRefreshBatchSize));
+  let queuedFirstFillPageIds = new Set();
+  if (firstFillOnly) {
+    const queued = await rest("research", "work_queue?select=advertiser_page_id,payload,status&queue_name=eq.research&job_type=eq.blockwise-ad-collector&status=in.(pending,claimed,failed,blocked)&limit=5000");
+    queuedFirstFillPageIds = new Set((queued || []).filter((job) => {
+      const payload = job.payload || {};
+      return payload.scanMode === "initial_fill" || payload.scan_mode === "initial_fill" || payload.initialFill === true;
+    }).map((job) => String(job.advertiser_page_id || job.payload?.advertiserPageId || "")).filter(Boolean));
+  }
   const candidates = pages.filter((page) => {
     if (!page.page_id || String(page.page_id).startsWith("slug:")) return false;
+    if (firstFillOnly && !isFirstFillPage(page, queuedFirstFillPageIds)) return false;
     if (activePageIds.has(page.id)) return false;
     if ((page.consecutive_failures || 0) >= adPageRefreshMaxConsecutiveFailures && page.backoff_until && Date.parse(page.backoff_until) > Date.now()) return false;
     return true;
@@ -2766,7 +2777,7 @@ async function runApifyFirstFillCapture(input) {
     const adapter = await apifyFirstFillAdapterPromise;
     const pageUrl = metaAdLibraryPageUrl(input);
     const outcome = await adapter.run({
-      runKey: input.adFetchRunId,
+      runKey: "ad-radar-first-fill:" + (input.workQueueJobId || input.adFetchRunId),
       pages: [{ pageId: input.metaPageId, url: pageUrl }],
       providerInput: { urls: [{ url: pageUrl }] },
       maxTotalChargeUsd: Number.isFinite(apifyFirstFillMaxTotalChargeUsd) && apifyFirstFillMaxTotalChargeUsd > 0
@@ -2774,10 +2785,15 @@ async function runApifyFirstFillCapture(input) {
         : 0.5,
       maxItems: Number(env.HERMES_APIFY_FIRST_FILL_MAX_ITEMS || 666),
     });
-    const items = normalizeApifyDataset(outcome.items || []).map((item) => normaliseHostedMetaAd(item, input.metaPageId));
+    const items = normalizeApifyDataset(outcome.items || [])
+      .filter((item) => !pick(item, "error_code", "errorCode", "error", "message")
+        && looksLikeAdId(pick(item, "ad_archive_id", "adArchiveId", "adArchiveID", "id")))
+      .map((item) => normaliseHostedMetaAd(item, input.metaPageId));
     return {
       ...outcome,
-      status: outcome.status === "succeeded" || outcome.status === "succeeded_partial" ? "SUCCEEDED" : "FAILED",
+      status: ["SUCCEEDED", "SUCCEEDED_PARTIAL"].includes(String(outcome.status || "").toUpperCase())
+        ? String(outcome.status).toUpperCase()
+        : "FAILED",
       startedAt,
       finishedAt: now(),
       items,
@@ -3565,24 +3581,24 @@ function normaliseHostedMetaAd(raw, pageId) {
   const adId = String(pick(raw, "adArchiveID", "adArchiveId", "ad_archive_id", "archive_id", "library_id", "id"));
   const imageUrls = collectStrings(
     pick(firstCard, "imageUrl", "image_url", "originalImageUrl", "original_image_url", "resizedImageUrl", "resized_image_url"),
-    cards,
+    cardMediaValues(cards, "image"),
     pick(snapshot, "images", "image_urls", "ad_creative_images"),
     pick(raw, "images", "image_urls", "ad_creative_images", "adCreativeImages"),
-    pick(raw, "cards", "asset_cards", "ad_cards", "carousel_cards", "carouselCards"),
+    cardMediaValues(pick(raw, "cards", "asset_cards", "ad_cards", "carousel_cards", "carouselCards"), "image"),
   );
   const videoUrls = collectStrings(
     pick(firstCard, "videoHdUrl", "video_hd_url", "videoSdUrl", "video_sd_url"),
-    cards,
+    cardMediaValues(cards, "video"),
     pick(snapshot, "videos", "video_urls"),
     pick(raw, "videos", "video_urls", "ad_creative_videos", "adCreativeVideos"),
-    pick(raw, "cards", "asset_cards", "ad_cards", "carousel_cards", "carouselCards"),
+    cardMediaValues(pick(raw, "cards", "asset_cards", "ad_cards", "carousel_cards", "carouselCards"), "video"),
   );
   const thumbnailUrls = collectStrings(
     pick(firstCard, "videoPreviewImageUrl", "video_preview_image_url", "thumbnailUrl", "thumbnail_url"),
-    cards,
+    cardMediaValues(cards, "thumbnail"),
     pick(snapshot, "videoPreviewImageUrl", "video_preview_image_url", "thumbnailUrl", "thumbnail_url"),
     pick(raw, "video_preview_image_url", "thumbnail_url", "videoPreviewImageUrl", "thumbnailUrl"),
-    pick(raw, "cards", "asset_cards", "ad_cards", "carousel_cards", "carouselCards"),
+    cardMediaValues(pick(raw, "cards", "asset_cards", "ad_cards", "carousel_cards", "carouselCards"), "thumbnail"),
   );
   const pageName = firstString(pick(raw, "pageName", "page_name"), pick(snapshot, "pageName", "page_name"));
   const normalisedPageId = String(pick(raw, "pageID", "pageId", "page_id") || pageId);
@@ -3736,9 +3752,9 @@ function normalisePlatformForDb(platforms) {
 
 function creativeFromMetaAd(ad) {
   const snapshot = ad.snapshot || {};
-  const imageUrls = collectStrings(snapshot.images, snapshot.cards);
-  const videoUrls = collectStrings(snapshot.videos, snapshot.cards);
-  const thumbnailUrls = collectStrings(snapshot.thumbnails, snapshot.cards);
+  const imageUrls = collectStrings(snapshot.images, cardMediaValues(snapshot.cards, "image"));
+  const videoUrls = collectStrings(snapshot.videos, cardMediaValues(snapshot.cards, "video"));
+  const thumbnailUrls = collectStrings(snapshot.thumbnails, cardMediaValues(snapshot.cards, "thumbnail"));
   const format = objectArray(snapshot.cards).length > 1 ? "carousel" : videoUrls.length ? "video" : imageUrls.length ? "image" : "unknown";
   return {
     format,
@@ -4348,6 +4364,7 @@ async function handleAdCollector(job) {
   payload.advertiserPageId = pageRow.id;
   const ingestTables = ["ad_fetch_runs", "observed_ads", "ad_snapshots", "ad_creatives", "media_assets"];
   const input = captureInput(payload);
+  input.workQueueJobId = job.id;
   const buildRunId = await resolveBuildRunId(payload.build_run_id, payload.buildRunId);
   const initialSourceProvider = apifyFirstFillEnabled && input.scanMode === "initial_fill"
     ? "apify"
@@ -4389,7 +4406,7 @@ async function handleAdCollector(job) {
       },
     };
   }
-  if (outcome.status !== "SUCCEEDED") {
+  if (!["SUCCEEDED", "SUCCEEDED_PARTIAL"].includes(outcome.status)) {
     await updateFetchRun(adFetchRunId, { source_provider: sourceProvider, status: "failed", result_summary: { provider: sourceProvider, metadata: outcome.metadata || {} }, error: outcome.errorMessage || "capture failed", cost_usd: outcome.costUsd || 0, ...runTelemetryPatch(outcome) });
     await markAdvertiserPageCheckFailed(payload.advertiserPageId);
     await insertCoverageDefect({
@@ -4409,8 +4426,16 @@ async function handleAdCollector(job) {
   // to exhaustion (or absence was explicitly confirmed). Truncated captures
   // never drive lifecycle.
   const metadataTruncated = outcome.metadata?.truncated === true;
-  const paginationExhausted = outcome.paginationExhausted ?? (!metadataTruncated && outcome.itemCount < input.resultsLimit);
-  const coverageComplete = outcome.coverageComplete ?? paginationExhausted;
+  // The Apify adapter is authoritative and fail-closed: item count can never
+  // imply exhaustion. Preserve the existing browser/API provider contract for
+  // maintenance paths, which may expose only a result-limit signal.
+  const explicitAdapterCoverage = sourceProvider === "apify";
+  const paginationExhausted = explicitAdapterCoverage
+    ? outcome.paginationExhausted === true
+    : outcome.paginationExhausted ?? (!metadataTruncated && outcome.itemCount < input.resultsLimit);
+  const coverageComplete = explicitAdapterCoverage
+    ? outcome.coverageComplete === true
+    : outcome.coverageComplete ?? paginationExhausted;
   if (outcome.itemCount === 0 && outcome.metadata?.confirmed_absence) {
     const zeroCaptureTrusted = await isTrustedConfirmedZeroAdCapture({
       advertiserPageId: payload.advertiserPageId,
@@ -4530,8 +4555,8 @@ async function handleAdCollector(job) {
   // function sees the authoritative coverage columns.
   await updateFetchRun(adFetchRunId, {
     source_provider: sourceProvider,
-    status: "success",
-    result_summary: { provider: sourceProvider, item_count: outcome.itemCount, ingested_count: ingested.length, raw_dataset_id: outcome.rawDatasetId, metadata: outcome.metadata || {} },
+    status: coverageComplete && paginationExhausted ? "success" : "partial",
+    result_summary: { provider: sourceProvider, item_count: outcome.itemCount, ingested_count: ingested.length, raw_dataset_id: outcome.rawDatasetId, metadata: outcome.metadata || {}, provider_status: outcome.status },
     cost_usd: outcome.costUsd || 0,
     ...runTelemetryPatch(outcome),
     coverage_complete: coverageComplete,
@@ -5419,23 +5444,17 @@ async function runExactJob(jobId) {
 }
 
 async function runAdDbWorkerPass() {
+  if (adRadarEnabled && adPageRefreshEnabled) {
+    const buildRunId = await ensureBuildRun();
+    await enqueueDueAdPageRefreshJobs(buildRunId);
+  }
   const jobs = await rest(
     "research",
     "work_queue?select=*&queue_name=eq.research&status=eq.pending&available_at=lte." + encode(now())
       + "&job_type=in.(blockwise-ad-collector,blockwise-media-collector)&dedupe_key=like.ad-radar:%25"
       + "&order=priority.asc,available_at.asc,created_at.asc&limit=100",
   );
-  const job = (jobs || []).find((candidate) => {
-    const initialFill = candidate.job_type === "blockwise-ad-collector"
-      && (candidate.payload?.scanMode === "initial_fill" || candidate.payload?.scan_mode === "initial_fill" || candidate.payload?.initialFill === true);
-    const firstFillChild = candidate.job_type === "blockwise-media-collector"
-      && candidate.payload?.ad_db_child === true
-      && candidate.payload?.parent_scan_mode === "initial_fill";
-    if (firstFillOnly && !initialFill && !firstFillChild) return false;
-    return initialFill || firstFillChild
-      || (!firstFillOnly && candidate.job_type === "blockwise-ad-collector")
-      || (!firstFillOnly && candidate.job_type === "blockwise-media-collector" && candidate.payload?.ad_db_child === true);
-  });
+  const job = (jobs || []).find((candidate) => shouldRunAdDbJob(candidate, firstFillOnly));
   if (!job) return { handled: 0, skipped_unmarked_media: (jobs || []).filter((candidate) => candidate.job_type === "blockwise-media-collector").length };
   await runExactJob(job.id);
   return { handled: 1, job_id: job.id, job_type: job.job_type };
