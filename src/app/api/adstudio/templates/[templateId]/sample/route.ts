@@ -59,6 +59,31 @@ export async function GET(
     : null);
   if (!template) return notFoundResponse();
 
+  const widthParam = Number(request.nextUrl.searchParams.get("w"));
+  const targetWidth = Number.isFinite(widthParam) && widthParam >= 64 && widthParam <= 1080
+    ? Math.round(widthParam)
+    : 0;
+
+  // A sample is a pure function of the template definition, the placement and the
+  // requested width, so the ETag can be derived before any work happens. Checking
+  // it here lets a revalidating browser skip the asset download, the canvas
+  // render, the opacity assertion and both encoders, which is the entire cost of
+  // the response. The gallery requests one sample per reviewed template, so on a
+  // repeat view this is the difference between 61 renders and 61 empty 304s.
+  const etag = `"${createHash("sha256")
+    .update(template.templateId)
+    .update("\0")
+    .update(placement)
+    .update("\0")
+    .update(String(targetWidth))
+    .update("\0")
+    .update(JSON.stringify(template))
+    .digest("hex")
+    .slice(0, 32)}"`;
+  if (request.headers.get("if-none-match") === etag) {
+    return new NextResponse(null, { status: 304, headers: { etag, "cache-control": SAMPLE_CACHE_CONTROL } });
+  }
+
   try {
     const assets = await loadDeclaredAssets(template, service);
     const imageValues: Record<string, Buffer> = { ...assets };
@@ -79,33 +104,12 @@ export async function GET(
     // re-encode here, where the module already exists, rather than relying on
     // Next's optimiser: that optimiser does not forward the caller's cookies,
     // so it cannot fetch this authenticated route at all.
-    const widthParam = Number(request.nextUrl.searchParams.get("w"));
-    const targetWidth = Number.isFinite(widthParam) && widthParam >= 64 && widthParam <= 1080
-      ? Math.round(widthParam)
-      : 0;
     let body = rendered.png;
     let contentType = "image/png";
     if (targetWidth > 0) {
       const { default: sharp } = await import("sharp");
       body = await sharp(rendered.png).resize({ width: targetWidth, withoutEnlargement: true }).webp({ quality: 78, effort: 4 }).toBuffer();
       contentType = "image/webp";
-    }
-    // A sample is a pure function of the template definition, the declared
-    // assets, the placement and the requested width, so it is safe to cache
-    // hard. The ETag lets a repeat view skip the body with a 304 instead of
-    // re-running the canvas render.
-    const etag = `"${createHash("sha256")
-      .update(template.templateId)
-      .update("\0")
-      .update(placement)
-      .update("\0")
-      .update(String(targetWidth))
-      .update("\0")
-      .update(JSON.stringify(template))
-      .digest("hex")
-      .slice(0, 32)}"`;
-    if (request.headers.get("if-none-match") === etag) {
-      return new NextResponse(null, { status: 304, headers: { etag, "cache-control": SAMPLE_CACHE_CONTROL } });
     }
     return new NextResponse(new Uint8Array(body), {
       headers: {
