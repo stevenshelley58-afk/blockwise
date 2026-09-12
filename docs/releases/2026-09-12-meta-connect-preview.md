@@ -26,3 +26,21 @@ Fresh finish review: **SHIP** for the visible preview, no material fixes. gpt-5.
 ## Retention and future gate
 
 Retain the named preview container, image and worktree until accepted or declined. Do not execute cleanup here. Actual integration remains gated on workspace-verified asset correlation, capability checks, system-user assignment, lead access and Meta app approval.
+
+## Revision 2 final deployment
+
+- Compiled source SHA: `6f88f83e5a06ef146cd0052e9203be7cfe56b5c1`.
+- Container/image: `blockwise-meta-connect-preview-6f88f83e5a06`.
+- Public page: HTTP `200`; `X-Preview-Revision` matches the compiled SHA.
+- Revision 2 is the simplified four-panel flow with responsive 4/2/1-column
+  layout, shorter copy, scoped data-blue CTA/number/icon accents, closed
+  walkthrough below the panels, and the simulation selector below it.
+- The walkthrough uses four actual Meta screenshots with captions covering
+  Manage campaigns and View performance while Full control remains off.
+- Review disposition: **SHIP**, limited to the observed 1440px and 390px UI;
+  no material fixes.
+- Build and image evidence: `/srv/blockwise/previews/meta-connect/{build-v2-final.log,image-build-v2-final.log}`.
+- Detector v2: `[]` (single run). Focused tests `4/4`, typecheck and build
+  passed. Final public E2E is pending due to the known intermittent
+  `net::ERR_NETWORK_CHANGED` condition; no app/page errors were observed.
+- Browser diagnosis: `/srv/blockwise/previews/meta-connect/browser-network-diagnosis-v3.log`.
