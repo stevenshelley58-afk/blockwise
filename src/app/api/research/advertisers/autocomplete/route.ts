@@ -31,6 +31,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ advertisers: [] });
   }
 
-  const advertisers = await loadCanonicalAdvertiserSuggestions(q);
+  const advertisers = await loadCanonicalAdvertiserSuggestions(q, { signal: request.signal });
   return NextResponse.json({ advertisers });
 }

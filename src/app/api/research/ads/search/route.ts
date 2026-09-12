@@ -46,7 +46,10 @@ export async function GET(request: NextRequest) {
   if (!parsed.input) return NextResponse.json({ cards: [] });
 
   try {
-    const result = await searchAdDbAds({ ...parsed.input, limit: 50 });
+    const result = await searchAdDbAds(
+      { ...parsed.input, limit: 50 },
+      { signal: request.signal },
+    );
     return NextResponse.json(
       { cards: result.items.map(mapAdDbRowToCustomerMetaCard), page: result.page },
       { headers: { "Cache-Control": "no-store" } },

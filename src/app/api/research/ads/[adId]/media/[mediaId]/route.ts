@@ -72,7 +72,7 @@ async function proxyMedia(
       method,
       range: request.headers.get("range"),
       ifRange: request.headers.get("if-range"),
-    });
+    }, { signal: request.signal });
     if (upstream.status === 404)
       return NextResponse.json({ error: "Media not found." }, { status: 404 });
     if (!upstream.ok) {

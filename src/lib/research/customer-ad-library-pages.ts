@@ -33,9 +33,10 @@ export type CustomerSavedResearchAd = {
 
 export async function loadCustomerResearchAdDetail(
   adId: string,
+  signal?: AbortSignal,
 ): Promise<{ ad: ResearchAdApiRecord | null; versions: CustomerCreativeVersion[]; error: string | null }> {
   try {
-    const row = await fetchAdDbAd(adId);
+    const row = await fetchAdDbAd(adId, { signal });
     return { ad: row ? toResearchAd(row) : null, versions: [], error: null };
   } catch {
     return { ad: null, versions: [], error: "Ad DB request failed." };
@@ -44,9 +45,10 @@ export async function loadCustomerResearchAdDetail(
 
 export async function loadCustomerAdvertiserAds(
   advertiserPageId: string,
+  signal?: AbortSignal,
 ): Promise<{ ads: ResearchAdApiRecord[]; error: string | null }> {
   try {
-    const result = await searchAdDbAds({ advertiserPageId, limit: 120 });
+    const result = await searchAdDbAds({ advertiserPageId, limit: 120 }, { signal });
     return { ads: result.items.map(toResearchAd), error: null };
   } catch {
     return { ads: [], error: "Ad DB request failed." };
@@ -70,9 +72,10 @@ export async function loadCustomerSavedResearchAds(
 
 export async function loadCustomerAdsByIds(
   adIds: string[],
+  signal?: AbortSignal,
 ): Promise<ResearchAdApiRecord[]> {
   if (adIds.length === 0) return [];
-  const rows = await Promise.all(adIds.map((adId) => fetchAdDbAd(adId)));
+  const rows = await Promise.all(adIds.map((adId) => fetchAdDbAd(adId, { signal })));
   return rows.filter((row): row is AdDbRow => row !== null).map(toResearchAd);
 }
 

@@ -28,13 +28,17 @@ const MIN_QUERY_LENGTH = 2;
 /** Customer-only advertiser suggestions sourced from the canonical Hermes Ad DB. */
 export async function loadCanonicalAdvertiserSuggestions(
   query: string,
-  limit: number = SUGGESTION_LIMIT,
+  options: { limit?: number; signal?: AbortSignal } = {},
 ): Promise<AdvertiserSuggestion[]> {
   const term = query.trim();
   if (term.length < MIN_QUERY_LENGTH) return [];
+  const limit = options.limit ?? SUGGESTION_LIMIT;
 
   try {
-    const result = await searchAdDbAds({ query: term, limit: ROW_SCAN_LIMIT });
+    const result = await searchAdDbAds(
+      { query: term, limit: ROW_SCAN_LIMIT },
+      { signal: options.signal },
+    );
     return dedupeAdvertisers(
       result.items.map((row) => ({
         page_id: row.advertiser_page_id,

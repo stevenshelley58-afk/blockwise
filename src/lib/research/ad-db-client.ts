@@ -1,3 +1,8 @@
+import { Agent as HttpAgent, request as httpRequest } from "node:http";
+import { Agent as HttpsAgent, request as httpsRequest } from "node:https";
+import { Readable } from "node:stream";
+import { createBrotliDecompress, createGunzip, createInflate } from "node:zlib";
+
 import { normaliseAdRadarCardSearchQuery } from "./ad-radar-card-search.ts";
 import {
   resolveAdRadarLocationSearch,
@@ -9,6 +14,8 @@ type Fetcher = (input: string | URL, init?: RequestInit) => Promise<Response>;
 type ClientOptions = {
   env?: Record<string, string | undefined>;
   fetcher?: Fetcher;
+  /** Caller cancellation, e.g. the incoming request's AbortSignal. */
+  signal?: AbortSignal;
 };
 
 export type AdDbSearchInput = {
@@ -48,6 +55,43 @@ export class AdDbUpstreamError extends Error {
     this.status = status;
   }
 }
+
+/**
+ * The Ad DB bridge is a same-host HTTP hop measured at ~220ms per call, and the
+ * cost is dominated by a fresh TCP connection per request. These agents keep
+ * sockets warm so a burst of Ad Radar reads reuses one connection instead of
+ * paying a handshake for each.
+ */
+const BRIDGE_KEEP_ALIVE_MS = 60_000;
+const BRIDGE_MAX_SOCKETS = 32;
+const bridgeHttpAgent = new HttpAgent({
+  keepAlive: true,
+  keepAliveMsecs: BRIDGE_KEEP_ALIVE_MS,
+  maxSockets: BRIDGE_MAX_SOCKETS,
+});
+const bridgeHttpsAgent = new HttpsAgent({
+  keepAlive: true,
+  keepAliveMsecs: BRIDGE_KEEP_ALIVE_MS,
+  maxSockets: BRIDGE_MAX_SOCKETS,
+});
+
+/**
+ * The browser gives up on an Ad Radar search after 10s, so the bridge call is
+ * bounded below that: the upstream stops working on a request the caller has
+ * already abandoned, and the caller gets a normal upstream error instead of
+ * being cut off mid-flight. The bridge's own 120s server-side timeout lives in
+ * the Hermes/Frank runtime, not here.
+ */
+const AD_DB_REQUEST_TIMEOUT_MS = 8_000;
+
+/**
+ * Concurrent identical reads (the same page requested by several cards) collapse
+ * into one in-flight bridge request. Entries are dropped the moment the request
+ * settles, so this coalesces work in progress only: there is no result cache and
+ * therefore no window in which a stale row can be served.
+ */
+const inFlightReads = new Map<string, Promise<unknown>>();
+const MAX_IN_FLIGHT_READS = 128;
 
 const ALLOWED_PARAMS = new Set([
   "q",
@@ -179,16 +223,22 @@ export async function searchAdDbAds(
     "limit",
     String(Math.min(100, Math.max(1, input.limit ?? 50))),
   );
-  const response = await request(
-    url,
-    token,
-    { method: "GET" },
-    options.fetcher,
-  );
-  if (!response.ok) throw new AdDbUpstreamError(response.status);
-  const payload: unknown = await response.json().catch(() => null);
-  if (!isSearchResult(payload)) throw new AdDbUpstreamError(502);
-  return payload;
+  const run = async (): Promise<AdDbSearchResult> => {
+    const response = await request(
+      url,
+      token,
+      { method: "GET" },
+      options.fetcher,
+      options.signal,
+    );
+    if (!response.ok) throw new AdDbUpstreamError(response.status);
+    const payload: unknown = await response.json().catch(() => null);
+    if (!isSearchResult(payload)) throw new AdDbUpstreamError(502);
+    return payload;
+  };
+  // An injected fetcher is a test seam and must observe every call, so only the
+  // shared bridge path is coalesced.
+  return coalesceRead(`GET ${url.toString()}`, run, !options.fetcher);
 }
 
 /** Load one canonical ad without exposing the research database to callers. */
@@ -201,18 +251,22 @@ export async function fetchAdDbAd(
     baseUrl,
     "/v1/ad-db/ads/" + encodeURIComponent(adId),
   );
-  const response = await request(
-    url,
-    token,
-    { method: "GET" },
-    options.fetcher,
-  );
-  if (response.status === 404) return null;
-  if (!response.ok) throw new AdDbUpstreamError(response.status);
-  const payload: unknown = await response.json().catch(() => null);
-  const row = unwrapAdDbRow(payload);
-  if (!row) throw new AdDbUpstreamError(502);
-  return row;
+  const run = async (): Promise<AdDbRow | null> => {
+    const response = await request(
+      url,
+      token,
+      { method: "GET" },
+      options.fetcher,
+      options.signal,
+    );
+    if (response.status === 404) return null;
+    if (!response.ok) throw new AdDbUpstreamError(response.status);
+    const payload: unknown = await response.json().catch(() => null);
+    const row = unwrapAdDbRow(payload);
+    if (!row) throw new AdDbUpstreamError(502);
+    return row;
+  };
+  return coalesceRead(`GET ${url.toString()}`, run, !options.fetcher);
 }
 
 export async function fetchAdDbMedia(
@@ -233,11 +287,13 @@ export async function fetchAdDbMedia(
   const headers = new Headers();
   if (input.range) headers.set("range", input.range);
   if (input.ifRange) headers.set("if-range", input.ifRange);
+  // Media bodies stream and are Range specific, so they are never coalesced.
   return request(
     url,
     token,
     { method: input.method, headers },
     options.fetcher,
+    options.signal,
   );
 }
 
@@ -267,22 +323,97 @@ function resolveAdDbConfig(
     throw new AdDbConfigurationError("AD_DB_API_URL is invalid.");
   return { baseUrl, token };
 }
+/**
+ * Minimal HTTP client for the bridge. Node's global fetch has no dependency-free
+ * way to pin a keep-alive dispatcher, so the bridge hop uses node:http(s)
+ * directly with the shared agents above. Only GET and HEAD are issued here, so
+ * there is no request body to write.
+ */
+function bridgeFetch(input: string | URL, init?: RequestInit): Promise<Response> {
+  const target = input instanceof URL ? input : new URL(String(input));
+  const secure = target.protocol === "https:";
+  const send = secure ? httpsRequest : httpRequest;
+  return new Promise<Response>((resolve, reject) => {
+    const outgoing = send(
+      target,
+      {
+        method: init?.method ?? "GET",
+        headers: Object.fromEntries(new Headers(init?.headers).entries()),
+        agent: secure ? bridgeHttpsAgent : bridgeHttpAgent,
+        signal: init?.signal ?? undefined,
+      },
+      (incoming) => {
+        const encoding = String(
+          incoming.headers["content-encoding"] ?? "",
+        ).toLowerCase();
+        let body: Readable = incoming;
+        if (encoding === "gzip" || encoding === "x-gzip")
+          body = incoming.pipe(createGunzip());
+        else if (encoding === "deflate") body = incoming.pipe(createInflate());
+        else if (encoding === "br") body = incoming.pipe(createBrotliDecompress());
+        const headers = new Headers();
+        for (const [name, value] of Object.entries(incoming.headers)) {
+          if (Array.isArray(value)) for (const item of value) headers.append(name, item);
+          else if (typeof value === "string") headers.set(name, value);
+        }
+        if (body !== incoming) {
+          // The body was decompressed above, so the encoded length no longer applies.
+          headers.delete("content-encoding");
+          headers.delete("content-length");
+        }
+        const status = incoming.statusCode ?? 502;
+        const bodiless = init?.method === "HEAD" || status === 204 || status === 304;
+        resolve(
+          new Response(
+            bodiless ? null : (Readable.toWeb(body) as unknown as ReadableStream<Uint8Array>),
+            { status, statusText: incoming.statusMessage, headers },
+          ),
+        );
+      },
+    );
+    outgoing.on("error", reject);
+    outgoing.end();
+  });
+}
+
+/** Join an in-flight identical read, or start one and remember it until it settles. */
+function coalesceRead<T>(
+  key: string,
+  run: () => Promise<T>,
+  enabled: boolean,
+): Promise<T> {
+  if (!enabled) return run();
+  const existing = inFlightReads.get(key);
+  if (existing) return existing as Promise<T>;
+  if (inFlightReads.size >= MAX_IN_FLIGHT_READS) return run();
+  const tracked = run();
+  inFlightReads.set(key, tracked);
+  const clear = () => {
+    if (inFlightReads.get(key) === tracked) inFlightReads.delete(key);
+  };
+  tracked.then(clear, clear);
+  return tracked;
+}
+
 async function request(
   url: URL,
   token: string,
   init: RequestInit,
-  fetcher: Fetcher = fetch,
+  fetcher?: Fetcher,
+  parentSignal?: AbortSignal,
 ): Promise<Response> {
   const headers = new Headers(init.headers);
   headers.set("accept", "application/json");
   headers.set("x-hermes-ad-db-read-token", token);
+  const timeout = AbortSignal.timeout(AD_DB_REQUEST_TIMEOUT_MS);
+  const signal = parentSignal ? AbortSignal.any([parentSignal, timeout]) : timeout;
   try {
-    const response = await fetcher(url, {
+    const response = await (fetcher ?? bridgeFetch)(url, {
       ...init,
       headers,
       cache: "no-store",
       redirect: "manual",
-      signal: AbortSignal.timeout(10_000),
+      signal,
     });
     if (response.status >= 300 && response.status < 400)
       throw new AdDbUpstreamError(response.status);

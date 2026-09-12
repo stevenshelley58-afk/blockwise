@@ -86,7 +86,7 @@ async function requestSuggestions(
   }
 
   try {
-    const response = await fetch(OPENAI_CHAT_URL, {
+    const response = await fetch(url, {
       method: "POST",
       signal: controller.signal,
       headers: {

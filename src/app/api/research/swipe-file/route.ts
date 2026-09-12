@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
   const observedIds = (savedRows ?? []).map((row) => row.observed_ad_id).filter(Boolean);
   let ads: Awaited<ReturnType<typeof loadAds>> = [];
   try {
-    ads = observedIds.length ? await loadAds(observedIds) : [];
+    ads = observedIds.length ? await loadAds(observedIds, request.signal) : [];
   } catch {
     return NextResponse.json({ error: "Ad DB is unavailable." }, { status: 502 });
   }
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 
   let adRows: Awaited<ReturnType<typeof loadAds>> = [];
   try {
-    adRows = await loadAds([parsed.data.observedAdId]);
+    adRows = await loadAds([parsed.data.observedAdId], request.signal);
   } catch {
     return NextResponse.json({ error: "Ad DB is unavailable." }, { status: 502 });
   }
@@ -104,9 +104,9 @@ export async function POST(request: NextRequest) {
   }, { status: 201 });
 }
 
-async function loadAds(observedIds: string[]) {
+async function loadAds(observedIds: string[], signal?: AbortSignal) {
   if (observedIds.length === 0) return [];
-  const rows = await Promise.all(observedIds.map((id) => fetchAdDbAd(id)));
+  const rows = await Promise.all(observedIds.map((id) => fetchAdDbAd(id, { signal })));
   return rows
     .filter((row): row is NonNullable<typeof row> => row !== null)
     .map(mapAdDbRowToCustomerMetaCard);
