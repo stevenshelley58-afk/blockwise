@@ -33,42 +33,44 @@ export function MetaMonitorHeader(props: {
   const hasLiveControls = props.isConnected && !props.isSample;
 
   return (
-    <header className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <MetaMark />
-            <h1 className="font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">
-              {copy.title}
-            </h1>
-          </div>
-          <p className="mt-1 text-[13px] text-muted-foreground">{copy.subtitle}</p>
+    <header>
+      <div>
+        {/* The action sits on the heading's own row rather than beside the
+            whole block: on a phone the block is full width, so a sibling of it
+            wrapped to a line of its own and landed under the sync state. */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <MetaMark />
+          <h1 className="font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">
+            {copy.title}
+          </h1>
           {hasLiveControls ? (
-            <span className="mt-1.5 flex items-center gap-1.5 text-[11.5px] font-medium text-(--faint)">
-              <span
-                className={`size-[7px] rounded-full ${props.lastSyncedAt ? "bg-success" : "bg-(--faint)"}`}
-                aria-hidden
-              />
-              {props.lastSyncedAt ? "Last known " + timeAgo(props.lastSyncedAt) : copy.states.notSynced}
-            </span>
-          ) : props.isSample ? null : (
-            <span className="mt-1.5 flex items-center gap-1.5 text-[11.5px] font-medium text-(--faint)">
-              <span className="size-[7px] rounded-full bg-(--faint)" aria-hidden />
-              Not connected
-            </span>
-          )}
+            <button
+              className="ml-auto inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-(--line-heavy) bg-card px-3.5 text-[12.5px] font-bold text-foreground transition-[background,box-shadow] duration-150 hover:bg-(--surface-subtle) hover:shadow-card disabled:cursor-default disabled:opacity-60"
+              type="button"
+              onClick={props.onRefresh}
+              disabled={props.isRefreshing}
+              aria-label={props.isRefreshing ? `${copy.refreshing} results` : `${copy.refresh} results`}
+            >
+              <RefreshCw size={13} className={props.isRefreshing ? "animate-spin" : undefined} aria-hidden />
+              <span>{props.isRefreshing ? copy.refreshing : copy.refresh}</span>
+            </button>
+          ) : null}
         </div>
-
-        {hasLiveControls ? <button
-          className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-(--line-heavy) bg-card px-3.5 text-[12.5px] font-bold text-foreground transition-[background,box-shadow] duration-150 hover:bg-(--surface-subtle) hover:shadow-card disabled:cursor-default disabled:opacity-60"
-          type="button"
-          onClick={props.onRefresh}
-          disabled={props.isRefreshing}
-          aria-label={props.isRefreshing ? `${copy.refreshing} results` : `${copy.refresh} results`}
-        >
-          <RefreshCw size={13} className={props.isRefreshing ? "animate-spin" : undefined} aria-hidden />
-          <span>{props.isRefreshing ? copy.refreshing : copy.refresh}</span>
-        </button> : null}
+        <p className="mt-1 text-[13px] text-muted-foreground">{copy.subtitle}</p>
+        {hasLiveControls ? (
+          <span className="mt-1.5 flex items-center gap-1.5 text-[11.5px] font-medium text-(--faint)">
+            <span
+              className={`size-[7px] rounded-full ${props.lastSyncedAt ? "bg-success" : "bg-(--faint)"}`}
+              aria-hidden
+            />
+            {props.lastSyncedAt ? "Last known " + timeAgo(props.lastSyncedAt) : copy.states.notSynced}
+          </span>
+        ) : props.isSample ? null : (
+          <span className="mt-1.5 flex items-center gap-1.5 text-[11.5px] font-medium text-(--faint)">
+            <span className="size-[7px] rounded-full bg-(--faint)" aria-hidden />
+            Not connected
+          </span>
+        )}
       </div>
     </header>
   );
