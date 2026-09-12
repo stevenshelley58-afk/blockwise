@@ -21,6 +21,7 @@ export type PlacementChoice =
   | "facebook_story"
   | "instagram_feed"
   | "instagram_story";
+export type PlacementsMode = "automatic" | "manual";
 
 export type PublishAudienceLocation = {
   key: string;
@@ -68,6 +69,8 @@ export type ExplicitPublishControlsDraft = {
   longitude: string;
   radiusKm: string;
   placementChoices: PlacementChoice[];
+  /** Automatic placements are delegated to Meta; manual choices remain explicit. */
+  placementsMode?: PlacementsMode;
   startIntent: ScheduleStartIntent;
   startAt: string;
   endIntent: ScheduleEndIntent;
@@ -145,6 +148,7 @@ export function buildExplicitMetaPublishControls(
 
     const controls: MetaPublishControls = {
       target,
+      ...(parentState ? { parentState } : {}),
       destinationMode: draft.destinationMode,
       destinationUrl,
       variantIds,
@@ -156,9 +160,9 @@ export function buildExplicitMetaPublishControls(
       summary: {
         target: `${target.adSetIds.length} existing ${target.adSetIds.length === 1 ? "ad set" : "ad sets"}`,
         budgetMode: parentState?.campaign?.budgetMode === "campaign"
-          ? "Campaign budget (CBO) · inherited from Meta"
+          ? "Campaign budget · inherited from Meta"
           : parentState?.campaign?.budgetMode === "adset"
-            ? "Ad set budgets (ABO) · inherited from Meta"
+            ? "Ad set budgets · inherited from Meta"
             : "Verified against Meta immediately before creation",
         budget: "Unchanged in Meta",
         audience: "Unchanged in Meta",
@@ -168,7 +172,7 @@ export function buildExplicitMetaPublishControls(
         variants: variantLabel,
         fulfilment: fulfilmentLabel,
         activationConfirmation:
-          `I confirm ${variantIds.length} ${variantIds.length === 1 ? "ad" : "ads"} will use the selected ad sets' live settings${fulfilment ? ` and deliver ${fulfilment.exactOffer}` : ""} when activated.`,
+          `I confirm ${variantIds.length} ${variantIds.length === 1 ? "ad" : "ads"} will use the selected ad sets' live settings${fulfilment ? ` and deliver ${fulfilment.exactOffer}` : ""} once published.`,
         usesExistingAdSetSettings: true,
       },
     };
@@ -182,7 +186,7 @@ export function buildExplicitMetaPublishControls(
     ? newCampaignBudgetMode ?? ""
     : existingCampaignBudgetMode ?? "";
   if (draft.targetMode === "new_campaign_new_adset" && !effectiveBudgetMode) {
-    issues.push("Choose campaign budget (CBO) or ad set budget (ABO).");
+    issues.push("Choose campaign budget or ad set budget.");
   }
   if (draft.targetMode === "new_campaign_new_adset" && !draft.newCampaignObjective.trim()) {
     issues.push("This template is missing its Meta campaign objective.");
@@ -197,12 +201,14 @@ export function buildExplicitMetaPublishControls(
     issues.push(
       draft.targetMode === "new_campaign_new_adset" && effectiveBudgetMode === "campaign"
         ? "Enter a campaign daily budget greater than A$0.00."
-        : "Enter a daily budget greater than A$0.00 for the new ad set. It is used only when Meta verifies ABO.",
+        : "Enter a daily budget greater than A$0.00 for the new ad set. It is used when Meta verifies the ad set budget.",
     );
   }
 
   const audience = buildAudience(draft, issues);
-  const placements = buildPlacements(draft.placementChoices, issues);
+  const placements = draft.placementsMode === "automatic"
+    ? { value: { mode: "automatic" as const }, label: "Automatic placements" }
+    : buildPlacements(draft.placementChoices, issues);
   const schedule = buildSchedule(draft, issues);
   if (!draft.setupConfirmed) {
     issues.push("Confirm the budget, audience, placements and schedule.");
@@ -222,6 +228,7 @@ export function buildExplicitMetaPublishControls(
 
   const controls: MetaPublishControls = {
     target,
+    ...(parentState ? { parentState } : {}),
     destinationMode: draft.destinationMode,
     destinationUrl,
     variantIds,
@@ -239,17 +246,17 @@ export function buildExplicitMetaPublishControls(
         }
       : {}),
     geo: audience.geo,
-    placements: placements.value,
+    ...(placements.value ? { placements: placements.value } : {}),
     schedule: schedule.value,
     ...(fulfilment ? { fulfilment } : {}),
   };
 
   const budgetLabel = draft.targetMode === "existing_campaign_new_adset"
-    ? `${formatAud(dailyBudgetMinorUnits)} per day if Meta verifies ABO; ignored for live CBO`
+    ? `${formatAud(dailyBudgetMinorUnits)} per day if Meta verifies ABO; campaign budget remains unchanged`
     : effectiveBudgetMode === "campaign"
     ? draft.targetMode === "new_campaign_new_adset"
       ? `${formatAud(dailyBudgetMinorUnits)} per day at campaign level`
-      : "Inherited campaign budget (CBO) · no ad set budget added"
+      : "Inherited campaign budget · no ad set budget added"
     : `${formatAud(dailyBudgetMinorUnits)} per day for the new ad set`;
 
   return {
@@ -262,11 +269,11 @@ export function buildExplicitMetaPublishControls(
           : `Campaign ${shortId(draft.campaignId)} · new ad set`,
       budgetMode: draft.targetMode === "existing_campaign_new_adset"
         ? parentState?.campaign?.budgetMode === "campaign"
-          ? "Last checked: Campaign budget (CBO) · re-verified before creation"
+          ? "Last checked: Campaign budget · re-verified before creation"
           : parentState?.campaign?.budgetMode === "adset"
-            ? "Last checked: Ad set budget (ABO) · re-verified before creation"
+            ? "Last checked: Ad set budget · re-verified before creation"
             : "Verified against Meta immediately before creation"
-        : effectiveBudgetMode === "campaign" ? "Campaign budget (CBO)" : "Ad set budget (ABO)",
+        : effectiveBudgetMode === "campaign" ? "Campaign budget" : "Ad set budget",
       budget: budgetLabel,
       audience: audience.label,
       placements: placements.label,
@@ -275,10 +282,10 @@ export function buildExplicitMetaPublishControls(
       variants: variantLabel,
       fulfilment: fulfilmentLabel,
       activationConfirmation: draft.targetMode === "existing_campaign_new_adset"
-        ? `I confirm Blockwise will re-verify the campaign's live budget mode, use its campaign budget for CBO or apply ${formatAud(dailyBudgetMinorUnits)} to the new ad set for ABO${fulfilment ? `, and deliver ${fulfilment.exactOffer}` : ""} once I activate it.`
+        ? `I confirm Blockwise will re-verify the campaign's live budget mode, use its campaign budget for CBO or apply ${formatAud(dailyBudgetMinorUnits)} to the new ad set for the ad set budget${fulfilment ? `, and deliver ${fulfilment.exactOffer}` : ""} once I activate it.`
         : effectiveBudgetMode === "campaign"
-          ? `I confirm Meta can use the campaign's ${formatAud(dailyBudgetMinorUnits)} daily budget${fulfilment ? ` and deliver ${fulfilment.exactOffer}` : ""} once I activate it.`
-          : `I confirm Meta can spend up to ${formatAud(dailyBudgetMinorUnits)} per day for this ad set${fulfilment ? ` and deliver ${fulfilment.exactOffer}` : ""} once I activate it.`,
+          ? `I confirm Meta will use the campaign's ${formatAud(dailyBudgetMinorUnits)} daily budget${fulfilment ? ` and deliver ${fulfilment.exactOffer}` : ""} once I activate it.`
+          : `I confirm this ad set has a daily budget of ${formatAud(dailyBudgetMinorUnits)}${fulfilment ? ` and deliver ${fulfilment.exactOffer}` : ""} once I activate it.`,
       usesExistingAdSetSettings: false,
     },
   };
@@ -529,6 +536,10 @@ function buildSchedule(
   }
 
   if (issues.some((issue) => /scheduled|should start|should end/.test(issue))) return null;
+  if ((startTime && Date.parse(startTime) < Date.now()) || (endTime && Date.parse(endTime) < Date.now())) {
+    issues.push("Schedule times must be in the future.");
+    return null;
+  }
   if (endTime && startTime && Date.parse(endTime) <= Date.parse(startTime)) {
     issues.push("Schedule the end after the start.");
     return null;

@@ -640,18 +640,22 @@ function buildPausedTargeting(controls: MetaPublishControls): Record<string, unk
           location_types: ["home", "recent"],
         }
       : null;
-  if (!geoLocations || !controls.placements?.publisherPlatforms?.length) {
+  if (!geoLocations || !controls.placements || (controls.placements.mode !== "automatic" && !controls.placements.publisherPlatforms?.length)) {
     throw new PublishError(
       "publish_dependencies_missing",
-      "Choose an explicit city or radius audience and exact placements before creating the ad set.",
+      "Choose an explicit city or radius audience and placements before creating the ad set.",
     );
   }
 
   return {
     geo_locations: geoLocations,
-    publisher_platforms: controls.placements.publisherPlatforms,
-    ...(controls.placements?.facebookPositions?.length ? { facebook_positions: controls.placements.facebookPositions } : {}),
-    ...(controls.placements?.instagramPositions?.length ? { instagram_positions: controls.placements.instagramPositions } : {}),
+    ...(controls.placements.mode === "automatic"
+      ? {}
+      : {
+          publisher_platforms: controls.placements.publisherPlatforms,
+          ...(controls.placements?.facebookPositions?.length ? { facebook_positions: controls.placements.facebookPositions } : {}),
+          ...(controls.placements?.instagramPositions?.length ? { instagram_positions: controls.placements.instagramPositions } : {}),
+        }),
   };
 }
 
@@ -749,8 +753,9 @@ function validatePausedPublishControls(controls: MetaPublishControls | undefined
     || Boolean(controls.placements?.facebookPositions?.length);
   const hasInstagramPositions = !selectedPlatforms.has("instagram")
     || Boolean(controls.placements?.instagramPositions?.length);
-  if (platforms.length === 0 || !supportedPlatforms || !hasFacebookPositions || !hasInstagramPositions) {
-    issues.push("Select explicit Facebook or Instagram placements before creating a new ad set.");
+  const automaticPlacements = controls.placements?.mode === "automatic";
+  if (!automaticPlacements && (platforms.length === 0 || !supportedPlatforms || !hasFacebookPositions || !hasInstagramPositions)) {
+    issues.push("Choose automatic placements or select valid Facebook/Instagram positions before creating a new ad set.");
   }
 
   const schedule = controls.schedule;
@@ -786,6 +791,7 @@ function normalizePausedControls(controls: MetaPublishControls): MetaPublishCont
               : controls.target,
         }
       : {}),
+    ...(controls.activationApproval ? { activationApproval: controls.activationApproval } : {}),
     ...(controls.variantIds ? { variantIds: [...new Set(controls.variantIds)] } : {}),
     ...(controls.newCampaign ? { newCampaign: controls.newCampaign } : {}),
     ...(controls.parentState ? { parentState: controls.parentState } : {}),
@@ -1044,20 +1050,20 @@ export function markPlanObjectsActive(plan: MetaPublishPlan): MetaPublishPlan {
     objectStatuses.campaign = {
       id: plan.reconciledObjects.campaignId,
       configuredStatus: "ACTIVE",
-      effectiveStatus: "ACTIVE",
+      effectiveStatus: null,
     };
   }
 
   objectStatuses.adSets = Object.fromEntries(
     Object.entries(plan.reconciledObjects.adSetIds).filter(([localId]) => !plan.adSets.find((adSet) => adSet.localId === localId)?.existingId).map(([localId, id]) => [
       localId,
-      { id, configuredStatus: "ACTIVE", effectiveStatus: "ACTIVE" },
+      { id, configuredStatus: "ACTIVE", effectiveStatus: null },
     ]),
   );
   objectStatuses.ads = Object.fromEntries(
     Object.entries(plan.reconciledObjects.adIds).map(([localId, id]) => [
       localId,
-      { id, configuredStatus: "ACTIVE", effectiveStatus: "ACTIVE" },
+      { id, configuredStatus: "ACTIVE", effectiveStatus: null },
     ]),
   );
 

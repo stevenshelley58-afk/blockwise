@@ -101,6 +101,8 @@ export function validateMetaOfferFulfilment(value: MetaOfferFulfilment | null | 
 }
 
 export type MetaPublishControls = {
+  /** Set only by the authenticated publish endpoint, never trusted from client controls. */
+  activationApproval?: { requestedBy: string };
   target?: MetaPublishTarget;
   dailyBudgetMinorUnits?: number;
   newCampaign?: { objective: string; specialAdCategories: string[]; specialAdCategoryCountries: string[]; budgetMode: "campaign" | "adset" };
@@ -123,6 +125,8 @@ export type MetaPublishControls = {
   };
   fulfilment?: MetaOfferFulfilment;
   placements?: {
+    /** Automatic/Advantage+ placements omit manual position constraints. */
+    mode?: "automatic" | "explicit";
     publisherPlatforms?: string[];
     facebookPositions?: string[];
     instagramPositions?: string[];
@@ -2421,9 +2425,13 @@ function buildTargeting(controls: MetaPublishControls): Record<string, unknown> 
 
   return {
     geo_locations: geoLocations,
-    publisher_platforms: controls.placements?.publisherPlatforms ?? ["facebook", "instagram"],
-    ...(controls.placements?.facebookPositions?.length ? { facebook_positions: controls.placements.facebookPositions } : {}),
-    ...(controls.placements?.instagramPositions?.length ? { instagram_positions: controls.placements.instagramPositions } : {}),
+    ...(controls.placements?.mode === "automatic"
+      ? {}
+      : {
+          publisher_platforms: controls.placements?.publisherPlatforms ?? ["facebook", "instagram"],
+          ...(controls.placements?.facebookPositions?.length ? { facebook_positions: controls.placements.facebookPositions } : {}),
+          ...(controls.placements?.instagramPositions?.length ? { instagram_positions: controls.placements.instagramPositions } : {}),
+        }),
   };
 }
 
@@ -2581,6 +2589,7 @@ function normalizeMetaPublishControls(
       endTime: controls?.schedule?.endTime ?? null,
     },
     placements: {
+      ...(controls?.placements?.mode === "automatic" ? { mode: "automatic" as const } : {}),
       publisherPlatforms: controls?.placements?.publisherPlatforms?.length ? controls.placements.publisherPlatforms : ["facebook", "instagram"],
       facebookPositions: controls?.placements?.facebookPositions ?? [],
       instagramPositions: controls?.placements?.instagramPositions ?? [],

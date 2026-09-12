@@ -15,10 +15,8 @@ export const dynamic = "force-dynamic";
 // ---------------------------------------------------------------------------
 // Ad Studio — Publish flow.
 //
-// Two explicit steps: freeze the LAST SAVED revision and create PAUSED Meta
-// objects, then let the customer separately approve activation. Server-renders
-// the frozen publish state, issues, and provider-write mode; the client drives
-// both explicit actions.
+// One final approval freezes the saved creative and authorises the durable
+// create-then-activate workflow. Provider writes remain separately gated.
 // ---------------------------------------------------------------------------
 
 export default async function PublishPage({
@@ -81,6 +79,9 @@ export default async function PublishPage({
   const issues = state
     ? validatePublishState(state, { controls: validationControls }).filter((issue) => !isInteractiveDependencyIssue(issue))
     : [];
+  const { data: publishDefaults } = await supabase.from("workspaces")
+    .select("country_code,publishing_currency,lead_destination_type,lead_destination_label")
+    .eq("id", access.workspaceId).maybeSingle();
   const providerWrites = metaPublishProviderWritesEnabled(access.workspaceId);
   const { data: metaConnection } = await supabase
     .from("provider_connections")
@@ -114,7 +115,7 @@ export default async function PublishPage({
           Back to editor
         </Link>
         <span className="ml-4 truncate text-sm font-medium">
-          Publish — {templateName}
+          Review · {templateName}
         </span>
         {!providerWrites && (
           <span className="ml-auto rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
@@ -134,6 +135,13 @@ export default async function PublishPage({
           initialIssues={issues}
           providerWritesEnabled={providerWrites}
           audienceLocations={audienceLocations}
+          publishingDefaults={{
+            country: publishDefaults?.country_code ?? "",
+            currency: publishDefaults?.publishing_currency ?? "",
+            leadDestination: publishDefaults?.lead_destination_type === "manual"
+              ? publishDefaults?.lead_destination_label || "Manual lead collection"
+              : publishDefaults?.lead_destination_label || "",
+          }}
           canRequestManualPublish={access.isOperator || access.role === "owner" || access.role === "admin"}
           automatedPublishAvailable={automatedPublishAvailable}
           metaConnectionConnected={metaConnectionConnected}

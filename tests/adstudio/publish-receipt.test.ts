@@ -70,3 +70,12 @@ function plan(controls: MetaPublishPlan["controls"]): MetaPublishPlan {
     updatedAt: "2026-09-03T00:00:00.000Z",
   };
 }
+
+test("reused campaign budget is inherited, not an extra ad allowance", () => {
+  const saved = plan({ target: { mode: "existing_campaign_new_adset", campaignId: "private-provider-id" }, dailyBudgetMinorUnits: 9999 });
+  saved.campaign.budgetMode = "campaign";
+  const summary = summarizePersistedPublishPlan(saved);
+  assert.equal(summary.budget, "Unchanged in Meta");
+  assert.match(summary.budgetMode, /unchanged/);
+  assert.doesNotMatch(summary.target, /private-provider-id/);
+});

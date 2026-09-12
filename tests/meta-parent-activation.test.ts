@@ -379,7 +379,7 @@ test("activation verifies reused parents but posts ACTIVE only to owned objects"
 });
 
 test("customer activation route verifies an explicit plan belongs to its ad", () => {
-  const source = readFileSync("src/app/api/adstudio/ads/[id]/activate/route.ts", "utf8");
+  const source = readFileSync("src/app/api/adstudio/ads/[id]/activate/route.ts", "utf8") + readFileSync("src/lib/providers/adstudio-activation.ts", "utf8");
   assert.match(source, /plan\.adStudioCampaignId !== id/);
   assert.match(source, /buildOwnedMetaActivationPayload\(plan\)/);
 });

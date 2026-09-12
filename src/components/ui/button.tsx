@@ -112,10 +112,9 @@ const buttonVariants = cva(
       },
       disc: {
         default: "",
-        none: "hidden",
+        none: "",
       },
     },
-    compoundVariants: [{ variant: "link", disc: "default", class: "hidden" }],
     defaultVariants: {
       variant: "default",
       size: "default",

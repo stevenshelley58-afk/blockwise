@@ -98,6 +98,15 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 
 The native editor starts on the actual edited ad preview. Template headings wrap at words, not arbitrary letters. Initial text is fitted using its actual font, box, line limit and existing overflow policy; saved customer typography is never refitted on reopen. Photos, Words and Adjust design occupy a slim secondary left tool column on desktop, and one equal-width bottom row on mobile. These tool buttons use the shared arrow-free option, with visible icon-and-text labels; the main customer navigation stays separate. Review & publish is primary; Save and its truthful status remain available. Adjust design reveals the stock full-width native canvas, and Done designing returns to the ad. These are two views of one continuously mounted native editor, not two implementations or a conversion. Preserve all freeform edits on transition and keep hidden design tools keyboard-inert. Copy, optional AI help and photo choices use shared Sheets rather than permanent sidebars. Secondary copy settings are disclosed when needed. Feed and Story dimensions remain fixed; native file imports and cloud services are not exposed. Original ads and the old editor remain available. See docs/architecture/adstudio-vue-editor.md for alternatives and trade-offs.
 
+## Publishing
+
+- Publishing starts from saved lead-generation creative, not a required property workflow. The review surface keeps the exact saved preview prominent and uses Lead capture, Audience & budget, and Review.
+- Generate leads is the recommended setup. Why use this campaign setup? and Customise setup are separate collapsed disclosures. Existing campaigns and ad sets are selected by provider name, never transcribed IDs.
+- One Approve & publish action authorises safe creation followed by activation. No second activation confirmation. Provider-write gates still apply and preview/manual modes never claim a Meta submission.
+- Budget scope sits immediately above approval. A daily budget is not a total or hard daily cap; inherited budgets are shared and unchanged, not a new per-ad allowance.
+- Success offers View in Performance and Create another ad. Configured ACTIVE alone never means Live. Pending, review, scheduled, failed and unconfirmed provider states remain distinct.
+- Keep management in Performance. This change does not add an Ads Manager navigation destination.
+
 ## Accessibility
 
 - **Accessibility is part of done.** Controls keep accessible names and roles, focus is visible and ordered, and colour is never the only carrier of meaning. Accessibility text is functional copy and is never trimmed by the fewer-words rule.

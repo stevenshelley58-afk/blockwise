@@ -28,7 +28,7 @@ test("the button renders the CTA disc itself rather than leaving it to call site
   assert.match(button, /\[--cta-disc:var\(--ui-cta-soft\)\]/);
   // Call sites can opt out, and an icon-only control never gets one.
   assert.match(button, /arrow\?: React\.ReactNode/);
-  assert.match(button, /disc: \{\s*default: "",\s*none: "hidden",\s*\}/);
+  assert.match(button, /disc: \{\s*default: "",\s*none: "",\s*\}/);
 });
 
 test("the CTA hover is transform-only and gated on reduced motion", () => {
@@ -85,4 +85,11 @@ test("every asChild link CTA keeps the disc and the merged props", () => {
   assert.match(button, /className: cn\(className, child\.props\.className\)/);
   assert.match(button, /"data-cta": "pill"/);
   assert.match(button, /<ButtonContents showDisc=\{showDisc\} arrow=\{arrow\}>/);
+});
+
+test("quiet actions remain visible when their disc is omitted", () => {
+  const button = read("src/components/ui/button.tsx");
+  assert.doesNotMatch(button, /none: "hidden"/);
+  assert.doesNotMatch(button, /variant: "link", disc: "default", class: "hidden"/);
+  assert.match(button, /disc !== "none" && arrow !== null && variant !== "link"/);
 });

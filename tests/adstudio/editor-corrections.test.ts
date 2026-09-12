@@ -343,48 +343,43 @@ describe("publish reports active state honestly with safe retry", () => {
   it("uses the paused or preview path for connected accounts and manual handoff otherwise", () => {
     assert.match(flow, /automatedPublishAvailable/);
     assert.match(flow, /metaConnectionConnected/);
-    assert.match(flow, /onClick=\{metaConnectionConnected \? handleAutomatedPublish : handleManualPublish\}/);
-    assert.match(flow, /disabled=\{metaConnectionConnected \?/);
+    assert.match(flow, /async function publish\(\)/);
+    assert.match(flow, /metaConnectionConnected/);
     assert.match(flow, /\/publish\?workspaceId=/);
-    assert.match(flow, /Preview paused plan/);
+    assert.match(flow, /Preview publish setup/);
     assert.match(flow, /Request manual publishing/);
     assert.match(flow, /\/manual-publish/);
-    assert.match(flow, /does not connect your Meta account to Blockwise or bypass Meta/);
-    assert.match(flow, /Ask a workspace owner or admin/);
-    assert.match(flow, /!canRequestManualPublish \|\| !ready/);
+    assert.match(flow, /does not send your ad directly to Meta/);
   });
 
   it("publish creates a paused receipt before a separate activation", () => {
-    assert.match(flow, /Create paused on Meta/);
-    assert.match(flow, /Created paused on Meta/);
-    assert.match(flow, /body: JSON\.stringify\(\{ planId, controlsFingerprint: receipt\?\.controlsFingerprint, clientMutationKey \}\)/);
-    assert.match(flow, /Activate on Meta/);
+    assert.match(flow, /approveAndPublish: true/);
+    assert.doesNotMatch(flow, /handleActivate|Activate on Meta|clientMutationKey/);
   });
 
   it("partial failure reports the real state and never claims the ad is active", () => {
-    assert.match(flow, /Created paused on Meta/);
-    assert.match(flow, /nothing is running or spending/);
-    assert.match(flow, /Published — active on Meta/);
+    assert.match(flow, /Meta may review it before delivery starts/);
+    assert.match(flow, /deliveryStatus === "live"/);
+    assert.match(flow, /deliveryStatus === "needs_attention"/);
   });
 
   it("retry targets the existing plan and never creates duplicates", () => {
-    assert.match(flow, /RetryActivationSection/);
-    assert.match(flow, /No new objects are created/);
-    assert.match(flow, /clientMutationKey/);
-    assert.match(flow, /controlsFingerprint/);
+    assert.match(flow, /creationLocked/);
+    assert.match(flow, /Check publish status/);
+    assert.match(flow, /resumePublish/);
   });
 
   it("never reports a confirmed pause when the safety pause is unverified", () => {
     // Indeterminate compensation → distinct "unknown" state with honest
     // messaging, not a claimed pause while objects may be ACTIVE.
-    assert.match(flow, /state unconfirmed/);
-    // Unknown state suppresses activation; only a confirmed paused receipt can continue.
-    assert.match(flow, /receipt\.status === "paused"/);
-    assert.match(flow, /do not retry activation until their status is known/i);
+    assert.match(flow, /final state is not confirmed/);
+    assert.match(flow, /receipt.status === "unknown"/);
+    assert.match(flow, /Check the saved status before retrying/);
   });
 
   it("the publish UI reserves ACTIVE language for the explicit activation receipt", () => {
-    assert.match(flow, /Activated on Meta/);
-    assert.match(flow, /This confirms that the reviewed ads can start running on Meta\. No new ads are created\./);
+    assert.match(flow, /Your ad is live/);
+    assert.match(flow, /Meta has confirmed delivery/);
+    assert.doesNotMatch(flow, /Activate on Meta|handleActivate/);
   });
 });

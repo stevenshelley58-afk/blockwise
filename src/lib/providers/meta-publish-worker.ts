@@ -1,3 +1,4 @@
+import { activateApprovedAdStudioPlan } from "./adstudio-activation.ts";
 import {
   applyMetaPublishExecutionResult,
   createMetaExecutionAdapter,
@@ -192,6 +193,7 @@ export async function executeMetaPublishPlan(input: {
   }
   if (input.plan.status === "paused_live") {
     await finalizeFreeLiveConversion(input, input.plan, freeLive);
+    await finishApprovedAdStudioPublish(input.plan, input);
     await queueReportingRefreshAfterProviderChange(input.plan.workspaceId, "publish");
     return input.plan;
   }
@@ -308,8 +310,24 @@ export async function executeMetaPublishPlan(input: {
   input.signal?.throwIfAborted();
   await updateMetaPublishPlanExecution(input.serviceSupabase, completedPlan);
   await persistPublishAudit(input.serviceSupabase, completedPlan);
+  await finishApprovedAdStudioPublish(completedPlan, input);
   await queueReportingRefreshAfterProviderChange(completedPlan.workspaceId, "publish");
   return completedPlan;
+}
+
+/** Finish the same durable approval after creation, including worker retries. */
+async function finishApprovedAdStudioPublish(plan: MetaPublishPlan, input: { serviceSupabase: SupabaseServiceClient; fetchImpl?: typeof fetch; compensationFetchImpl?: typeof fetch }) {
+  const approval = plan.controls.activationApproval;
+  if (!approval) return;
+  if (!plan.adStudioCampaignId || plan.status !== "paused_live") throw new Error("Creation must finish before activation.");
+  const response = await activateApprovedAdStudioPlan({
+    adId: plan.adStudioCampaignId, workspaceId: plan.workspaceId, requestedBy: approval.requestedBy,
+    planId: plan.planId, controlsFingerprint: plan.idempotencyKey,
+    clientMutationKey: deterministicUuid(plan.planId + ":approved-publish"),
+    serviceSupabase: input.serviceSupabase, fetchImpl: input.fetchImpl, compensationFetchImpl: input.compensationFetchImpl,
+  });
+  const outcome = await response.json() as { status?: string; message?: string };
+  if (!response.ok || outcome.status !== "activated") throw new Error(outcome.message || "Publishing activation has not completed.");
 }
 
 async function queueReportingRefreshAfterProviderChange(

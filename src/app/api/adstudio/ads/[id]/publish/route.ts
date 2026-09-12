@@ -1,3 +1,6 @@
+import { fetchMetaPublishParentState } from "@/lib/providers/meta-publish-options";
+import { readMetaPublishDelivery, type PublishDeliveryState } from "@/lib/providers/meta-publish-delivery";
+import { queueMetaPublishPlanExecution } from "@/lib/providers/meta-publish-queue";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
@@ -41,6 +44,8 @@ type RouteContext = {
 
 type PublishBody = {
   controls?: unknown;
+  approveAndPublish?: boolean;
+  resumePlanId?: string;
 };
 
 export async function GET(request: NextRequest, context: RouteContext) {
@@ -57,7 +62,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       plan.planId,
     );
     const dryRun = plan.status === "draft";
-    const status = activation.status ?? (dryRun
+    const status = activation.status ?? (plan.status === "approved" ? "publishing" : dryRun
       ? "paused_disabled"
       : plan.status === "paused_live"
         ? "paused"
@@ -66,13 +71,22 @@ export async function GET(request: NextRequest, context: RouteContext) {
           : plan.status === "failed"
             ? "failed"
             : "unknown");
+    let delivery: PublishDeliveryState | undefined;
+    if (activation.status === "active") {
+      try {
+        const tokens = await loadStoredProviderTokens(serviceSupabase, plan.providerConnectionId);
+        if (tokens.accessToken) delivery = await readMetaPublishDelivery({ plan, accessToken: tokens.accessToken });
+      } catch { /* Keep submission truthful when live status is unavailable. */ }
+    }
     return NextResponse.json({
+      ...(delivery ?? { deliveryStatus: "pending" }),
       ok: true,
       mode: dryRun ? "dry_run" : "publish",
       providerWritesEnabled: metaPublishProviderWritesEnabled(access.access.workspaceId),
       ...summarizePersistedPublishSource(plan),
       planId: plan.planId,
       status,
+      activationRequested: Boolean(plan.controls.activationApproval),
       controlsFingerprint: plan.idempotencyKey,
       lastCheckedAt: activation.lastCheckedAt ?? plan.updatedAt,
       setupSummary: summarizePersistedPublishPlan(plan),
@@ -113,7 +127,33 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const body = await readJsonBody<PublishBody>(request);
-  const controls = isMetaPublishControls(body.controls) ? body.controls : {};
+  if (typeof body.resumePlanId === "string" && body.resumePlanId) {
+    try {
+      const service = createSupabaseServiceClient();
+      const saved = await loadMetaPublishPlan(service, { workspaceId: access.access.workspaceId, planId: body.resumePlanId });
+      if (saved.adStudioCampaignId !== id || !saved.controls.activationApproval) {
+        return NextResponse.json({ error: "publish_approval_missing" }, { status: 400 });
+      }
+      if (!metaPublishProviderWritesEnabled(saved.workspaceId)) {
+        return NextResponse.json({ error: "provider_writes_disabled" }, { status: 403 });
+      }
+      const activation = await loadLatestActivationReceiptState(service, saved.workspaceId, saved.planId);
+      if (activation.status === "unknown") {
+        return NextResponse.json({ error: "activation_unconfirmed", message: "The final Meta state must be confirmed before retrying." }, { status: 409 });
+      }
+      if (activation.status === "active") return GET(request, context);
+      // Only resume creation. A failed activation is quarantined rather than
+      // silently issuing a different approval or changing the approved setup.
+      if (activation.lastError) return NextResponse.json({ error: "activation_needs_attention", message: activation.lastError }, { status: 409 });
+      if (saved.status === "failed") await updateMetaPublishPlanExecution(service, { ...saved, status: "publishing", updatedAt: new Date().toISOString() });
+      if (saved.status === "draft") return NextResponse.json({ error: "approval_required" }, { status: 400 });
+      await queueMetaPublishPlanExecution(saved);
+      return NextResponse.json({ ok: true, mode: "publish", status: "publishing", planId: saved.planId, activationRequested: true }, { status: 202 });
+    } catch (error) { return errorResponse(error); }
+  }
+  const controls: MetaPublishControls = isMetaPublishControls(body.controls) ? { ...body.controls } : {};
+  delete controls.activationApproval;
+  if (body.approveAndPublish === true) controls.activationApproval = { requestedBy: access.access.userId };
 
   try {
     // 1. Promote the frozen revision's Meta copy onto the ad row (the editor
@@ -136,6 +176,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if (setupBlockers.length > 0) {
       return NextResponse.json({ error: "setup_incomplete", blockers: setupBlockers }, { status: 400 });
     }
+
+    // The browser never supplies authoritative parent settings.
+    if (controls.target && controls.target.mode !== "new_campaign_new_adset") {
+      const tokens = await loadStoredProviderTokens(serviceSupabase, connection.id);
+      if (!tokens.accessToken) throw new PublishError("meta_token_missing", "Reconnect Meta before publishing.");
+      controls.parentState = await fetchMetaPublishParentState({
+        accessToken: tokens.accessToken, accountId: setup.metaAdAccountId,
+        campaignId: controls.target.campaignId,
+        adSetIds: controls.target.mode === "existing_adset" ? controls.target.adSetIds : [],
+      });
+    } else { delete controls.parentState; }
 
     // 3. Freeze the LAST SAVED revision — rejects when the ad has unsaved
     // changes (no active revision). This is the authoritative server state.
@@ -247,6 +298,28 @@ export async function POST(request: NextRequest, context: RouteContext) {
           "Provider writes are disabled (BLOCKWISE_ENABLE_PROVIDER_WRITES=false). " +
           "The saved revision is frozen and the PAUSED Meta plan is drafted, but NO Meta objects were created.",
       });
+    }
+
+    // Approval is durable before queueing. The watchdog recovers approved plans
+    // if the request is interrupted between persistence and enqueue.
+    if (controls.activationApproval) {
+      const persisted = await persistMetaPublishPlan(serviceSupabase, { ...plan, status: "approved" }, access.access.userId);
+      const approved = await loadMetaPublishPlan(serviceSupabase, { workspaceId: access.access.workspaceId, planId: persisted.id });
+      if (approved.status === "draft") {
+        const promotion = await serviceSupabase.from("meta_publish_plans")
+          .update({ status: "approved", updated_at: new Date().toISOString() })
+          .eq("workspace_id", access.access.workspaceId).eq("id", approved.planId).eq("status", "draft");
+        if (promotion.error) throw new Error(promotion.error.message);
+      }
+      if (!approved.controls.activationApproval) throw new PublishError("approval_missing", "This saved plan has no publishing approval.");
+      await queueMetaPublishPlanExecution(approved);
+      return NextResponse.json({
+        ok: true, mode: "publish", providerWritesEnabled: true,
+        ...summarizePersistedPublishSource(approved), planId: approved.planId,
+        status: "publishing", activationRequested: true,
+        controlsFingerprint: approved.idempotencyKey, setupSummary: summarizePersistedPublishPlan(approved),
+        message: "Your approved ad is queued for publishing.",
+      }, { status: 202 });
     }
 
     // 8. Provider writes enabled → execute the paused create via the existing

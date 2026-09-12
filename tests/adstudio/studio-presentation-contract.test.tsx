@@ -7,21 +7,21 @@ import { needsLogoImportRecovery } from "../../src/components/adstudio/brand-stu
 const publishFlow = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/publish-flow.tsx", "utf8");
 const brandStudio = readFileSync("src/components/adstudio/brand-studio.tsx", "utf8");
 
-test("ordinary publish setup keeps provider identifiers behind advanced setup", () => {
-  assert.match(publishFlow, /Blockwise prepares a new ad for you\. You choose your daily spend, area, where it appears and timing below\./);
-  assert.match(publishFlow, /Use an existing setup \(advanced\)/);
-  assert.ok(publishFlow.indexOf("Use an existing setup (advanced)") < publishFlow.indexOf('id="meta-target-mode"'));
-  assert.doesNotMatch(publishFlow, /Blockwise prepares a new campaign and ad set by default/);
-  assert.doesNotMatch(publishFlow, /Use an existing Meta campaign \(advanced\)/);
+test("ordinary publish setup keeps named provider choices behind customisation", () => {
+  assert.match(publishFlow, /Why use this campaign setup/);
+  assert.match(publishFlow, /Customise setup/);
+  assert.ok(publishFlow.indexOf("Customise setup") < publishFlow.indexOf('id="publish-target"'));
+  assert.doesNotMatch(publishFlow, /placeholder="(?:Campaign ID|Ad set ID|Latitude|Longitude)"/);
 });
 
-test("ordinary publish setup uses plain-language required choices", () => {
-  for (const label of ["Daily spend (AUD)", "Area", "Where your ad appears", "Starts", "Ends"]) {
-    assert.match(publishFlow, new RegExp(label.replace(/[()]/g, "\\$&")));
+test("ordinary publish setup uses plain-language choices and one spend approval", () => {
+  for (const label of ["Average daily budget", "Town or suburb", "Where your ad appears", "Starts", "Ends"]) {
+    assert.ok(publishFlow.includes(label), label);
   }
-  assert.match(publishFlow, /Set a distance around a map point \(advanced\)/);
-  assert.match(publishFlow, /Meta setup details \(advanced\)/);
-  assert.match(publishFlow, /I confirm the daily spend, area, places shown, timing, ad versions and any offer delivery details are correct/);
+  assert.match(publishFlow, /Approve & publish/);
+  assert.match(publishFlow, /No total spending cap is set/);
+  assert.match(publishFlow, /Shared with existing ads, not a per-ad allowance/);
+  assert.doesNotMatch(publishFlow, /I confirm the daily spend/);
 });
 
 test("legacy external logo URLs give a safe existing-flow recovery", () => {

@@ -113,7 +113,7 @@ describe("explicit Meta publish setup", () => {
     assert.equal(Object.hasOwn(result.controls, "geo"), false);
     assert.equal(Object.hasOwn(result.controls, "placements"), false);
     assert.equal(Object.hasOwn(result.controls, "schedule"), false);
-    assert.equal(Object.hasOwn(result.controls, "parentState"), false);
+    assert.equal(Object.hasOwn(result.controls, "parentState"), true);
     assert.equal(result.summary?.usesExistingAdSetSettings, true);
   });
 
@@ -135,8 +135,8 @@ describe("explicit Meta publish setup", () => {
     assert.ok(result.controls);
     assert.equal(result.controls.dailyBudgetMinorUnits, 3550);
     assert.equal(Object.hasOwn(result.controls, "newCampaign"), false);
-    assert.equal(Object.hasOwn(result.controls, "parentState"), false);
-    assert.match(result.summary?.budget ?? "", /ignored for live CBO/i);
+    assert.equal(Object.hasOwn(result.controls, "parentState"), true);
+    assert.match(result.summary?.budget ?? "", /campaign budget remains unchanged/i);
   });
 
   it("rejects duplicate existing ad sets so the creative matrix is exact", () => {
@@ -186,38 +186,20 @@ describe("explicit Meta publish setup", () => {
     assert.notEqual(publishSetupFingerprint(withoutConfirmation({ ...base, fulfilment: { ...base.fulfilment, fulfilmentUrl: "https://example.com/new-delivery" } })), fingerprint);
   });
 
-  it("keeps both customer confirmations and explicit labels visible", () => {
+  it("uses one explicit approval, named setup choices and truthful spend disclosure", () => {
     const source = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/publish-flow.tsx", "utf8");
-    assert.match(source, /htmlFor="publish-daily-budget"[\s\S]*"Daily spend \(AUD\)"/);
-    assert.match(source, /id="publish-daily-budget"/);
-    assert.match(source, /htmlFor="publish-audience-mode">Area<\/Label>/);
-    assert.match(source, /id="publish-audience-mode"/);
-    assert.match(source, /<legend className="text-xs font-medium">Where your ad appears<\/legend>/);
-    assert.match(source, /Choose start timing/);
-    assert.match(source, /Ad destination/);
-    assert.match(source, /Fulfilment delivery URL/);
-    assert.match(source, /Campaign budget \(CBO\)/);
-    assert.match(source, /Ad set budget \(ABO\)/);
-    assert.match(source, /Special ad category country/);
-    assert.match(source, /Blockwise will not assume it/);
+    for (const text of ["Town or suburb", "Automatic placements (recommended)", "Choose an end time",
+      "Approve & publish", "Validation is not approval", "Customise setup", "Why use this campaign setup?",
+      "Daily spend can vary. No total spending cap is set.", "View in Performance", "Create another ad"]) {
+      assert.ok(source.includes(text), text);
+    }
+    assert.match(source, /approveAndPublish: true/);
+    assert.match(source, /requestVersion/);
+    assert.match(source, /creationLocked/);
+    assert.doesNotMatch(source, /window\.confirm|AlertDialog|handleActivate|meta-campaign-id|publish-latitude/);
     assert.doesNotMatch(source, /newCampaignSpecialAdCategoryCountry: "AU"/);
-    assert.match(source, /I confirm the daily spend, area, places shown, timing, ad versions and any offer delivery details are correct/);
-    assert.doesNotMatch(source, /Fulfilment asset/);
-    assert.match(source, /A typed file name is not accepted/);
-    // Creation and activation are separate explicit actions for the exact plan.
-    assert.match(source, /Create paused on Meta/);
-    assert.match(source, /Activate on Meta/);
-    assert.match(source, /AlertDialog/);
-    assert.match(source, /Keep paused/);
-    assert.match(source, /Activate ads/);
-    assert.match(source, /Audience \/ targeting/);
-    assert.doesNotMatch(source, /window\.confirm/);
-    assert.match(source, /clientMutationKey/);
-    assert.match(source, /controlsFingerprint/);
-    assert.match(source, /status === "publishing"/);
-    assert.match(source, /View results/);
-    assert.match(source, /No new objects are created/);
-    assert.match(source, /targets only the objects this publish created/);
+    assert.match(source, /Meta may review it before delivery starts/);
+    assert.match(source, /receipt.deliveryStatus === "live"/);
   });
 
   it("loads workspace-scoped saved campaign locations into the publish UI", () => {
@@ -234,11 +216,15 @@ describe("explicit Meta publish setup", () => {
     assert.match(page, /\.from\("adstudio_campaigns"\)/);
     assert.match(page, /\.eq\("workspace_id", access\.workspaceId\)/);
     assert.match(page, /audienceLocations=\{audienceLocations\}/);
-    assert.match(flow, /availableLocations: audienceLocations/);
+    assert.match(flow, /availableLocations: locations/);
     assert.doesNotMatch(flow, /availableLocations:\s*\[\]/);
     assert.doesNotMatch(flow, /audienceLocations=\{\[\]\}/);
   });
 });
+
+  it("supports automatic placements", () => { const result = buildExplicitMetaPublishControls(draft({ targetMode: "new_campaign_new_adset", placementsMode: "automatic", placementChoices: [] })); assert.ok(result.controls); assert.equal(Object.hasOwn(result.controls, "placements"), true); assert.equal(result.summary?.placements, "Automatic placements"); });
+
+  it("rejects past scheduled times", () => { const result = buildExplicitMetaPublishControls(draft({ startIntent: "scheduled", startAt: "2000-01-01T00:00" })); assert.equal(result.controls, null); assert.match(result.issues.join(" "), /future/); });
 
 function validFulfilment(): ExplicitPublishControlsDraft["fulfilment"] {
   return {

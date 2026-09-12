@@ -53,12 +53,14 @@ export function summarizePersistedPublishPlan(plan: MetaPublishPlan): PublishPla
   const controls = plan.controls;
   const target = controls.target;
   const usesExistingAdSetSettings = target?.mode === "existing_adset";
+  const inheritsCampaignBudget = target?.mode === "existing_campaign_new_adset" && plan.campaign.budgetMode === "campaign";
   const budgetMode = usesExistingAdSetSettings
     ? "Existing ad set settings · unchanged"
+    : inheritsCampaignBudget ? "Existing campaign budget · unchanged"
     : controls.newCampaign?.budgetMode === "campaign"
       ? "Campaign budget (CBO)"
       : "Ad set budget (ABO)";
-  const budget = usesExistingAdSetSettings
+  const budget = usesExistingAdSetSettings || inheritsCampaignBudget
     ? "Unchanged in Meta"
     : formatMoney(plan.setup.currency, controls.dailyBudgetMinorUnits);
 
@@ -66,7 +68,7 @@ export function summarizePersistedPublishPlan(plan: MetaPublishPlan): PublishPla
     target: target?.mode === "new_campaign_new_adset"
       ? "New campaign · new ad set"
       : target?.mode === "existing_campaign_new_adset"
-        ? `Campaign ${shortId(target.campaignId)} · new ad set`
+        ? "Existing campaign · new ad set"
         : target?.mode === "existing_adset"
           ? `${target.adSetIds.length} existing ${target.adSetIds.length === 1 ? "ad set" : "ad sets"}`
           : "Not recorded",
@@ -111,6 +113,7 @@ function formatAudience(geo: MetaPublishPlan["controls"]["geo"]): string {
 
 function formatPlacements(placements: MetaPublishPlan["controls"]["placements"]): string {
   if (!placements) return "Not recorded";
+  if (placements.mode === "automatic") return "Automatic placements";
   const values = [
     ...(placements.facebookPositions ?? []).map((value) => `Facebook ${value}`),
     ...(placements.instagramPositions ?? []).map((value) => `Instagram ${value}`),
@@ -119,7 +122,7 @@ function formatPlacements(placements: MetaPublishPlan["controls"]["placements"])
 }
 
 function formatSchedule(schedule: MetaPublishPlan["controls"]["schedule"], timezone: string): string {
-  if (!schedule?.startTime) return "Not recorded";
+  if (!schedule?.startTime) return schedule?.endTime ? "After Meta approval · ends " + formatDate(schedule.endTime, timezone) : "After Meta approval · runs until paused";
   return schedule.endTime
     ? `${formatDate(schedule.startTime, timezone)} to ${formatDate(schedule.endTime, timezone)}`
     : `${formatDate(schedule.startTime, timezone)} · runs until you pause it`;
@@ -133,8 +136,4 @@ function formatDate(value: string, timezone: string): string {
   } catch {
     return date.toLocaleString("en-AU");
   }
-}
-
-function shortId(value: string): string {
-  return value.length <= 12 ? value : `${value.slice(0, 8)}…${value.slice(-4)}`;
 }

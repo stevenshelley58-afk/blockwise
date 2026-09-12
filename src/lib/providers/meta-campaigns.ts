@@ -115,7 +115,9 @@ export async function fetchEligibleMetaCampaigns(input: {
   const rows: MetaCampaignRow[] = [];
   let nextUrl: string | null = firstUrl.toString();
 
+  let pages = 0;
   while (nextUrl) {
+    if (++pages > 20 || new URL(nextUrl).origin !== "https://graph.facebook.com") throw new Error("Meta campaign pagination could not be verified.");
     const response = await fetchImpl(nextUrl, {
       cache: "no-store",
       signal: AbortSignal.timeout(30_000),
