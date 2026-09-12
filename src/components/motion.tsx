@@ -148,6 +148,11 @@ export function ParallaxField({
     let currentX = 0;
     let currentY = 0;
     let raf = 0;
+    /* The eased loop is only worth running while the field can be seen. Offscreen
+       it painted nothing, and a hidden tab still scheduled a frame every 16ms,
+       which is main-thread work on a page that is already LCP/INP bound. */
+    let inView = true;
+    let pageVisible = document.visibilityState !== "hidden";
 
     const onMove = (event: PointerEvent) => {
       const rect = el.getBoundingClientRect();
@@ -169,14 +174,43 @@ export function ParallaxField({
       raf = requestAnimationFrame(loop);
     };
 
+    const stop = () => {
+      if (!raf) return;
+      cancelAnimationFrame(raf);
+      raf = 0;
+    };
+    const start = () => {
+      if (raf || !inView || !pageVisible) return;
+      raf = requestAnimationFrame(loop);
+    };
+
+    const onVisibility = () => {
+      pageVisible = document.visibilityState !== "hidden";
+      if (pageVisible) start();
+      else stop();
+    };
+
+    let io: IntersectionObserver | null = null;
+    if (typeof IntersectionObserver !== "undefined") {
+      io = new IntersectionObserver((entries) => {
+        inView = entries[entries.length - 1]?.isIntersecting ?? true;
+        if (inView) start();
+        else stop();
+      });
+      io.observe(el);
+    }
+
     el.addEventListener("pointermove", onMove);
     el.addEventListener("pointerleave", onLeave);
-    raf = requestAnimationFrame(loop);
+    document.addEventListener("visibilitychange", onVisibility);
+    start();
 
     return () => {
       el.removeEventListener("pointermove", onMove);
       el.removeEventListener("pointerleave", onLeave);
-      cancelAnimationFrame(raf);
+      document.removeEventListener("visibilitychange", onVisibility);
+      io?.disconnect();
+      stop();
     };
   }, []);
 

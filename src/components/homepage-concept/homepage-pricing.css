@@ -37,3 +37,13 @@
 }
 .hp-plan-note { margin: 10px 0 0; color: var(--hc-faint); font-size: 12px; line-height: 1.4; font-weight: 500; }
 @media (prefers-reduced-motion: reduce) { .hp-pricing * { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
+
+/* The whole pricing section sits well below the hero, so its grid does not need
+   to be laid out on the first frame. The intrinsic size is a fallback and `auto`
+   remembers the measured height after the first render, so the page does not
+   jump once the reader scrolls down to it. */
+.hp-pricing {
+  content-visibility: auto;
+  contain-intrinsic-size: 1100px;
+  contain-intrinsic-size: auto 1100px;
+}

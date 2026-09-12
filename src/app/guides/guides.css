@@ -1164,3 +1164,32 @@
   .bw-guides-topic-nav a { flex: 1 1 auto; text-align: center; }
   .bw-blockwise-cta { padding: 26px 22px; }
 }
+
+/* ---------- Rendering containment ---------- */
+
+/* Long guide sections are skipped while they are offscreen. Every guide page
+   renders its prose as direct-child <section> elements, so the whole body gets
+   the benefit without touching the shared article markup. The length is only a
+   fallback: the `auto` keyword makes the browser remember the real height once
+   a section has rendered, which is what stops the scroll height jumping. */
+.bw-article-prose > section {
+  content-visibility: auto;
+  contain-intrinsic-size: 620px;
+  contain-intrinsic-size: auto 620px;
+}
+
+/* The index groups stack eight cards below the intro and feature. */
+.bw-guides-group {
+  content-visibility: auto;
+  contain-intrinsic-size: 460px;
+  contain-intrinsic-size: auto 460px;
+}
+
+/* The measure tables are the widest block in a guide: up to five columns, and
+   rows that keep a 560px minimum on a phone. Their height is small and fixed,
+   so skipping the row layout until they are near the viewport is cheap. */
+.bw-measure-table {
+  content-visibility: auto;
+  contain-intrinsic-size: 380px;
+  contain-intrinsic-size: auto 380px;
+}
