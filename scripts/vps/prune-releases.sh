@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Bound the number of retained release worktrees.
+# Bound the number of retained release worktrees and release images.
 #
 # Every release adds a worktree under releases/product, and rollback needs the
 # previous one, but nothing ever removed the older ones. This keeps the live
-# revision, the rollback revision and the newest N, then retires the rest.
+# revision, the rollback revision and the newest N, then retires the rest, along
+# with the immutable image built for each retired revision.
 #
 # A release that is not committed and clean is never removed: it is either a
 # broken release or someone's work, and neither is this script's to delete.
@@ -15,6 +16,7 @@ readonly RELEASES=/srv/blockwise/releases/product
 readonly ENV=/srv/blockwise/product/.env
 readonly APP_CONTAINER=blockwise-product-product-app-1
 readonly SHA_RE='^[a-f0-9]{40}$'
+readonly IMAGE_REPO=blockwise-app
 
 KEEP=5
 APPLY=false
@@ -27,7 +29,8 @@ Without --apply this reports what it would remove and removes nothing.
 
 Kept regardless of age: the revision serving traffic, the revision the
 environment selector records for rollback, the newest <n> (default 5), and any
-release worktree that is not clean or not at its own commit.
+release worktree that is not clean or not at its own commit. A retired revision
+takes its blockwise-app image with it, unless a container still references it.
 USAGE
 }
 
@@ -64,8 +67,12 @@ PREVIOUS_SHA="${PREVIOUS_SHA##*:}"
 [[ "$PREVIOUS_SHA" =~ $SHA_RE ]] || PREVIOUS_SHA=""
 
 mapfile -t ALL < <(find "$RELEASES" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | grep -E "$SHA_RE" | sort)
+# The name is the second field of a "mtime name" line, so it has to be taken
+# before the SHA pattern is applied. Matching the anchored pattern against the
+# whole line selected nothing at all, which left the newest-N rule protecting
+# nothing and every release but the live one retired on sight.
 mapfile -t NEWEST < <(find "$RELEASES" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %f\n' 2>/dev/null \
-  | grep -E "$SHA_RE"'$' | sort -rn | head -n "$KEEP" | awk '{print $2}')
+  | sort -rn | awk '{print $2}' | grep -E "$SHA_RE" | head -n "$KEEP")
 
 is_protected() {
   local sha="$1" kept
@@ -121,6 +128,41 @@ done
 
 if $APPLY; then git -C "$CANONICAL_SOURCE" worktree prune 2>/dev/null || true; fi
 
-printf '\n%s: %s release(s), %s retained, %s reclaimable\n' \
-  "$($APPLY && echo removed || echo would remove)" "$removed" "$kept" "$(numfmt --to=iec "$freed")"
+# Release images carry a tag naming their revision, and that tag is exactly what
+# keeps them: `docker image prune` removes only untagged images, so one image per
+# release piled up with nothing to reclaim it. Sixty-nine were on disk when this
+# was written, on a volume that was 87 percent full. Images also outlive their
+# worktrees, so this walks the images rather than the directories and retires
+# each one under the same protection as the worktrees.
+image_freed=0; image_removed=0; image_kept=0
+mapfile -t IMAGES < <(docker image ls --format '{{.Tag}}' "$IMAGE_REPO" 2>/dev/null | grep -E "$SHA_RE" | sort)
+for sha in "${IMAGES[@]}"; do
+  image="$IMAGE_REPO:$sha"
+  if is_protected "$sha"; then image_kept=$((image_kept + 1)); continue; fi
+  # An image a container still references is not this script's to remove, stopped
+  # or running, and forcing it out could break a rollback already in flight.
+  if [[ -n "$(docker ps -aq --filter "ancestor=$image" 2>/dev/null)" ]]; then
+    printf 'skip image %s: a container still uses it\n' "${sha:0:12}"
+    image_kept=$((image_kept + 1)); continue
+  fi
+  # Docker reports an image's whole size, shared base layers included, so this is
+  # the size of the images retired rather than the space returned to disk.
+  size="$(docker image inspect --format '{{.Size}}' "$image" 2>/dev/null || echo 0)"
+  if ! $APPLY; then
+    image_freed=$((image_freed + size)); image_removed=$((image_removed + 1))
+    printf 'would remove image %s (%s)\n' "${sha:0:12}" "$(numfmt --to=iec "$size")"
+    continue
+  fi
+  if docker image rm "$image" >/dev/null 2>&1; then
+    image_freed=$((image_freed + size)); image_removed=$((image_removed + 1))
+    printf 'removed image %s (%s)\n' "${sha:0:12}" "$(numfmt --to=iec "$size")"
+  else
+    printf 'skip image %s: docker refused to remove it\n' "${sha:0:12}"
+    image_kept=$((image_kept + 1))
+  fi
+done
+
+action="$($APPLY && echo removed || echo 'would remove')"
+printf '\n%s: %s release(s), %s image(s), %s retained, %s reclaimable\n' \
+  "$action" "$removed" "$image_removed" "$((kept + image_kept))" "$(numfmt --to=iec "$((freed + image_freed))")"
 $APPLY || printf 'run again with --apply to remove them\n'

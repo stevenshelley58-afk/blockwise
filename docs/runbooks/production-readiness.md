@@ -69,14 +69,33 @@ This runs on its own, so nobody has to remember it:
 - `blockwise-cleanup-checkouts.timer` runs it hourly with `--quiet --apply` and
   appends to `/srv/blockwise/releases/cleanup.log`. A run that changed nothing
   logs a single line.
-- `blockwise-autodeploy` prunes release worktrees immediately after every
-  successful release, so releases are bounded as they happen.
+- `blockwise-autodeploy` prunes release worktrees and release images immediately
+  after every successful release, so releases are bounded as they happen.
 - `blockwise-prune-releases.timer` keeps the live revision, the rollback revision
   and the newest five releases on a weekly sweep, as a backstop.
 
 To read the history of what was removed, check those logs rather than a session
 transcript. Unmerged checkouts are deliberately never deleted: they are reported
 in `cleanup.log` and are the owner's call.
+
+### Release storage rules
+
+- `scripts/vps/prune-releases.sh` is the only thing that retires release storage.
+  It keeps the revision serving traffic, the revision the environment selector
+  names for rollback, and the newest N (autodeploy passes `--keep 10`, the weekly
+  timer uses 5). Retiring a revision removes its worktree and its
+  `blockwise-app:<sha>` image together.
+- Never delete a release directory or a release image by hand, and never reach for
+  `docker image prune -a` to reclaim space. The tag is the only thing protecting a
+  release image, and `docker image prune` cannot see a tagged one, which is how
+  sixty-nine of them accumulated to fill the volume to 87 percent.
+- Read the deployed revision instead of re-deriving it:
+  `cat /srv/blockwise/releases/.autodeploy.sha` and
+  `curl -fsS https://blockwise.sale/api/health`. A canonical checkout whose HEAD
+  is behind `origin/main` is the normal steady state, not a fault: the watcher
+  releases from an immutable worktree of the pushed commit and never moves the
+  checkout. Only a hand-run `product-release.sh --deploy` needs `git pull` first,
+  because it asserts the canonical HEAD equals the candidate.
 
 ## Historical candidate (7 September 2026, beta readiness)
 
