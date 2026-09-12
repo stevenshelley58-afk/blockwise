@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BarChart3,
   Check,
   Clipboard,
   ExternalLink,
@@ -8,7 +9,7 @@ import {
   Instagram,
   LoaderCircle,
   RefreshCw,
-  ShieldCheck,
+  Shield,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -23,6 +24,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  META_PARTNER_STEPS,
+  type MetaPartnerStep,
+} from "@/components/meta/partner-steps";
+import {
   META_CONNECT_PREVIEW,
   type MetaConnectPreviewState,
 } from "@/config/niche/blockwise/meta-connect-preview";
@@ -31,8 +36,8 @@ type ConnectionState = "idle" | "checking" | "missing" | "waiting" | "connected"
 
 /**
  * Code-led composition: the existing customer surface supplies the tokens,
- * pill CTA and Inter/Manrope voice. This preview keeps the task in one compact
- * viewport and makes every provider-like result explicitly synthetic.
+ * pill CTA and Inter/Manrope voice. This preview keeps the task in four compact
+ * panels and makes every provider-like result explicitly synthetic.
  */
 export function MetaConnectPreview({ businessId }: { businessId: string | null }) {
   const [scenario, setScenario] = useState<MetaConnectPreviewState>("setup");
@@ -79,24 +84,24 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
     if (checking) {
       return {
         label: "Checking",
-        title: "Checking shared access",
-        body: "SIMULATED check in progress. No request is being sent to Meta.",
+        title: "Checking connection",
+        body: "SIMULATED check. No request is being sent to Meta.",
         tone: "blue" as StatusTone,
       };
     }
     if (connectionState === "connected") {
       return {
         label: "Connected",
-        title: "Example access found",
-        body: "The preview discovered the example Page and ad account below.",
+        title: "All set",
+        body: "We found the example Page and ad account.",
         tone: "green" as StatusTone,
       };
     }
     if (connectionState === "missing") {
       return {
         label: "Missing access",
-        title: "One permission still needs attention",
-        body: "The example check could not find the Page and ad account with the required access.",
+        title: "One permission needs attention",
+        body: "The example check could not find the required access.",
         tone: "amber" as StatusTone,
       };
     }
@@ -104,14 +109,14 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
       return {
         label: "Waiting",
         title: "Waiting for approval",
-        body: "The example share is waiting for a Meta Business Portfolio admin to approve the request.",
+        body: "A Meta Business Portfolio admin still needs to approve the request.",
         tone: "blue" as StatusTone,
       };
     }
     return {
       label: "Not checked",
-      title: "Check your shared access",
-      body: "After the Meta step, run the preview check to see the next state.",
+      title: "Check connection",
+      body: "Add Blockwise and assign the assets, then check here.",
       tone: "blue" as StatusTone,
     };
   }, [checking, connectionState]);
@@ -170,9 +175,7 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
       ? "Retry check"
       : connectionState === "waiting"
         ? "Check again"
-        : connectionState === "idle"
-          ? "I've added Blockwise"
-          : "Check my sharing";
+        : "I've added Blockwise";
 
   return (
     <main
@@ -180,7 +183,7 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
       data-preview-ready={hydrated ? "true" : "false"}
     >
       <header className="border-b border-border bg-card">
-        <div className="mx-auto flex min-h-[68px] w-full max-w-[1120px] items-center justify-between gap-4 px-5 sm:px-8">
+        <div className="mx-auto flex min-h-[68px] w-full max-w-[1440px] items-center justify-between gap-4 px-5 sm:px-8">
           <a
             href="/meta-connect-preview"
             aria-label="Reset preview"
@@ -204,19 +207,22 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-[1120px] px-5 py-8 sm:px-8 sm:py-12">
-        <div className="mb-7 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div className="max-w-[620px]">
-            <h1 className="font-display text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.08] tracking-[-0.04em]">
-              Connect Facebook &amp; Instagram
-            </h1>
-            <p className="mt-3 max-w-[58ch] text-[15px] leading-6 text-muted-foreground">
-              Share the assets Blockwise needs for your first lead ad. You stay
-              in Meta, and you can remove access at any time.
-            </p>
-          </div>
+      <div className="mx-auto w-full max-w-[1440px] px-5 py-8 sm:px-8 sm:py-10">
+        <div className="mb-6">
+          <h1 className="font-display text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.08] tracking-[-0.04em]">
+            Connect Facebook &amp; Instagram
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Add Blockwise to your Meta Business Portfolio, then choose the
+            assets to share.
+          </p>
+        </div>
 
-          <div className="grid max-w-[220px] gap-1.5">
+        <details className="mb-6 rounded-(--r-card) border border-border bg-card px-4 py-3">
+          <summary className="cursor-pointer text-sm font-semibold">
+            Preview options
+          </summary>
+          <div className="mt-3 grid max-w-[240px] gap-1.5">
             <label
               id="preview-state-label"
               htmlFor="preview-state"
@@ -247,199 +253,112 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
               </SelectContent>
             </Select>
           </div>
-        </div>
+        </details>
 
-        <div className="grid gap-7 lg:grid-cols-[minmax(0,1.06fr)_minmax(350px,.94fr)] lg:items-start lg:gap-12">
-          <section aria-labelledby="steps-heading">
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <h2
-                id="steps-heading"
-                className="font-display text-lg font-semibold tracking-[-0.025em]"
-              >
-                Three quick steps
-              </h2>
-              <span className="text-xs text-muted-foreground">
-                About two minutes
-              </span>
-            </div>
-
-            <ol className="border-y border-border">
-              <li className="grid gap-3 border-b border-border py-5 sm:grid-cols-[34px_1fr] sm:gap-4">
-                <span
-                  className="grid size-8 place-items-center rounded-full bg-secondary text-sm font-semibold"
-                  aria-hidden="true"
-                >
-                  1
-                </span>
-                <div>
-                  <h3 className="font-display text-[15px] font-semibold">
-                    Open Meta Business Settings
-                  </h3>
-                  <p className="mt-1 text-[13.5px] leading-5 text-muted-foreground">
-                    Open Partners and choose Give a partner access to your
-                    assets.
-                  </p>
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="mt-3 h-11 min-h-11"
-                  >
-                    <a
-                      href={META_CONNECT_PREVIEW.metaSettingsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Open Meta settings
-                    </a>
-                  </Button>
-                </div>
-              </li>
-
-              <li className="grid gap-3 border-b border-border py-5 sm:grid-cols-[34px_1fr] sm:gap-4">
-                <span
-                  className="grid size-8 place-items-center rounded-full bg-secondary text-sm font-semibold"
-                  aria-hidden="true"
-                >
-                  2
-                </span>
-                <div>
-                  <h3 className="font-display text-[15px] font-semibold">
-                    Add the Blockwise Business ID
-                  </h3>
-                  <p className="mt-1 text-[13.5px] leading-5 text-muted-foreground">
-                    Paste this into Meta&apos;s Partner business ID field. The
-                    ID grants nothing until you select assets.
-                  </p>
-                  <div className="mt-3 flex flex-col gap-2 rounded-(--r-card) border border-border bg-secondary/40 p-3 sm:flex-row sm:items-center sm:justify-between">
-                    <code className="break-all text-sm font-semibold tracking-[0.03em]">
-                      {businessId ?? "Business ID is unavailable in this preview"}
-                    </code>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-11 min-h-11 shrink-0"
-                      onClick={() => void copyBusinessId()}
-                      disabled={!businessId || !hydrated}
-                      arrow={null}
-                    >
-                      {copyState === "copied" ? (
-                        <Check aria-hidden="true" />
-                      ) : (
-                        <Clipboard aria-hidden="true" />
-                      )}
-                      {copyState === "copied" ? "Copied" : "Copy ID"}
-                    </Button>
-                  </div>
-                  {copyState === "failed" ? (
-                    <p className="mt-2 text-xs text-destructive" role="alert">
-                      Copy was unavailable. Select the ID and copy it manually.
-                    </p>
-                  ) : null}
-                </div>
-              </li>
-
-              <li className="grid gap-3 py-5 sm:grid-cols-[34px_1fr] sm:gap-4">
-                <span
-                  className="grid size-8 place-items-center rounded-full bg-secondary text-sm font-semibold"
-                  aria-hidden="true"
-                >
-                  3
-                </span>
-                <div>
-                  <h3 className="font-display text-[15px] font-semibold">
-                    Share the right assets
-                  </h3>
-                  <p className="mt-1 text-[13.5px] leading-5 text-muted-foreground">
-                    In Meta&apos;s asset picker, choose Partial access. Leave
-                    Full control off, then click Assign assets.
-                  </p>
-                  <ul className="mt-3 space-y-2 rounded-(--r-card) border border-border bg-secondary/40 p-3 text-[13px] leading-5">
-                    <li>
-                      <strong>Facebook Page:</strong> Ads and lead access.
-                    </li>
-                    <li>
-                      <strong>Ad account:</strong> Manage campaigns and View
-                      performance.
-                    </li>
-                    <li>
-                      <strong>Instagram account:</strong> optional.
-                    </li>
-                    <li>
-                      <strong>Pixel:</strong> optional, for conversion tracking
-                      only.
-                    </li>
-                  </ul>
-                </div>
-              </li>
-            </ol>
-
-            <details className="mt-5 rounded-(--r-card) border border-border bg-card px-4 py-3.5">
-              <summary className="cursor-pointer text-sm font-semibold">
-                Need the full walkthrough?
-              </summary>
-              <p className="mt-2 max-w-[64ch] text-[13px] leading-5 text-muted-foreground">
-                Open Meta&apos;s official help for the longer partner-access
-                walkthrough. This preview shows no Meta screens and makes no
-                live account changes.
+        <ol className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <li>
+            <PreviewPanel number="1" eyebrow="Connect Meta" title="Connect your Meta accounts">
+              <p className="text-sm leading-5 text-muted-foreground">
+                Give Blockwise access to your business assets. You choose what
+                we can access and can remove it anytime.
               </p>
-              <a
-                href={META_CONNECT_PREVIEW.helpUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold underline underline-offset-4"
+              <Button
+                asChild
+                className="mt-5 h-11 min-h-11 w-full"
+                variant="default"
               >
-                Open Meta Help
-                <ExternalLink size={15} aria-hidden="true" />
-              </a>
-            </details>
-          </section>
-
-          <section
-            aria-labelledby="check-heading"
-            className="rounded-(--r-panel) border border-border bg-card p-5 shadow-card sm:p-6"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2
-                  id="check-heading"
-                  className="font-display text-xl font-semibold tracking-[-0.03em]"
+                <a
+                  href={META_CONNECT_PREVIEW.metaSettingsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
-                  {status.title}
-                </h2>
-              </div>
-              <StatusPill tone={status.tone}>{status.label}</StatusPill>
-            </div>
-            <p className="mt-3 text-[13.5px] leading-5 text-muted-foreground">
-              {status.body}
-            </p>
+                  Open Meta Business Settings
+                </a>
+              </Button>
+            </PreviewPanel>
+          </li>
 
-            {connectionState === "connected" ? (
-              <AssetConfirmation
-                hydrated={hydrated}
-                continued={continued}
-                onContinue={() => setContinued(true)}
-              />
-            ) : null}
-
-            {connectionState !== "connected" || continued ? (
-              <div className="mt-5 border-t border-border pt-4">
-                {continued ? (
-                  <p
-                    className="mb-3 rounded-(--r-card) bg-secondary/60 px-3.5 py-3 text-[13px] leading-5 text-foreground"
-                    role="status"
-                  >
-                    <strong>Next step preview:</strong> confirm the example
-                    assets, then finish publishing setup. Nothing was saved and
-                    no page changed.
-                  </p>
-                ) : null}
-                {!continued ? (
+          <li>
+            <PreviewPanel number="2" eyebrow="Add Blockwise as a partner" title="Use our Business Portfolio ID">
+              <p className="text-sm leading-5 text-muted-foreground">
+                Add Blockwise as a partner in Meta Business Settings.
+              </p>
+              <div className="mt-4 rounded-(--r-ctl) border border-border bg-(--surface-subtle) p-3">
+                <span className="block text-xs text-muted-foreground">
+                  Blockwise Business Portfolio ID
+                </span>
+                <div className="mt-1 flex items-center justify-between gap-2">
+                  <code className="break-all text-base font-semibold tracking-[0.02em]">
+                    {businessId ?? "Unavailable"}
+                  </code>
                   <Button
                     type="button"
-                    className="h-11 min-h-11 w-full sm:w-auto"
+                    size="icon-sm"
+                    variant="outline"
+                    aria-label="Copy Business Portfolio ID"
+                    onClick={() => void copyBusinessId()}
+                    disabled={!businessId || !hydrated}
+                    arrow={null}
+                  >
+                    {copyState === "copied" ? (
+                      <Check aria-hidden="true" />
+                    ) : (
+                      <Clipboard aria-hidden="true" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+              {copyState === "failed" ? (
+                <p className="mt-2 text-xs text-destructive" role="alert">
+                  Copy was unavailable. Select the ID and copy it manually.
+                </p>
+              ) : null}
+            </PreviewPanel>
+          </li>
+
+          <li>
+            <PreviewPanel number="3" eyebrow="Share your assets" title="Share these assets">
+              <p className="text-sm leading-5 text-muted-foreground">
+                Choose Partial access. Leave Full control off.
+              </p>
+              <div className="mt-4 space-y-2">
+                <AssetRow
+                  icon={<Facebook aria-hidden="true" />}
+                  label="Facebook Page"
+                  detail="Required"
+                />
+                <AssetRow
+                  icon={<BarChart3 aria-hidden="true" />}
+                  label="Ad account"
+                  detail="Required"
+                />
+                <AssetRow
+                  icon={<Instagram aria-hidden="true" />}
+                  label="Instagram account"
+                  detail="Optional"
+                />
+              </div>
+            </PreviewPanel>
+          </li>
+
+          <li>
+            <PreviewPanel number="4" eyebrow="Check connection" title={status.title}>
+              <p className="text-sm leading-5 text-muted-foreground">
+                {status.body}
+              </p>
+              {connectionState === "connected" ? (
+                <AssetConfirmation
+                  hydrated={hydrated}
+                  continued={continued}
+                  onContinue={() => setContinued(true)}
+                />
+              ) : (
+                <div className="mt-5">
+                  <Button
+                    type="button"
+                    className="h-11 min-h-11 w-full"
                     onClick={() => void runCheck()}
                     disabled={checking || !hydrated}
-                    arrow={null}
                   >
                     {checking ? (
                       <LoaderCircle
@@ -449,34 +368,112 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
                     ) : connectionState === "missing" ? (
                       <RefreshCw aria-hidden="true" />
                     ) : (
-                      <ShieldCheck aria-hidden="true" />
+                      <Shield aria-hidden="true" />
                     )}
                     {checking ? "Checking" : checkLabel}
                   </Button>
-                ) : (
+                  <p
+                    className="mt-3 text-center text-xs text-muted-foreground"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    {checkMessage}
+                  </p>
+                </div>
+              )}
+              {connectionState !== "connected" ? (
+                <StatusPill tone={status.tone}>{status.label}</StatusPill>
+              ) : null}
+              {continued ? (
+                <div className="mt-4 border-t border-border pt-4">
+                  <p
+                    className="rounded-(--r-card) bg-success-soft px-3 py-2.5 text-xs leading-5 text-foreground"
+                    role="status"
+                  >
+                    <strong>Next step preview:</strong> your example assets are
+                    ready for publishing setup. Nothing was saved.
+                  </p>
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-11 min-h-11"
+                    className="mt-3 h-11 min-h-11"
                     onClick={() => setContinued(false)}
                     arrow={null}
                   >
                     Back to result
                   </Button>
-                )}
-                <p
-                  className="mt-3 text-xs text-muted-foreground"
-                  role="status"
-                  aria-live="polite"
-                >
-                  {checkMessage}
-                </p>
-              </div>
-            ) : null}
-          </section>
-        </div>
+                </div>
+              ) : null}
+            </PreviewPanel>
+          </li>
+        </ol>
+
+        <details className="mt-6 rounded-(--r-card) border border-border bg-card">
+          <summary className="cursor-pointer px-4 py-4 text-sm font-semibold sm:px-5">
+            Need the full walkthrough?
+          </summary>
+          <div className="grid gap-5 border-t border-border p-4 sm:p-5 lg:grid-cols-2">
+            <p className="text-sm leading-5 text-muted-foreground lg:col-span-2">
+              These are the real Blockwise help screenshots. Click any image to
+              open it full size. They show where to click in Meta, not a live
+              account.
+            </p>
+            {META_PARTNER_STEPS.map((step) => (
+              <WalkthroughStep step={step} key={step.title} />
+            ))}
+          </div>
+        </details>
       </div>
     </main>
+  );
+}
+
+function PreviewPanel({
+  number,
+  eyebrow,
+  title,
+  children,
+}: {
+  number: string;
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="flex h-full min-h-[300px] flex-col rounded-(--r-card) border border-border bg-card p-5 shadow-card">
+      <span className="grid size-8 place-items-center rounded-full bg-(--surface-subtle) text-sm font-semibold text-foreground">
+        {number}
+      </span>
+      <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+        {eyebrow}
+      </p>
+      <h2 className="mt-2 font-display text-[clamp(1.35rem,2vw,1.8rem)] font-semibold leading-tight tracking-[-0.03em]">
+        {title}
+      </h2>
+      <div className="mt-4 flex flex-1 flex-col">{children}</div>
+    </section>
+  );
+}
+
+function AssetRow({
+  icon,
+  label,
+  detail,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  detail: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-(--r-ctl) border border-border bg-(--surface-subtle) px-3 py-2.5">
+      <span className="grid size-8 shrink-0 place-items-center rounded-full bg-background text-foreground [&_svg]:size-4">
+        {icon}
+      </span>
+      <span className="min-w-0">
+        <strong className="block text-sm font-semibold">{label}</strong>
+        <span className="text-xs text-muted-foreground">{detail}</span>
+      </span>
+    </div>
   );
 }
 
@@ -490,26 +487,19 @@ function AssetConfirmation({
   onContinue: () => void;
 }) {
   return (
-    <div className="mt-5 border-t border-border pt-5">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="font-display text-sm font-semibold">Example assets</h3>
-        <Check size={16} className="text-success" aria-hidden="true" />
+    <div className="mt-4">
+      <div className="flex items-center gap-2 text-success">
+        <Check size={16} aria-hidden="true" />
+        <span className="text-sm font-semibold">Example assets found</span>
       </div>
-      <ul className="mt-3 divide-y divide-border rounded-(--r-card) border border-border">
+      <ul className="mt-3 space-y-2">
         {META_CONNECT_PREVIEW.exampleAssets.map((asset) => (
           <li
             key={asset.label}
-            className="flex items-center gap-3 px-3.5 py-3"
+            className="flex items-center gap-3 rounded-(--r-ctl) border border-border bg-success-soft/40 px-3 py-2.5"
           >
-            <span className="grid size-8 place-items-center rounded-(--r-ctl) bg-secondary text-muted-foreground">
-              {asset.label === "Facebook Page" ? (
-                <Facebook size={15} aria-hidden="true" />
-              ) : (
-                <ShieldCheck size={15} aria-hidden="true" />
-              )}
-            </span>
             <span className="min-w-0">
-              <strong className="block text-[13px] font-semibold">
+              <strong className="block text-sm font-semibold">
                 {asset.name}
               </strong>
               <span className="text-xs text-muted-foreground">
@@ -518,16 +508,11 @@ function AssetConfirmation({
             </span>
           </li>
         ))}
-        <li className="flex items-center gap-3 px-3.5 py-3">
-          <span className="grid size-8 place-items-center rounded-(--r-ctl) bg-secondary text-muted-foreground">
-            <Instagram size={15} aria-hidden="true" />
-          </span>
+        <li className="flex items-center gap-3 rounded-(--r-ctl) border border-border bg-(--surface-subtle) px-3 py-2.5">
           <span className="min-w-0">
-            <strong className="block text-[13px] font-semibold">
-              Not selected
-            </strong>
+            <strong className="block text-sm font-semibold">Not selected</strong>
             <span className="text-xs text-muted-foreground">
-              Instagram identity, optional
+              Instagram account, optional
             </span>
           </span>
         </li>
@@ -543,5 +528,51 @@ function AssetConfirmation({
         </Button>
       ) : null}
     </div>
+  );
+}
+
+function WalkthroughStep({ step }: { step: MetaPartnerStep }) {
+  const image = `/meta-connect-preview${step.image}`;
+  const fullImage = `/meta-connect-preview${step.fullImage ?? step.image}`;
+  const caption =
+    step.title === "Choose assets and permissions"
+      ? "Use this image to locate the controls. Turn on Manage campaigns and View performance. Leave Full control off."
+      : step.where;
+
+  return (
+    <article className="overflow-hidden rounded-(--r-card) border border-border bg-(--surface-subtle)">
+      <div className="p-4">
+        <h3 className="font-display text-lg font-semibold">{step.title}</h3>
+        <p className="mt-1 text-xs font-medium text-muted-foreground">{caption}</p>
+      </div>
+      <a
+        href={fullImage}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block border-y border-border bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <img
+          src={image}
+          alt={step.alt}
+          width={step.width}
+          height={step.height}
+          className="mx-auto h-auto max-h-[460px] w-full object-contain"
+        />
+      </a>
+      <div className="space-y-3 p-4 text-sm leading-5">
+        <ul className="space-y-1.5 text-muted-foreground">
+          {step.detail.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+        {step.tips.length ? (
+          <ul className="space-y-1.5 text-muted-foreground">
+            {step.tips.map((tip) => (
+              <li key={tip}>{tip}</li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+    </article>
   );
 }

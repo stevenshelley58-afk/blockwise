@@ -11,7 +11,7 @@ test("Meta connection preview is guarded and uses the validated public Business 
   assert.match(page, /BLOCKWISE_META_CONNECT_PREVIEW/);
   assert.match(page, /notFound\(\)/);
   assert.match(page, /getMetaPartnerBusinessId/);
-  assert.match(component, /Copy ID/);
+  assert.match(component, /Copy Business Portfolio ID/);
   assert.match(component, /No accounts will be changed/);
   assert.match(component, /SIMULATED/);
   assert.match(component, /data-preview-ready=\{hydrated \? "true" : "false"\}/);
@@ -28,4 +28,8 @@ test("preview fixtures stay named and synthetic", () => {
   assert.match(component, /Example assets/);
   assert.match(component, /Not selected/);
   assert.match(component, /Continue/);
+  assert.match(component, /Preview options/);
+  assert.match(component, /META_PARTNER_STEPS/);
+  assert.match(component, /fullImage/);
+  assert.match(component, /Manage campaigns and View performance/);
 });
