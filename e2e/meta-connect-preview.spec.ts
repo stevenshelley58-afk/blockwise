@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 
 /**
@@ -22,16 +22,15 @@ const VIEWPORTS = [
 const providerOrMutationUrl = (url: string) =>
   /(?:\/api\/|\/auth\/|oauth|facebook\.com|meta\.com|supabase)/i.test(url);
 
-async function openPreview(page: Page, width: number, height: number) {
-  await page.setViewportSize({ width, height });
-  const response = await page.goto(PREVIEW_PATH, { waitUntil: "domcontentloaded" });
-  expect(response?.status(), "isolated preview must be reachable").toBe(200);
-  await expect(
-    page.getByRole("heading", { name: /Connect Facebook & Instagram/i }),
-  ).toBeVisible();
-  await expect(page.getByRole("main")).toHaveAttribute("data-preview-ready", "true", { timeout: 15_000 });
-  await page.evaluate(async () => document.fonts.ready);
-  await page.locator("img").evaluateAll(async (images: HTMLImageElement[]) => {
+const WALKTHROUGH_STEPS = [
+  "Open Partners",
+  "Give Blockwise access",
+  "Paste the Blockwise Business ID",
+  "Choose assets and permissions",
+] as const;
+
+async function waitForImages(locator: Locator) {
+  await locator.evaluateAll(async (images: HTMLImageElement[]) => {
     await Promise.all(
       images.map((image) => {
         if (image.complete) return Promise.resolve();
@@ -43,15 +42,43 @@ async function openPreview(page: Page, width: number, height: number) {
       }),
     );
   });
-  const imageWidths = await page.locator("img").evaluateAll((images: HTMLImageElement[]) =>
+  const widths = await locator.evaluateAll((images: HTMLImageElement[]) =>
     images.map((image) => image.naturalWidth),
   );
-  expect(imageWidths.every((width) => width > 0), "preview images must load").toBe(true);
+  expect(widths.every((width) => width > 0), "preview images must load").toBe(true);
+}
+
+async function openPreview(page: Page, width: number, height: number) {
+  await page.setViewportSize({ width, height });
+  const response = await page.goto(PREVIEW_PATH, { waitUntil: "domcontentloaded" });
+  expect(response?.status(), "isolated preview must be reachable").toBe(200);
+  await expect(
+    page.getByRole("heading", { name: /Connect Facebook & Instagram/i }),
+  ).toBeVisible();
+  await expect(page.getByRole("main")).toHaveAttribute("data-preview-ready", "true", { timeout: 15_000 });
+  await page.evaluate(async () => document.fonts.ready);
+  await waitForImages(page.locator("img:visible"));
+  const previewOptions = page
+    .locator("details")
+    .filter({ hasText: "Preview options" })
+    .first();
+  await openPreviewOptions(page);
+  await previewOptions.locator("summary").click();
+  await expect(previewOptions).not.toHaveAttribute("open", "");
 
   await expect(page.getByText("Preview", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("button", { name: /Accept all|Essential only/i }),
   ).toHaveCount(0);
+}
+
+async function openPreviewOptions(page: Page) {
+  const details = page.locator("details").filter({ hasText: "Preview options" }).first();
+  await expect(details).toBeVisible();
+  if ((await details.getAttribute("open")) === null) {
+    await details.locator("summary").click();
+  }
+  await expect(page.getByRole("combobox", { name: /preview state|preview options|mode/i })).toBeVisible();
 }
 
 async function noHorizontalScroll(page: Page) {
@@ -61,6 +88,7 @@ async function noHorizontalScroll(page: Page) {
 }
 
 async function selectDemoMode(page: Page, label: string) {
+  await openPreviewOptions(page);
   const select = page.getByRole("combobox", { name: /demo|preview|mode/i }).first();
   if (await select.count()) {
     const tagName = await select.evaluate((element) => element.tagName);
@@ -123,10 +151,13 @@ test.describe("isolated Meta connection preview contract", () => {
     const idMatch = bodyText.match(/\b\d{8,16}\b/);
     expect(idMatch, "preview should show the configured numeric Business ID").not.toBeNull();
 
-    const copy = page.getByRole("button", { name: /copy.*(?:business )?id/i }).first();
+    const copy = page.getByRole("button", {
+      name: "Copy Business Portfolio ID",
+      exact: true,
+    });
     await expect(copy).toBeVisible();
     await copy.click();
-    await expect(page.getByRole("button", { name: "Copied", exact: true })).toBeVisible();
+    await expect(copy).toHaveText("Copied");
 
     const clipboard = await page.evaluate(() => navigator.clipboard.readText());
     expect(clipboard).toBe(idMatch![0]);
@@ -141,7 +172,7 @@ test.describe("isolated Meta connection preview contract", () => {
 
     await expect(page.getByRole("button", { name: /I've added Blockwise/i })).toBeVisible();
     await page.getByRole("button", { name: /I've added Blockwise/i }).click();
-    await expect(page.getByRole("heading", { name: "Checking shared access", level: 2 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Checking connection", level: 2 })).toBeVisible();
 
     await expect(modeText(page, /connected|access is ready|ready to go/i)).toBeVisible();
     await expect(page.getByText(/example|sample|fictional/i).first()).toBeVisible();
@@ -172,11 +203,61 @@ test.describe("isolated Meta connection preview contract", () => {
     });
   }
 
+  test("expands the four-step walkthrough and serves every linked full-size image", async ({ page }) => {
+    for (const viewport of [
+      { width: 1440, height: 1000, label: "desktop" },
+      { width: 390, height: 844, label: "mobile" },
+    ] as const) {
+      await openPreview(page, viewport.width, viewport.height);
+
+      const walkthrough = page
+        .locator("details")
+        .filter({ hasText: "Need the full walkthrough?" })
+        .first();
+      await expect(walkthrough).toBeVisible();
+      await walkthrough.locator("summary").click();
+      await expect(walkthrough).toHaveAttribute("open", "");
+
+      for (const title of WALKTHROUGH_STEPS) {
+        await expect(walkthrough).toContainText(title);
+      }
+
+      const shots = walkthrough.locator("img");
+      await expect(shots).toHaveCount(4);
+      await waitForImages(shots);
+
+      for (let index = 0; index < 4; index += 1) {
+        const link = shots.nth(index).locator("xpath=..");
+        const href = await link.getAttribute("href");
+        expect(href, "walkthrough screenshot " + (index + 1) + " needs a full-size link").toBeTruthy();
+        const response = await page.request.get(new URL(href!, page.url()).toString());
+        expect(response.status(), "walkthrough screenshot " + (index + 1) + " must be served").toBe(200);
+      }
+
+      expect(await noHorizontalScroll(page)).toBe(true);
+      mkdirSync(REVIEW_DIR, { recursive: true });
+      await page.screenshot({
+        path: REVIEW_DIR + "/meta-connect-preview-revision2-walkthrough-" + viewport.label + "-" + viewport.width + "x" + viewport.height + ".png",
+        fullPage: true,
+      });
+    }
+  });
   test("has labelled controls and no unlabeled images or buttons", async ({ page }) => {
     await openPreview(page, 1440, 1000);
 
     await expect(page.getByRole("heading", { name: /Connect Facebook & Instagram/i })).toHaveCount(1);
     await expect(page.getByRole("main")).toBeVisible();
+    const walkthrough = page
+      .locator("details")
+      .filter({ hasText: "Need the full walkthrough?" })
+      .first();
+    await expect(walkthrough.locator("summary")).toBeVisible();
+    await walkthrough.locator("summary").click();
+    for (const title of WALKTHROUGH_STEPS) {
+      await expect(walkthrough.getByRole("heading", { name: title })).toBeVisible();
+    }
+
+    await openPreviewOptions(page);
     await expect(page.getByRole("combobox").first()).toHaveAccessibleName(/demo|preview|mode/i);
     if ((await page.getByRole("option").count()) === 0) {
       await page.getByRole("combobox").first().click();
@@ -209,9 +290,23 @@ test.describe("isolated Meta connection preview contract", () => {
       const height = await primary.evaluate((element) => element.getBoundingClientRect().height);
       expect(height, "primary action should remain touchable").toBeGreaterThanOrEqual(40);
 
+      const previewOptions = page
+        .locator("details")
+        .filter({ hasText: "Preview options" })
+        .first();
+      await expect(previewOptions).not.toHaveAttribute("open", "");
+      await page.evaluate(() => window.scrollTo(0, 0));
       mkdirSync(REVIEW_DIR, { recursive: true });
       await page.screenshot({
-        path: `${REVIEW_DIR}/meta-connect-preview-${viewport.label}-${viewport.width}x${viewport.height}.png`,
+        path:
+          REVIEW_DIR +
+          "/meta-connect-preview-revision2-" +
+          viewport.label +
+          "-" +
+          viewport.width +
+          "x" +
+          viewport.height +
+          ".png",
         fullPage: true,
       });
     });
