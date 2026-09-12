@@ -610,7 +610,7 @@ async function enqueueDueCensusJobs(buildRunId) {
 }
 
 async function enqueueDueAdPageRefreshJobs(buildRunId) {
-  if (!adPageRefreshEnabled) return { adRefreshCandidates: 0, adRefreshEnqueued: 0 };
+  if (!firstFillOnly && !adPageRefreshEnabled) return { adRefreshCandidates: 0, adRefreshEnqueued: 0 };
   const challengeCooldownMs = metaBrowserChallengeCooldownRemaining();
   if (!firstFillOnly && challengeCooldownMs > 0) {
     return { adRefreshCandidates: 0, adRefreshEnqueued: 0, adRefreshSkippedChallengeCooldown: true, adRefreshChallengeCooldownMs: challengeCooldownMs };
@@ -2802,7 +2802,7 @@ async function runApifyFirstFillCapture(input) {
       finishedAt: now(),
       items,
       itemCount: items.length,
-      errorMessage: outcome.status === "failed" ? "Apify first-fill failed" : null,
+      errorMessage: outcome.metadata?.billingPending ? "Apify billing reconciliation pending" : outcome.status === "FAILED" ? "Apify capture incomplete: " + (outcome.metadata?.pageOutcomes || []).map((page) => page.reason || page.outcome).join(", ") : null,
       metadata: { ...(outcome.metadata || {}), advertiserPageId: input.advertiserPageId, resolverDecisionId: input.resolverDecisionId },
     };
   } catch (error) {
@@ -4438,6 +4438,10 @@ async function handleAdCollector(job) {
       },
     };
   }
+  if (sourceProvider === "apify" && outcome.metadata?.billingPending) {
+    await updateFetchRun(adFetchRunId, { source_provider: sourceProvider, status: "failed", error: "apify_billing_pending", result_summary: { provider: sourceProvider, reconciliation_pending: true, metadata: outcome.metadata } });
+    return { status: "deferred", result: { handler: "blockwise-ad-collector", provider_run_id: outcome.runId, billing_pending: true, collection_complete: false } };
+  }
   if (!["SUCCEEDED", "SUCCEEDED_PARTIAL"].includes(outcome.status)) {
     await updateFetchRun(adFetchRunId, { source_provider: sourceProvider, status: "failed", result_summary: { provider: sourceProvider, metadata: outcome.metadata || {} }, error: outcome.errorMessage || "capture failed", cost_usd: outcome.costUsd || 0, ...runTelemetryPatch(outcome) });
     await markAdvertiserPageCheckFailed(payload.advertiserPageId);
@@ -5306,7 +5310,10 @@ async function processOneJob(job) {
     }
     const outcome = await handleJob(job);
     const result = { ...outcome.result, duration_ms: Date.now() - started, worker_id: workerId };
-    if (outcome.status === "complete") await finishJob(job, "complete", { result, last_error: null, blocked_reason: null });
+    if (outcome.status === "deferred") {
+      await finishJob(job, "pending", { available_at: new Date(Date.now() + 300_000).toISOString(), attempts: Math.max(0, (job.attempts || 1) - 1), result, last_error: "apify_billing_pending", blocked_reason: null });
+    }
+    else if (outcome.status === "complete") await finishJob(job, "complete", { result, last_error: null, blocked_reason: null });
     else await finishJob(job, "blocked", { result, blocked_reason: outcome.blocked_reason || "blocked", last_error: null });
     log("job handled", { jobId: job.id, jobType: job.job_type, outcome: outcome.status, durationMs: Date.now() - started });
   } catch (error) {
@@ -5476,7 +5483,7 @@ async function runExactJob(jobId) {
 }
 
 async function runAdDbWorkerPass() {
-  if (adRadarEnabled && adPageRefreshEnabled) {
+  if (adRadarEnabled && (firstFillOnly || adPageRefreshEnabled)) {
     const buildRunId = await ensureBuildRun();
     await enqueueDueAdPageRefreshJobs(buildRunId);
   }
