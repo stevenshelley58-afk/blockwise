@@ -91,11 +91,13 @@ in `cleanup.log` and are the owner's call.
   sixty-nine of them accumulated to fill the volume to 87 percent.
 - Read the deployed revision instead of re-deriving it:
   `cat /srv/blockwise/releases/.autodeploy.sha` and
-  `curl -fsS https://blockwise.sale/api/health`. A canonical checkout whose HEAD
-  is behind `origin/main` is the normal steady state, not a fault: the watcher
-  releases from an immutable worktree of the pushed commit and never moves the
-  checkout. Only a hand-run `product-release.sh --deploy` needs `git pull` first,
-  because it asserts the canonical HEAD equals the candidate.
+  `curl -fsS https://blockwise.sale/api/health`. The watcher releases from an
+  immutable worktree of the pushed commit, so a canonical checkout that is
+  behind `origin/main` is expected between releases. A verified
+  `product-release.sh --deploy` fast-forwards the canonical checkout to the
+  revision it made live, so the tree stops recording an old revision. It reports
+  and leaves the checkout alone, instead of forcing it, when that checkout holds
+  uncommitted changes or is not on `main`.
 
 ## Historical candidate (7 September 2026, beta readiness)
 
@@ -294,6 +296,8 @@ actual detailed logs and any explicit skipped-test reasons separately. Run
 source/image/live chain without changing it. Preparation does not change
 production. Activation recreates only the application service; database, Auth,
 Storage, Caddy, worker and provider activation remain separately gated changes.
+A verified deploy then fast-forwards the canonical checkout's `main` to the
+released revision, so the branch agents read is the revision that is live.
 
 Run the repository gates below against the candidate. Verify the candidate in
 one isolated controlled canary with outbound credentials disabled, then record

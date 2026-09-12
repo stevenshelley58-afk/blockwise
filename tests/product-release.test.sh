@@ -23,6 +23,7 @@ for receipt in "$WORK"/*.json; do bad "$SCRIPT" --deploy "$SHA" --receipt "$rece
 mkdir -p "$WORK/bin" "$WORK/source" "$WORK/releases/$OLD/infra/coolify" "$WORK/releases/$OLD/scripts/vps" "$WORK/receipts"
 cp "$SCRIPT" "$WORK/product-release.sh"
 sed -i \
+  -e "s|^readonly CANONICAL_SOURCE=.*|readonly CANONICAL_SOURCE=$WORK/source|" \
   -e "s|^readonly SOURCE=.*|readonly SOURCE=$WORK/source|" \
   -e "s|^readonly RELEASES=.*|readonly RELEASES=$WORK/releases|" \
   -e "s|^readonly RECEIPTS=.*|readonly RECEIPTS=$WORK/receipts|" \
@@ -44,11 +45,16 @@ args=("$@")
 joined=" $* "
 case "$joined" in
   *" fetch "*) exit 0 ;;
+  *" cat-file -e "*) exit 0 ;;
   *" branch --show-current"*) printf 'main\n' ;;
+  *" rev-parse --short=12 HEAD"*) printf '%s\n' "${MOCK_SHA:0:12}" ;;
   *" rev-parse HEAD"*|*" rev-parse origin/main"*) printf '%s\n' "$MOCK_SHA" ;;
+  *" rev-parse --git-common-dir"*) printf '%s\n' "$MOCK_CANONICAL/.git" ;;
+  *" diff --shortstat "*) exit 0 ;;
   *" diff --quiet"*) exit 0 ;;
   *" symbolic-ref -q HEAD"*) exit 1 ;;
   *" status --porcelain"*) exit 0 ;;
+  *" merge --ff-only "*) exit 0 ;;
   *" worktree add "*)
     for ((i=0;i<${#args[@]};i++)); do
       if [[ "${args[i]}" == --detach ]]; then release="${args[i+1]}"; break; fi
@@ -71,7 +77,7 @@ if [[ -n "${MOCK_DOCKER_FAIL_ONCE:-}" && -e "$MOCK_DOCKER_FAIL_ONCE" && " $* " =
 fi
 DOCKER
 chmod 700 "$WORK/bin/git" "$WORK/bin/docker"
-run() { PATH="$WORK/bin:$PATH" MOCK_ROOT="$WORK" MOCK_SHA="$SHA" "$WORK/product-release.sh" "$@"; }
+run() { PATH="$WORK/bin:$PATH" MOCK_ROOT="$WORK" MOCK_SHA="$SHA" MOCK_CANONICAL="$WORK/source" "$WORK/product-release.sh" "$@"; }
 printf '{"sha":"%s","canary_pass":true,"repository_checks":"pass"}\n' "$SHA" > "$WORK/ok.json"
 run --prepare "$SHA"
 run --deploy "$SHA" --receipt "$WORK/ok.json"

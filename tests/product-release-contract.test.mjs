@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-for (const suite of ["product-release-preflight.test.sh", "product-release.test.sh"]) {
+for (const suite of ["product-release-preflight.test.sh", "product-release.test.sh", "product-release-canonical.test.sh"]) {
   test(`single-authority release contract: ${suite}`, { skip: process.platform === "win32" ? "VPS Bash release contract" : false }, () => {
     const result = spawnSync("bash", [`tests/${suite}`], { cwd: root, encoding: "utf8", timeout: 60_000 });
     assert.ifError(result.error);

@@ -22,6 +22,8 @@ Usage:
 
 No arguments is a non-mutating plan. Receipt JSON must be exactly:
 {"sha":"<full-git-sha>","canary_pass":true,"repository_checks":"pass"}
+A verified --deploy fast-forwards the canonical checkout to the released
+revision, unless that checkout has uncommitted changes or is not on main.
 USAGE
 }
 fail() { printf 'product release failed: %s\n' "$*" >&2; exit 2; }
@@ -95,6 +97,39 @@ assert_source_authority() {
     releases_real="$(readlink -f -- "$RELEASES")"
     source_real="$(readlink -f -- "$SOURCE")"
     [[ "$source_real" == "$releases_real"/* ]] || fail "release source override must live under $RELEASES"
+  fi
+}
+# The canonical tree is the record of what is live, and the watcher releases
+# from an immutable worktree without ever moving it. Left alone it therefore
+# falls behind the moment another session pushes: every release lands on
+# origin/main, and none of that reaches the branch an agent reads. Every such
+# session then reports the checkout as behind, and a tree that is merely old is
+# easy to mistake for one holding another session's work. Catching the branch up
+# once the release is verified live is the whole fix.
+advance_canonical_main() {
+  local branch changed
+  # None of these outcomes may fail the release: it is already verified live by
+  # the time this runs, and a stale branch is not worth rolling production back
+  # over. Each one says what it left behind instead.
+  branch="$("$GIT" -C "$CANONICAL_SOURCE" branch --show-current)"
+  if [[ "$branch" != main ]]; then
+    printf 'note: canonical checkout is on %s; left where it is\n' "${branch:-no branch}" >&2
+    return 0
+  fi
+  # The candidate is origin/main and canonical HEAD equalled the revision before
+  # this one, so this only ever fast-forwards. Uncommitted changes are the one
+  # case that must not be forced: they belong to a session that has not
+  # committed them, and losing them is worse than a stale branch.
+  changed="$("$GIT" -C "$CANONICAL_SOURCE" diff --shortstat HEAD -- 2>/dev/null)"
+  if [[ -n "$changed" ]]; then
+    printf 'note: canonical checkout has uncommitted changes; left at %s\n' \
+      "$("$GIT" -C "$CANONICAL_SOURCE" rev-parse --short=12 HEAD)" >&2
+    return 0
+  fi
+  if "$GIT" -C "$CANONICAL_SOURCE" merge --ff-only "$TARGET"; then
+    printf 'canonical checkout advanced to %s\n' "$TARGET"
+  else
+    printf 'warning: canonical checkout did not advance; reconcile %s by hand\n' "$CANONICAL_SOURCE" >&2
   fi
 }
 checkout() {
@@ -214,6 +249,7 @@ deploy() {
   # so it is reported loudly enough to find in the release log.
   "$RELEASE/scripts/vps/product-edge-purge.sh" \
     || printf 'warning: edge cache purge failed; the previous marketing HTML stays cached until its TTL expires\n' >&2
+  advance_canonical_main
   printf 'deployed %s with receipt %s\n' "$TARGET" "$(basename "$RECEIPT")"
 }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
