@@ -1,7 +1,8 @@
 import { ArrowRight, CalendarClock, Mail } from "lucide-react";
 
 import {
-  BOOKING_HREF,
+  BOOKING_CALL,
+  BOOKING_MODE,
   BOOKING_POINTS,
   CONTACT_EMAIL,
   CONTACT_HREF,
@@ -11,11 +12,14 @@ import "./homepage-booking.css";
 
 /**
  * Closing section: the path for a visitor who has read the page and wants a
- * person rather than a signup form. It states the length and the cost, then
- * hands over to SnagTime for live availability, so nothing here promises a
- * time slot the scheduler has not actually offered.
+ * person rather than a signup form. It states the length and the cost. The
+ * action follows BOOKING_MODE, so it either asks for times by email or hands
+ * over to SnagTime for a real slot, and never promises a picker that is not
+ * there.
  */
 export function HomepageBooking() {
+  const call = BOOKING_CALL[BOOKING_MODE];
+
   return (
     <section className="hb-booking" id="book-a-call" aria-labelledby="hb-booking-title">
       <div className="hc-shell hb-booking-grid">
@@ -34,20 +38,19 @@ export function HomepageBooking() {
         <div className="hb-booking-card">
           <CalendarClock aria-hidden="true" size={26} />
           <h3>Find a time that works</h3>
-          <p>
-            You will see live availability and get a confirmation straight away, plus a calendar
-            invite.
-          </p>
-          <a className="hb-booking-cta" href={BOOKING_HREF}>
-            See available times
+          <p>{call.detail}</p>
+          <a className="hb-booking-cta" href={call.href}>
+            {call.action}
             <ArrowRight aria-hidden="true" size={16} />
           </a>
-          <p className="hb-booking-alt">
-            <Mail aria-hidden="true" size={14} />
-            <span>
-              Prefer email? <a href={CONTACT_HREF}>{CONTACT_EMAIL}</a>
-            </span>
-          </p>
+          {BOOKING_MODE === "live" ? (
+            <p className="hb-booking-alt">
+              <Mail aria-hidden="true" size={14} />
+              <span>
+                Prefer email? <a href={CONTACT_HREF}>{CONTACT_EMAIL}</a>
+              </span>
+            </p>
+          ) : null}
         </div>
       </div>
     </section>

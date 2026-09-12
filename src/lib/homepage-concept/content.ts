@@ -123,6 +123,29 @@ export const BOOKING_POINTS = [
   "No obligation to continue",
 ] as const;
 
+/**
+ * SnagTime is not serving on BOOKING_ORIGIN yet, and a home page must not offer
+ * live availability it cannot show. In "request" mode the section asks for a
+ * few times by email and we confirm one; in "live" mode it hands over to
+ * SnagTime for a real slot picker. The wording below follows the mode, so
+ * switching to "live" is the same one-line change that deploys the scheduler,
+ * and the page can never promise a picker that is not there.
+ */
+export const BOOKING_MODE: "request" | "live" = "request";
+
+export const BOOKING_CALL = {
+  request: {
+    action: "Request a time",
+    detail: "Send us two or three times that suit you and we will confirm one by email.",
+    href: `${CONTACT_HREF}?subject=Book%20a%20call`,
+  },
+  live: {
+    action: "See available times",
+    detail: "You will see live availability, and you get a confirmation straight away.",
+    href: BOOKING_HREF,
+  },
+} as const;
+
 export type FaqLink = { readonly label: string; readonly href: string };
 export type Faq = { readonly question: string; readonly answer: string; readonly links?: readonly FaqLink[] };
 
