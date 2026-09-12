@@ -1,6 +1,6 @@
 import { fetchMetaPublishParentState } from "@/lib/providers/meta-publish-options";
 import { readMetaPublishDelivery, type PublishDeliveryState } from "@/lib/providers/meta-publish-delivery";
-import { queueMetaPublishPlanExecution } from "@/lib/providers/meta-publish-queue";
+import { queueMetaPublishPlanExecution, loadLatestMetaPublishPlanQueueState } from "@/lib/providers/meta-publish-queue";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { errorResponse, readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
@@ -62,10 +62,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
       plan.planId,
     );
     const dryRun = plan.status === "draft";
+    const awaitingApprovedActivation = plan.status === "paused_live" && Boolean(plan.controls.activationApproval) && !activation.status;
+    const queueState = awaitingApprovedActivation ? await loadLatestMetaPublishPlanQueueState({
+      serviceSupabase, workspaceId: plan.workspaceId, planId: plan.planId,
+    }) : null;
+    const approvedActivationStatus = activation.lastError || queueState?.status === "failed" ? "failed" : "publishing";
     const status = activation.status ?? (plan.status === "approved" ? "publishing" : dryRun
       ? "paused_disabled"
       : plan.status === "paused_live"
-        ? "paused"
+        ? awaitingApprovedActivation ? approvedActivationStatus : "paused"
         : plan.status === "publishing"
           ? "publishing"
           : plan.status === "failed"

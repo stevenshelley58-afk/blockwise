@@ -83,3 +83,9 @@ test("single approval is authenticated, durable and queued before activation", (
   assert.match(worker, /finishApprovedAdStudioPublish\(completedPlan, input\)/);
   assert.match(worker, /deterministicUuid\(plan.planId/);
 });
+
+test("receipt keeps polling across the paused creation to activation handoff", () => {
+  assert.match(publishRoute, /const awaitingApprovedActivation = plan.status === "paused_live" && Boolean\(plan.controls.activationApproval\)/);
+  assert.match(publishRoute, /awaitingApprovedActivation \? approvedActivationStatus : "paused"/);
+  assert.match(publishRoute, /activation.lastError \|\| queueState\?\.status === "failed"/);
+});
