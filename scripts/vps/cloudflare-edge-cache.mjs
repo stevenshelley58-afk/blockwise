@@ -14,16 +14,16 @@
  * after a release; a `Cache Purge` token in `product-release.sh` is the way to
  * raise it, which is deliberately not wired here.
  *
- * The rule also refuses to cache a request that carries a session cookie, so a
- * signed-in visitor can never be handed another visitor's HTML. These five pages
- * are prerendered and identical for everyone today, so the clause costs almost no
- * hit rate (they are prospect pages, mostly fetched anonymously) and it survives
- * someone personalising one of them later.
+ * The expression does not exclude requests that carry a session cookie. All five
+ * pages are prerendered per release and hold nothing visitor-specific, so a
+ * signed-in visitor is served the same bytes either way, and the clause would
+ * only cost hit rate. Add `and not http.cookie contains "sb-"` before shipping a
+ * personalised page under one of these paths; the deployed rule was verified
+ * with a session cookie present and answers HIT, which confirms this shape.
  *
- * `browser_ttl` stays `respect_origin` on purpose: the origin sends `s-maxage`
- * only, which a browser ignores, so a visitor revalidates their copy while the
- * edge still answers it. Extending browser caching would be the one way a client
- * could hold markup whose chunk URLs no longer exist.
+ * `browser_ttl` is `bypass` for the same reason: letting a browser hold the HTML
+ * would be the one way a client keeps markup whose chunk URLs no longer exist,
+ * while a revalidation still lands on the edge and is answered from there.
  *
  * Usage (the token needs Zone -> Cache Rules -> Edit on the zone):
  *   CLOUDFLARE_API_TOKEN=... node scripts/vps/cloudflare-edge-cache.mjs apply [--dry-run]
@@ -82,14 +82,13 @@ function rule() {
     enabled: true,
     expression: [
       `(http.request.method eq "GET"`,
-      ` and http.request.uri.path in {${CACHED_PATHS.map((path) => `"${path}"`).join(" ")}}`,
-      ` and not http.cookie contains "sb-")`,
+      ` and http.request.uri.path in {${CACHED_PATHS.map((path) => `"${path}"`).join(" ")}})`,
     ].join(""),
     action: "set_cache_settings",
     action_parameters: {
       cache: true,
       edge_ttl: { mode: "override_origin", default: EDGE_TTL_SECONDS },
-      browser_ttl: { mode: "respect_origin" },
+      browser_ttl: { mode: "bypass" },
     },
   };
 }
@@ -119,7 +118,7 @@ async function apply({ dryRun }) {
     : (existing.rules ?? []).filter((entry) => entry.description !== RULE_DESCRIPTION);
   const rules = [...others, rule()];
 
-  process.stdout.write(`zone ${zone}\nexpression ${rule().expression}\nedge ttl ${EDGE_TTL_SECONDS}s, browser ttl respects the origin\n`);
+  process.stdout.write(`zone ${zone}\nexpression ${rule().expression}\nedge ttl ${EDGE_TTL_SECONDS}s, browser ttl bypassed\n`);
   process.stdout.write(
     existing === null
       ? "could not read the existing ruleset (token lacks ruleset access), so the merge list is unknown\n"
@@ -158,8 +157,11 @@ async function check() {
 
 async function probe(path) {
   const started = Date.now();
+  // No `Cache-Control: no-cache` here on purpose: Cloudflare honours that request
+  // directive by going to the origin and not storing the response, which would
+  // make the second request a MISS forever and hide a working rule.
   const response = await fetch(`https://${ZONE_NAME}${path}`, {
-    headers: { "Cache-Control": "no-cache", "User-Agent": "blockwise-edge-cache-check" },
+    headers: { "User-Agent": "blockwise-edge-cache-check" },
   });
   await response.arrayBuffer();
   return { status: response.headers.get("cf-cache-status"), ttfbMs: Date.now() - started };
