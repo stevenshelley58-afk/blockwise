@@ -1,10 +1,5 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
 .hc-meta-showcase { position: relative; width: 100%; }
-.hc-meta-example-label { position: absolute; z-index: 20; top: 2px; left: 50%; translate: -50% 0; border-radius: 999px; padding: 5px 10px; background: var(--hc-ink); color: #fff; font-size: 11px; font-weight: 750; white-space: nowrap; }
-/* Sits at the top-right of the deck, clear of the centred example label. */
-.hc-meta-rotate-toggle { position: absolute; z-index: 21; top: 2px; right: 0; display: inline-flex; align-items: center; gap: 5px; min-height: 26px; border: 1px solid rgba(255,255,255,.22); border-radius: 999px; padding: 0 11px; background: rgba(255,255,255,.08); color: rgba(255,255,255,.82); font-family: var(--hc-body); font-size: 11px; font-weight: 700; cursor: pointer; transition: background 160ms ease, color 160ms ease; }
-.hc-meta-rotate-toggle:hover { background: rgba(255,255,255,.16); color: #fff; }
-.hc-meta-rotate-toggle:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .hc-meta-stage { position: relative; height: 620px; overflow: visible; isolation: isolate; }
 .hc-meta-stage::before { position: absolute; inset: 10% -8%; background: radial-gradient(circle, rgba(78,156,245,.2), rgba(78,156,245,0) 66%); content: ""; pointer-events: none; }
 .hc-sr-only { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0,0,0,0) !important; clip-path: inset(50%) !important; white-space: nowrap !important; }

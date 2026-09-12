@@ -48,11 +48,10 @@ test("homepage composition explains the product, flow, pricing and final signup"
 
 test("hero restores the previous animated ad deck without fabricated proof metrics", async () => {
   const showcase = await readFile(new URL("../src/components/homepage-concept/hero-ad-showcase.tsx", import.meta.url), "utf8");
-  assert.match(showcase, /Example ads/);
   assert.match(showcase, /IntersectionObserver/);
   assert.match(showcase, /useReducedMotion/);
   // The front card is held long enough to be read before the deck advances.
-  assert.match(showcase, /const DECK_HOLD_MS = 3400/);
+  assert.match(showcase, /const DECK_HOLD_MS = 1600/);
   assert.doesNotMatch(showcase, /, 1850\)/);
   assert.doesNotMatch(showcase, /reactions|comments/);
 });
@@ -172,15 +171,19 @@ test("headline and small print clear the contrast floor", async () => {
   assert.ok(ratio(token("hc-faint"), "#ffffff") >= 4.5, "small print is under 4.5:1 on white");
 });
 
-test("the hero ad deck offers a stop", async () => {
+test("the hero ad deck stops itself instead of offering a control", async () => {
   const showcase = await readFile(new URL("../src/components/homepage-concept/hero-ad-showcase.tsx", import.meta.url), "utf8");
   const css = await readFile(new URL("../src/components/homepage-concept/hero-ad-showcase.css", import.meta.url), "utf8");
-  // WCAG 2.2.2: moving content that runs for more than five seconds needs a pause.
-  assert.match(showcase, /aria-pressed=\{playing\}/);
-  assert.match(showcase, /hc-meta-rotate-toggle/);
-  assert.match(css, /\.hc-meta-rotate-toggle \{/);
-  // The reader's own pause survives the other play conditions.
-  assert.match(showcase, /const shouldPlay = playing && inView && pageVisible && !reduceMotion;/);
+  // WCAG 2.2.2: the deck carries no pause control, so it must stop itself once
+  // every ad has had its turn rather than rotating indefinitely.
+  assert.match(showcase, /const \[advances, setAdvances\] = useState\(0\)/);
+  assert.match(showcase, /if \(!shouldPlay \|\| cycled\) return;/);
+  // One full turn of the deck, counted from the advances rather than from the
+  // front ad: the first ad starts on top, so that test stopped it on mount.
+  assert.match(showcase, /const cycled = advances >= SHOWCASE_ADS\.length;/);
+  // The hero carries no label or playback control.
+  assert.doesNotMatch(showcase, /hc-meta-example-label|hc-meta-rotate-toggle|Example ads/);
+  assert.doesNotMatch(css, /\.hc-meta-example-label|\.hc-meta-rotate-toggle/);
 });
 
 test("the trial headline and its supporting line do not collide", async () => {

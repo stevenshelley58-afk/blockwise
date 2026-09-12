@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, Globe2, MessageCircle, MoreHorizontal, Pause, Play, Send, Share2, ThumbsUp } from "lucide-react";
+import { ChevronRight, Globe2, MessageCircle, MoreHorizontal, Send, Share2, ThumbsUp } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
@@ -10,7 +10,7 @@ import { SHOWCASE_ADS, withBasePath, type ShowcaseAd } from "@/lib/homepage-conc
 type DeckPose = { x: string; y: number; scale: number; rotate: number; opacity: number };
 
 /** How long the front card is held before the deck advances. */
-const DECK_HOLD_MS = 3400;
+const DECK_HOLD_MS = 1600;
 
 const DECK_POSES: readonly DeckPose[] = [
   { x: "0%", y: 0, scale: 1, rotate: 0, opacity: 1 },
@@ -102,9 +102,13 @@ export function HeroAdShowcase() {
   const [inView, setInView] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
   const [compactDeck, setCompactDeck] = useState(false);
-  /* A reader who asks for less motion gets a still deck unless they ask for it. */
-  const [playing, setPlaying] = useState(() => !reduceMotion);
-  const shouldPlay = playing && inView && pageVisible && !reduceMotion;
+  /* The showcase carries no pause control, so it turns through the deck once
+     and stops rather than rotating indefinitely: eight ads at this hold is
+     about thirteen seconds, and the stack it holds is the stack it started in.
+     Raising DECK_HOLD_MS lengthens that whole pass, so raise it with care. */
+  const [advances, setAdvances] = useState(0);
+  const cycled = advances >= SHOWCASE_ADS.length;
+  const shouldPlay = inView && pageVisible && !reduceMotion;
 
   useEffect(() => {
     const syncVisibility = () => setPageVisible(document.visibilityState === "visible");
@@ -127,29 +131,17 @@ export function HeroAdShowcase() {
   }, []);
 
   useEffect(() => {
-    if (!shouldPlay) return;
+    if (!shouldPlay || cycled) return;
     /* Long enough that the card on top can actually be read before it moves. */
-    const timer = window.setTimeout(() => setOrder((current) => [current[current.length - 1], ...current.slice(0, -1)]), DECK_HOLD_MS);
+    const timer = window.setTimeout(() => {
+      setOrder((current) => [current[current.length - 1], ...current.slice(0, -1)]);
+      setAdvances((current) => current + 1);
+    }, DECK_HOLD_MS);
     return () => window.clearTimeout(timer);
-  }, [order, shouldPlay]);
+  }, [order, shouldPlay, cycled]);
 
   return (
     <div className="hc-meta-showcase" ref={sectionRef}>
-      <span className="hc-meta-example-label">Example ads</span>
-      {/* WCAG 2.2.2: the deck rotates indefinitely, so the reader needs a stop.
-          Hidden under reduced motion, where the deck never rotates on its own. */}
-      {reduceMotion ? null : (
-        <button
-          type="button"
-          className="hc-meta-rotate-toggle"
-          aria-pressed={playing}
-          aria-label={playing ? "Pause the example ads" : "Play the example ads"}
-          onClick={() => setPlaying((current) => !current)}
-        >
-          {playing ? <Pause size={11} aria-hidden="true" /> : <Play size={11} aria-hidden="true" />}
-          <span>{playing ? "Pause" : "Play"}</span>
-        </button>
-      )}
       <div className="hc-meta-stage" aria-label="Animated examples of Facebook Feed and Instagram Story ads">
         <p className="hc-sr-only">Showing {SHOWCASE_ADS[order[0]].format === "feed" ? "Facebook Feed" : "Instagram Story"} example from {SHOWCASE_ADS[order[0]].page}</p>
         <div className="hc-meta-deck">
