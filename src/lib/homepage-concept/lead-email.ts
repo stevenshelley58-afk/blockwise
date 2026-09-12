@@ -6,7 +6,7 @@ export const LEAD_EMAIL_TEMPLATE = {
   version: 1,
   subject: "New lead",
   previewLabel: "New lead email",
-  intro: `A new enquiry just arrived for ${REPORT_EXAMPLE.campaign}.`,
+  intro: `A new lead just arrived.`,
   action: "View lead",
   creative: {
     src: "/ads/ad-hillview.jpg",
@@ -15,7 +15,6 @@ export const LEAD_EMAIL_TEMPLATE = {
   },
   details: [
     { label: "Enquiry", value: "Property appraisal" },
-    { label: "Location", value: `${REPORT_EXAMPLE.lead.suburb}, WA` },
     { label: "Source", value: REPORT_EXAMPLE.lead.source },
     { label: "Received", value: REPORT_EXAMPLE.lead.received },
   ],

@@ -6,6 +6,21 @@ import "./concept/concept.css";
 import "@/components/homepage-concept/hero-ad-showcase.css";
 
 export const metadata: Metadata = {
+  title: { absolute: "More leads. Less ad management. | Blockwise" },
+  description: "Create, customise and run Facebook and Instagram ads in one place.",
+  keywords: ["real estate ads", "real estate lead generation", "Facebook ads", "Instagram ads"],
+  openGraph: {
+    title: "More leads. Less ad management. | Blockwise",
+    description: "Create, customise and run Facebook and Instagram ads in one place.",
+    type: "website",
+    siteName: "Blockwise",
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "More leads. Less ad management. | Blockwise",
+    description: "Create, customise and run Facebook and Instagram ads in one place.",
+  },
   alternates: { canonical: "/" },
 };
 

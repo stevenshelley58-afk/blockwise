@@ -26,8 +26,7 @@ export function HomepageBooking() {
         <div className="hb-booking-copy">
           <h2 id="hb-booking-title">Book a call first</h2>
           <p>
-            Pick a time that suits you. We will look at your area, the properties you want to
-            advertise, and what your first month would involve.
+            Talk through the ads you want to run and what getting started involves.
           </p>
           <ul className="hb-booking-points">
             {BOOKING_POINTS.map((point) => (

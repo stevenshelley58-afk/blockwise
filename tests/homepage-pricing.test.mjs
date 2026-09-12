@@ -15,8 +15,10 @@ test("homepage pricing presents three honest choices with direct signup", async 
     "Cancel anytime. Monthly billing, no lock-in.",
     "You only pay Blockwise if you choose a paid plan.",
     "Choosing this plan is the paid step. Starting free does not auto-charge you.",
-    "Three Feed + Story ad packs", "One campaign",
-    "Saved designs and leads stay available", "Up to 50 Feed + Story ad packs", "Up to four live campaigns",
+    "Three Feed + Story ad packs", "One trial set of ads sharing one budget",
+    "Your saved ads and leads stay available", "Up to 50 Feed + Story packs a month",
+    "Up to four live groups of ads managed for you",
+    "Weekly improvements and monthly reports", "100 creative updates each billing period",
   ]) assert.ok(data.includes(value), `missing offer fact: ${value}`);
   // Three distinct plans, each priced with its own action, and only one featured.
   assert.equal((data.match(/cta: \{ label:/g) ?? []).length, 3);
@@ -28,5 +30,8 @@ test("homepage pricing presents three honest choices with direct signup", async 
   assert.match(component, /homepage-pricing\.css/);
   assert.match(styles, /\.hp-pricing-grid/);
   assert.match(styles, /@media \(max-width: 760px\)/);
-  assert.doesNotMatch(data + component, /\u2014|#trial|Keep managing your ads for free|14 days|first ad runs/i);
+  assert.match(data, /14 days of app access/);
+  assert.match(data, /Create and manage your own ads\./);
+  assert.match(data, /Start free, then choose/);
+  assert.doesNotMatch(data + component, /\u2014|#trial|Keep managing your ads for free|render credits|\bcampaigns\b/i);
 });

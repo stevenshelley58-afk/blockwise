@@ -93,6 +93,15 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 
 - **Accessibility is part of done.** Controls keep accessible names and roles, focus is visible and ordered, and colour is never the only carrier of meaning. Accessibility text is functional copy and is never trimmed by the fewer-words rule.
 
+## Homepage preview direction, 12 September 2026
+
+- This revision is a working mock-up for owner review, not approval to replace the public homepage. Preserve the existing type, palette, rounded surfaces and real product imagery.
+- The homepage speaks in everyday ad and lead language. Do not require the visitor to understand campaigns, render credits or provider terminology. Preserve actual limits and terms in concise, accessible detail without changing their meaning. Do not add geographic positioning.
+- Screen selectors stay at the top right of each demonstration and fit at narrow phone widths. They are the visitor's only playback-related controls: selecting a screen shows its readable finished state and ends automatic progression for that demonstration. No separate play, pause or replay buttons.
+- Do not add visible sample badges to these homepage demonstrations or present them as verified customer results. Existing accessibility descriptions and truthful fixture provenance stay intact. This exception is confined to marketing demonstrations, not authenticated reporting.
+- All demonstration timers, typing and transitions suspend while offscreen or the document is hidden. Reduced motion renders complete still states without spatial transforms. Autoplay is finite; inactive states do not pulse or keep compositor hints.
+- Homepage animation timing comes from the shared motion vocabulary. Reading holds may be longer than transition durations. Product imagery is loaded only as required; avoid new animation libraries or scroll replacement. Check mobile and desktop in a real browser and compare measured page speed before and after.
+
 ## How to change this system
 
 - **Changing the system.** A new accent family, radius scale, typography system or navigation grammar is a system change: it needs the owner's decision and a DESIGN.md change in the same commit. A purpose-built surface that reuses the existing vocabulary is not a system change.

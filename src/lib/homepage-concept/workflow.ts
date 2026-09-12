@@ -14,17 +14,17 @@ export const WORKFLOW_PHASES = [
 export const WORKFLOW_STEP_STARTS = [0, 2, 5] as const;
 export const WORKFLOW_TEMPLATES = [
   { id: "appraisal", label: "Appraisal", image: "/home/home-dusk.webp", title: "A new perspective", detail: "Discover your home's value" },
-  { id: "listing", label: "Property listing", image: "/home/subiaco-townhouse.webp", title: "Discover Subiaco", detail: "3 beds  ·  2 baths  ·  2 cars" },
-  { id: "guide", label: "Suburb guide", image: "/home/home-pool.webp", title: "Life, locally", detail: "Your neighbourhood guide" },
+  { id: "listing", label: "Property listing", image: "/home/subiaco-townhouse.webp", title: "Discover this home", detail: "3 beds  ·  2 baths  ·  2 cars" },
+  { id: "guide", label: "Seller guide", image: "/home/home-pool.webp", title: "A clearer next step", detail: "A practical property guide" },
 ] as const;
 export const WORKFLOW_AD = {
-  agency: "West Coast Home Co",
+  agency: "Home Co",
   initials: "WCH",
-  startingCopy: "A fresh start in Subiaco. Explore the property.",
-  editedCopy: "Your next chapter starts in Subiaco. View this Saturday.",
-  startingTitle: "Discover Subiaco",
+  startingCopy: "A fresh start. Explore the property.",
+  editedCopy: "Your next chapter starts here. View the property.",
+  startingTitle: "Discover this home",
   editedTitle: "18 Olive Street",
-  subtitle: "Subiaco, WA",
+  subtitle: "Property details",
   domain: "WESTCOASTHOME.CO",
 } as const;
 export function workflowFrame(phase: number) {

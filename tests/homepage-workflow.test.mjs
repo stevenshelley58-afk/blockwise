@@ -5,27 +5,28 @@ import test from "node:test";
 const source = await readFile(new URL("../src/components/homepage-concept/workflow-showcase.tsx", import.meta.url), "utf8");
 const content = await readFile(new URL("../src/lib/homepage-concept/content.ts", import.meta.url), "utf8");
 const styles = await readFile(new URL("../src/components/homepage-concept/workflow-showcase.css", import.meta.url), "utf8");
+const motion = await readFile(new URL("../src/lib/motion.ts", import.meta.url), "utf8");
 
 test("workflow runs a fixed phase sequence that stops on the live frame", () => {
   const statuses = [...source.match(/const STORY_STATUS = \[([\s\S]*?)\] as const/)[1].matchAll(/"([^"]+)"/g)].map((match) => match[1]);
   assert.equal(statuses.length, 9);
-  assert.equal(statuses.at(-1), "Campaign approved. The ad is live.");
+  assert.equal(statuses.at(-1), "Your ad is approved. It is live.");
   assert.equal(statuses[0], "Choosing an ad. Browsing ready-made ads.");
   assert.equal(statuses[3], "Ad selected.");
 
   // A hold of null means the phase waits for the text to finish being written.
-  const holds = source.match(/const STORY_HOLDS[^=]*= \[([^\]]+)\]/)[1].split(",").map((value) => value.trim());
+  assert.match(source, /const STORY_HOLDS = homepageMotion\.workflow\.phaseHoldsMs/);
+  const holds = motion.match(/phaseHoldsMs: \[([^\]]+)\]/)[1].split(",").map((value) => value.trim());
   assert.equal(holds.length, statuses.length);
-  assert.ok(holds.every((hold) => hold === "null" || Number(hold) > 0), `bad hold: ${holds}`);
-  assert.equal(holds[5], "null", "the post copy phase is paced by the typing");
+  assert.ok(holds.every((hold) => hold === "null" || Number(hold) > 0), "bad hold: " + holds);
+  assert.equal(holds[5], "null", "the ad text phase is paced by the typing");
   assert.equal(holds[6], "null", "the link title phase is paced by the typing");
   // The button is pressed on the last phase, which is also where the ad goes live.
   assert.match(source, /const PRESS_PHASE = STORY_HOLDS\.length - 1/);
   assert.match(source, /approved=\{phase >= PRESS_PHASE\}/);
 
   // The three visitor steps still map onto the nine phases.
-  const stepPhases = source.match(/const STORY_STEP_PHASES = \[([^\]]+)\]/)[1].split(",").map(Number);
-  assert.deepEqual(stepPhases, [0, 4, 7]);
+  assert.match(source, /const STORY_PHASE_TO_STEP = \[0, 0, 0, 0, 1, 1, 1, 2, 2\] as const/);
   assert.match(source, /const activeStep = STORY_PHASE_TO_STEP\[phase\]/);
 
   // One pass that ends, so nothing animates forever.
@@ -35,18 +36,18 @@ test("workflow runs a fixed phase sequence that stops on the live frame", () => 
 
 test("the text is written a character at a time, in the field and the ad together", () => {
   // One counter per text, driving both surfaces, so they cannot drift apart.
-  assert.match(source, /function useTypewriter\(\{ run, text, at, past, speed, onComplete \}/);
-  assert.match(source, /setChars\(index\)/);
+  assert.match(source, /function useTypewriter\(\{ run, text, at, past, speed, paused, complete, onComplete \}/);
+  assert.match(source, /setChars\(indexRef\.current\)/);
   assert.match(source, /STORY_AD\.postCopy\.slice\(0, copyChars\)/);
   assert.match(source, /STORY_AD\.linkTitle\.slice\(0, linkChars\)/);
 
   // Nothing types until its phase arrives, and stepping back clears it.
   assert.match(source, /run: phase >= 5/);
   assert.match(source, /run: phase >= 6/);
-  assert.match(source, /if \(!run \|\| !text\) \{\s*setChars\(0\)/);
-  assert.match(source, /const typing = run && at === past && chars < text\.length/);
+  assert.match(source, /if \(!run \|\| !text\) \{/);
+  assert.match(source, /const typing = run && at === past && !complete && !paused && chars < text\.length/);
   // A step change mid-write hands the text over rather than retyping it.
-  assert.match(source, /if \(at !== past\) \{\s*setChars\(text\.length\)/);
+  assert.match(source, /if \(at !== past \|\| complete\) \{\s*keyRef\.current = "complete"/);
   // Only the phase that is still current may move the story on.
   assert.match(source, /if \(current !== from\) return current/);
 
@@ -60,22 +61,22 @@ test("the text is written a character at a time, in the field and the ad togethe
   // can change the height of the frame mid-write.
   assert.match(styles, /\.hc-field > strong \{[^}]*box-sizing: border-box/);
   assert.match(styles, /\.hc-story-ad \.hc-meta-feed-copy \{[^}]*box-sizing: border-box/);
-  const speeds = [...source.matchAll(/const TYPE_SPEED_\w+ = (\d+)/g)].map((match) => Number(match[1]));
-  assert.equal(speeds.length, 2);
-  assert.ok(speeds.every((speed) => speed >= 20 && speed <= 60), `typing speed out of range: ${speeds}`);
-  // The two writing fields must be slower than a machine tick.
-  assert.match(source, /const TYPE_SPEED_COPY = 24/);
-  assert.match(source, /const TYPE_SPEED_LINK = 40/);
+  const speeds = [...motion.matchAll(/(?:copyTypeMs|linkTypeMs|reviewTypeMs): (\d+)/g)].map((match) => Number(match[1]));
+  assert.equal(speeds.length, 3);
+  assert.ok(speeds.every((speed) => speed >= 18 && speed <= 60), "typing speed out of range: " + speeds);
+  // The two writing fields and review use the shared homepage contract.
+  assert.match(source, /const TYPE_SPEED_COPY = homepageMotion\.workflow\.copyTypeMs/);
+  assert.match(source, /const TYPE_SPEED_LINK = homepageMotion\.workflow\.linkTypeMs/);
   // Pacing is jittered, never on a fixed period: a stall on every nth character
   // reads as the animation stuttering.
-  assert.match(source, /const jitter = speed \* 0\.45/);
-  assert.match(source, /const pause = Math\.random\(\) < 0\.18/);
+  assert.match(source, /const jitter = speed \* 0\.3/);
+  assert.match(source, /const pause = Math\.random\(\) < 0\.12/);
   assert.doesNotMatch(source, /index % 5 === 0 \? 26 : 0/);
-  assert.match(source, /const REVIEW_ITEM_SPEED = 19/);
+  assert.match(source, /const REVIEW_ITEM_SPEED = homepageMotion\.workflow\.reviewTypeMs/);
 
   // A step jumped to ahead of the writing still shows a finished ad.
   assert.match(source, /const copyChars = scene === "browse" \? 0 : phase > 5 \? STORY_AD\.postCopy\.length/);
-  assert.match(source, /const linkChars = scene === "browse" \|\| phase < 6 \? 0 : phase > 6 \? STORY_AD\.linkTitle\.length/);
+  assert.match(source, /const linkChars = scene === "browse" \|\| phase < 6 \? 0 : phase > 6 \|\| \(manualSelection && phase === 6\) \? STORY_AD\.linkTitle\.length/);
 });
 
 test("the field writes the ad headline onto the image", () => {
@@ -106,9 +107,9 @@ test("the field writes the ad headline onto the image", () => {
 test("the review step writes its values, presses, and puts the ad live", () => {
   // The three confirmed values are written one character at a time.
   assert.match(source, /const REVIEW_FIELDS = \[/);
-  assert.match(source, /function useTypedReview\(start: boolean, reduceMotion: boolean\)/);
+  assert.match(source, /function useTypedReview\(start: boolean, reduceMotion: boolean, paused: boolean, complete: boolean\)/);
   assert.match(source, /value\.slice\(0, counts\[index\]\)/);
-  assert.match(source, /useTypedReview\(phase >= 7, reduceMotion\)/);
+  assert.match(source, /useTypedReview\(phase >= 7, reduceMotion, !active \|\| !canAnimate, phase >= PRESS_PHASE\)/);
 
   // The press is a real press: the button dips and the ad takes the motion.
   assert.match(source, /const pressing = phase === PRESS_PHASE/);
@@ -121,11 +122,11 @@ test("the review step writes its values, presses, and puts the ad live", () => {
   // Approved: green button, live tag on the ad, live toast.
   assert.match(source, /hc-story-approve\$\{approved \? " is-approved" : ""\}/);
   assert.match(source, /hc-story-ad-live/);
-  assert.match(source, /Campaign is live/);
+  assert.match(source, /Ad is live/);
   assert.match(styles, /\.hc-story-ad-live \{[^}]*background: var\(--hc-green\)/);
   assert.match(styles, /\.hc-story-approve\.is-approved \{[^}]*background: var\(--hc-green\)/);
-  // The live tag pulses, and the pulse can be found.
-  assert.match(styles, /@keyframes hc-story-live-pulse/);
+  // The live tag is settled, with no ambient pulse at rest.
+  assert.doesNotMatch(styles, /hc-story-live-pulse/);
 });
 
 test("the copy column leads with the offer and nothing else", () => {
@@ -149,8 +150,7 @@ test("scenes cross-fade symmetrically and the ad morphs only into the editor", (
   assert.match(styles, /\.hc-story-scene\.is-active \{[^}]*opacity: 1/);
   // The swap is one gesture: the outgoing screen leaves faster than the
   // incoming one settles, and both travel the same short distance.
-  assert.match(styles, /opacity 220ms cubic-bezier\(\.4, 0, \.2, 1\)/);
-  assert.match(styles, /opacity 320ms cubic-bezier\(\.4, 0, \.2, 1\)/);
+  assert.match(styles, /opacity var\(--hc-motion-scene-ms, 350ms\) cubic-bezier\(\.4, 0, \.2, 1\)/);
   assert.match(styles, /--scene-shift: 14px/);
   assert.match(styles, /transform: translate3d\(calc\(var\(--scene-shift\) \* -1\), 0, 0\)/);
   assert.match(source, /className=\{`hc-story-scene hc-story-library\$\{active \? " is-active" : ""\}`\}/);
@@ -167,10 +167,11 @@ test("scenes cross-fade symmetrically and the ad morphs only into the editor", (
 });
 
 test("reduced motion drops the movement and keeps the fades", () => {
-  assert.match(source, /const REDUCED_FADE_IN = \{ duration: 0\.28, ease: "linear" \}/);
+  assert.match(source, /const REDUCED_FADE_IN = \{ duration: durations\.state, ease: "linear" \}/);
   assert.match(source, /transition=\{reduceMotion \? REDUCED_FADE_IN :/);
   // The press still registers, without travelling.
   assert.match(source, /reduceMotion\s*\? \{ scale: \[1, 0\.99, 1\] \}/);
+  assert.match(source, /<MotionConfig reducedMotion="user">/);
 });
 
 test("the demo card keeps one size and the scenes change inside it", () => {
@@ -210,9 +211,10 @@ test("the story starts once when scrolled into view and then stops", () => {
   // on screen, and then they get a beat before the first frame moves. A low
   // threshold ran it while they were still reading the headline.
   assert.match(source, /const STORY_START_THRESHOLD = 0\.6/);
-  assert.match(source, /const STORY_START_DELAY_MS = 1200/);
+  assert.match(source, /const STORY_START_DELAY_MS = homepageMotion\.workflow\.startDelayMs/);
   assert.match(source, /\{ threshold: STORY_START_THRESHOLD \}/);
-  assert.match(source, /window\.setTimeout\(\(\) => \{[\s\S]{0,200}STORY_START_DELAY_MS/);
+  assert.match(source, /start = window\.setTimeout\(\(\) => \{/);
+  assert.match(source, /}, STORY_START_DELAY_MS\);/);
   assert.doesNotMatch(source, /threshold: 0\.12/);
   // A phone viewport is shorter than the section, so the start must not be
   // gated on a fraction the viewport cannot reach.
@@ -271,7 +273,7 @@ test("choose, customise and review are one working control in the card header", 
   assert.match(source, /setIndicator\(\{ left: button\.offsetLeft, width: button\.offsetWidth \}\)/);
   assert.match(source, /aria-pressed=\{activeStep === index\}/);
   assert.match(source, /onClick=\{\(\) => selectStep\(index\)\}/);
-  assert.match(source, /setPhase\(STORY_STEP_PHASES\[nextStep\]\)/);
+  assert.match(source, /setPhase\(\(\[SELECTED_PHASE, 6, PRESS_PHASE\] as const\)\[nextStep\]\)/);
 
   assert.match(styles, /\.hc-process-steps \{[^}]*border-radius: 999px/);
   assert.match(styles, /\.hc-process-steps button\[aria-pressed="true"\]/);
@@ -306,7 +308,7 @@ test("screen two hands the chosen ad to the left and writes the fields on the ri
   // Both fields start empty and say what to write, so nothing reads as broken.
   assert.match(source, /data-empty=\{copyChars === 0 \? "true" : undefined\}/);
   assert.match(source, /data-empty=\{linkChars === 0 \? "true" : undefined\}/);
-  assert.match(source, /Write your post copy/);
+  assert.match(source, /Write your ad text/);
   assert.match(source, /Add a link title/);
   assert.match(styles, /\.hc-field\[data-empty="true"\] > strong/);
 
@@ -323,7 +325,7 @@ test("the demo edits a real ad instead of inventing copy", () => {
   assert.match(content, /adTitle: "/);
   // The headline account matches the agent shown inside the creative.
   assert.match(source, /account: "Alex Morgan Property"/);
-  assert.match(source, /domain: "ALEXMORGAN\.COM\.AU"/);
+  assert.match(source, /domain: "BLOCKWISE\.EXAMPLE"/);
   // No fabricated performance claims in the preview.
   assert.doesNotMatch(source, /guarantee|ROI|cost per lead|\d+ (new )?leads/i);
   // The typed image overlay is gone; the real creative carries its own text.

@@ -301,8 +301,9 @@
   .hc-shell { width: calc(100% - 32px); }
   .hc-button { min-height: 48px; padding-inline: 19px; }
 
-  .hc-hero,
-  .hc-hero-grid,
+  /* The hero owns the full-bleed canvas; keep mobile breathing room on the
+     inner grid so it is not counted twice by the section and its child. */
+  .hc-hero { padding-block: 0; }
   .hc-hero-grid { align-content: start; gap: 22px; padding-block: 94px 48px; }
   .hc-hero-copy, .hc-hero-visual { animation: none; }
   .hc-hero-copy h1 { font-size: clamp(38px, 10.6vw, 44px); }
@@ -408,7 +409,7 @@
 }
 @media (max-width: 600px) {
   .hc-login { margin-left: auto; }
-  .hc-hero-grid { gap: 28px; padding-block: 94px 44px; }
+  .hc-hero-grid { gap: 20px; padding-block: 94px 44px; }
   .hc-hero-copy h1 { font-size: clamp(28px, 9vw, 40px); }
   .hc-hero-actions > span { align-self: start; max-width: 320px; }
   .hc-hero-visual { width: 100%; }

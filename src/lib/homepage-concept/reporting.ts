@@ -22,20 +22,19 @@ export const REPORTS = {
 
 export const REPORT_EXAMPLE = {
   campaign: "Free property appraisal",
-  agency: "West Coast Home Co",
+  agency: "Home Co",
   status: "Example data",
   lead: {
     name: "Jordan Whitfield",
     email: "j.whitfield@example.com",
     phone: "04·· ··· ··31",
-    suburb: "Mt Lawley",
     source: "Facebook lead form",
     received: "Today, 9:12 am",
   },
 } as const;
 
 export function formatAdSpend(value: number) {
-  return `$${value.toLocaleString("en-AU")}`;
+  return "A$" + value.toLocaleString("en-AU");
 }
 
 /** Fixed coordinates keep both seven-point ranges directly comparable. */

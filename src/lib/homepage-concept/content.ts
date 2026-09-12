@@ -18,14 +18,14 @@ export type ShowcaseAd = {
 };
 
 export const SHOWCASE_ADS: readonly ShowcaseAd[] = [
-  { id: "just-listed-feed", format: "feed", page: "Blockwise Realty", initials: "BR", tone: "navy", image: "/home/home-dusk.webp", copy: "Just listed in Mount Lawley. View the photos, floorplan and inspection times.", headline: "A new address worth seeing", domain: "BLOCKWISEREALTY.COM.AU" },
-  { id: "buyers-story", format: "story", page: "West & Co Property", initials: "W&C", tone: "blue", image: "/hero/hero-tall.webp", copy: "Qualified buyers are looking now.", headline: "See buyer demand", domain: "WESTANDCO.COM.AU" },
-  { id: "local-advice-feed", format: "feed", page: "Jordan Lee Property", initials: "JL", tone: "charcoal", image: "/home/open-home-living.webp", copy: "Local advice. Clear next steps. Talk with Jordan about your property plans.", headline: "Book a property call", domain: "JORDANLEE.COM.AU" },
-  { id: "appraisal-story", format: "story", page: "Mia Calloway Real Estate", initials: "MC", tone: "gold", image: "/ads/ad-coastline.webp", copy: "Find out what your home could be worth.", headline: "Request an appraisal", domain: "MIACALLOWAY.COM.AU" },
-  { id: "first-home-feed", format: "feed", page: "Northside Property", initials: "NP", tone: "navy", image: "/home/mt-lawley-federation.webp", copy: "Buying your first home? Start with the questions that make every inspection easier.", headline: "A smarter first-home checklist", domain: "NORTHSIDEPROPERTY.COM.AU" },
-  { id: "mobile-appraisal-story", format: "story", page: "Alex Morgan Property", initials: "AM", tone: "blue", image: "/home/workspace-hero/agent-ad.webp", copy: "Your local property appraisal, made simple.", headline: "Book an appraisal", domain: "ALEXMORGAN.COM.AU" },
-  { id: "market-report-feed", format: "feed", page: "Harbourline Realty", initials: "HR", tone: "charcoal", image: "/home/home-pool.webp", copy: "Prices, recent sales and buyer activity. See what changed in your local market.", headline: "Your suburb market report", domain: "HARBOURLINE.COM.AU" },
-  { id: "planning-story", format: "story", page: "Oak & Key Property", initials: "O&K", tone: "gold", image: "/ads/ad-hillview.webp", copy: "Plan your next move with a clearer property checklist.", headline: "Get the checklist", domain: "OAKANDKEY.COM.AU" },
+  { id: "just-listed-feed", format: "feed", page: "Blockwise Realty", initials: "BR", tone: "navy", image: "/home/home-dusk.webp", copy: "Just listed. View the photos, floorplan and inspection times.", headline: "A new address worth seeing", domain: "BLOCKWISEREALTY.COM" },
+  { id: "buyers-story", format: "story", page: "West & Co Property", initials: "W&C", tone: "blue", image: "/hero/hero-tall.webp", copy: "Qualified buyers are looking now.", headline: "See buyer demand", domain: "WESTANDCO.COM" },
+  { id: "local-advice-feed", format: "feed", page: "Jordan Lee Property", initials: "JL", tone: "charcoal", image: "/home/open-home-living.webp", copy: "Clear advice. Clear next steps. Talk with Jordan about your property plans.", headline: "Book a property call", domain: "JORDANLEE.COM" },
+  { id: "appraisal-story", format: "story", page: "Mia Calloway Real Estate", initials: "MC", tone: "gold", image: "/ads/ad-coastline.webp", copy: "Find out what your home could be worth.", headline: "Request an appraisal", domain: "MIACALLOWAY.COM" },
+  { id: "first-home-feed", format: "feed", page: "Northside Property", initials: "NP", tone: "navy", image: "/home/mt-lawley-federation.webp", copy: "Buying your first home? Start with the questions that make every inspection easier.", headline: "A smarter first-home checklist", domain: "NORTHSIDEPROPERTY.COM" },
+  { id: "mobile-appraisal-story", format: "story", page: "Alex Morgan Property", initials: "AM", tone: "blue", image: "/home/workspace-hero/agent-ad.webp", copy: "Your property appraisal, made simple.", headline: "Book an appraisal", domain: "ALEXMORGAN.COM" },
+  { id: "market-report-feed", format: "feed", page: "Harbourline Realty", initials: "HR", tone: "charcoal", image: "/home/home-pool.webp", copy: "Prices, recent sales and buyer activity. See what changed in your market.", headline: "Your market report", domain: "HARBOURLINE.COM" },
+  { id: "planning-story", format: "story", page: "Oak & Key Property", initials: "O&K", tone: "gold", image: "/ads/ad-hillview.webp", copy: "Plan your next move with a clearer property checklist.", headline: "Get the checklist", domain: "OAKANDKEY.COM" },
 ] as const;
 
 export const AD_EXAMPLES = [
@@ -47,7 +47,7 @@ export const AD_EXAMPLES = [
     id: "consult",
     label: "Seller consult",
     title: "A low-pressure first step.",
-    body: "Lead with useful local expertise and invite a no-obligation conversation.",
+    body: "Lead with useful expertise and invite a no-obligation conversation.",
     image:
       "/adstudio-thumbnails/meta/6b49016814ffdb9e64eb33943667efda84f3f55e0020d0fc00cbab4f121754d3-preview.webp",
     postCopy: "Curious what buyers would pay for your home? Get a free, no-obligation consultation.",
@@ -68,13 +68,13 @@ export const AD_EXAMPLES = [
   {
     id: "report",
     label: "Market report",
-    title: "Useful local information.",
+    title: "Useful information for sellers.",
     body: "Create a useful entry point for future sellers who are not ready to book yet.",
     image:
       "/adstudio-thumbnails/meta/eb4bce514070f6ce1566fc8fd2570755157d99eb50518e210739b276a6a1f370-preview.webp",
-    postCopy: "What is your suburb really worth right now? Get the latest market report for your area.",
-    linkTitle: "Free suburb market report",
-    adTitle: "What is your suburb worth now?",
+    postCopy: "What is your market worth right now? Get the latest market report.",
+    linkTitle: "Free market report",
+    adTitle: "What is your market worth now?",
   },
 ] as const;
 
@@ -175,6 +175,6 @@ export const FAQ_GROUPS = [
   ] },
   { heading: "Let’s talk", faqs: [
     { question: "Can I talk to someone before choosing?", answer: "Yes. Email us and we will arrange a time.", links: [{ label: `Email ${CONTACT_EMAIL}`, href: CONTACT_HREF }] },
-    { question: "Can I arrange a Perth meeting?", answer: "Yes. Request a Perth meeting by email and we will arrange the details.", links: [{ label: `Email ${CONTACT_EMAIL}`, href: CONTACT_HREF }] },
+    { question: "Can I ask about managed setup?", answer: "Yes. Email us and we will explain the setup options.", links: [{ label: `Email ${CONTACT_EMAIL}`, href: CONTACT_HREF }] },
   ] },
 ] as const;

@@ -4,26 +4,33 @@ import { ChevronRight, Globe2, MessageCircle, MoreHorizontal, Send, Share2, Thum
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+
 import { creativeImageSrcSet } from "@/lib/homepage-concept/creative-image";
 import { SHOWCASE_ADS, withBasePath, type ShowcaseAd } from "@/lib/homepage-concept/content";
+import { homepageMotion } from "@/lib/motion";
 
 type DeckPose = { x: string; y: number; scale: number; rotate: number; opacity: number };
 
 /** How long the front card is held before the deck advances. */
-const DECK_HOLD_MS = 1600;
+const DECK_HOLD_MS = homepageMotion.hero.holdMs;
+const DECK_VISIBLE_COUNT = 3;
 
 const DECK_POSES: readonly DeckPose[] = [
   { x: "0%", y: 0, scale: 1, rotate: 0, opacity: 1 },
   { x: "28%", y: 18, scale: 0.91, rotate: 3, opacity: 0.66 },
   { x: "-28%", y: 30, scale: 0.82, rotate: -4, opacity: 0.38 },
-  { x: "12%", y: 50, scale: 0.74, rotate: 2, opacity: 0 },
-  { x: "-12%", y: 62, scale: 0.69, rotate: -2, opacity: 0 },
-  { x: "8%", y: 72, scale: 0.65, rotate: 2, opacity: 0 },
-  { x: "-8%", y: 80, scale: 0.62, rotate: -2, opacity: 0 },
-  { x: "0%", y: 88, scale: 0.6, rotate: 0, opacity: 0 },
 ];
 
 const COMPACT_DECK_POSES: readonly DeckPose[] = DECK_POSES.map((pose) => ({ ...pose, x: "0%", rotate: 0 }));
+const REDUCED_DECK_POSES: readonly DeckPose[] = DECK_POSES.map((pose, position) => ({
+  ...pose,
+  x: "0%",
+  y: 0,
+  scale: 1,
+  rotate: 0,
+  opacity: position === 0 ? 1 : 0,
+}));
 
 function Avatar({ ad }: { ad: ShowcaseAd }) {
   return <span className={`hc-meta-avatar hc-meta-avatar--${ad.tone}`}>{ad.initials}</span>;
@@ -102,13 +109,14 @@ export function HeroAdShowcase() {
   const [inView, setInView] = useState(false);
   const [pageVisible, setPageVisible] = useState(true);
   const [compactDeck, setCompactDeck] = useState(false);
+  const [manualFormat, setManualFormat] = useState<ShowcaseAd["format"] | null>(null);
   /* The showcase carries no pause control, so it turns through the deck once
      and stops rather than rotating indefinitely: eight ads at this hold is
-     about thirteen seconds, and the stack it holds is the stack it started in.
+     about twenty-four seconds, and the stack it holds is the stack it started in.
      Raising DECK_HOLD_MS lengthens that whole pass, so raise it with care. */
   const [advances, setAdvances] = useState(0);
   const cycled = advances >= SHOWCASE_ADS.length;
-  const shouldPlay = inView && pageVisible && !reduceMotion;
+  const shouldPlay = inView && pageVisible && !reduceMotion && !cycled;
 
   useEffect(() => {
     const syncVisibility = () => setPageVisible(document.visibilityState === "visible");
@@ -131,35 +139,62 @@ export function HeroAdShowcase() {
   }, []);
 
   useEffect(() => {
-    if (!shouldPlay || cycled) return;
+    if (!shouldPlay) return;
     /* Long enough that the card on top can actually be read before it moves. */
     const timer = window.setTimeout(() => {
-      setOrder((current) => [current[current.length - 1], ...current.slice(0, -1)]);
+      setOrder((current) => [...current.slice(1), current[0]]);
       setAdvances((current) => current + 1);
     }, DECK_HOLD_MS);
     return () => window.clearTimeout(timer);
   }, [order, shouldPlay, cycled]);
 
+  const chooseFormat = (format: ShowcaseAd["format"]) => {
+    setManualFormat(format);
+    setOrder((current) => {
+      const selected = current.findIndex((index) => SHOWCASE_ADS[index].format === format);
+      return selected < 0 ? current : [current[selected], ...current.slice(0, selected), ...current.slice(selected + 1)];
+    });
+    setAdvances(SHOWCASE_ADS.length);
+  };
+
   return (
     <div className="hc-meta-showcase" ref={sectionRef}>
-      <div className="hc-meta-stage" aria-label="Animated examples of Facebook Feed and Instagram Story ads">
+      <div className="hc-meta-stage" aria-label="Examples of Facebook Feed and Instagram Story ads">
+        <div className="hc-meta-format-selector" role="group" aria-label="Choose ad format">
+          {(["feed", "story"] as const).map((format) => (
+            <Button
+              key={format}
+              variant="ghost"
+              size="sm"
+              disc="none"
+              type="button"
+              aria-pressed={(manualFormat ?? SHOWCASE_ADS[order[0]].format) === format}
+              onClick={() => chooseFormat(format)}
+            >
+              {format === "feed" ? "Feed" : "Story"}
+            </Button>
+          ))}
+        </div>
         <p className="hc-sr-only">Showing {SHOWCASE_ADS[order[0]].format === "feed" ? "Facebook Feed" : "Instagram Story"} example from {SHOWCASE_ADS[order[0]].page}</p>
         <div className="hc-meta-deck">
-          {SHOWCASE_ADS.map((ad, index) => {
-            const position = order.indexOf(index);
-            const pose = (compactDeck ? COMPACT_DECK_POSES : DECK_POSES)[position];
+          {order.slice(0, DECK_VISIBLE_COUNT).map((index, position) => {
+            const ad = SHOWCASE_ADS[index];
+            const pose = reduceMotion
+              ? REDUCED_DECK_POSES[position]
+              : (compactDeck ? COMPACT_DECK_POSES : DECK_POSES)[position];
             return (
               <div className="hc-meta-card-positioner" key={ad.id}>
                 <motion.div
                   className={`hc-meta-card hc-meta-card--${ad.format}${position === 0 ? " is-front" : ""}`}
                   style={{ zIndex: SHOWCASE_ADS.length - position }}
                   aria-hidden={position !== 0}
-                  animate={{ transform: transformFor(pose), opacity: pose.opacity }}
-                  transition={reduceMotion ? { duration: 0 } : { duration: 0.72, ease: [0.16, 1, 0.3, 1] as const }}
+                  initial={reduceMotion ? false : { transform: transformFor(pose), opacity: pose.opacity }}
+                  animate={reduceMotion ? { transform: "none", opacity: pose.opacity } : { transform: transformFor(pose), opacity: pose.opacity }}
+                  transition={{ duration: homepageMotion.hero.transitionMs / 1000, ease: [0.16, 1, 0.3, 1] as const }}
                 >
                   {ad.format === "feed"
-                    ? <FeedAd ad={ad} eager={position <= 1} />
-                    : <StoryAd ad={ad} eager={position <= 1} />}
+                    ? <FeedAd ad={ad} eager={position === 0} />
+                    : <StoryAd ad={ad} eager={position === 0} />}
                 </motion.div>
               </div>
             );

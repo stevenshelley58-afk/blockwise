@@ -80,3 +80,31 @@ export const reportingLoop = {
   chartHold: durations.entrance,
   emailHold: 5,
 } as const;
+
+/**
+ * Homepage-only motion contract. Marketing previews can take a longer hold so
+ * the product states are readable, while the reporting preview can reuse the
+ * same values without each worker inventing its own clock.
+ */
+export const homepageMotion = {
+  hero: {
+    holdMs: 3000,
+    transitionMs: 350,
+  },
+  workflow: {
+    startDelayMs: 1000,
+    sceneTransitionMs: 350,
+    indicatorTransitionMs: 350,
+    briefTransitionMs: 200,
+    phaseHoldsMs: [1200, 1400, 1400, 2400, 1200, null, null, 3000, 4200] as const,
+    copyTypeMs: 24,
+    linkTypeMs: 40,
+    reviewTypeMs: 19,
+    reviewItemDelayMs: 420,
+  },
+  reporting: {
+    drawMs: 1400,
+    chartHoldMs: 3000,
+    emailHoldMs: 2200,
+  },
+} as const;

@@ -97,8 +97,8 @@
   border-radius: 999px;
   background: var(--scene-soft);
   transition:
-    transform .48s cubic-bezier(.4, 0, .2, 1),
-    width .48s cubic-bezier(.4, 0, .2, 1),
+    transform var(--hc-motion-indicator-ms, 350ms) cubic-bezier(.4, 0, .2, 1),
+    width var(--hc-motion-indicator-ms, 350ms) cubic-bezier(.4, 0, .2, 1),
     border-color .34s ease,
     background-color .34s ease;
   pointer-events: none;
@@ -204,10 +204,9 @@
   opacity: 0;
   transform: translate3d(calc(var(--scene-shift) * -1), 0, 0);
   transition:
-    opacity 220ms cubic-bezier(.4, 0, .2, 1),
-    transform 320ms cubic-bezier(.2, 0, 0, 1),
-    visibility 0s linear 220ms;
-  will-change: opacity, transform;
+    opacity var(--hc-motion-scene-ms, 350ms) cubic-bezier(.4, 0, .2, 1),
+    transform var(--hc-motion-scene-ms, 350ms) cubic-bezier(.2, 0, 0, 1),
+    visibility 0s linear var(--hc-motion-scene-ms, 350ms);
 }
 
 .hc-story-scene.is-active {
@@ -215,8 +214,8 @@
   opacity: 1;
   transform: translate3d(0, 0, 0);
   transition:
-    opacity 320ms cubic-bezier(.4, 0, .2, 1),
-    transform 320ms cubic-bezier(.2, 0, 0, 1),
+    opacity var(--hc-motion-scene-ms, 350ms) cubic-bezier(.4, 0, .2, 1),
+    transform var(--hc-motion-scene-ms, 350ms) cubic-bezier(.2, 0, 0, 1),
     visibility 0s;
 }
 
@@ -225,8 +224,10 @@
   .hc-story-scene,
   .hc-story-scene.is-active {
     transform: none;
-    transition: opacity 220ms linear, visibility 0s;
+    transition: opacity var(--hc-motion-scene-ms, 250ms) linear, visibility 0s;
   }
+  .hc-process-step-indicator { transition: none; }
+  .hc-story-caret { animation: none; }
 }
 
 .hc-story-scene-heading {
@@ -470,7 +471,7 @@
   color: #fff;
 }
 
-/* The live tag lands on the creative once the campaign is approved. */
+/* The live tag lands on the creative once the ad is approved. */
 .hc-story-ad-live {
   position: absolute;
   top: 2.6%;
@@ -495,7 +496,6 @@
   height: 1.6cqw;
   border-radius: 50%;
   background: #fff;
-  animation: hc-story-live-pulse 1.8s ease-in-out infinite;
 }
 
 .hc-story-ad .hc-meta-link-preview {
@@ -706,11 +706,6 @@
   50% { opacity: .25; }
 }
 
-@keyframes hc-story-live-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: .55; transform: scale(.82); }
-}
-
 
 /* ------------------------------------------------------------------ *
  * Responsive
@@ -739,7 +734,7 @@
   .hc-process-demo-topbar > span { font-size: 0; gap: 0; }
   .hc-process-stage { flex: 1 1 auto; min-width: 0; justify-items: stretch; }
   .hc-process-steps { width: 100%; gap: 3px; padding: 3px; }
-  .hc-process-steps button { flex: 1 1 0; min-width: 0; min-height: 38px; padding-inline: 4px; font-size: 11.5px; }
+  .hc-process-steps button { flex: 1 1 0; min-width: 0; min-height: 44px; padding-inline: 4px; font-size: 11.5px; }
   .hc-process-step-indicator { top: 3px; bottom: 3px; }
   .hc-process-brief { font-size: 11.5px; text-align: center; }
 

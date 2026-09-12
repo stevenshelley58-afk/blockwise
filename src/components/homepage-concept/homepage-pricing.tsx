@@ -10,9 +10,9 @@ export function HomepagePricing() {
     <section className="hp-pricing" id="pricing" aria-labelledby="hp-pricing-heading">
       <div className="hc-shell">
         <div className="hp-pricing-heading">
-          <h2 id="hp-pricing-heading">Start free. Sign up when you&rsquo;re ready.</h2>
-          <p>Three Feed and Story packs published to your Meta ad account. Yours to keep,
-            no card is needed. 7 days of your personal Blockwise dashboard.</p>
+          <h2 id="hp-pricing-heading">Try the app free. Choose what comes next.</h2>
+          <p>Create your first ads with no Blockwise subscription fee.
+            No card is needed to start. You choose whether to continue.</p>
         </div>
         <div className="hp-pricing-grid">
           {HOMEPAGE_PLANS.map((plan) => (

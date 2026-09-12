@@ -6,8 +6,9 @@ import "./concept.css";
 import "@/components/homepage-concept/hero-ad-showcase.css";
 
 export const metadata: Metadata = {
-  title: "More leads. Less ad management. | Blockwise",
-  description: "Create, review and run real-estate Feed and Story ads with Blockwise.",
+  title: { absolute: "More leads. Less ad management. | Blockwise" },
+  description: "Create, customise and run Facebook and Instagram ads in one place.",
+  keywords: ["real estate ads", "real estate lead generation", "Facebook ads", "Instagram ads"],
   other: {
     "blockwise-preview-revision": process.env.BLOCKWISE_BUILD_REVISION ?? "",
   },

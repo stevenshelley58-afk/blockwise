@@ -10,7 +10,7 @@ const withoutComments = (text: string) =>
 
 test("reporting keeps honest example metrics and one safe lead", () => {
   assert.equal(REPORT_EXAMPLE.campaign, "Free property appraisal");
-  assert.equal(REPORT_EXAMPLE.agency, "West Coast Home Co");
+  assert.equal(REPORT_EXAMPLE.agency, "Home Co");
   assert.equal(REPORT_EXAMPLE.status, "Example data");
   assert.ok(REPORT_EXAMPLE.lead.email.endsWith("@example.com"));
   assert.match(REPORT_EXAMPLE.lead.phone, /·/);
@@ -48,19 +48,23 @@ test("reporting demo is manual, isolated and explicit about side effects", async
   for (const required of [
     "See your leads. Know your costs.",
     "Interactive example report",
-    "Example report view",
+    "Reporting view",
     "TRIAL_SIGNUP_URL",
     "TRIAL_CTA_LABEL",
     "Static preview — nothing is sent.",
   ]) assert.ok(source.includes(required) || emailPreview.includes(required), required);
 
   assert.match(source, /REPORT_VIEWS: readonly ReportingView\[\] = \["week", "month", "email"\]/);
-  assert.match(source, /aria-label="Example report view"/);
+  assert.match(source, /aria-label="Reporting view"/);
   assert.match(source, /role="img"/);
   assert.match(source, /onPointerMove=\{inspectPoint\}/);
   // The visitor drives the views, and the tour timers are cleaned up.
   assert.match(source, /aria-pressed=\{view === id\}/);
   assert.match(source, /window\.clearTimeout/);
+  assert.match(source, /useReducedMotion/);
+  assert.match(source, /document.visibilityState/);
+  assert.match(source, /reducedMotion/);
+  assert.match(source, /data-report-visible/);
   assert.match(emailPreview, /LEAD_EMAIL_TEMPLATE/);
 
   // No network, storage, analytics, polling or contact side effects in the demo.
@@ -77,4 +81,5 @@ test("reporting demo is manual, isolated and explicit about side effects", async
   assert.match(css, /font-size: 16px/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.doesNotMatch(css, /\.hc-reporting|transition:\s*all/);
+  assert.match(css, /data-report-visible="false"[\s\S]*animation-play-state: paused/);
 });

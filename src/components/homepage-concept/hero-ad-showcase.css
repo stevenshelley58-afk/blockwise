@@ -1,11 +1,15 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
 .hc-meta-showcase { position: relative; width: 100%; }
 .hc-meta-stage { position: relative; height: 620px; overflow: visible; isolation: isolate; }
+.hc-meta-format-selector { position: absolute; top: 8px; right: 0; z-index: 4; display: inline-flex; gap: 3px; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; padding: 3px; background: rgba(16,18,23,.72); backdrop-filter: blur(10px); }
+.hc-meta-format-selector button { min-height: 30px; border: 0; border-radius: 999px; padding: 0 12px; background: transparent; color: rgba(255,255,255,.68); font: 700 11px/1 var(--hc-display); cursor: pointer; transition: background-color .2s ease, color .2s ease; }
+.hc-meta-format-selector button[aria-pressed="true"] { background: #fff; color: var(--hc-ink); }
+.hc-meta-format-selector button:focus-visible { outline: 2px solid var(--hc-blue-bright); outline-offset: 2px; }
 .hc-meta-stage::before { position: absolute; inset: 10% -8%; background: radial-gradient(circle, rgba(78,156,245,.2), rgba(78,156,245,0) 66%); content: ""; pointer-events: none; }
 .hc-sr-only { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0,0,0,0) !important; clip-path: inset(50%) !important; white-space: nowrap !important; }
 .hc-meta-deck { position: absolute; inset: 0; }
 .hc-meta-card-positioner { position: absolute; top: 52.5%; left: 50%; width: 0; height: 0; }
-.hc-meta-card { position: absolute; top: 0; left: 0; translate: -50% -50%; transform-origin: 50% 62%; will-change: transform, opacity; }
+.hc-meta-card { position: absolute; top: 0; left: 0; translate: -50% -50%; transform-origin: 50% 62%; }
 .hc-meta-card--feed { width: 326px; }
 .hc-meta-card--story { width: 276px; }
 .hc-meta-ad { overflow: hidden; background: #fff; font-family: Arial, Helvetica, sans-serif; font-weight: 400; letter-spacing: 0; box-shadow: 0 5px 12px rgba(17,24,39,.09),0 26px 62px rgba(17,24,39,.2); }
@@ -54,6 +58,8 @@
   .hc-meta-feed-image { height: 338px; }
 }
 @media (max-width: 600px) {
+  .hc-meta-format-selector { top: 0; right: 2px; }
+  .hc-meta-format-selector button { min-height: 44px; padding-inline: 10px; }
   .hc-meta-stage { height: 556px; }
   .hc-meta-card--feed { width: min(296px,calc(100vw - 62px)); }
   .hc-meta-card--story { width: min(240px,calc(100vw - 106px)); }
@@ -66,4 +72,3 @@
   .hc-meta-card--story { width: 224px; }
   .hc-meta-feed-image { height: 292px; }
 }
-@media (prefers-reduced-motion: reduce) { .hc-meta-card { will-change: auto; } }

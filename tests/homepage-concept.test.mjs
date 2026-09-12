@@ -51,12 +51,16 @@ test("hero restores the previous animated ad deck without fabricated proof metri
   assert.match(showcase, /IntersectionObserver/);
   assert.match(showcase, /useReducedMotion/);
   // The front card is held long enough to be read before the deck advances.
-  assert.match(showcase, /const DECK_HOLD_MS = 1600/);
+  assert.match(showcase, /const DECK_HOLD_MS = homepageMotion\.hero\.holdMs/);
+  assert.match(showcase, /const DECK_VISIBLE_COUNT = 3/);
+  assert.match(showcase, /initial=\{reduceMotion \? false : \{ transform: transformFor\(pose\)/);
+  assert.match(showcase, /setOrder\(\(current\) => \[\.\.\.current\.slice\(1\), current\[0\]\]\)/);
+  assert.match(showcase, /eager=\{position === 0\}/);
   assert.doesNotMatch(showcase, /, 1850\)/);
   assert.doesNotMatch(showcase, /reactions|comments/);
 });
 
-test("homepage FAQ remains grouped, collapsed and matches the offer", async () => {
+test("homepage FAQ opens getting started while keeping the remaining groups collapsed", async () => {
   const component = await readFile(new URL("../src/components/homepage-concept/homepage-concept.tsx", import.meta.url), "utf8");
   assert.match(component, /FAQ_GROUPS\.map/);
   assert.match(component, /className="hc-faq-groups"/);
@@ -67,7 +71,7 @@ test("homepage FAQ remains grouped, collapsed and matches the offer", async () =
   assert.equal(faqs.find((faq) => faq.question === "Is Meta ad spend included?")?.answer, "No. You pay Meta directly through your own ad account.");
   assert.ok(faqs.every((faq) => !/\u2014/.test(faq.answer)));
   const faqSection = component.slice(component.indexOf('className="hc-faq"'), component.indexOf('className="hc-trial"'));
-  assert.doesNotMatch(faqSection, /<details[^>]*open/);
+  assert.match(faqSection, /open=\{groupIndex === 0\}/);
   assert.match(faqSection, /<details className="hc-faq-group"/);
 });
 
@@ -131,14 +135,15 @@ test("the results card holds one height in every view", async () => {
   }
 });
 
-test("both demo cards take one header format", async () => {
+test("demo headers keep screen selectors without extra playback controls", async () => {
   const results = await readFile(new URL("../src/components/homepage-concept/results-reporting.tsx", import.meta.url), "utf8");
   const resultsCss = await readFile(new URL("../src/components/homepage-concept/results-reporting.css", import.meta.url), "utf8");
   const workflow = await readFile(new URL("../src/components/homepage-concept/workflow-showcase.tsx", import.meta.url), "utf8");
   const workflowCss = await readFile(new URL("../src/components/homepage-concept/workflow-showcase.css", import.meta.url), "utf8");
-  // One header bar: product on the left, the selector at the top right.
+  // The reporting header keeps only its top-right screen selector.
   assert.match(results, /className="rr-stage-topbar"/);
-  assert.match(results, /<span className="rr-stage-brand">/);
+  assert.doesNotMatch(results, /className="rr-stage-brand"/);
+  assert.doesNotMatch(results, />(?:Pause|Play|Replay)</);
   assert.match(results, /className="rr-stage-slot"/);
   assert.doesNotMatch(results, /rr-stage-head/);
   // The selection control is the same pill and slider as the ad-creation card's.
@@ -147,8 +152,8 @@ test("both demo cards take one header format", async () => {
     assert.ok(pill(resultsCss, "rr-views").includes(property), `the reporting selector lost ${property}`);
     assert.ok(pill(workflowCss, "hc-process-steps").includes(property), `the ad-creation selector lost ${property}`);
   }
-  // One short line under the selector, on both cards.
-  assert.match(results, /className="rr-view-brief"/);
+  // Reporting periods are named in the selectors; the workflow keeps its task hint.
+  assert.doesNotMatch(results, /className="rr-view-brief"/);
   assert.match(workflow, /className="hc-process-brief"/);
 });
 
@@ -177,12 +182,14 @@ test("the hero ad deck stops itself instead of offering a control", async () => 
   // WCAG 2.2.2: the deck carries no pause control, so it must stop itself once
   // every ad has had its turn rather than rotating indefinitely.
   assert.match(showcase, /const \[advances, setAdvances\] = useState\(0\)/);
-  assert.match(showcase, /if \(!shouldPlay \|\| cycled\) return;/);
+  assert.match(showcase, /if \(!shouldPlay\) return;/);
   // One full turn of the deck, counted from the advances rather than from the
   // front ad: the first ad starts on top, so that test stopped it on mount.
   assert.match(showcase, /const cycled = advances >= SHOWCASE_ADS\.length;/);
   // The hero carries no label or playback control.
-  assert.doesNotMatch(showcase, /hc-meta-example-label|hc-meta-rotate-toggle|Example ads/);
+  assert.match(showcase, /className="hc-meta-format-selector"/);
+  assert.match(showcase, /setAdvances\(SHOWCASE_ADS\.length\)/);
+  assert.doesNotMatch(showcase, /hc-meta-example-label|hc-meta-rotate-toggle|Example ads|Replay|Pause the demo/);
   assert.doesNotMatch(css, /\.hc-meta-example-label|\.hc-meta-rotate-toggle/);
 });
 
