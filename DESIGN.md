@@ -183,3 +183,5 @@ The native editor starts on the actual edited ad preview. Template headings wrap
   route inventories moved out; token values, the motion vocabulary and the owner
   preferences kept verbatim from the previous version.
 - 2026-09-12: Homepage workflow now uses a measured, finite Choose → Customise → Review sequence with one persistent ad preview and a concise setup check.
+
+- 2026-09-12: Homepage workflow keeps one persistent ad through Choose, Customise and Review. Its finite marketing sequence uses the shared workflowStudy timings, holds the approval state long enough to read, and follows the study container rather than the browser viewport for its responsive geometry.

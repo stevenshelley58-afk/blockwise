@@ -93,3 +93,20 @@ test("shown values use multiline fields and match the preview", () => {
 test("autoplay waits for and reacts to measured geometry", () => {
   assert.ok(source.includes("[geometryReady, motionReady, inView, manual, pageVisible, reduced, step]"));
 });
+
+test("study restores the workflow heading, trial terms, measured container state and approval", () => {
+  assert.match(source, /Lead generating ads for/);
+  assert.match(source, /Facebook &amp; Instagram/);
+  assert.match(source, /Start free trial/);
+  assert.match(source, /Free trial · No card required · Cancel anytime/);
+  assert.match(source, /approvalHoldMs/);
+  assert.match(source, /Ad approved/);
+  assert.match(source, /Check aria-hidden/);
+  assert.match(source, /STUDY_NARROW_BREAKPOINT/);
+  assert.match(source, /data-narrow=/);
+  assert.match(styles, /container-type: inline-size/);
+  assert.match(styles, /data-narrow="true"/);
+  assert.match(styles, /@container \(max-width: 360px\)/);
+  assert.doesNotMatch(styles, /@media \(max-width: (700|360)px\)/);
+  assert.doesNotMatch(styles, /bwStudyConfirm|bwStudyApprove/);
+});

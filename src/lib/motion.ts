@@ -82,8 +82,26 @@ export function entrance(reduced: boolean | null): {
 }
 
 
-// Marketing-only focal reveal, explicitly requested for the reporting graph.
-// One shared clip reveals both line and fill; routine app timings stay unchanged.
+
+/**
+ * Homepage-only motion contract. Marketing previews can take a longer hold so
+ * the product states are readable, while the reporting preview can reuse the
+ * same values without each worker inventing its own clock.
+ */
+export const homepageMotion = {
+  workflowStudy: {
+    autoHoldMs: 2600,
+    adMoveMs: 680,
+    panelRevealMs: 360,
+    sideFadeMs: 150,
+    typeStartMs: 760,
+    typeMs: 28,
+    reviewHoldMs: 1500,
+    approvalHoldMs: 1500,
+    ease: [0.2, 0.82, 0.28, 1] as const,
+  },
+} as const;
+
 export const reportingReveal = {
   duration: 1.5,
   ease: [0.4, 0, 0.2, 1] as const,
@@ -93,42 +111,4 @@ export const reportingReveal = {
 export const reportingLoop = {
   chartHold: durations.entrance,
   emailHold: 5,
-} as const;
-
-/**
- * Homepage-only motion contract. Marketing previews can take a longer hold so
- * the product states are readable, while the reporting preview can reuse the
- * same values without each worker inventing its own clock.
- */
-export const homepageMotion = {
-  hero: {
-    holdMs: 3000,
-    transitionMs: 350,
-  },
-  workflow: {
-    startDelayMs: 1000,
-    sceneTransitionMs: 350,
-    indicatorTransitionMs: 350,
-    briefTransitionMs: 200,
-    phaseHoldsMs: [1200, 1400, 1400, 2400, 1200, null, null, 3000, 4200] as const,
-    copyTypeMs: 24,
-    linkTypeMs: 40,
-    reviewTypeMs: 19,
-    reviewItemDelayMs: 420,
-  },
-  reporting: {
-    drawMs: 1400,
-    chartHoldMs: 3000,
-    emailHoldMs: 2200,
-  },
-  workflowStudy: {
-    autoHoldMs: 2600,
-    adMoveMs: 680,
-    panelRevealMs: 360,
-    sideFadeMs: 220,
-    typeStartMs: 760,
-    typeMs: 28,
-    reviewHoldMs: 700,
-    ease: [0.2, 0.82, 0.28, 1] as const,
-  },
 } as const;

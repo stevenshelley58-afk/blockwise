@@ -1,13 +1,15 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { AD_EXAMPLES, AD_LIBRARY, withBasePath } from "@/lib/homepage-concept/content";
 import { creativeImageSrcSet } from "@/lib/homepage-concept/creative-image";
+import { TRIAL_SIGNUP_URL } from "@/lib/homepage-concept/pricing";
 import { homepageMotion, useHydratedReducedMotion } from "@/lib/motion";
-import { studyAdMotion, studyEditLayout } from "./workflow-motion-study-geometry";
+import { STUDY_NARROW_BREAKPOINT, studyAdMotion, studyEditLayout } from "./workflow-motion-study-geometry";
 import styles from "./workflow-motion-study.module.css";
 
 const STUDY_STEPS = [
@@ -88,6 +90,7 @@ function EditPanel({ headlineChars, reduced }: { headlineChars: number; reduced:
       initial={reduced ? { opacity: 1 } : { opacity: 0, y: 16 }}
       animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
       transition={{ duration: reduced ? 0 : TIMING.panelRevealMs / 1000, delay: reduced ? 0 : (TIMING.adMoveMs / 1000) * 0.62, ease: TIMING.ease }}
+      exit={reduced ? { opacity: 0 } : { opacity: 0, y: -10 }}
       aria-label="Customise your ad"
     >
       <div className={styles.bwStudyPanelHeading}><h2>Make it yours</h2></div>
@@ -123,26 +126,37 @@ function EditPanel({ headlineChars, reduced }: { headlineChars: number; reduced:
   );
 }
 
-function ReviewPanel({ reduced }: { reduced: boolean }) { return ( <motion.section className={styles.bwStudyEditPanel} initial={reduced ? { opacity: 1 } : { opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduced ? 0 : TIMING.panelRevealMs / 1000, ease: TIMING.ease }} aria-label="Review your ad setup"><div className={styles.bwStudyPanelHeading}><h2>Ready to review</h2><p> A quick check before you approve the setup.</p></div><dl className={styles.bwStudyReviewList}><div><dt>Who sees it</dt><dd>Homeowners and potential sellers</dd></div><div><dt>Daily budget</dt><dd>A$20 per day</dd></div><div><dt>Duration</dt><dd>14 days</dd></div></dl><p className={styles.bwStudyApprovalStatus}><span aria-hidden="true">✓</span> Setup checked</p></motion.section> ); }
+function ReviewPanel({ approved, reduced }: { approved: boolean; reduced: boolean }) {
+  return (
+    <motion.section className={styles.bwStudyEditPanel} initial={reduced ? { opacity: 1 } : { opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={reduced ? { opacity: 0 } : { opacity: 0, y: -10 }} transition={{ duration: reduced ? 0 : TIMING.panelRevealMs / 1000, ease: TIMING.ease }} aria-label="Review your ad setup">
+      <div className={styles.bwStudyPanelHeading}><h2>Ready to review</h2></div>
+      <dl className={styles.bwStudyReviewList}><div><dt>Who sees it</dt><dd>Homeowners and potential sellers</dd></div><div><dt>Daily budget</dt><dd>$20 per day</dd></div><div><dt>Duration</dt><dd>14 days</dd></div></dl>
+      <p className={styles.bwStudyApprovalStatus}><Check aria-hidden="true" size={15} /> {approved ? "Ad approved" : "Approving ad"}</p>
+    </motion.section>
+  );
+}
 
 export function WorkflowMotionStudy() {
   const reduced = useHydratedReducedMotion();
-  const [narrow, setNarrow] = useState(false);
   const { rootRef, inView, pageVisible } = usePageActivity();
   const [step, setStep] = useState<StudyStep>("Choose");
   const [manual, setManual] = useState(false);
   const [headlineChars, setHeadlineChars] = useState(0);
+  const [reviewConfirmed, setReviewConfirmed] = useState(false);
   const [stageSize, setStageSize] = useState({ width: 1040, height: 560 });
   const [adSize, setAdSize] = useState({ width: STUDY_AD_WIDTH, height: 550 });
   const [geometryReady, setGeometryReady] = useState(false);
   const [motionReady, setMotionReady] = useState(false);
+  const narrow = stageSize.width < STUDY_NARROW_BREAKPOINT;
   const stageRef = useRef<HTMLDivElement>(null);
   const adRef = useRef<HTMLDivElement>(null);
   const headlineIndexRef = useRef(0);
 
   const selectStep = useCallback((next: StudyStep) => {
+    if (next === step) return;
     setManual(true);
     setStep(next);
+    setReviewConfirmed(next === "Review" && reduced);
     if (next === "Choose") {
       headlineIndexRef.current = 0;
       setHeadlineChars(0);
@@ -150,12 +164,13 @@ export function WorkflowMotionStudy() {
       headlineIndexRef.current = SELECTED_AD.adTitle.length;
       setHeadlineChars(SELECTED_AD.adTitle.length);
     }
-  }, []);
+  }, [reduced, step]);
 
   useEffect(() => {
     if (reduced) {
       setManual(true);
       setStep("Review");
+      setReviewConfirmed(true);
       headlineIndexRef.current = SELECTED_AD.adTitle.length;
       setHeadlineChars(SELECTED_AD.adTitle.length);
     }
@@ -202,11 +217,21 @@ export function WorkflowMotionStudy() {
   }, [headlineChars, inView, manual, pageVisible, reduced, step]);
 
   useEffect(() => {
+    if (step !== "Review" || reduced || !inView || !pageVisible) {
+      if (step !== "Review") setReviewConfirmed(false);
+      return;
+    }
+    setReviewConfirmed(false);
+    const timer = window.setTimeout(() => setReviewConfirmed(true), TIMING.approvalHoldMs);
+    return () => window.clearTimeout(timer);
+  }, [inView, pageVisible, reduced, step]);
+
+  useEffect(() => {
     const stage = stageRef.current;
     const ad = adRef.current;
     if (!stage || !ad) return;
     const measure = () => {
-      setStageSize({ width: stage.clientWidth, height: stage.clientHeight }); setNarrow(stage.clientWidth < 700);
+      setStageSize({ width: stage.clientWidth, height: stage.clientHeight });
       setAdSize({ width: ad.offsetWidth, height: ad.offsetHeight });
       setGeometryReady(true);
     };
@@ -215,7 +240,7 @@ export function WorkflowMotionStudy() {
     observer.observe(stage);
     observer.observe(ad);
     return () => observer.disconnect();
-  }, [narrow]);
+  }, []);
 
   useEffect(() => {
     if (!geometryReady) return;
@@ -243,7 +268,11 @@ export function WorkflowMotionStudy() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className={"tw " + styles.bwStudy} ref={rootRef}>
+      <div className={"tw " + styles.bwStudy} ref={rootRef} data-narrow={narrow ? "true" : "false"}>
+        <header className={styles.bwStudyIntro}>
+          <h2><span>Lead generating ads for</span><span>Facebook &amp; Instagram</span></h2>
+          <div><Button asChild size="lg"><a href={TRIAL_SIGNUP_URL}>Start free trial</a></Button><small>Free trial · No card required · Cancel anytime</small></div>
+        </header>
         <section className={styles.bwStudyFrame} aria-label="Ad Studio motion study">
           <header className={styles.bwStudyToolbar}>
             <span className={styles.bwStudyTitle}><i aria-hidden="true" /> Ad Studio</span>
@@ -262,7 +291,7 @@ export function WorkflowMotionStudy() {
             <motion.div className={styles.bwStudyAdMotion} ref={adRef} style={{ left: geometryReady ? 0 : undefined }} initial={false} animate={geometryReady ? adMotion : undefined} transition={{ duration: !motionReady || reduced ? 0 : TIMING.adMoveMs / 1000, ease: TIMING.ease }}>
               <StudyAd headlineChars={headlineChars} />
             </motion.div>
-            <AnimatePresence initial={false}>{customise ? <div className={styles.bwStudyEditSlot}>{review ? <ReviewPanel key="review" reduced={reduced} /> : <EditPanel key="edit" headlineChars={headlineChars} reduced={reduced} />}</div> : null}</AnimatePresence>
+            <AnimatePresence initial={false} mode="wait">{customise ? <div key={review ? "review" : "edit"} className={styles.bwStudyEditSlot}>{review ? <ReviewPanel approved={reviewConfirmed} reduced={reduced} /> : <EditPanel headlineChars={headlineChars} reduced={reduced} />}</div> : null}</AnimatePresence>
           </div>
           <p className={styles.bwStudyHint} aria-live="polite">{STUDY_STEPS.find((item) => item.label === step)?.hint}</p>
         </section>

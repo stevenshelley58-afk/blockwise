@@ -1,3 +1,4 @@
+export const STUDY_NARROW_BREAKPOINT = 700;
 export const STUDY_AD_SCALE = 0.78;
 export const STUDY_PANEL_GAP = 56;
 export const STUDY_PANEL_MAX_WIDTH = 410;
