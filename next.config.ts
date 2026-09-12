@@ -35,13 +35,25 @@ function publicAssetCacheControl(maxAgeSeconds: number): { key: string; value: s
 }
 
 const homepagePreview = process.env.BLOCKWISE_HOMEPAGE_PREVIEW === "true";
-const previewBasePath = homepagePreview ? "/homepage-preview" : "";
+const metaConnectPreview = process.env.BLOCKWISE_META_CONNECT_PREVIEW === "true";
+
+if (homepagePreview && metaConnectPreview) {
+  throw new Error("Only one isolated Blockwise preview may be built at a time.");
+}
+
+const isolatedPreview = homepagePreview || metaConnectPreview;
+const previewBasePath = homepagePreview
+  ? "/homepage-preview"
+  : metaConnectPreview
+    ? "/meta-connect-preview"
+    : "";
 
 const nextConfig: NextConfig = {
   basePath: previewBasePath,
   // Embedded at build time: a mutable runtime env must not impersonate a release.
   env: {
     BLOCKWISE_HOMEPAGE_PREVIEW: homepagePreview ? "true" : "false",
+    BLOCKWISE_META_CONNECT_PREVIEW: metaConnectPreview ? "true" : "false",
     NEXT_PUBLIC_BASE_PATH: previewBasePath,
     BLOCKWISE_BUILD_REVISION: /^[a-f0-9]{40}$/i.test(process.env.BLOCKWISE_BUILD_REVISION ?? "")
       ? process.env.BLOCKWISE_BUILD_REVISION
@@ -123,6 +135,26 @@ const nextConfig: NextConfig = {
     ];
   },
   async headers() {
+    // An isolated preview is a self-contained, public UI artifact. Keep its
+    // response policy independent of the product's provider/analytics CSP.
+    if (isolatedPreview) {
+      return [
+        {
+          source: "/:path*",
+          headers: [
+            { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+            { key: "Cache-Control", value: "no-store" },
+            { key: "X-Content-Type-Options", value: "nosniff" },
+            { key: "Referrer-Policy", value: "no-referrer" },
+            { key: "X-Frame-Options", value: "DENY" },
+            {
+              key: "Content-Security-Policy",
+              value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'none'",
+            },
+          ],
+        },
+      ];
+    }
     // Security headers for the standalone Next server behind Caddy.
     // Directives are composed from the verified browser-loaded provider
     // inventory (do not add origins without a code reference):

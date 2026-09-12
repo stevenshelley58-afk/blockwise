@@ -44,11 +44,13 @@ const GA4_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID;
 const CLARITY_PROJECT_ID = process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID;
 
 const HOMEPAGE_PREVIEW = process.env.BLOCKWISE_HOMEPAGE_PREVIEW === "true";
+const META_CONNECT_PREVIEW = process.env.BLOCKWISE_META_CONNECT_PREVIEW === "true";
+const ISOLATED_PREVIEW = HOMEPAGE_PREVIEW || META_CONNECT_PREVIEW;
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://blockwise.sale";
 const SITE_TITLE = "Blockwise | Real Estate Meta Ads Workflow";
-const SITE_DESCRIPTION = HOMEPAGE_PREVIEW
-  ? "Blockwise homepage concept. Create, approve and track real estate ads in one place."
+const SITE_DESCRIPTION = ISOLATED_PREVIEW
+  ? "Blockwise concept preview. No account connection, analytics, or provider services are active."
   : "Create, approve, publish, and track Meta ad campaigns through your own ad account. Start with email and create three complete ads before adding a card.";
 
 export const viewport: Viewport = {
@@ -88,7 +90,7 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
   },
   facebook: META_APP_ID ? { appId: META_APP_ID } : undefined,
-  robots: { index: !HOMEPAGE_PREVIEW, follow: !HOMEPAGE_PREVIEW },
+  robots: { index: !ISOLATED_PREVIEW, follow: !ISOLATED_PREVIEW },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -101,17 +103,19 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     >
       <head>
         {/* Set sidebar theme before paint to avoid a flash */}
-        <Script id="sidebar-theme-init" strategy="beforeInteractive">
-          {`try{var t=localStorage.getItem('bw-sidebar')||'light';document.documentElement.setAttribute('data-sidebar-theme',t);}catch(e){}`}
-        </Script>
+        {!ISOLATED_PREVIEW && (
+          <Script id="sidebar-theme-init" strategy="beforeInteractive">
+            {`try{var t=localStorage.getItem('bw-sidebar')||'light';document.documentElement.setAttribute('data-sidebar-theme',t);}catch(e){}`}
+          </Script>
+        )}
       </head>
       <body>
-        {!HOMEPAGE_PREVIEW && <MarketingAnalytics metaPixelId={META_PIXEL_ID} ga4MeasurementId={GA4_MEASUREMENT_ID} />}
-        {!HOMEPAGE_PREVIEW && <ClarityAnalytics projectId={CLARITY_PROJECT_ID} />}
+        {!ISOLATED_PREVIEW && <MarketingAnalytics metaPixelId={META_PIXEL_ID} ga4MeasurementId={GA4_MEASUREMENT_ID} />}
+        {!ISOLATED_PREVIEW && <ClarityAnalytics projectId={CLARITY_PROJECT_ID} />}
         {children}
-        {!HOMEPAGE_PREVIEW && <ServiceWorkerRegistrar />}
-        {!HOMEPAGE_PREVIEW && <PageViewTracker />}
-        {!HOMEPAGE_PREVIEW && <ConsentBanner />}
+        {!ISOLATED_PREVIEW && <ServiceWorkerRegistrar />}
+        {!ISOLATED_PREVIEW && <PageViewTracker />}
+        {!ISOLATED_PREVIEW && <ConsentBanner />}
       </body>
     </html>
   );

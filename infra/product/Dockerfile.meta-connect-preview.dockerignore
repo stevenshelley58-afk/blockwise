@@ -1,0 +1,10 @@
+**
+!public
+!public/brand
+!public/brand/blockwise-logo.svg
+!public/brand/blockwise-icon-midnight.svg
+!.next
+!.next/standalone
+!.next/standalone/**
+!.next/static
+!.next/static/**

@@ -14,11 +14,39 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Preview is a read-only UI: do not refresh auth or expose product endpoints.
-  if (process.env.BLOCKWISE_HOMEPAGE_PREVIEW === "true") {
-    if (pathname === "/concept" || pathname.startsWith("/_next/")) {
-      return NextResponse.next();
+  const homepagePreview = process.env.BLOCKWISE_HOMEPAGE_PREVIEW === "true";
+  const metaConnectPreview = process.env.BLOCKWISE_META_CONNECT_PREVIEW === "true";
+  if (homepagePreview || metaConnectPreview) {
+    const allowedPage = homepagePreview
+      ? pathname === "/concept"
+      : pathname === "/concept/meta-connect";
+    const previewHeaders = new Headers({
+      "Cache-Control": "no-store",
+      "X-Robots-Tag": "noindex, nofollow, noarchive",
+    });
+    const revision = process.env.BLOCKWISE_BUILD_REVISION;
+    if (/^[a-f0-9]{40}$/i.test(revision ?? "")) {
+      previewHeaders.set("X-Preview-Revision", revision!);
     }
-    return new NextResponse("Not found", { status: 404 });
+
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      return new NextResponse("Method not allowed", { status: 405, headers: previewHeaders });
+    }
+    if (metaConnectPreview && pathname === "/" && request.method === "GET") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/concept/meta-connect";
+      return NextResponse.redirect(url, { headers: previewHeaders });
+    }
+    if (!allowedPage && !pathname.startsWith("/_next/")) {
+      return new NextResponse("Not found", { status: 404, headers: previewHeaders });
+    }
+
+    // The edge route strips these too. Repeat it here so a direct internal
+    // request cannot make auth material available to preview rendering.
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.delete("authorization");
+    requestHeaders.delete("cookie");
+    return NextResponse.next({ request: { headers: requestHeaders }, headers: previewHeaders });
   }
 
   if (process.env.NODE_ENV === "production" && pathname.startsWith("/api/dev/")) {
