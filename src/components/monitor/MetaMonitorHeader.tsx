@@ -1,22 +1,6 @@
 import { RefreshCw } from "lucide-react";
 
 import { niche } from "@/config/niche";
-import type { MonitorDateRange, MonitorRange } from "@/lib/meta-monitor/types";
-
-/** The only range options: three presets plus custom. */
-const RANGE_OPTIONS: Array<{ value: MonitorRange; key: "d7" | "d30" | "d90" | null }> = [
-  { value: "last_7", key: "d7" },
-  { value: "last_30", key: "d30" },
-  { value: "last_90", key: "d90" },
-  { value: "custom", key: null },
-];
-
-// 34px visual height with a pseudo-element expanding the hit area to the 44px
-// minimum touch target.
-const chipBase =
-  "relative inline-flex h-[34px] cursor-pointer items-center rounded-full border px-[13px] text-xs font-bold transition-[background,color,border-color,transform] duration-150 before:absolute before:inset-x-0 before:-inset-y-[5px] before:content-[''] active:scale-[0.96] motion-reduce:active:scale-100";
-const chipOn = `${chipBase} border-(--ink) bg-(--ink) text-white`;
-const chipOff = `${chipBase} border-(--line) bg-(--surface) text-foreground hover:border-(--line-heavy)`;
 
 export function MetaMark({ size = 26 }: { size?: number }) {
   return (
@@ -34,20 +18,18 @@ export function MetaMark({ size = 26 }: { size?: number }) {
   );
 }
 
+/**
+ * The page heading. The date range belongs to the chart above the data it
+ * slices, so this header keeps only the title, the sync state and Refresh.
+ */
 export function MetaMonitorHeader(props: {
-  range: MonitorDateRange;
-  rangeKey: MonitorRange;
-  customRange: { since: string; until: string };
   lastSyncedAt: string | null;
   isRefreshing: boolean;
   isSample: boolean;
   isConnected: boolean;
-  onRangeChange: (range: MonitorRange) => void;
-  onCustomRangeChange: (range: { since: string; until: string }) => void;
   onRefresh: () => void;
 }) {
   const copy = niche.copy.performance;
-  const isCustom = props.rangeKey === "custom";
   const hasLiveControls = props.isConnected && !props.isSample;
 
   return (
@@ -61,6 +43,20 @@ export function MetaMonitorHeader(props: {
             </h1>
           </div>
           <p className="mt-1 text-[13px] text-muted-foreground">{copy.subtitle}</p>
+          {hasLiveControls ? (
+            <span className="mt-1.5 flex items-center gap-1.5 text-[11.5px] font-medium text-(--faint)">
+              <span
+                className={`size-[7px] rounded-full ${props.lastSyncedAt ? "bg-success" : "bg-(--faint)"}`}
+                aria-hidden
+              />
+              {props.lastSyncedAt ? "Last known " + timeAgo(props.lastSyncedAt) : copy.states.notSynced}
+            </span>
+          ) : props.isSample ? null : (
+            <span className="mt-1.5 flex items-center gap-1.5 text-[11.5px] font-medium text-(--faint)">
+              <span className="size-[7px] rounded-full bg-(--faint)" aria-hidden />
+              Not connected
+            </span>
+          )}
         </div>
 
         {hasLiveControls ? <button
@@ -74,92 +70,8 @@ export function MetaMonitorHeader(props: {
           <span>{props.isRefreshing ? copy.refreshing : copy.refresh}</span>
         </button> : null}
       </div>
-
-      {hasLiveControls ? (
-      <div className="flex flex-wrap items-center gap-2">
-        <div
-          className="flex flex-wrap items-center gap-1.5"
-          role="group"
-          aria-label={`Date range, ${formatRangeSpan(props.range)}`}
-        >
-          {RANGE_OPTIONS.map((option) =>
-            option.key === null ? (
-              <button
-                key={option.value}
-                type="button"
-                className={isCustom ? chipOn : chipOff}
-                aria-pressed={isCustom}
-                onClick={() => props.onCustomRangeChange(props.customRange)}
-              >
-                {copy.customRange}
-              </button>
-            ) : (
-              <button
-                key={option.value}
-                type="button"
-                className={option.value === props.rangeKey ? chipOn : chipOff}
-                aria-pressed={option.value === props.rangeKey}
-                onClick={() => props.onRangeChange(option.value)}
-              >
-                <span className="sm:hidden">{copy.rangesShort[option.key]}</span>
-                <span className="hidden sm:inline">{copy.ranges[option.key]}</span>
-              </button>
-            ),
-          )}
-        </div>
-
-        {isCustom ? (
-          <div
-            className="inline-flex items-center gap-1.5 rounded-full border border-(--line) bg-(--surface-subtle) px-2.5 py-1 text-muted-foreground"
-            role="group"
-            aria-label="Custom date range"
-          >
-            <input
-              type="date"
-              aria-label="From date"
-              className="h-[30px] border-0 bg-transparent text-[12.5px] font-semibold text-(--ink) outline-none"
-              value={props.customRange.since}
-              max={props.customRange.until || undefined}
-              onChange={(event) => props.onCustomRangeChange({ ...props.customRange, since: event.target.value })}
-            />
-            <span aria-hidden>–</span>
-            <input
-              type="date"
-              aria-label="To date"
-              className="h-[30px] border-0 bg-transparent text-[12.5px] font-semibold text-(--ink) outline-none"
-              value={props.customRange.until}
-              min={props.customRange.since || undefined}
-              onChange={(event) => props.onCustomRangeChange({ ...props.customRange, until: event.target.value })}
-            />
-          </div>
-        ) : null}
-
-        <span className="ml-auto inline-flex items-center gap-1.5 text-[11.5px] font-medium text-(--faint)">
-          <span
-            className={`size-[7px] rounded-full ${props.lastSyncedAt ? "bg-success" : "bg-(--faint)"}`}
-            aria-hidden
-          />
-          {props.lastSyncedAt ? "Last known " + timeAgo(props.lastSyncedAt) : copy.states.notSynced}
-        </span>
-      </div>
-      ) : props.isSample ? null : (
-        <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-(--faint)">
-          <span className="size-[7px] rounded-full bg-(--faint)" aria-hidden />
-          Not connected
-        </span>
-      )}
     </header>
   );
-}
-
-function formatRangeSpan(range: MonitorDateRange): string {
-  return `${formatDay(range.since)} – ${formatDay(range.until)}`;
-}
-
-function formatDay(isoDate: string): string {
-  const date = new Date(`${isoDate}T00:00:00`);
-
-  return date.toLocaleDateString("en-AU", { day: "numeric", month: "short" });
 }
 
 function timeAgo(iso: string): string {

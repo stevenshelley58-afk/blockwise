@@ -183,12 +183,20 @@ export type LeadsCopy = {
 export type PerformanceCopy = {
   title: string;
   subtitle: string;
-  ranges: { d7: string; d30: string; d90: string };
-  /** Compact labels for the mobile chip row, where the full words do not fit. */
-  rangesShort: { d7: string; d30: string; d90: string };
+  /** The only ranges Results offers: one day, a week, a month, or the customer's own span. */
+  ranges: { d1: string; d7: string; d30: string };
   charts: { spend: string; leads: string; cpl: string };
   cplGapNote: string;
-  leadResults: { title: string; subtitle: string };
+  /** Accessible names for the two chart controls. */
+  chartMetricLabel: string;
+  rangeLabel: string;
+  /** Shown instead of the chart when the range holds a single day. */
+  singleDayNote: string;
+  /** Disclosure labels for the reporting sections below the chart. */
+  moreDetails: string;
+  adDetails: string;
+  customFromLabel: string;
+  customToLabel: string;
   /** Per-area performance panel — "area" is `terms.area` for this niche. */
   areaBreakdown: { title: string; empty: string };
   budgetPacing: string;

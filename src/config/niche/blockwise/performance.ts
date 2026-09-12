@@ -3,18 +3,20 @@ import type { PerformanceCopy } from "../niche";
 export const performance: PerformanceCopy = {
   title: "Results",
   subtitle: "Spend, leads and cost per lead across your live ads.",
-  ranges: { d7: "7 days", d30: "30 days", d90: "90 days" },
-  rangesShort: { d7: "7d", d30: "30d", d90: "90d" },
+  ranges: { d1: "1 day", d7: "7 days", d30: "30 days" },
   charts: {
     spend: "Spend over time",
     leads: "Valid leads over time",
     cpl: "Cost per lead over time",
   },
   cplGapNote: "Days with no valid leads show no cost per lead.",
-  leadResults: {
-    title: "Lead results",
-    subtitle: "Results by listing or offer, with lead quality, cost, and the next action.",
-  },
+  chartMetricLabel: "Chart metric",
+  rangeLabel: "Date range",
+  singleDayNote: "One day has no trend to chart. Choose 7 days or more to see the line.",
+  moreDetails: "More reporting details",
+  adDetails: "Open ad details",
+  customFromLabel: "From date",
+  customToLabel: "To date",
   areaBreakdown: {
     title: "Valid leads by suburb",
     empty:

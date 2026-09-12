@@ -14,18 +14,17 @@
  * dressed as delivery.
  */
 
-import { ArrowDown, ArrowRight, ArrowUp } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
-import { Sparkline } from "@/components/self-serve/sparkline";
-import { AnimatedNumber } from "@/components/ui/animated-number";
 import { niche } from "@/config/niche";
 import type { HomeData } from "@/components/self-serve/home-dashboard";
+import {
+  changeBetween,
+  MetricCard,
+  type MetricChange,
+} from "@/components/ui/metric-card";
 import { previousWeekTotals } from "@/lib/home/home-safe-read-model";
-import { countUpDuration, springs } from "@/lib/motion";
-import { cn } from "@/lib/utils";
-
-const COUNT_SPRING = { ...springs.slow, duration: countUpDuration };
 
 /** Costs read as money, so cents stay visible: $0.80, never $0.8. */
 const money = (value: number) =>
@@ -33,20 +32,12 @@ const money = (value: number) =>
 
 const whole = (value: number) => Math.round(value).toLocaleString("en-AU");
 
-type Change = { direction: "up" | "down" | "level"; percent: number };
-
 /**
- * Week on week, as a percentage. A prior week with nothing in it has no
- * percentage to report, so the comparison is dropped rather than shown as
- * infinite or as a flat zero.
+ * What the comparison is against. The screen-reader sentence spells the whole
+ * statement out; this is only the tail the card appends to the percentage, and
+ * the niche copy has no field for half a sentence.
  */
-function changeBetween(current: number, prior: number): Change | null {
-  if (!Number.isFinite(prior) || prior <= 0) return null;
-  const ratio = (current - prior) / prior;
-  const percent = Math.round(Math.abs(ratio) * 100);
-  if (percent === 0) return { direction: "level", percent: 0 };
-  return { direction: ratio > 0 ? "up" : "down", percent };
-}
+const COMPARE_LABEL = "prior week";
 
 type Metric = {
   key: "spend" | "clicks" | "cpc" | "leads";
@@ -56,7 +47,7 @@ type Metric = {
   format: (value: number) => string;
   /** One point per day of the trailing week; fewer than two draws no line. */
   series: number[];
-  change: Change | null;
+  change: MetricChange | null;
 };
 
 type Performance = NonNullable<HomeData["performance"]>;
@@ -119,26 +110,19 @@ function buildMetrics(performance: Performance): Metric[] {
   ];
 }
 
-function ChangeNote({ change }: { change: Change }) {
+/**
+ * The comparison as a screen reader hears it: the week's real direction in
+ * words, because "12%" beside an arrow says nothing out loud. The band shows
+ * only the percentage; the sentence comes from the niche's own copy, so the
+ * card itself carries none.
+ */
+function spokenChange(change: MetricChange): string {
   const copy = niche.copy.home.kpis;
-  const spoken =
-    change.direction === "level"
-      ? copy.vsPriorWeek.level
-      : change.direction === "up"
-        ? copy.vsPriorWeek.higher(change.percent)
-        : copy.vsPriorWeek.lower(change.percent);
-  // "0%" next to a minus reads as a negative, so a level week says so in words.
-  const Icon = change.direction === "up" ? ArrowUp : change.direction === "down" ? ArrowDown : null;
-
-  return (
-    <span className="flex items-start gap-1 text-[11.5px] leading-[1.35] text-muted-foreground">
-      {Icon ? <Icon aria-hidden size={12} strokeWidth={2.4} className="mt-[3px] shrink-0" /> : null}
-      <span className="sr-only">{spoken}</span>
-      <span aria-hidden className="tabular-nums">
-        {change.direction === "level" ? "No change" : `${change.percent}%`} vs prior week
-      </span>
-    </span>
-  );
+  return change.direction === "level"
+    ? copy.vsPriorWeek.level
+    : change.direction === "up"
+      ? copy.vsPriorWeek.higher(change.percent)
+      : copy.vsPriorWeek.lower(change.percent);
 }
 
 export function HomeMetricsBand({
@@ -204,47 +188,22 @@ export function HomeMetricsBand({
         // for a five-figure spend.
         <dl className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-3.5">
           {metrics.map((metric) => (
-            <div
-              key={metric.key}
-              data-metric={metric.key}
-              className="min-w-0 rounded-(--r-card) border border-(--line) bg-card px-4 py-3.5 shadow-card lg:px-[18px] lg:pt-[17px] lg:pb-[15px]"
-            >
-              <dt className="text-[12px] leading-[1.35] font-semibold text-muted-foreground">
-                {metric.label}
-              </dt>
-              <dd
-                className={cn(
-                  "mt-1 font-display text-[22px] leading-none font-extrabold tracking-[-0.025em] tabular-nums lg:text-[24px]",
-                  metric.value === null ? "text-muted-foreground" : "text-foreground",
-                )}
-              >
-                {metric.value === null ? (
-                  <>
-                    <span aria-hidden>{copy.unavailableValue}</span>
-                    <span className="sr-only">{copy.unavailableValueSpoken}</span>
-                  </>
-                ) : (
-                  <AnimatedNumber
-                    value={metric.value}
-                    format={metric.format}
-                    springOptions={COUNT_SPRING}
-                  />
-                )}
-              </dd>
-              {metric.series.length > 1 || metric.change ? (
-                // The line and the comparison stack: side by side they would
-                // squeeze the note into a column of two-word lines at two up.
-                <div className="mt-2.5 flex flex-col gap-1.5">
-                  {metric.series.length > 1 ? (
-                    <Sparkline
-                      points={metric.series}
-                      width={104}
-                      className="h-auto w-full max-w-[104px]"
-                    />
-                  ) : null}
-                  {metric.change ? <ChangeNote change={metric.change} /> : null}
-                </div>
-              ) : null}
+            // One wrapper per figure: it carries the React key and
+            // `data-metric`, which is how Home's own tests and the band's tone
+            // checks single a figure out. The shared card takes no data
+            // attributes of its own.
+            <div key={metric.key} data-metric={metric.key} className="min-w-0">
+              <MetricCard
+                label={metric.label}
+                value={metric.value}
+                format={metric.format}
+                series={metric.series}
+                change={metric.change}
+                compareLabel={COMPARE_LABEL}
+                spokenChange={metric.change ? spokenChange(metric.change) : undefined}
+                unavailable={copy.unavailableValue}
+                unavailableSpoken={copy.unavailableValueSpoken}
+              />
             </div>
           ))}
         </dl>

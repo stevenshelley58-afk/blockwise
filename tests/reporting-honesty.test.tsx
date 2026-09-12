@@ -75,21 +75,10 @@ test("Home distinguishes missing, zero, mismatched source, and mismatched period
 function header(lastSyncedAt: string | null, isSample: boolean, isConnected: boolean): string {
   return renderToStaticMarkup(
     createElement(MetaMonitorHeader, {
-      range: {
-        key: "last_30",
-        since: "2026-08-08",
-        until: "2026-09-06",
-        days: 30,
-        label: "Last 30 days",
-      },
-      rangeKey: "last_30",
-      customRange: { since: "2026-08-08", until: "2026-09-06" },
       lastSyncedAt,
       isRefreshing: false,
       isSample,
       isConnected,
-      onRangeChange() {},
-      onCustomRangeChange() {},
       onRefresh() {},
     }),
   );

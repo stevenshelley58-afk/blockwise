@@ -64,5 +64,8 @@ test("results resolves and focuses the campaign owned by the exact publish plan"
   assert.match(resultsDashboard, /campaignRowDomId\(focusCampaignId\)/);
   assert.match(resultsDashboard, /Showing the ad created from your publish plan/);
   assert.match(resultsDashboard, /Manage campaigns and budgets/);
-  assert.match(resultsDashboard, /open=\{focusCampaignId \? true : undefined\}/);
+  // The campaigns card opens with the page, on the plan's own campaign when
+  // there is one, so the publish hand-off lands on an expanded row.
+  assert.match(resultsDashboard, /<details className=\{panelClass\} open>[\s\S]*Manage campaigns and budgets/);
+  assert.match(resultsDashboard, /rows\.find\(\(row\) => row\.campaignId === focusCampaignId\) \?\? rows\[0\]/);
 });

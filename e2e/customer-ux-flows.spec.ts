@@ -70,7 +70,7 @@ test.describe("customer UX flows", () => {
     await expect(page.getByRole("link", { name: "Billing & plan", exact: true })).toBeVisible();
   });
 
-  test("results opens the example report when nothing is connected, with a switchable chart", async ({ page }) => {
+  test("results opens the example report when nothing is connected, and its controls drive the page", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     // No Meta connection: Performance goes straight to the labelled example
     // report, keeping Connect Meta in reach instead of a connect interstitial.
@@ -81,18 +81,33 @@ test.describe("customer UX flows", () => {
     await expect(page.getByRole("link", { name: "Connect Meta", exact: true }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Setup guide", exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /refresh/i })).toHaveCount(0);
-    await expect(page.getByRole("group", { name: "Results chart" })).toBeVisible();
+    // The page leads with the figures, not with a per-listing summary.
+    await expect(page.getByText("Lead results", { exact: true })).toHaveCount(0);
 
-    await page.goto("/results?example=1");
-    await expect(page.getByText("Example report", { exact: true }).first()).toBeVisible();
-    await expect(page.getByRole("button", { name: /refresh/i })).toHaveCount(0);
-    await expect(page.getByRole("group", { name: /date range/i })).toHaveCount(0);
-    await expect(page.getByRole("group", { name: "Results chart" })).toBeVisible();
-    const leads = page.getByRole("button", { name: "Leads", exact: true });
-    await leads.click();
-    await expect(leads).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByText("More reporting details", { exact: true })).toBeVisible();
-    await expect(page.getByText("Open pacing and location details", { exact: true })).toBeVisible();
+    // The chart metric is a menu, and the range beside it replaces the old
+    // metric chips: both drive the same example payload.
+    const metric = page.getByLabel("Chart metric");
+    const range = page.getByLabel("Date range");
+    await expect(metric).toHaveText(/Spend over time/);
+    await expect(range).toHaveText(/30 days/);
+    await metric.click();
+    await page.getByRole("option", { name: "Cost per lead over time" }).click();
+    await expect(metric).toHaveText(/Cost per lead over time/);
+    await range.click();
+    await page.getByRole("option", { name: "7 days" }).click();
+    await expect(range).toHaveText(/7 days/);
+    await expect(page.getByText(/vs previous 7 days/).first()).toBeVisible();
+
+    // Pacing and location moved inside the details card, which stays shut until
+    // asked for; the campaign table and the ad cards open with the page.
+    await expect(page.getByText("Open pacing and location details", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Valid leads by suburb", { exact: true })).toBeHidden();
+    await page.getByText("More reporting details", { exact: true }).click();
+    await expect(page.getByText("Valid leads by suburb", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Lover (Image)", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Carlingford lead source", exact: true }).first(),
+    ).toBeVisible();
   });
 
   test("Meta sharing stays a short checklist on a phone", async ({ page }) => {
