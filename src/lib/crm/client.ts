@@ -1,9 +1,14 @@
 /**
  * Low-level Frappe CRM transport.
  *
- * Server-only. Every request carries the agency's site in the `Host` header and
- * a token Authorization header. Frappe wraps results in {"message": ...};
- * the envelope is unwrapped here so callers see the payload only.
+ * Server-only. Every request names the agency's site in the
+ * `X-Frappe-Site-Name` header and carries a token Authorization header.
+ * Frappe wraps results in {"message": ...}; the envelope is unwrapped here so
+ * callers see the payload only.
+ *
+ * It talks to gunicorn, not to the nginx frontend, because that is the only
+ * path on which the site can be named from Node: see the note on the headers
+ * below. nginx keeps routing browser traffic strictly by Host.
  *
  * Retry policy: exactly one bounded retry, and only for a transport failure
  * (connection refused, DNS, timeout, socket reset). An HTTP response is never
@@ -82,7 +87,18 @@ export function createCrmClient(options: CrmTransportOptions): CrmClient {
     const isRead = request.payload === undefined;
     const url = buildUrl(config.baseUrl, request.method, isRead ? request.query : undefined);
     const headers: Record<string, string> = {
-      Host: site,
+      // NOT the Host header. Site selection is by hostname in principle, but
+      // `Host` is a forbidden header in the Fetch spec and Node's fetch strips
+      // it silently — the request then lands on whichever site the frontend
+      // defaults to, with no error. Measured against the live stack: fetch with
+      // Host does not route, while node:http with Host does.
+      //
+      // Frappe reads X-Frappe-Site-Name before the Host header
+      // (frappe/app.py: site = _site or request.headers.get("X-Frappe-Site-Name")
+      // or get_site_name(request.host)), so this names the site explicitly and
+      // survives the transport. It reaches gunicorn directly, never nginx, so
+      // no request from the internet can choose its own tenant this way.
+      "X-Frappe-Site-Name": site,
       Authorization: "token " + config.apiKey + ":" + config.apiSecret,
     };
     let body: string | undefined;

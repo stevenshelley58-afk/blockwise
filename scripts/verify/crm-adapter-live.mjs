@@ -2,32 +2,39 @@
 /**
  * Live end-to-end proof that Blockwise can command the CRM server-side.
  *
- * This is NOT part of `npm test`. It needs a running CRM stack and the product
- * database, so it runs on the VPS as a verification step, not in CI. Run it
- * after provisioning a site, and after any change to the adapter or to the
- * blockwise_crm command API.
+ * This is NOT part of `npm test`. It needs a running product stack and a
+ * running CRM, so it runs on the VPS as a verification step, not in CI.
  *
  * It exercises the REAL adapter (src/lib/crm/*) against the REAL Frappe, with
- * the workspace -> site mapping read from the REAL product database. The only
- * thing stood in for is the Supabase HTTP transport: the adapter's
- * site-resolution calls `supabase.from(...).select(...).eq(...).maybeSingle()`,
- * and that one shape is served here by a direct query, so the script can run
- * from the VPS host where PostgREST is not published.
+ * the workspace -> site mapping read through the REAL Supabase client from the
+ * REAL product database. Nothing is stubbed.
  *
- * Every check asserts something observed. There are no unconditional passes.
+ * Run it from a container on the product's compose network, which is where the
+ * product's own server-side code runs:
  *
- * Usage, from the repository root on the VPS:
+ *   docker run --rm --network blockwise-product \
+ *     -e PRODUCT_SUPABASE_URL=http://product-rest:3000 \
+ *     -e PRODUCT_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY" \
+ *     -e CRM_API_KEY=... -e CRM_API_SECRET=... \
+ *     -v "$PWD":/app -w /app node:22-bookworm \
+ *     node --import tsx scripts/verify/crm-adapter-live.mjs <workspace-uuid>
  *
- *   node --import tsx scripts/verify/crm-adapter-live.mjs <workspace-uuid>
+ * Or on the host, with CRM_LIVE_ENV_FILE pointing at the CRM deployment .env.
  *
  * Environment:
- *   CRM_LIVE_BASE_URL     default http://127.0.0.1:8081
- *   CRM_LIVE_ENV_FILE     default /srv/blockwise/crm/deploy/.env
- *   PRODUCT_DB_CONTAINER  default blockwise-product-product-db-1
+ *   PRODUCT_SUPABASE_URL      e.g. http://product-rest:3000   (required)
+ *   PRODUCT_SERVICE_ROLE_KEY  service role key                (required)
+ *   CRM_LIVE_ENV_FILE         CRM deployment .env, for the API key/secret
+ *   CRM_BASE_URL              default http://blockwise-crm-backend:8000
+ *   CRM_LIVE_STRICT           set to 0 to warn instead of failing on the
+ *                             cross-tenant check
+ *
+ * Every check asserts something observed. There are no unconditional passes.
  */
 
-import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+
+import { createClient } from "@supabase/supabase-js";
 
 import { createWorkspaceCrm } from "../../src/lib/crm/index.ts";
 
@@ -36,10 +43,6 @@ if (!WORKSPACE_ID) {
   console.error("usage: node --import tsx scripts/verify/crm-adapter-live.mjs <workspace-uuid>");
   process.exit(2);
 }
-
-const BASE_URL = process.env.CRM_LIVE_BASE_URL ?? "http://127.0.0.1:8081";
-const ENV_FILE = process.env.CRM_LIVE_ENV_FILE ?? "/srv/blockwise/crm/deploy/.env";
-const DB_CONTAINER = process.env.PRODUCT_DB_CONTAINER ?? "blockwise-product-product-db-1";
 
 function readEnvFile(path) {
   const out = {};
@@ -50,43 +53,31 @@ function readEnvFile(path) {
   return out;
 }
 
-function psqlJson(sql) {
-  const raw = execFileSync(
-    "docker",
-    ["exec", DB_CONTAINER, "psql", "-U", "postgres", "-d", "blockwise", "-t", "-A", "-c", sql],
-    { encoding: "utf8" },
-  ).trim();
-  return raw ? JSON.parse(raw) : null;
+const ENV_FILE = process.env.CRM_LIVE_ENV_FILE ?? "/srv/blockwise/crm/deploy/.env";
+let crmEnv = {};
+try {
+  crmEnv = readEnvFile(ENV_FILE);
+} catch {
+  // Running inside a container: the key and secret come from the environment.
 }
 
-/**
- * The one Supabase shape the adapter uses, served from the product database.
- * Deliberately narrow: any other table or method throws rather than quietly
- * returning nothing, so this proof cannot pass by failing to look.
- */
-function supabaseShim() {
-  return {
-    from(table) {
-      if (table !== "crm_workspace_sites") {
-        throw new Error(`shim only serves crm_workspace_sites, asked for ${table}`);
-      }
-      const filters = [];
-      const builder = {
-        select() { return builder; },
-        eq(column, value) { filters.push(`${column} = '${value}'`); return builder; },
-        async maybeSingle() {
-          const where = filters.length ? ` where ${filters.join(" and ")}` : "";
-          return {
-            data: psqlJson(
-              `select row_to_json(t) from (select workspace_id, crm_site, status from public.crm_workspace_sites${where} limit 1) t;`,
-            ),
-            error: null,
-          };
-        },
-      };
-      return builder;
-    },
-  };
+const BASE_URL = process.env.CRM_BASE_URL ?? "http://blockwise-crm-backend:8000";
+const env = {
+  ...process.env,
+  CRM_BASE_URL: BASE_URL,
+  CRM_API_KEY: process.env.CRM_API_KEY ?? crmEnv.CRM_API_KEY,
+  CRM_API_SECRET: process.env.CRM_API_SECRET ?? crmEnv.CRM_API_SECRET,
+};
+
+const SUPABASE_URL = process.env.PRODUCT_SUPABASE_URL;
+const SERVICE_KEY = process.env.PRODUCT_SERVICE_ROLE_KEY;
+if (!SUPABASE_URL || !SERVICE_KEY) {
+  console.error("PRODUCT_SUPABASE_URL and PRODUCT_SERVICE_ROLE_KEY are required");
+  process.exit(2);
+}
+if (!env.CRM_API_KEY || !env.CRM_API_SECRET) {
+  console.error(`CRM credentials not found in the environment or ${ENV_FILE}`);
+  process.exit(2);
 }
 
 const results = [];
@@ -95,30 +86,44 @@ function check(name, ok, detail = "") {
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? `\n        ${detail}` : ""}`);
 }
 
-const crmEnv = readEnvFile(ENV_FILE);
-const env = {
-  ...process.env,
-  CRM_BASE_URL: BASE_URL,
-  CRM_API_KEY: crmEnv.CRM_API_KEY,
-  CRM_API_SECRET: crmEnv.CRM_API_SECRET,
-};
-
 console.log(`==> workspace ${WORKSPACE_ID}`);
 console.log(`==> crm       ${BASE_URL}`);
+console.log(`==> mapping   ${SUPABASE_URL}`);
+
+const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
+
+// --- the mapping row itself, through the real client -------------------------
+const { data: mappingRow, error: mappingError } = await supabase
+  .from("crm_workspace_sites")
+  .select("workspace_id, crm_site, status")
+  .eq("workspace_id", WORKSPACE_ID)
+  .maybeSingle();
+check(
+  "the workspace has a site mapping row",
+  Boolean(mappingRow?.crm_site) && !mappingError,
+  mappingError ? mappingError.message : `site=${mappingRow?.crm_site} status=${mappingRow?.status}`,
+);
 
 // --- resolve the site through the real adapter ------------------------------
 const { mapping, commands } = await createWorkspaceCrm({
-  supabase: supabaseShim(),
+  supabase,
   workspaceId: WORKSPACE_ID,
   env,
 });
 console.log(`==> site      ${mapping.crmSite} (${mapping.status})`);
-check("workspace resolves to a provisioned site", mapping.crmSite.endsWith(".crm.internal"), mapping.crmSite);
+check("the adapter resolves the mapped site", mapping.crmSite === mappingRow.crm_site);
 check("the adapter carries the workspace id", commands.workspaceId === WORKSPACE_ID);
-check("the adapter carries the resolved site", commands.site === mapping.crmSite);
 
+// --- the API answers, on the right site -------------------------------------
 const health = await commands.health();
 check("the command API reports healthy", health.ok === true, `site=${health.site}`);
+check(
+  "the command API answers for the MAPPED site, not a default",
+  health.site === mapping.crmSite,
+  `reported=${health.site} expected=${mapping.crmSite}`,
+);
 
 // --- capture -----------------------------------------------------------------
 const stamp = `live-${Date.now()}`;
@@ -156,11 +161,7 @@ check(
 const lead = await commands.getLead(first.lead);
 check("the enquiry reads back by id", lead.name === first.lead);
 check("the source provider is recorded", lead.sourceProvider === "meta", `provider=${lead.sourceProvider}`);
-check(
-  "the source submission id is recorded",
-  lead.sourceSubmissionId === stamp,
-  `submission=${lead.sourceSubmissionId}`,
-);
+check("the source submission id is recorded", lead.sourceSubmissionId === stamp);
 check("the property context survives", lead.propertyContext === "Live probe suburb");
 check("the enquiry starts unarchived", lead.archived === false);
 
@@ -210,28 +211,45 @@ const listed = await commands.listLeads({ limit: 100 });
 check("the enquiry appears in the workspace list", listed.some((row) => row.name === first.lead), `count=${listed.length}`);
 
 // --- isolation, asserted against the API rather than assumed ----------------
-// The adapter always sends its own workspace id, so this is tested by calling
-// the command API directly with a DIFFERENT workspace id for the same lead.
-const other = psqlJson(
-  `select json_build_object('id', id) from public.workspaces where id <> '${WORKSPACE_ID}' limit 1;`,
-);
-if (other?.id) {
+// Naming a DIFFERENT workspace for the same lead must not disclose it. This is
+// the check that would have caught the routing bug: with every request landing
+// on one site, it passed for the wrong reason.
+const { data: otherWorkspaces } = await supabase
+  .from("workspaces")
+  .select("id")
+  .neq("id", WORKSPACE_ID)
+  .limit(1);
+const otherId = otherWorkspaces?.[0]?.id;
+
+if (otherId) {
   const response = await fetch(`${BASE_URL}/api/method/blockwise_crm.api.get_lead`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Host: mapping.crmSite,
+      "X-Frappe-Site-Name": mapping.crmSite,
       Authorization: `token ${env.CRM_API_KEY}:${env.CRM_API_SECRET}`,
     },
-    body: JSON.stringify({ workspace_id: other.id, lead: first.lead }),
+    body: JSON.stringify({ workspace_id: otherId, lead: first.lead }),
   });
   const text = await response.text();
-  const refused = response.status >= 400 || /not found/i.test(text);
   check(
     "another workspace is refused the same enquiry",
-    refused,
-    `status=${response.status} ${text.slice(0, 120)}`,
+    response.status >= 400 || /not found/i.test(text),
+    `status=${response.status} ${text.slice(0, 100)}`,
   );
+
+  // And the same workspace still can read it, so the refusal above is about
+  // scope and not about the call simply being broken.
+  const allowed = await fetch(`${BASE_URL}/api/method/blockwise_crm.api.get_lead`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Frappe-Site-Name": mapping.crmSite,
+      Authorization: `token ${env.CRM_API_KEY}:${env.CRM_API_SECRET}`,
+    },
+    body: JSON.stringify({ workspace_id: WORKSPACE_ID, lead: first.lead }),
+  });
+  check("the owning workspace can still read it", allowed.ok, `status=${allowed.status}`);
 } else {
   check("another workspace is refused the same enquiry", false, "no second workspace to test with");
 }
@@ -242,4 +260,4 @@ if (failed.length) {
   console.error("LIVE PROOF FAILED");
   process.exit(1);
 }
-console.log("LIVE PROOF PASSED: Blockwise reaches and commands the CRM server-side.");
+console.log("LIVE PROOF PASSED: Blockwise reaches and commands the CRM server-side, on the mapped site.");

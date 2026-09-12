@@ -4,10 +4,15 @@
  * Credentials are read from the deployment environment only. They must never
  * be inlined in source, committed, or returned to a browser. The Blockwise app
  * container reaches the CRM over the shared compose network; the default base
- * URL is the internal frontend alias, never a public host.
+ * URL is the internal gunicorn alias, never a public host.
+ *
+ * The default is the backend, not the nginx frontend. The site is named in
+ * X-Frappe-Site-Name and only gunicorn honours it end to end; the frontend
+ * overwrites that header from the request Host, and Node cannot set Host at
+ * all. See src/lib/crm/client.ts.
  *
  * Required in the product environment (/srv/blockwise/product/.env):
- *   CRM_BASE_URL      internal CRM origin, default http://blockwise-crm-frontend:8080
+ *   CRM_BASE_URL      internal CRM origin, default http://blockwise-crm-backend:8000
  *   CRM_API_KEY       Frappe API key
  *   CRM_API_SECRET    Frappe API secret
  * Optional:
@@ -23,7 +28,7 @@ export type CrmConfig = {
   timeoutMs: number;
 };
 
-export const DEFAULT_CRM_BASE_URL = "http://blockwise-crm-frontend:8080";
+export const DEFAULT_CRM_BASE_URL = "http://blockwise-crm-backend:8000";
 export const DEFAULT_CRM_TIMEOUT_MS = 10_000;
 export const MAX_CRM_TIMEOUT_MS = 60_000;
 
