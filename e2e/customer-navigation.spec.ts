@@ -145,7 +145,7 @@ test.describe("customer navigation canary", () => {
     await expect(page.getByRole("heading", { name: "Results", exact: true })).toBeVisible();
     // No Meta connection: Performance opens the example report instead of a
     // connect interstitial, labelled by the banner that carries the way out.
-    await expect(page.getByText("Example report", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Demo numbers for an example account", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: "Connect Meta", exact: true }).first()).toBeVisible();
     await expect(page.getByText(/^Last known /)).toHaveCount(0);
     await settle(page);
@@ -200,7 +200,7 @@ test.describe("customer navigation canary", () => {
       await expect(page).toHaveURL(/\/results/);
       await expect(page.getByRole("heading", { name: "Results", exact: true })).toBeVisible();
       // The example report replaces the connect interstitial, and is labelled.
-      await expect(page.getByText("Example report", { exact: true }).first()).toBeVisible();
+      await expect(page.getByText("Demo numbers for an example account", { exact: true }).first()).toBeVisible();
       await expect(page.getByRole("link", { name: "Connect Meta", exact: true }).first()).toBeVisible();
       await expect(page.getByText(/^Last known /)).toHaveCount(0);
       await settle(page);

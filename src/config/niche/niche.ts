@@ -130,8 +130,8 @@ export type HomeCopy = {
     emptyTitle: string;
     emptyBody: string;
     ctaLabel: string;
-    /** Shown over the example leads a demo workspace sees. */
-    exampleNote: string;
+    /** The demo caveat the example leads close on, in the words the figures bar uses. */
+    demoNote: string;
   };
   localAds: {
     title: string;
@@ -212,7 +212,8 @@ export type PerformanceCopy = {
   /** Per-area performance panel — "area" is `terms.area` for this niche. */
   areaBreakdown: { title: string; empty: string };
   budgetPacing: string;
-  demoChip: string;
+  /** The demo caveat the example report closes its figures on, in Home's own words. */
+  demoNote: string;
   viewExample: string;
   refresh: string;
   refreshing: string;

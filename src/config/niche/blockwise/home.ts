@@ -39,7 +39,7 @@ export const home: HomeCopy = {
       lower: (percent) => `${percent}% lower than the prior week`,
       level: "Level with the prior week",
     },
-    demoNote: "Demo numbers for an example account, not yours.",
+    demoNote: "Demo numbers for an example account",
     demoAction: "Connect Meta",
     unavailableValue: "—",
     unavailableValueSpoken: "Not reported",
@@ -98,7 +98,7 @@ export const home: HomeCopy = {
     emptyTitle: "No leads yet",
     emptyBody: "Leads land here as soon as your first ad is live.",
     ctaLabel: "Create an ad",
-    exampleNote: "Example leads",
+    demoNote: "Demo numbers for an example account",
   },
   localAds: {
     title: "Ads near you",

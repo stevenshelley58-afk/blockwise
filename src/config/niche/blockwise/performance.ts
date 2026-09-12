@@ -35,7 +35,7 @@ export const performance: PerformanceCopy = {
       'No suburb attribution yet. Suburbs come from lead records or the "Suburb - Name" ad set convention.',
   },
   budgetPacing: "Budget pacing",
-  demoChip: "Example report",
+  demoNote: "Demo numbers for an example account",
   viewExample: "View example report",
   refresh: "Refresh",
   refreshing: "Refreshing",

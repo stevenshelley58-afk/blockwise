@@ -77,7 +77,7 @@ test.describe("customer UX flows", () => {
     await page.goto("/results");
     await expect(page).toHaveURL(/\/results$/);
     await expect(page.getByRole("heading", { name: "Results", exact: true })).toBeVisible();
-    await expect(page.getByText("Example report", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Demo numbers for an example account", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: "Connect Meta", exact: true }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Setup guide", exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /refresh/i })).toHaveCount(0);

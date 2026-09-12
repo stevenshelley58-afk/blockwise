@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { HomePerformanceChart } from "../src/components/self-serve/home-chart.tsx";
 import { DemoModeNotice } from "../src/components/monitor/DemoModeNotice.tsx";
 import { MetaMonitorHeader } from "../src/components/monitor/MetaMonitorHeader.tsx";
+import { niche } from "../src/config/niche/index.ts";
 import { homePerformanceFromReporting } from "../src/lib/home/home-dashboard-data.ts";
 import { buildSampleMetaMonitorPayload } from "../src/lib/meta-monitor/sampleMetaMonitorData.ts";
 import type { MetaMonitorPayload } from "../src/lib/meta-monitor/types.ts";
@@ -85,14 +86,17 @@ function header(lastSyncedAt: string | null, isSample: boolean, isConnected: boo
 }
 
 test("Results labels samples plainly and never invents a recent timestamp", () => {
-  // The demo label lives in the one banner that also carries the way out, so
-  // the header stays free of a second badge and a sample never claims a sync.
+  // The demo label lives in the one bar under the figures that also carries the
+  // way out, so the header stays free of a second badge and a sample never
+  // claims a sync.
   const banner = renderToStaticMarkup(
     createElement(DemoModeNotice, { metaConnectHref: "/connect-meta" }),
   );
-  assert.match(banner, /Example report/);
+  assert.match(banner, /data-notice-bar/);
+  assert.match(banner, />Demo numbers for an example account</);
   assert.match(banner, /Connect Meta/);
-  assert.doesNotMatch(banner, /Setup guide/);
+  assert.match(banner, /href="\/connect-meta"/);
+  assert.doesNotMatch(banner, /Setup guide|Hide demo/);
 
   const sample = header(null, true, true);
   assert.doesNotMatch(sample, /Last known|just now|Not synced yet|Not connected/);
@@ -111,6 +115,15 @@ test("Results labels a disconnected account plainly and hides sync controls", ()
   assert.match(disconnected, /Not connected/);
   assert.doesNotMatch(disconnected, /Not synced yet/);
   assert.doesNotMatch(disconnected, /Refresh/);
+});
+
+test("a demo is labelled in the same bar and the same words everywhere", () => {
+  // One sentence, three bars: Home's weekly figures, Home's example leads and
+  // Results' example report. Nothing to keep in step by hand, because there is
+  // one string to change.
+  const { home } = niche.copy;
+  assert.equal(home.leads.demoNote, home.kpis.demoNote);
+  assert.equal(niche.copy.performance.demoNote, home.kpis.demoNote);
 });
 
 

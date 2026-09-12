@@ -306,6 +306,11 @@ export function MetaMonitorDashboard({
     ? { ...payload, summary: null, daily: [], suburbPerformance: [], ads: [], anglePerformance: [] }
     : (examplePayload ?? payload);
   const summary = displayPayload.summary;
+  // The demo statement closes the figures it labels rather than sitting above
+  // them, so the dashboard that draws those figures is handed the way out and
+  // places the bar itself.
+  const demoConnectHref: string | null =
+    showExample && hasNoMetaConnection(payload) && metaConnectHref ? metaConnectHref : null;
 
   return (
     <div className="mx-auto grid w-full min-w-0 max-w-[1120px] gap-3.5 px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
@@ -345,10 +350,6 @@ export function MetaMonitorDashboard({
         </div>
       ) : null}
 
-      {showExample && hasNoMetaConnection(payload) && metaConnectHref ? (
-        <DemoModeNotice metaConnectHref={metaConnectHref} />
-      ) : null}
-
       {!summary ? (
         isRefreshing ? (
           <MonitorDashboardSkeleton />
@@ -361,6 +362,7 @@ export function MetaMonitorDashboard({
           onSelectAd={scrollToAd}
           focusCampaignId={focusCampaignId}
           refreshing
+          demoConnectHref={demoConnectHref}
           rangeKey={rangeKey}
           customRange={customRange}
           onRangeChange={handleRangeChange}
@@ -371,6 +373,7 @@ export function MetaMonitorDashboard({
           payload={displayPayload}
           onSelectAd={scrollToAd}
           focusCampaignId={focusCampaignId}
+          demoConnectHref={demoConnectHref}
           rangeKey={rangeKey}
           customRange={customRange}
           onRangeChange={handleRangeChange}
@@ -386,6 +389,7 @@ function Dashboard({
   onSelectAd,
   focusCampaignId,
   refreshing = false,
+  demoConnectHref,
   rangeKey,
   customRange,
   onRangeChange,
@@ -395,6 +399,8 @@ function Dashboard({
   onSelectAd: (adId: string) => void;
   focusCampaignId?: string | null;
   refreshing?: boolean;
+  /** Set while the figures are an example: the bar under them says so. */
+  demoConnectHref?: string | null;
   rangeKey: MonitorRange;
   customRange: { since: string; until: string };
   onRangeChange: (range: MonitorRange) => void;
@@ -465,6 +471,10 @@ function Dashboard({
         />
         <MetricCard compact label="Running ads" value={activeAds} format={wholeNumber} />
       </dl>
+
+      {/* The demo caveat closes the figures it labels, in the same bar and the
+          same words Home's figures close on. */}
+      {demoConnectHref ? <DemoModeNotice metaConnectHref={demoConnectHref} /> : null}
 
       <section className={panelClass}>
         <div className="flex flex-wrap items-center justify-between gap-2.5">

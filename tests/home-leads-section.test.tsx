@@ -111,7 +111,8 @@ test("a demo workspace sees example leads, said as examples, with the one next a
     }),
   );
 
-  assert.match(html, /Example leads/);
+  assert.match(html, /data-notice-bar/);
+  assert.match(html, />Demo numbers for an example account</);
   assert.match(html, /Priya Raman/);
   assert.match(html, /Scarborough · Facebook/);
   // The CRM's status record is what the row reports, not a made-up waiting time.
@@ -120,7 +121,7 @@ test("a demo workspace sees example leads, said as examples, with the one next a
   // figures bar carries, so both say and offer the same thing.
   assert.match(html, /Create an ad/);
   const lastRow = html.lastIndexOf("Marcus Bell");
-  const note = html.indexOf("Example leads");
+  const note = html.indexOf("Demo numbers for an example account");
   const cta = html.indexOf("Create an ad");
   assert.ok(note > lastRow, "the example note sits under the rows");
   assert.ok(cta > note, "the action sits in the note bar");
@@ -150,7 +151,7 @@ test("a workspace with its own leads keeps the real list and no example note", (
     }),
   );
 
-  assert.doesNotMatch(html, /Example leads/);
+  assert.doesNotMatch(html, /Demo numbers for an example account/);
   assert.match(html, /1 not yet followed up/);
   assert.match(html, /Waiting 3 days/);
   assert.match(html, /href="\/leads"/);

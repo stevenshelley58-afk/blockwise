@@ -17,7 +17,6 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
-import { HomeNoticeBar } from "@/components/self-serve/home-notice-bar";
 import { niche } from "@/config/niche";
 import type { HomeData } from "@/components/self-serve/home-dashboard";
 import {
@@ -25,6 +24,7 @@ import {
   MetricCard,
   type MetricChange,
 } from "@/components/ui/metric-card";
+import { NoticeBar } from "@/components/ui/notice-bar";
 import { previousWeekTotals } from "@/lib/home/home-safe-read-model";
 
 /** Costs read as money, so cents stay visible: $0.80, never $0.8. */
@@ -214,7 +214,7 @@ export function HomeMetricsBand({
         // One notice, one label for the whole band: the demo tone says it once
         // rather than twice. The dot marks a preview; the unavailable tone is a
         // fault report and wears none.
-        <HomeNoticeBar
+        <NoticeBar
           text={notice.text}
           action={{ href: notice.href, label: notice.action }}
           marker={tone === "demo"}

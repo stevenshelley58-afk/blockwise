@@ -173,10 +173,13 @@ test("the band labels demo numbers instead of presenting them as delivery", () =
   assert.ok(model);
   const html = renderToStaticMarkup(createElement(HomeDashboard, { data: homeData(model.performance) }));
 
-  // The demo tone is said once, in the note under the figures. A second badge
-  // beside the heading only repeated it.
+  // The demo tone is said once, in the note under the figures, in the one bar
+  // every preview block closes on. A second badge beside the heading only
+  // repeated it.
   assert.doesNotMatch(html, /Demo data/);
-  assert.match(html, /Demo numbers for an example account, not yours\./);
+  assert.match(html, /data-notice-bar/);
+  assert.match(html, />Demo numbers for an example account</);
+  assert.doesNotMatch(html, /not yours/);
   assert.match(html, /Connect Meta/);
   // The four figures the band owns, named the way the data actually reads, and
   // each one in the shared card surface rather than loose on the page.

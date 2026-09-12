@@ -5,9 +5,9 @@ import { motion } from "motion/react";
 import Link from "next/link";
 
 import { MetaAdTile } from "@/components/research/meta-ad-tile";
-import { HomeNoticeBar } from "@/components/self-serve/home-notice-bar";
 import { HomeMetricsBand } from "@/components/self-serve/home-metrics-band";
 import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
+import { NoticeBar } from "@/components/ui/notice-bar";
 import { SafeImage } from "@/components/ui/safe-image";
 import { niche } from "@/config/niche";
 import type { HomeCreativeSuggestions } from "@/lib/home/creative-suggestions";
@@ -175,8 +175,8 @@ function LeadsSection({
           labelled under theirs, and the bar carries the one action that would
           replace them with the workspace's own leads. */}
       {areExamples ? (
-        <HomeNoticeBar
-          text={copy.exampleNote}
+        <NoticeBar
+          text={copy.demoNote}
           action={{ href: "/ad-studio", label: copy.ctaLabel }}
         />
       ) : null}
