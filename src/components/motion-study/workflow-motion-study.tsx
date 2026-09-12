@@ -222,7 +222,7 @@ export function WorkflowMotionStudy() {
     adWidth: adSize.width,
     adHeight: adSize.height,
     narrow,
-    customise: customise && !reduced,
+    customise,
   });
 
   return (

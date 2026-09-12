@@ -80,4 +80,5 @@ test("study is finite, activity-aware and reduced-motion safe", () => {
   assert.match(source, /if \(reduced\)/);
   assert.match(styles, /prefers-reduced-motion: reduce/);
   assert.match(motion, /workflowStudy:/);
+  assert.doesNotMatch(source, /customise: customise && !reduced/);
 });
