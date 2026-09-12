@@ -64,6 +64,8 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 - **Every figure card draws its own week, or says why it cannot.** A figure's line comes from the days it could measure: a day with no clicks contributes no cost per click to that line rather than dropping the week's shape, and fewer than two measured days draws nothing. A demo fixture whose figure never moves is a fixture that needs fixing, not a chart to fake.
 - **One figure card, used everywhere.** That card is `src/components/ui/metric-card.tsx`: label, figure, its own line, its comparison. Home and Results both build their figure rows from it, so a surface never hand-rolls a second stat card. A figure with no daily series draws no line, and a missing figure renders the unavailable mark rather than a zero.
 - **One period control per surface, next to the data it slices.** Results states its range once, in the chart card above the line it changes; the heading keeps the title, the sync state and Refresh. Do not repeat the same period as chips or a second selector, and choose the chart's own metric from a menu rather than a row of buttons.
+- **A demo workspace sees example leads, and they say so.** A workspace with no delivery of its own gets example rows where its own leads would be, under the same amber marker the demo figures use, so the empty state is a preview of the work rather than a blank. They are the one section that carries the product's call to action instead of a link of its own, because there is nowhere to go yet. A workspace with real delivery and no leads keeps saying "No leads yet".
+- **Leads are modelled on the CRM's records.** Blockwise's CRM is Frappe CRM: a lead is `CRM Lead` (lead name, territory, source, status, owner, Meta lead ids) and `source` and `status` are Link fields pointing at `CRM Lead Source` and `CRM Lead Status` records that a deployment names itself. A row prints the status record it is given rather than inventing a state, and falls back to waiting time only while no CRM state exists.
 - **One label per fact.** State a caveat once, at the level it applies to. A band that is entirely demo data says so in its one note under the figures; it does not repeat the same word as a badge beside the heading.
 - **Ad Radar feeds Home's local ads, keyed on the workspace's own area.** Read the list for the postcode from the workspace's brand address, and fall back to the niche's default area until an address supplies one.
 - **A URL is not a thumbnail.** The research archive holds cards whose archived object has gone missing, so a card is only offered a row once its still has answered a request; verify the candidates on the server, hold the verdict for an hour, and check more than Home shows so one dead image does not shorten the row. Never fill a row with a card that cannot draw its own still, and never hand a video file to an image element.
@@ -90,6 +92,10 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 
 ## Changelog
 
+- 2026-09-12: the weekly band is titled "Last 7 days" (it no longer repeats the
+  window twice), the local-ads heading is "Ads near you", the demo note's action
+  wears the product's own call to action, and a demo workspace sees example leads
+  shaped like Frappe CRM's `CRM Lead`.
 - 2026-09-12: Home's local ads are now the ads Ad Radar shows, four to a row from
   `lg` and rows on a phone, and only ads whose archived still actually answers
   are listed at all.

@@ -27,12 +27,11 @@ export const home: HomeCopy = {
     },
   },
   kpis: {
-    weeklyTitle: "This week",
+    weeklyTitle: "Last 7 days",
     weeklySpend: "Spend",
     weeklyClicks: "Link clicks",
     weeklyCpc: "Cost per link click",
     weeklyLeads: "Leads",
-    weekScope: "Last 7 days",
     syncedAt: (when) => `Synced ${when}`,
     viewPerformance: "View performance",
     vsPriorWeek: {
@@ -99,9 +98,10 @@ export const home: HomeCopy = {
     emptyTitle: "No leads yet",
     emptyBody: "Leads land here as soon as your first ad is live.",
     ctaLabel: "Create an ad",
+    exampleNote: "Example leads, not yours.",
   },
   localAds: {
-    title: (place) => `Ads near ${place}`,
+    title: "Ads near you",
     viewAll: "View all",
     // The Perth default stands until a brand address gives us a postcode.
     fallbackArea: { searchTerm: "Perth, WA", place: "Perth" },

@@ -35,6 +35,7 @@ export type HomeSafeReadModel = Pick<
   | "performance"
   | "creativeSuggestions"
   | "leads"
+  | "leadsAreExamples"
   | "localAds"
   | "localAdsArea"
 >;
@@ -58,6 +59,7 @@ export function homeSafeReadModelFromData(data: HomeData): HomeSafeReadModel {
     performance: data.performance,
     creativeSuggestions: data.creativeSuggestions,
     leads: data.leads,
+    leadsAreExamples: data.leadsAreExamples,
     localAds: data.localAds,
     localAdsArea: data.localAdsArea,
   };

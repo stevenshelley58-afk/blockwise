@@ -78,7 +78,6 @@ export type HomeCopy = {
     weeklyClicks: string;
     weeklyCpc: string;
     weeklyLeads: string;
-    weekScope: string;
     syncedAt: (when: string) => string;
     viewPerformance: string;
     /** Spoken descriptions of the week-on-week change; the band shows only the percentage. */
@@ -131,10 +130,11 @@ export type HomeCopy = {
     emptyTitle: string;
     emptyBody: string;
     ctaLabel: string;
+    /** Shown over the example leads a demo workspace sees. */
+    exampleNote: string;
   };
   localAds: {
-    /** `place` is the workspace's own suburb or postcode, or the fallback area. */
-    title: (place: string) => string;
+    title: string;
     viewAll: string;
     /** Searched instead until a brand address supplies a postcode. */
     fallbackArea: { searchTerm: string; place: string };

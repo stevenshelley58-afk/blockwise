@@ -30,6 +30,7 @@ function homeData(overrides: Partial<HomeData> = {}): HomeData {
     ads: { created: 0, live: null, publishedThisWeek: 0 },
     performance: null,
     leads: [],
+    leadsAreExamples: false,
     localAds: [],
     localAdsArea: null,
     activation: {
@@ -88,8 +89,8 @@ test("local ads read as rows on a phone and as Ad Radar cards on desktop", () =>
     ),
   );
 
-  // The heading names the area the ads were read for, and View all carries it.
-  assert.match(html, /Ads near Scarborough/);
+  // The heading is Home's own, and View all carries the area the ads were read for.
+  assert.match(html, /Ads near you/);
   assert.match(html, /\/ad-radar\?q=6019/);
 
   // Both treatments are in the markup, each behind its own breakpoint: the list

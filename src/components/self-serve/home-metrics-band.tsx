@@ -17,6 +17,7 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
+import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
 import { niche } from "@/config/niche";
 import type { HomeData } from "@/components/self-serve/home-dashboard";
 import {
@@ -161,11 +162,11 @@ export function HomeMetricsBand({
         >
           {copy.weeklyTitle}
         </h2>
-        <p className="text-[11.5px] text-muted-foreground">
-          {tone === "live" && synced
-            ? `${copy.weekScope} · ${copy.syncedAt(synced)}`
-            : copy.weekScope}
-        </p>
+        {/* The heading already says the window, so this line carries only what
+            the heading cannot: when the figures were last synced. */}
+        {tone === "live" && synced ? (
+          <p className="text-[11.5px] text-muted-foreground">{copy.syncedAt(synced)}</p>
+        ) : null}
         {/* Only a workspace reading its own delivery gets a second way in; the
             demo and unavailable tones carry a single recovery action instead. */}
         {tone === "live" ? (
@@ -213,7 +214,7 @@ export function HomeMetricsBand({
         // One notice, one label for the whole band: the demo tone says it once
         // here rather than twice, and the amber dot is the same marker Results
         // puts on the same statement.
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-(--r-card) border border-(--line) bg-(--surface-subtle) px-4 py-3">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-(--r-card) border border-(--line) bg-(--surface-subtle) px-4 py-2.5">
           <p className="flex min-w-0 items-start gap-2.5 text-[12.5px] leading-snug text-muted-foreground">
             {tone === "demo" ? (
               // Anchored to the sentence's first line rather than to the row, so
@@ -222,15 +223,11 @@ export function HomeMetricsBand({
             ) : null}
             <span>{notice.text}</span>
           </p>
-          {/* The only action the band offers in these tones, so it keeps a
-              full touch target on the phone rather than a line of small text. */}
-          <Link
-            href={notice.href}
-            className="inline-flex min-h-11 items-center gap-1 text-[12.5px] font-semibold text-foreground underline-offset-4 transition-colors duration-150 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-0"
-          >
+          {/* The band's one action in these tones, wearing the product's own
+              call to action rather than a line of small text. */}
+          <ButtonArrow href={notice.href} className="shrink-0">
             {notice.action}
-            <ArrowRight size={13} aria-hidden />
-          </Link>
+          </ButtonArrow>
         </div>
       ) : null}
     </section>

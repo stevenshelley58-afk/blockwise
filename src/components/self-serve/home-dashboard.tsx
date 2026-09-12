@@ -10,6 +10,7 @@ import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
 import { SafeImage } from "@/components/ui/safe-image";
 import { niche } from "@/config/niche";
 import type { HomeCreativeSuggestions } from "@/lib/home/creative-suggestions";
+import type { HomeLead } from "@/lib/home/home-lead-row";
 import type { HomeLocalAd } from "@/lib/home/home-local-ads";
 import { entrance, useReducedMotion } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -33,13 +34,9 @@ export type HomeData = ActivationCardData & {
     lastSyncedAt: string | null;
   } | null;
   creativeSuggestions?: HomeCreativeSuggestions;
-  leads: Array<{
-    id: string;
-    name: string;
-    suburb: string;
-    source: string;
-    createdAt: string;
-  }>;
+  leads: HomeLead[];
+  /** True when those rows are examples for a demo workspace, not this workspace's leads. */
+  leadsAreExamples: boolean;
   localAds: HomeLocalAd[];
   /**
    * The area those ads were read for: the workspace's own suburb or postcode
@@ -59,25 +56,35 @@ const SECTION_LINK =
 const ROW_LINK =
   "group flex min-h-[64px] items-center gap-3 py-2.5 transition-colors duration-150 hover:bg-(--surface-subtle) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+/** An example row: the same shape as a lead row, with nothing to open. */
+const ROW_STATIC = "flex min-h-[64px] items-center gap-3 py-2.5";
+
 const ROW_ARROW =
   "shrink-0 text-(--faint) transition-transform duration-150 group-hover:translate-x-0.5 motion-reduce:group-hover:translate-x-0";
 
 /**
- * How long a lead has been sitting untouched. The workspace has no CRM contact
- * state yet, so waiting time is the only follow-up signal that can be stated
- * without inventing one. It is one label rather than a waiting chip plus a
- * second timestamp, because both said the same thing.
+ * A lead's follow-up state. The CRM owns this once one is connected, so a row
+ * with a CRM status shows it; a row without one falls back to how long it has
+ * been waiting, which is the only signal the workspace itself can state.
  */
-function waitingLabel(iso: string): { text: string; stale: boolean } | null {
-  const parsed = Date.parse(iso);
+function followUp(lead: HomeLead): { text: string; tone: "status" | "waiting" | "stale" } | null {
+  if (lead.status) return { text: lead.status, tone: "status" };
+
+  const parsed = Date.parse(lead.createdAt);
   if (!Number.isFinite(parsed)) return null;
   const days = Math.floor((Date.now() - parsed) / 86_400_000);
-  if (days < 1) return { text: "Waiting since today", stale: false };
-  if (days === 1) return { text: "Waiting 1 day", stale: false };
-  return { text: `Waiting ${days} days`, stale: days >= 2 };
+  if (days < 1) return { text: "Waiting since today", tone: "waiting" };
+  if (days === 1) return { text: "Waiting 1 day", tone: "waiting" };
+  return { text: `Waiting ${days} days`, tone: days >= 2 ? "stale" : "waiting" };
 }
 
-function LeadsSection({ leads }: { leads: HomeData["leads"] }) {
+function LeadsSection({
+  leads,
+  areExamples,
+}: {
+  leads: HomeData["leads"];
+  areExamples: boolean;
+}) {
   const copy = niche.copy.home.leads;
   if (leads.length === 0) {
     return (
@@ -101,45 +108,85 @@ function LeadsSection({ leads }: { leads: HomeData["leads"] }) {
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
           <h2 className={SECTION_TITLE}>{copy.title}</h2>
-          <span className="text-[12.5px] text-(--faint)">{copy.followUp(leads.length)}</span>
+          {areExamples ? null : (
+            <span className="text-[12.5px] text-(--faint)">{copy.followUp(leads.length)}</span>
+          )}
         </div>
-        <Link href="/leads" className={cn(SECTION_LINK, "shrink-0")}>
-          {copy.viewAll}
-          <ArrowRight size={14} aria-hidden />
-        </Link>
+        {/* Example leads have nowhere to go: the Leads page holds this
+            workspace's own, and it has none yet. The section offers the one
+            action that changes that instead. */}
+        {areExamples ? null : (
+          <Link href="/leads" className={cn(SECTION_LINK, "shrink-0")}>
+            {copy.viewAll}
+            <ArrowRight size={14} aria-hidden />
+          </Link>
+        )}
       </div>
-      <ul className="mt-3 list-none divide-y divide-(--line) border-y border-(--line)">
+
+      {areExamples ? (
+        <p className="mt-3 flex items-center gap-2.5 rounded-(--r-card) border border-(--line) bg-(--surface-subtle) px-4 py-2.5 text-[12.5px] leading-snug text-muted-foreground">
+          <span className="size-[8px] shrink-0 rounded-full bg-warning" aria-hidden />
+          <span>{copy.exampleNote}</span>
+        </p>
+      ) : null}
+
+      <ul
+        className={cn(
+          "list-none divide-y divide-(--line) border-y border-(--line)",
+          areExamples ? "mt-4" : "mt-3",
+        )}
+      >
         {leads.map((lead) => {
-          const waiting = waitingLabel(lead.createdAt);
+          const state = followUp(lead);
+          const row = (
+            <>
+              <div className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-[13.5px] font-semibold text-foreground">
+                  {lead.name}
+                </span>
+                <span className="truncate text-[12px] text-muted-foreground">
+                  {lead.suburb} · {lead.source}
+                </span>
+              </div>
+              {state ? (
+                <span
+                  className={cn(
+                    "shrink-0 text-[11.5px] font-semibold",
+                    state.tone === "status" ? "text-foreground" : "tabular-nums",
+                    // Staleness is carried by the words; the amber only
+                    // reinforces it, and both tones stay above AA contrast.
+                    state.tone === "stale" ? "text-warning" : null,
+                    state.tone === "waiting" ? "text-muted-foreground" : null,
+                  )}
+                >
+                  {state.text}
+                </span>
+              ) : null}
+            </>
+          );
+
           return (
             <li key={lead.id}>
-              <Link href="/leads" className={ROW_LINK}>
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-[13.5px] font-semibold text-foreground">
-                    {lead.name}
-                  </span>
-                  <span className="truncate text-[12px] text-muted-foreground">
-                    {lead.suburb} · {lead.source}
-                  </span>
-                </div>
-                {waiting ? (
-                  <span
-                    className={cn(
-                      "shrink-0 text-[11.5px] font-semibold tabular-nums",
-                      // Staleness is carried by the words; the amber only
-                      // reinforces it, and both tones stay above AA contrast.
-                      waiting.stale ? "text-warning" : "text-muted-foreground",
-                    )}
-                  >
-                    {waiting.text}
-                  </span>
-                ) : null}
-                <ArrowRight size={16} aria-hidden className={ROW_ARROW} />
-              </Link>
+              {/* An example row leads nowhere: the Leads page holds this
+                  workspace's own, and it has none. */}
+              {areExamples ? (
+                <div className={ROW_STATIC}>{row}</div>
+              ) : (
+                <Link href="/leads" className={ROW_LINK}>
+                  {row}
+                  <ArrowRight size={16} aria-hidden className={ROW_ARROW} />
+                </Link>
+              )}
             </li>
           );
         })}
       </ul>
+
+      {areExamples ? (
+        <ButtonArrow href="/ad-studio" className="mt-5">
+          {copy.ctaLabel}
+        </ButtonArrow>
+      ) : null}
     </section>
   );
 }
@@ -157,7 +204,7 @@ function LocalAdsSection({
   return (
     <section className="mt-10 md:mt-12">
       <div className="flex items-center justify-between gap-4">
-        <h2 className={cn(SECTION_TITLE, "min-w-0")}>{copy.title(area.place)}</h2>
+        <h2 className={cn(SECTION_TITLE, "min-w-0")}>{copy.title}</h2>
         <Link
           href={`/ad-radar?q=${encodeURIComponent(area.searchTerm)}`}
           className={cn(SECTION_LINK, "shrink-0")}
@@ -227,7 +274,7 @@ export function HomeDashboard({ data }: { data: HomeData }) {
       </motion.section>
 
       <motion.section variants={itemVariants}>
-        <LeadsSection leads={data.leads} />
+        <LeadsSection leads={data.leads} areExamples={data.leadsAreExamples} />
       </motion.section>
 
       <motion.section variants={itemVariants}>

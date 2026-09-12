@@ -47,6 +47,7 @@ function homeData(
     ads: { created: 0, live: null, publishedThisWeek: 0 },
     performance,
     leads: [],
+    leadsAreExamples: false,
     localAds: [],
     localAdsArea: null,
     activation: {
@@ -235,8 +236,8 @@ test("the band claims a week and never a 30 day window", () => {
   assert.ok(model);
   const html = renderToStaticMarkup(createElement(HomeDashboard, { data: homeData(model.performance) }));
 
-  assert.match(html, /This week/);
   assert.match(html, /Last 7 days/);
+  assert.doesNotMatch(html, /This week/);
   assert.doesNotMatch(html, /Last 30 days/);
   assert.doesNotMatch(html, /Demo data/);
 });
@@ -244,7 +245,7 @@ test("the band claims a week and never a 30 day window", () => {
 test("the band reports unavailable rather than guessing when reporting is absent", () => {
   const html = renderToStaticMarkup(createElement(HomeDashboard, { data: homeData(null) }));
 
-  assert.match(html, /This week/);
+  assert.match(html, /Last 7 days/);
   assert.match(html, /No reporting for this workspace yet\./);
   // It says what is missing and offers the one way forward, rather than
   // rendering three empty figure slots that read as a broken table.

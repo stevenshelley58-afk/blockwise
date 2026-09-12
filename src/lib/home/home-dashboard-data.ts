@@ -8,6 +8,7 @@ import { listTemplates } from "@/lib/adstudio/pack-gallery";
 import { buildHomeCreativeSuggestions, type HomeCreativeSuggestions } from "@/lib/home/creative-suggestions";
 import { homePerformanceFromReporting, mergeHomeSafeReadModel, type HomeSafeReadModel } from "@/lib/home/home-safe-read-model";
 import { homeLocalAdCandidates, HOME_LOCAL_AD_LIMIT, toHomeLocalAds } from "@/lib/home/home-local-ads";
+import { sampleHomeLeads } from "@/lib/leads/sample-crm-leads";
 import { leadSourceLabel } from "@/lib/leads/rows";
 import { resolveBrandPackLocation } from "@/lib/research/brand-pack-suburb";
 import { loadPublicAdRadarCards } from "@/lib/research/public-ad-radar";
@@ -220,6 +221,10 @@ export async function loadHomeDashboardData(input: {
   const creditsExpired = walletRow?.credits_expired ?? 0;
   const workspaceRow = (workspace.data ?? {}) as Record<string, unknown>;
   const live = homePerformanceFromReporting(results);
+  // Example leads stand in exactly where the example figures do: a workspace
+  // reading a demo has no leads of its own, and a workspace with real delivery
+  // but no leads yet keeps saying so.
+  const leadsAreExamples = leadsResult.length === 0 && live?.performance.isSample === true;
 
   const safe: HomeSafeReadModel = {
     workspaceName,
@@ -257,7 +262,8 @@ export async function loadHomeDashboardData(input: {
     },
     performance: live?.performance ?? null,
     creativeSuggestions,
-    leads: leadsResult,
+    leads: leadsAreExamples ? sampleHomeLeads() : leadsResult,
+    leadsAreExamples,
     localAds: localAdsResult.ads,
     localAdsArea: localAdsResult.area,
   };
