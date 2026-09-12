@@ -62,3 +62,9 @@ Active container: `blockwise-homepage-preview-23a03de88751e827699dc7d3a545f08efc
 Final boundary evidence is `security-final-23a03de.txt`. The scoped route currently depends on the product router's preview-network attachment and host mapping; a router recreation requires restoring that attachment/mapping and reapplying the scoped route. No router restart was performed.
 
 To retire this preview, first remove only the preview route with `python3 scripts/vps/homepage-preview-route.py --remove --apply` from this worktree. Then remove only the container named above; its image can also be removed if no longer required. Do not restore a stale whole-router configuration or remove other workers' previews.
+
+## Owner-directed workflow refinement
+
+The owner confirmed the three steps are right but rejected the current proportions. The browser confirmed their displayed version was `23a03de88751e827699dc7d3a545f08efca6fb2e`, not an old preview. Its workflow heading measured 48px/800 while the shared section scale was 58px/760. The report uses a separate larger treatment and is outside this refinement.
+
+This follow-up changes only the workflow section: heading scale, frame proportions, toolbar spacing, ad continuity and compact review details. Other homepage sections remain frozen. Browser acceptance covers Choose, Customise and Review at desktop and phone widths, manual selection retention, reduced-motion loading, and no new required image failures.

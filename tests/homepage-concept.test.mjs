@@ -97,29 +97,27 @@ test("every demo card on the homepage takes one shell", async () => {
   assert.match(workflow, /import "\.\/demo-card\.css"/);
   assert.match(results, /import "\.\/demo-card\.css"/);
 
-  // Neither card may reintroduce its own shell values.
+  // Shared radii remain unchanged; the owner requested a quieter workflow shadow.
   assert.doesNotMatch(workflowCss, /\.hc-process-demo \{[^}]*border-radius/);
   assert.doesNotMatch(resultsCss, /\.rr-stage \{[^}]*border-radius/);
-  assert.doesNotMatch(workflowCss, /\.hc-process-demo \{[^}]*box-shadow/);
+
   assert.doesNotMatch(resultsCss, /\.rr-stage \{[^}]*box-shadow: 0 30px 80px #0004/);
 
   // Each keeps its own height and header layout: only the frame is shared.
-  assert.match(workflowCss, /--hc-demo-height: 764px/);
-  assert.match(workflowCss, /\.hc-process-demo \{[^}]*overflow: visible/);
+  assert.match(workflowCss, /--hc-demo-height: \d+px/);
+  assert.match(workflowCss, /\.hc-process-demo \{[^}]*overflow: hidden/);
   assert.match(resultsCss, /\.rr-stage \{[^}]*overflow: hidden/);
 });
 
-test("the ad-creation headline is set as a block, not shrunk to one line", async () => {
+test("the workflow headline follows the shared section scale", async () => {
   const css = await readFile(new URL("../src/components/homepage-concept/workflow-showcase.css", import.meta.url), "utf8");
-  const layout = css.match(/\.hc-process-layout \{([^}]*)\}/)[1];
   const headline = css.match(/\.hc-process-copy h2 \{([^}]*)\}/)[1];
-  // The column has to be wide enough to set the headline at display size.
-  const column = Number(layout.match(/minmax\(260px, ([\d.]+)fr\)/)[1]);
-  assert.ok(column >= 0.9, `copy column fraction is ${column}, too narrow for a display headline`);
-  const size = Number(headline.match(/clamp\((\d+)px/)[1]);
-  assert.ok(size >= 30, `headline starts at ${size}px, still caption sized`);
-  // Two lines, one per span, is the intended shape.
+  assert.match(headline, /font-size: clamp\(40px, 4\.4vw, 58px\)/);
+  assert.match(headline, /font-weight: 760/);
+  assert.match(headline, /line-height: 1\.06/);
   assert.match(css, /\.hc-process-copy h2 > span \{\s*display: block/);
+  assert.doesNotMatch(css, /font-size: clamp\(26px, 7\.4vw, 34px\)/);
+
 });
 
 test("the results card holds one height in every view", async () => {
@@ -148,10 +146,14 @@ test("demo headers keep screen selectors without extra playback controls", async
   assert.doesNotMatch(results, /rr-stage-head/);
   // The selection control is the same pill and slider as the ad-creation card's.
   const pill = (css, name) => css.match(new RegExp(`\\.${name} button \\{([^}]*)\\}`))[1];
-  for (const property of ["border-radius: 999px", "min-height: 32px", "font-weight: 700"]) {
+  for (const property of ["border-radius: 999px", "font-weight: 700"]) {
     assert.ok(pill(resultsCss, "rr-views").includes(property), `the reporting selector lost ${property}`);
     assert.ok(pill(workflowCss, "hc-process-steps").includes(property), `the ad-creation selector lost ${property}`);
   }
+  assert.match(pill(resultsCss, "rr-views"), /min-height: 32px/);
+  assert.match(pill(workflowCss, "hc-process-steps"), /min-height: 36px/);
+  assert.match(workflowCss, /min-height: 44px/);
+  assert.match(workflow, /arrow=\{null\}/);
   // Reporting periods are named in the selectors; the workflow keeps its task hint.
   assert.doesNotMatch(results, /className="rr-view-brief"/);
   assert.match(workflow, /className="hc-process-brief"/);
@@ -170,7 +172,7 @@ test("headline and small print clear the contrast floor", async () => {
     const [high, low] = [luminance(a), luminance(b)].sort((x, y) => y - x);
     return (high + 0.05) / (low + 0.05);
   };
-  // The demo headline is 48px, so it needs the 3:1 large-text floor.
+  // The section headline is large text, so it needs the 3:1 contrast floor.
   assert.ok(ratio(token("hc-blue-bright"), token("hc-canvas")) >= 3, "the demo headline is under 3:1 on the card canvas");
   // Plan notes at 12px and the footer small print at 11px need 4.5:1 on white.
   assert.ok(ratio(token("hc-faint"), "#ffffff") >= 4.5, "small print is under 4.5:1 on white");

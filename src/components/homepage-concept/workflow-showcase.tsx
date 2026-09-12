@@ -241,7 +241,7 @@ function StoryAd({
           alt=""
           width="1080"
           height="1350"
-          sizes="(min-width: 1024px) 320px, (min-width: 601px) 300px, 78vw"
+          sizes="(min-width: 1024px) 700px, (min-width: 601px) 560px, 560px"
           loading="eager"
           fetchPriority="high"
           decoding="async"
@@ -850,7 +850,7 @@ export function WorkflowShowcase() {
         variants={DEMO_RISE}
       >
         <div className="hc-process-demo-topbar">
-          <span><i aria-hidden="true" /> Blockwise Ad Studio</span>
+          <span><i aria-hidden="true" /> Ad Studio</span>
 
           <div className="hc-process-stage">
             <div className="hc-process-steps" ref={stepsRef} role="group" aria-label="How Blockwise works">
@@ -862,29 +862,35 @@ export function WorkflowShowcase() {
                 />
               ) : null}
               {PROCESS_STEPS.map((item, index) => (
-                <button
+                <Button
                   key={item.label}
                   type="button"
+                  variant="ghost-pill"
+                  size="pill"
+                  arrow={null}
                   aria-pressed={activeStep === index}
                   onClick={() => selectStep(index)}
                 >
                   {item.label}
-                </button>
+                </Button>
               ))}
             </div>
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.span
-                className="hc-process-brief"
-                key={activeStep}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: homepageMotion.workflow.briefTransitionMs / 1000, ease: STORY_EASE }}
-              >
-                {PROCESS_STEPS[activeStep].hint}
-              </motion.span>
-            </AnimatePresence>
           </div>
+        </div>
+
+        <div className="hc-process-brief-row" aria-live="polite">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              className="hc-process-brief"
+              key={activeStep}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: homepageMotion.workflow.briefTransitionMs / 1000, ease: STORY_EASE }}
+            >
+              {PROCESS_STEPS[activeStep].hint}
+            </motion.span>
+          </AnimatePresence>
         </div>
 
         <p className="hc-sr-only" aria-live="polite">{STORY_STATUS[phase]}</p>

@@ -102,6 +102,13 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 - All demonstration timers, typing and transitions suspend while offscreen or the document is hidden. Reduced motion renders complete still states without spatial transforms. Autoplay is finite; inactive states do not pulse or keep compositor hints.
 - Homepage animation timing comes from the shared motion vocabulary. Reading holds may be longer than transition durations. Product imagery is loaded only as required; avoid new animation libraries or scroll replacement. Check mobile and desktop in a real browser and compare measured page speed before and after.
 
+## Workflow section refinement, 12 September 2026
+
+- Scope is only the homepage Choose, Customise and Review demonstration and its adjoining heading/actions. The owner rejected the previous proportions. Do not revise the hero, reporting, pricing, FAQ or other sections during this pass.
+- Preserve the existing words, blue emphasis and three-step sequence. Bring the workflow heading onto the shared section scale: 58px maximum, weight 760, line-height 1.06, with a 40px phone heading. Natural line wrapping replaces the old two-line squeeze.
+- The demonstration has one quiet rounded frame, a clear top-right selector and a stable ad position across Customise and Review. The review details size to their content rather than stretching into an empty tower. The selected step remains held; there are no playback controls.
+- Keep phone composition legible rather than shrinking a whole desktop canvas. Preserve finite autoplay, offscreen suspension, stable hydration and reduced-motion handling. No additional library or hero asset download is justified by this refinement.
+
 ## How to change this system
 
 - **Changing the system.** A new accent family, radius scale, typography system or navigation grammar is a system change: it needs the owner's decision and a DESIGN.md change in the same commit. A purpose-built surface that reuses the existing vocabulary is not a system change.

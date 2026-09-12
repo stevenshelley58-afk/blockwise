@@ -176,7 +176,7 @@ test("reduced motion drops the movement and keeps the fades", () => {
 
 test("the demo card keeps one size and the scenes change inside it", () => {
   // One height token, no per-scene viewport height and no height animation.
-  assert.match(styles, /--hc-demo-height: 600px/);
+  assert.match(styles, /--hc-demo-height: 576px/);
   assert.match(styles, /\.hc-story-viewport \{[^}]*height: var\(--hc-demo-height\)/);
   assert.doesNotMatch(styles, /\.hc-process-demo\[data-scene="browse"\] \.hc-story-viewport/);
   assert.doesNotMatch(styles, /transition: height/);
