@@ -173,10 +173,10 @@ export function PublishFlow({
   const build = buildExplicitMetaPublishControls({ ...draft, setupConfirmed: true });
   const formReady = !requiresForm || formPinned;
   const captureReady = formReady && validHttpsUrl(destinationUrl) && (!offerEnabled || Object.values(fulfilment).every(value => value.trim()));
-  const ready = (targetMode === "new_campaign_new_adset" || Boolean(effectiveParent?.campaign) && (targetMode !== "existing_adset" || Boolean(effectiveParent?.adSets?.some(item => item.id === adSetId)))) && !notSaved && initialIssues.length === 0 && captureReady && Boolean(build.controls);
+  const currency = publishingDefaults?.currency || "";
+  const ready = Boolean(currency) && (targetMode === "new_campaign_new_adset" || Boolean(effectiveParent?.campaign) && (targetMode !== "existing_adset" || Boolean(effectiveParent?.adSets?.some(item => item.id === adSetId)))) && !notSaved && initialIssues.length === 0 && captureReady && Boolean(build.controls);
   const existingBudget = targetMode === "existing_adset" || (targetMode === "existing_campaign_new_adset" && selectedCampaign?.budgetMode === "campaign");
-  const currency = publishingDefaults?.currency || "AUD";
-  const dailyAmount = new Intl.NumberFormat("en-AU", { style: "currency", currency }).format(Number(dailyBudgetDollars) || 0);
+  const dailyAmount = currency ? new Intl.NumberFormat("en-AU", { style: "currency", currency }).format(Number(dailyBudgetDollars) || 0) : "Currency not configured";
   const spendLabel = existingBudget ? "Uses existing budget. No budget increase." : dailyAmount + " average daily budget";
   const persistedSummary = receipt?.setupSummary;
   const creationLocked = receipt?.mode === "publish" && Boolean(receipt.planId);
@@ -374,9 +374,10 @@ export function PublishFlow({
               <ReviewRow title="After submitting" value={destinationUrl || "Add a thank-you page"} onChange={() => setStage(0)} />
               {offerEnabled ? <ReviewRow title="Offer" value={fulfilment.exactOffer || "Complete your offer"} onChange={() => setStage(0)} /> : null}
               <ReviewRow title="Setup" value={targetMode === "new_campaign_new_adset" ? "New lead-generation campaign" : <>{selectedCampaign?.name || "Choose a campaign"}{selectedAdSet ? " · " + selectedAdSet.name : ""}</>} onChange={() => { setStage(1); setAdvanced(true); }} />
-              {!ready ? <div className="pt-4"><Issues issues={[...build.issues, ...(!formReady ? ["Save your lead form before publishing."] : [])]} /></div> : null}
+              {!ready ? <div className="pt-4"><Issues issues={[...build.issues, ...(!currency ? ["Set your publishing currency in Settings before publishing."] : []), ...(!formReady ? ["Save your lead form before publishing."] : [])]} /></div> : null}
               {!metaConnectionConnected ? <div className="pt-4"><h2 className="text-sm font-semibold">Manual publishing request</h2><p className="mt-2 text-sm text-muted-foreground">A Blockwise operator will review this request. It does not send your ad directly to Meta.</p><Input aria-label="Note for publishing team" placeholder="Optional note for the publishing team" value={manualNotes} onChange={event => setManualNotes(event.target.value)} maxLength={500} className="mt-3" /></div> : !providerWritesEnabled ? <p className="pt-4 text-sm text-muted-foreground">Preview only. Nothing will be created or turned on in Meta.</p> : <p className="pt-4 text-sm text-muted-foreground">Approving sends this ad to Meta and turns on its new setup. Meta may review it before delivery starts.</p>}
             </section>
+            {!currency ? <p className="mt-4 text-sm text-destructive" role="status">Set your publishing currency in <Link href="/settings" className="underline">Settings</Link> before publishing.</p> : null}
             {receiptLoading ? <p className="mt-4 text-sm text-muted-foreground" role="status">Checking saved publish status…</p> : null}
             {refreshError ? <div className="mt-4" role="alert"><p className="text-sm text-destructive">{refreshError}</p><Button variant="outline" className="mt-2" onClick={refreshReceipt}>Check publish status</Button></div> : null}
             {creationLocked || receipt?.error || manualStatus ? <div className="mt-5 border-t border-border pt-4"><p className="text-sm font-semibold" role="status">{manualStatus ? manualLabel(manualStatus) : outcome.title}</p><Button variant="link" onClick={() => setModalOpen(true)}>View publish status</Button></div> : null}
