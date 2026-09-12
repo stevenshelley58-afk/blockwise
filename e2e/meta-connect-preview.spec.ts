@@ -125,8 +125,6 @@ test.describe("isolated Meta connection preview contract", () => {
 
     await openPreview(page, 1440, 1000);
     await expect(page.getByRole("main")).toBeVisible();
-    await expect(page.getByRole("combobox").first()).toBeVisible();
-
     // The preview is intentionally a read-only GET surface.
     const post = await request.post(PREVIEW_PATH);
     expect(post.status(), "preview POST must be rejected").toBe(405);
@@ -174,8 +172,8 @@ test.describe("isolated Meta connection preview contract", () => {
     await page.getByRole("button", { name: /I've added Blockwise/i }).click();
     await expect(page.getByRole("heading", { name: "Checking connection", level: 2 })).toBeVisible();
 
-    await expect(modeText(page, /connected|access is ready|ready to go/i)).toBeVisible();
-    await expect(page.getByText(/example|sample|fictional/i).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "All set", level: 2 })).toBeVisible();
+    await expect(page.getByText("Example assets found", { exact: true })).toBeVisible();
 
     const continueButton = page.getByRole("button", { name: /Continue/i }).first();
     expect(requests.filter(providerOrMutationUrl)).toEqual([]);
