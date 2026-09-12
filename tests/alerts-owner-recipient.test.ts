@@ -8,27 +8,30 @@ import {
   sendAlertWhatsApp,
 } from "../src/lib/alerts/notify.ts";
 
-test("resolveAlertEmailRecipient prefers explicit env over the owner default", () => {
+test("resolveAlertEmailRecipient accepts only configured @blockwise.sale mailboxes", () => {
   assert.equal(
-    resolveAlertEmailRecipient({ ALERT_EMAIL_TO: "ops@blockwise.test" }),
-    "ops@blockwise.test",
+    resolveAlertEmailRecipient({ ALERT_EMAIL_TO: "ops@blockwise.sale" }),
+    "ops@blockwise.sale",
   );
   assert.equal(
-    resolveAlertEmailRecipient({ DEMO_NOTIFY_TO: "demo@blockwise.test" }),
-    "demo@blockwise.test",
+    resolveAlertEmailRecipient({ DEMO_NOTIFY_TO: "demo@blockwise.sale" }),
+    "demo@blockwise.sale",
   );
   assert.equal(
-    resolveAlertEmailRecipient({ BLOCKWISE_OWNER_ALERT_EMAIL: "owner@blockwise.test" }),
-    "owner@blockwise.test",
+    resolveAlertEmailRecipient({ BLOCKWISE_OWNER_ALERT_EMAIL: "owner@blockwise.sale" }),
+    "owner@blockwise.sale",
   );
 });
 
-test("resolveAlertEmailRecipient falls back to the owner inbox when nothing is set", () => {
-  const recipient = resolveAlertEmailRecipient({});
-  assert.match(recipient, /@/);
-  assert.equal(recipient, "stevenshelley58@gmail.com");
+test("resolveAlertEmailRecipient fails closed without configured or with external mailboxes", () => {
+  assert.equal(resolveAlertEmailRecipient({}), null);
+  assert.equal(resolveAlertEmailRecipient({ ALERT_EMAIL_TO: "stevenshelley58@gmail.com" }), null);
+  assert.equal(
+    resolveAlertEmailRecipient({ ALERT_EMAIL_TO: "ops@example.com", DEMO_NOTIFY_TO: "ops@blockwise.sale" }),
+    null,
+    "an invalid primary setting must not fall through to another recipient",
+  );
 });
-
 test("copy-generation wires the model-fallback alert at the cascade fallback point", () => {
   const source = readFileSync("src/lib/adstudio/copy-generation.ts", "utf8");
   assert.match(source, /import \{ emitModelFallbackAlert \} from "\.\.\/alerts\/model-fallback-alert\.ts"/);
