@@ -633,11 +633,16 @@ async function enqueueDueAdPageRefreshJobs(buildRunId) {
     // completion marker, so no operational state is terminal here.
     ? "advertiser_pages?select=id,page_id,page_name,status,scan_enabled,scan_state,next_scan_at,backoff_until,consecutive_failures,has_ever_run_ads,initial_fill_completed_at,agent_id,agency_id,metadata,agent:agents(state,status),agency:agencies(state,status)&scan_enabled=eq.true&status=neq.rejected_non_real_estate&page_id=not.is.null&initial_fill_completed_at=is.null&order=backoff_until.asc.nullsfirst,next_scan_at.asc&limit=" + adPageRefreshScanLimit
     : "advertiser_pages?select=id,page_id,page_name,status,scan_state,next_scan_at,backoff_until,consecutive_failures,has_ever_run_ads,initial_fill_completed_at&scan_enabled=eq.true&status=neq.rejected_non_real_estate&page_id=not.is.null&next_scan_at=lte." + encode(now()) + "&order=next_scan_at.asc&limit=" + adPageRefreshScanLimit;
-  const pages = await rest("research", pagePath);
+  const pages = [];
+  for (let offset = 0;; offset += adPageRefreshScanLimit) {
+    const batch = await rest("research", pagePath + "&offset=" + offset);
+    pages.push(...(batch || []));
+    if (!firstFillOnly || (batch || []).length < adPageRefreshScanLimit) break;
+  }
   const capacity = Math.max(0, Math.min(adPageRefreshMaxActive - blockingCollectors.length, adPageRefreshBatchSize));
   let queuedFirstFillPageIds = new Set();
   if (firstFillOnly) {
-    const queued = await rest("research", "work_queue?select=advertiser_page_id,payload,status&queue_name=eq.research&job_type=eq.blockwise-ad-collector&status=in.(pending,claimed)&limit=5000");
+    const queued = await rest("research", "work_queue?select=advertiser_page_id,payload,status&queue_name=eq.research&job_type=eq.blockwise-ad-collector&status=in.(pending,claimed,failed,blocked)&limit=5000");
     queuedFirstFillPageIds = new Set((queued || []).filter((job) => {
       const payload = job.payload || {};
       return payload.scanMode === "initial_fill" || payload.scan_mode === "initial_fill" || payload.initialFill === true;
@@ -1778,6 +1783,10 @@ async function enqueueFollowUp(input, parentJob) {
   const active = existing.find((job) => job.status === "pending" || job.status === "claimed");
   if (active) return false;
   const recyclable = existing.find((job) => job.status === "failed" || job.status === "blocked");
+  if (recyclable && firstFillOnly && input.job_type === "blockwise-ad-collector") {
+    // Keep exhausted attempts visible, not automatically reset on each tick.
+    return false;
+  }
   if (recyclable) {
     await rest("research", `work_queue?id=eq.${recyclable.id}`, {
       method: "PATCH",
