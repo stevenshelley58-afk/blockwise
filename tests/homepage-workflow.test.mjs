@@ -145,8 +145,14 @@ test("scenes cross-fade symmetrically and the ad morphs only into the editor", (
   // All three scenes stay mounted and cross-fade on one CSS transition, so the
   // swap is a single interpolation rather than a mount/unmount race.
   assert.match(styles, /\.hc-story-scene \{[^}]*opacity: 0/);
-  assert.match(styles, /\.hc-story-scene \{[^}]*transition:\s*opacity 440ms/);
+  assert.match(styles, /\.hc-story-scene \{[^}]*transition:/);
   assert.match(styles, /\.hc-story-scene\.is-active \{[^}]*opacity: 1/);
+  // The swap is one gesture: the outgoing screen leaves faster than the
+  // incoming one settles, and both travel the same short distance.
+  assert.match(styles, /opacity 220ms cubic-bezier\(\.4, 0, \.2, 1\)/);
+  assert.match(styles, /opacity 320ms cubic-bezier\(\.4, 0, \.2, 1\)/);
+  assert.match(styles, /--scene-shift: 14px/);
+  assert.match(styles, /transform: translate3d\(calc\(var\(--scene-shift\) \* -1\), 0, 0\)/);
   assert.match(source, /className=\{`hc-story-scene hc-story-library\$\{active \? " is-active" : ""\}`\}/);
   assert.match(source, /className=\{`hc-story-scene hc-story-editor\$\{active \? " is-active" : ""\}`\}/);
   assert.match(source, /className=\{`hc-story-scene hc-story-review\$\{active \? " is-active" : ""\}`\}/);
