@@ -37,6 +37,21 @@ workspace media controls. Both scenes freeze before browser PNG rendering.
 - Existing infrastructure test expected an obsolete trusted proxy address;
   its assertion now matches the unchanged maintained environment example.
 
+## Deployed bundle check
+
+The live health endpoint reported application revision
+f2ca51a64ee20662df51c472df7650654d83855f. The production editor HTML returned
+200 with SAMEORIGIN and the restricted CSP. A fixture parent loaded the actual
+deployed bundle and passed the bridge edit/export checks on desktop and mobile.
+Only the parent fixture was intercepted; editor assets and headers came from
+blockwise.sale. The existing Cloudflare edge beacon injection was blocked by
+CSP, as required. This is not authenticated account acceptance.
+
+The initial image build omitted the new build-time script because the
+Dockerfile-specific ignore rules excluded scripts. A follow-up included only
+the necessary builder and added a regression assertion. The normal deployment
+then completed successfully.
+
 ## Deliberate limits
 
 Authenticated live copy/save/review acceptance is not yet verified: the stored

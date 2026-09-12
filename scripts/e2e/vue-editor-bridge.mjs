@@ -40,8 +40,9 @@ const origin = deployment ? new URL(deployment).origin : `http://127.0.0.1:${ser
 const browser = await chromium.launch({ executablePath: process.env.ADSTUDIO_E2E_CHROMIUM || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
 const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, deviceScaleFactor: 1 });
 const page = await context.newPage();
-const errors = [], requests = [];
+const errors = [], requests = [], blockedRequests = [];
 page.on('pageerror', error => errors.push(error.message));
+page.on('requestfailed', request => blockedRequests.push({ url: request.url(), reason: request.failure()?.errorText }));
 page.on('request', request => { if (!request.url().startsWith(origin) && !/^(data|blob):/.test(request.url())) requests.push(request.url()); });
 async function message(type, requestId) {
   await page.waitForFunction(({ type, requestId }) => window.messages.some(message => message.type === type && (!requestId || message.requestId === requestId)), { type, requestId }, { timeout: 30000 });
@@ -89,11 +90,17 @@ try {
   await message('initialized');
   await page.screenshot({ path: resolve(output, 'mobile.png'), fullPage: true });
   assert.deepEqual(errors, []);
-  assert.deepEqual(requests, []);
+  // The production edge may inject its existing Cloudflare analytics beacon.
+  // It is not part of this editor and must remain blocked by the editor CSP.
+  const forbidden = requests.filter(url => !(deployment
+    && new URL(url).hostname === 'static.cloudflareinsights.com'
+    && blockedRequests.some(request => request.url === url && /CSP|csp|blocked/i.test(request.reason || ''))));
+  assert.deepEqual(forbidden, []);
+  if (requests.length) console.log(JSON.stringify({ edgeScriptsBlocked: blockedRequests.filter(request => requests.includes(request.url)) }));
   console.log(JSON.stringify({ status: 'passed', checks: ['strict CSP', 'no upstream network calls', 'initialize', 'full-sized PNGs', 'scene edit/export roundtrip', 'placement isolation', 'native element insertion', 'host save action', 'desktop/mobile screenshots'], output }));
 } catch (error) {
   await page.screenshot({ path: resolve(output, 'failure.png'), fullPage: true }).catch(() => {});
-  console.error(JSON.stringify({ errors, requests, text: await page.locator('body').innerText(), messages: await page.evaluate(() => (window.messages || []).map(({ type, payload }) => ({ type, error: payload?.message }))) }));
+  console.error(JSON.stringify({ errors, requests, blockedRequests, text: await page.locator('body').innerText(), messages: await page.evaluate(() => (window.messages || []).map(({ type, payload }) => ({ type, error: payload?.message }))) }));
   throw error;
 } finally {
   await context.close(); await browser.close(); server.close();
