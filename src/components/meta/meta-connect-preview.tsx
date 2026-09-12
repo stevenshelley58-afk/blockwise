@@ -249,14 +249,14 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
                 <span className="block text-xs text-muted-foreground">
                   Blockwise Business Portfolio ID
                 </span>
-                <div className="mt-1 flex items-center justify-between gap-2">
-                  <code className="whitespace-nowrap text-sm font-semibold tracking-[0.02em]">
+                <div className="mt-1 flex min-w-0 flex-wrap items-center justify-between gap-2">
+                  <code className="min-w-0 max-w-full overflow-x-auto whitespace-nowrap text-sm font-semibold tracking-[0.02em]">
                     {businessId ?? "Unavailable"}
                   </code>
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-11 min-h-11 shrink-0 px-3"
+                    className="ml-auto h-11 min-h-11 shrink-0 px-3"
                     aria-label="Copy Business Portfolio ID"
                     onClick={() => void copyBusinessId()}
                     disabled={!businessId || !hydrated}
