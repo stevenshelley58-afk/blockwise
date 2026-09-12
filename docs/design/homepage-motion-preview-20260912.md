@@ -68,3 +68,13 @@ To retire this preview, first remove only the preview route with `python3 script
 The owner confirmed the three steps are right but rejected the current proportions. The browser confirmed their displayed version was `23a03de88751e827699dc7d3a545f08efca6fb2e`, not an old preview. Its workflow heading measured 48px/800 while the shared section scale was 58px/760. The report uses a separate larger treatment and is outside this refinement.
 
 This follow-up changes only the workflow section: heading scale, frame proportions, toolbar spacing, ad continuity and compact review details. Other homepage sections remain frozen. Browser acceptance covers Choose, Customise and Review at desktop and phone widths, manual selection retention, reduced-motion loading, and no new required image failures.
+
+### Workflow refinement acceptance
+
+Published UI revision: `6b716885f4aa29f7bb645c594d5bf2d92d3c786f`. Review link: https://blockwise.sale/homepage-preview/concept?rev=6b7168#how-it-works . The versioned link avoids a stale bare-path preview response observed during the router switch; the preview route's duplicate cache headers require separate maintenance, not a change to this section's source.
+
+Applied Impeccable `layout` assessment and craft-floor checks. Source changes outside documentation/tests are limited to the workflow component and its stylesheet. No hero, reporting, pricing or other homepage source was changed. 29 focused tests pass; typecheck and diff check pass.
+
+Browser review covered all three steps at 1440px, 390px and 320px. The heading measures 58px desktop and 40px on phones. The selected step holds. The ad image now selects an existing larger source suited to the portrait crop rather than magnifying a small landscape thumbnail. Compact review rows give approximately 16px top and bottom clearance on both phone widths; the parent confirmed the exact final revision in the browser. No new dependency was added.
+
+Bounded QA evidence is in `/srv/blockwise/e2e-runs/homepage-motion-preview-20260912/workflow-refinement/`. The initial refinement browser run had no console/page errors and passed fresh reduced-motion loading. Single-load first-paint observations were 916ms at 390px and 516ms at 320px; these are not a cross-run speed claim. The final confirmation changes only phone review spacing. Production remains unchanged.
