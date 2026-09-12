@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { HomePerformanceChart } from "../src/components/self-serve/home-chart.tsx";
+import { DemoModeNotice } from "../src/components/monitor/DemoModeNotice.tsx";
 import { MetaMonitorHeader } from "../src/components/monitor/MetaMonitorHeader.tsx";
 import { homePerformanceFromReporting } from "../src/lib/home/home-dashboard-data.ts";
 import { buildSampleMetaMonitorPayload } from "../src/lib/meta-monitor/sampleMetaMonitorData.ts";
@@ -95,9 +96,18 @@ function header(lastSyncedAt: string | null, isSample: boolean, isConnected: boo
 }
 
 test("Results labels samples plainly and never invents a recent timestamp", () => {
+  // The demo label lives in the one banner that also carries the way out, so
+  // the header stays free of a second badge and a sample never claims a sync.
+  const banner = renderToStaticMarkup(
+    createElement(DemoModeNotice, { metaConnectHref: "/connect-meta" }),
+  );
+  assert.match(banner, /Example report/);
+  assert.match(banner, /Connect Meta/);
+  assert.doesNotMatch(banner, /Setup guide/);
+
   const sample = header(null, true, true);
-  assert.match(sample, /Example report/);
-  assert.doesNotMatch(sample, /Last known|just now/);
+  assert.doesNotMatch(sample, /Last known|just now|Not synced yet|Not connected/);
+  assert.doesNotMatch(sample, /Refresh/);
 
   const unknown = header(null, false, true);
   assert.match(unknown, /Not synced yet/);

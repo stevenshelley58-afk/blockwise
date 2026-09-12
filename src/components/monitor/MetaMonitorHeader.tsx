@@ -59,11 +59,6 @@ export function MetaMonitorHeader(props: {
             <h1 className="font-display text-[24px] font-extrabold tracking-[-0.02em] md:text-[27px]">
               {copy.title}
             </h1>
-            {props.isSample ? (
-              <span className="rounded-full bg-warning-soft px-2.5 py-1 text-[10.5px] font-bold tracking-wide text-warning uppercase">
-                {copy.demoChip}
-              </span>
-            ) : null}
           </div>
           <p className="mt-1 text-[13px] text-muted-foreground">{copy.subtitle}</p>
         </div>
@@ -144,13 +139,13 @@ export function MetaMonitorHeader(props: {
             className={`size-[7px] rounded-full ${props.lastSyncedAt ? "bg-success" : "bg-(--faint)"}`}
             aria-hidden
           />
-          {props.isSample ? "Example data" : props.lastSyncedAt ? "Last known " + timeAgo(props.lastSyncedAt) : copy.states.notSynced}
+          {props.lastSyncedAt ? "Last known " + timeAgo(props.lastSyncedAt) : copy.states.notSynced}
         </span>
       </div>
-      ) : (
+      ) : props.isSample ? null : (
         <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-(--faint)">
           <span className="size-[7px] rounded-full bg-(--faint)" aria-hidden />
-          {props.isSample ? "Example data" : "Not connected"}
+          Not connected
         </span>
       )}
     </header>
