@@ -7,9 +7,12 @@
 
 ## Product
 
-- Blockwise helps real-estate agents get leads, not sell houses. Lead with getting leads; ad creation, campaign management and reporting are tools that serve that.
+- **Blockwise is a lead-generation product for real-estate agents, not a home-selling or listing-promotion product.** Its job is to attract prospects, capture their details and help agents follow up. Ad creation, campaign management and reporting serve that job; selling a particular property is not the product outcome.
+- **Lead generation owns the product model.** Organise campaign presets, publishing, onboarding and reporting around the lead goal, offer, audience, lead capture and delivery, and approved budget. Do not default to one campaign per property, a property-first workflow, property enquiries or vendor-funded listing budgets unless the owner explicitly requests that use case.
+- Property photos and details may support an ad or offer when relevant. They are optional creative context, not the default unit of campaign structure or a requirement for every lead-generation ad.
+- Lead count, cost per lead, available lead-quality evidence and follow-up outcomes explain success. Never substitute home sales, listing performance or property-specific enquiries for the lead-generation goal. Apply this distinction to plans and recommendations as well as code and customer copy.
 - Never imply guaranteed leads or sales. Show the real allowance, renewal, charge and cancellation terms beside the decision that needs them.
-- The flow: pick a Frank-built template pack, supply brand and property inputs, edit in AdStudio, save Feed and Story renders, review the publish setup, submit the gated Meta workflow. Campaigns, leads and billing live in the same product.
+- The flow: pick a Frank-built lead-generation template pack, supply brand and offer inputs (property details only when the chosen template needs them), edit in AdStudio, save Feed and Story renders, review the lead-generation publish setup, submit the gated Meta workflow. Campaigns, leads and billing live in the same product.
 - A lead books a call from the Blockwise customer surface. SnagTime is the scheduling engine, and Frank runs it as a Hub service: the customer never sees Frank and never reaches the operator console behind it.
 - Frank is the owner's Hub, not a customer surface. Frank runs and accounts for the apps; Blockwise is where customers live. Never put a customer-facing screen or a customer account in Frank.
 - Plain language on the customer surface: hide campaigns, ad sets, placements, provider IDs and coordinates, except where a connection screen needs the exact provider label.
