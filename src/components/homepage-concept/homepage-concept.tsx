@@ -7,7 +7,7 @@ import { HeroAdShowcase } from "@/components/homepage-concept/hero-ad-showcase";
 import { HomepageBooking } from "@/components/homepage-concept/homepage-booking";
 import { HomepagePricing } from "@/components/homepage-concept/homepage-pricing";
 import { ResultsReporting } from "@/components/homepage-concept/results-reporting";
-import { WorkflowShowcase } from "@/components/homepage-concept/workflow-showcase";
+import { WorkflowMotionStudy } from "@/components/motion-study/workflow-motion-study";
 import { Button } from "@/components/ui/button";
 import {
   BUSINESS_IDENTITY,
@@ -51,7 +51,7 @@ export function HomepageConcept() {
       </header>
       <main>
         <section className="hc-hero" id="top"><div className="hc-shell hc-hero-grid"><div className="hc-hero-copy"><h1><span>More leads.</span><span className="hc-hero-prompt">Less ad management.</span></h1><p>Blockwise helps real estate agents create, review and run Facebook and Instagram ads in one place.</p><div className="hc-hero-actions"><TrialLink className="max-[600px]:w-full">{TRIAL_CTA_LABEL}</TrialLink><span><Check aria-hidden="true" size={16} /> No card required.</span></div></div><div className="hc-hero-visual"><HeroAdShowcase /></div></div></section>
-        <section className="hc-process" id="how-it-works"><div className="hc-shell"><WorkflowShowcase /></div></section>
+        <section className="hc-process" id="how-it-works"><div className="hc-shell"><WorkflowMotionStudy /></div></section>
         <ResultsReporting />
         <HomepagePricing />
         <section className="hc-faq" id="faq"><div className="hc-shell hc-faq-grid"><div className="hc-section-copy"><h2>FAQ</h2><p>Useful details before you start.</p></div><div className="hc-faq-groups">{FAQ_GROUPS.map((group, groupIndex) => <details className="hc-faq-group" key={group.heading}><summary><h3 id={`hc-faq-group-${groupIndex}`}>{group.heading}</h3><ChevronDown aria-hidden="true" size={20} /></summary><div className="hc-faq-list">{group.faqs.map((faq) => <details key={faq.question}><summary><span>{faq.question}</span><ChevronDown aria-hidden="true" size={18} /></summary><div className="hc-faq-answer"><p>{faq.answer}</p>{"links" in faq && faq.links?.length ? <p className="hc-faq-links">{faq.links.map((link) => <a key={link.href} href={link.href}>{link.label}</a>)}</p> : null}</div></details>)}</div></details>)}</div></div></section>

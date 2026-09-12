@@ -7,9 +7,23 @@
  * Reduced = opacity-only, no transforms, numbers render their final value
  * instantly. Nothing loops; nothing exceeds the entrance duration.
  */
+import { useReducedMotion as motionUseReducedMotion } from "motion/react";
 import type { Transition, Variants } from "motion/react";
+import { useEffect, useState } from "react";
 
 export { useReducedMotion } from "motion/react";
+
+/**
+ * Match the server and the first client render before applying the browser motion preference.
+ * Motion resolves matchMedia synchronously in its hook, so reading it directly in markup can
+ * make reduced-motion clients hydrate a different tree than the server rendered.
+ */
+export function useHydratedReducedMotion() {
+  const preference = motionUseReducedMotion();
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+  return hydrated && preference === true;
+}
 
 /**
  * Spring presets (values re-typed from tuned references, never pasted):
@@ -79,4 +93,42 @@ export const reportingReveal = {
 export const reportingLoop = {
   chartHold: durations.entrance,
   emailHold: 5,
+} as const;
+
+/**
+ * Homepage-only motion contract. Marketing previews can take a longer hold so
+ * the product states are readable, while the reporting preview can reuse the
+ * same values without each worker inventing its own clock.
+ */
+export const homepageMotion = {
+  hero: {
+    holdMs: 3000,
+    transitionMs: 350,
+  },
+  workflow: {
+    startDelayMs: 1000,
+    sceneTransitionMs: 350,
+    indicatorTransitionMs: 350,
+    briefTransitionMs: 200,
+    phaseHoldsMs: [1200, 1400, 1400, 2400, 1200, null, null, 3000, 4200] as const,
+    copyTypeMs: 24,
+    linkTypeMs: 40,
+    reviewTypeMs: 19,
+    reviewItemDelayMs: 420,
+  },
+  reporting: {
+    drawMs: 1400,
+    chartHoldMs: 3000,
+    emailHoldMs: 2200,
+  },
+  workflowStudy: {
+    autoHoldMs: 2600,
+    adMoveMs: 680,
+    panelRevealMs: 360,
+    sideFadeMs: 220,
+    typeStartMs: 760,
+    typeMs: 28,
+    reviewHoldMs: 700,
+    ease: [0.2, 0.82, 0.28, 1] as const,
+  },
 } as const;

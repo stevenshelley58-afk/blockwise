@@ -182,3 +182,4 @@ The native editor starts on the actual edited ad preview. Template headings wrap
 - 2026-09-11: condensed to binding rules. Reference material, worked examples and
   route inventories moved out; token values, the motion vocabulary and the owner
   preferences kept verbatim from the previous version.
+- 2026-09-12: Homepage workflow now uses a measured, finite Choose → Customise → Review sequence with one persistent ad preview and a concise setup check.
