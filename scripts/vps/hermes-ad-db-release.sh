@@ -19,7 +19,7 @@ clean "$release_root"
 [[ -f "$unit_template" && -x "$launcher" ]] || fail "missing immutable release inputs"
 "$launcher" --preflight "$release_root" "$env_file"
 install -d -o root -g root -m 0755 "$render_root"
-tmp=$(mktemp "$render_root/.$commit.XXXXXX"); trap 'rm -f "$tmp"' EXIT
+tmp=$(mktemp "$render_root/.$commit.XXXXXX.service"); trap 'rm -f "$tmp"' EXIT
 sed "s|@RELEASE_ROOT@|$release_root|g" "$unit_template" > "$tmp"
 systemd-analyze verify "$tmp"
 install -o root -g root -m 0644 "$tmp" "$rendered_unit"
