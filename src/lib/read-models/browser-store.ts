@@ -1,7 +1,7 @@
 "use client";
 
 export const READ_MODEL_DB_NAME = "bw-read-models-v1";
-export const READ_MODEL_SCHEMA_VERSION = 2 as const;
+export const READ_MODEL_SCHEMA_VERSION = 3 as const;
 export const READ_MODEL_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 const STORE_NAME = "read-models";

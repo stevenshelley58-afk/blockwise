@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
 
+import { MetaAdTile } from "@/components/research/meta-ad-tile";
 import { HomeMetricsBand } from "@/components/self-serve/home-metrics-band";
 import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
 import { SafeImage } from "@/components/ui/safe-image";
@@ -165,23 +166,20 @@ function LocalAdsSection({
           <ArrowRight size={14} aria-hidden />
         </Link>
       </div>
-      <ul className="mt-3 list-none divide-y divide-(--line) border-y border-(--line)">
+      {/* Phone: four rows, one ad each, which is a lot of detail in little
+          space. From `lg` the same ads become the cards Ad Radar shows them
+          as, four to a row, because there is width for a picture by then. */}
+      <ul className="mt-3 list-none divide-y divide-(--line) border-y border-(--line) lg:hidden">
         {ads.map((ad) => (
           <li key={ad.id}>
             <Link href={`/ad-radar/ads/${encodeURIComponent(ad.id)}`} className={ROW_LINK}>
               <span className="h-[52px] w-[52px] shrink-0 overflow-hidden rounded-(--r-ctl) bg-(--surface-subtle)">
-                {ad.imageUrl ? (
-                  <SafeImage
-                    src={ad.imageUrl}
-                    alt=""
-                    className="h-full w-full object-cover"
-                    compactFallback
-                  />
-                ) : (
-                  <span className="flex h-full w-full items-center justify-center text-[10px] text-(--faint)">
-                    Ad
-                  </span>
-                )}
+                <SafeImage
+                  src={ad.imageUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  compactFallback
+                />
               </span>
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-[13.5px] font-semibold text-foreground">
@@ -197,6 +195,17 @@ function LocalAdsSection({
           </li>
         ))}
       </ul>
+
+      <div className="mt-4 hidden gap-4 lg:grid lg:grid-cols-4">
+        {ads.map((ad) => (
+          <MetaAdTile
+            key={ad.id}
+            href={`/ad-radar/ads/${encodeURIComponent(ad.id)}`}
+            thumbnailUrl={ad.imageUrl}
+            card={ad}
+          />
+        ))}
+      </div>
     </section>
   );
 }

@@ -63,7 +63,9 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 - **The weekly metrics row is Home's only card row.** The four trailing-week figures — spend, link clicks, cost per link click and leads — each render in the shared KPI card surface: `rounded-(--r-card)`, `border-(--line)`, `bg-card`, `shadow-card`, with that figure's sparkline and prior-week comparison inside its own card. Two cards across on a phone, one row of four from `lg`, because the sidebar takes its width before that. Leads, local ads and everything else on Home stay flat: sections, rows and hairlines.
 - **Every figure card draws its own week, or says why it cannot.** A figure's line comes from the days it could measure: a day with no clicks contributes no cost per click to that line rather than dropping the week's shape, and fewer than two measured days draws nothing. A demo fixture whose figure never moves is a fixture that needs fixing, not a chart to fake.
 - **One label per fact.** State a caveat once, at the level it applies to. A band that is entirely demo data says so in its one note under the figures; it does not repeat the same word as a badge beside the heading.
-- **Ad Radar feeds Home's local ads, keyed on the workspace's own area.** Read the list for the postcode from the workspace's brand address, and fall back to the niche's default area until an address supplies one. Never fill the list with a card that cannot draw its own still image: prefer ads with an image and a headline, and never hand a video file to an image element.
+- **Ad Radar feeds Home's local ads, keyed on the workspace's own area.** Read the list for the postcode from the workspace's brand address, and fall back to the niche's default area until an address supplies one.
+- **A URL is not a thumbnail.** The research archive holds cards whose archived object has gone missing, so a card is only offered a row once its still has answered a request; verify the candidates on the server, hold the verdict for an hour, and check more than Home shows so one dead image does not shorten the row. Never fill a row with a card that cannot draw its own still, and never hand a video file to an image element.
+- **Home shows local ads two ways, and both are Ad Radar's.** On a phone they are rows: thumbnail, advertiser, headline, area. From `lg` they are the same ads as Ad Radar cards, four to a row, drawn by the shared tile rather than a Home-only copy of it.
 - **Lead with the customer's real creative.** Home leads with the customer's creative and keeps its next action linked to a server-resolved, available route.
 - **Guides are content-first.** Lead with the useful content, use rounded panels only when they improve grouping, and keep promotion subtle and secondary.
 - **Help owns the walkthrough.** `/help` is the customer destination for provider walkthroughs, screenshots, tips and edge cases. A working screen keeps only the instruction its next action needs, plus one link to Help; it never carries the manual. The Meta sharing steps in `src/components/meta/partner-steps.ts` are the single source shared by `/connect-meta` and Help, so the checklist and the walkthrough cannot drift apart.
@@ -86,6 +88,9 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 
 ## Changelog
 
+- 2026-09-12: Home's local ads are now the ads Ad Radar shows, four to a row from
+  `lg` and rows on a phone, and only ads whose archived still actually answers
+  are listed at all.
 - 2026-09-12: the weekly metrics row grew its fourth figure (leads), two up on a
   phone and one row on desktop; cost per link click now draws a line from the
   days that had clicks, and the demo fixture's cost per click moves day to day

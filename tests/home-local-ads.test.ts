@@ -1,8 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { homeAdImageUrl, selectHomeLocalAds } from "../src/lib/home/home-local-ads.ts";
+import {
+  HOME_LOCAL_AD_CANDIDATES,
+  HOME_LOCAL_AD_LIMIT,
+  homeAdImageUrl,
+  homeLocalAdCandidates,
+  toHomeLocalAds,
+} from "../src/lib/home/home-local-ads.ts";
 import type { PublicAdRadarCard } from "../src/lib/research/public-ad-radar.ts";
+
+/** A card's still. Distinct per id, so a test can kill one and leave the rest. */
+const image = (id: string) => [
+  { kind: "image" as const, url: `https://cdn.example/${id}.jpg`, posterUrl: null },
+];
+const VIDEO = [{ kind: "video" as const, url: "https://cdn.example/ad.mp4", posterUrl: null }];
 
 function card(overrides: Partial<PublicAdRadarCard> & { id: string }): PublicAdRadarCard {
   return {
@@ -29,27 +41,26 @@ function card(overrides: Partial<PublicAdRadarCard> & { id: string }): PublicAdR
   };
 }
 
+/**
+ * The composition the loader performs once its thumbnail checks come back: the
+ * candidates it asked about, then the rows Home renders from the stills that
+ * answered. `verified` defaults to "everything answered".
+ */
+function rows(cards: PublicAdRadarCard[], verified: (url: string) => boolean = () => true) {
+  const candidates = homeLocalAdCandidates(cards);
+  return toHomeLocalAds(candidates.filter((candidate) => verified(candidate.imageUrl)));
+}
+
 test("the thumbnail is a still image, never a video file", () => {
   // An mp4 handed to an <img> is an unrenderable URL, which is what put broken
   // frames in the row before.
-  assert.equal(
-    homeAdImageUrl(
-      card({
-        id: "video-only",
-        media: [{ kind: "video", url: "https://cdn.example/ad.mp4", posterUrl: null }],
-      }),
-    ),
-    null,
-  );
+  assert.equal(homeAdImageUrl(card({ id: "video-only", media: VIDEO })), null);
 
   assert.equal(
     homeAdImageUrl(
       card({
         id: "with-image",
-        media: [
-          { kind: "video", url: "https://cdn.example/ad.mp4", posterUrl: null },
-          { kind: "image", url: "https://cdn.example/ad.jpg", posterUrl: null },
-        ],
+        media: [...VIDEO, { kind: "image", url: "https://cdn.example/ad.jpg", posterUrl: null }],
       }),
     ),
     "https://cdn.example/ad.jpg",
@@ -67,28 +78,38 @@ test("the thumbnail is a still image, never a video file", () => {
   );
 });
 
-test("a card with a picture and a headline is shown ahead of one without", () => {
-  const ads = selectHomeLocalAds([
-    card({ id: "bare", pageName: "Bare Realty", headline: null }),
-    card({
-      id: "pictured",
-      pageName: "Pictured Realty",
-      media: [{ kind: "image", url: "https://cdn.example/ad.jpg", posterUrl: null }],
-    }),
+test("an ad with no still to draw is never offered a row", () => {
+  // The empty tile these render is what Home looked like before: rows that read
+  // as broken ads rather than as a local market.
+  const ads = rows([
+    card({ id: "no-media", pageName: "Bare Realty", media: [] }),
+    card({ id: "video-only", pageName: "Video Realty", media: VIDEO }),
+    card({ id: "with-image", pageName: "Pictured Realty", media: image("pictured") }),
   ]);
 
   assert.deepEqual(
     ads.map((ad) => ad.id),
-    ["pictured", "bare"],
+    ["with-image"],
   );
-  assert.equal(ads[0]?.imageUrl, "https://cdn.example/ad.jpg");
-  assert.equal(ads[1]?.imageUrl, null);
+  assert.equal(ads[0]?.imageUrl, "https://cdn.example/pictured.jpg");
+});
+
+test("a card with a headline is shown ahead of one without", () => {
+  const ads = rows([
+    card({ id: "bare", pageName: "Bare Realty", headline: null, media: image("bare") }),
+    card({ id: "titled", pageName: "Titled Realty", media: image("titled") }),
+  ]);
+
+  assert.deepEqual(
+    ads.map((ad) => ad.id),
+    ["titled", "bare"],
+  );
 });
 
 test("the radar's own order is kept between cards that present equally well", () => {
-  const ads = selectHomeLocalAds([
-    card({ id: "newest", pageName: "First Realty" }),
-    card({ id: "older", pageName: "Second Realty" }),
+  const ads = rows([
+    card({ id: "newest", pageName: "First Realty", media: image("newest") }),
+    card({ id: "older", pageName: "Second Realty", media: image("older") }),
   ]);
 
   assert.deepEqual(
@@ -98,11 +119,11 @@ test("the radar's own order is kept between cards that present equally well", ()
 });
 
 test("one advertiser does not fill the list before another is shown", () => {
-  const ads = selectHomeLocalAds([
-    card({ id: "a1", pageName: "Repeat Realty" }),
-    card({ id: "a2", pageName: "Repeat Realty" }),
-    card({ id: "a3", pageName: "Repeat Realty" }),
-    card({ id: "b1", pageName: "Other Realty" }),
+  const ads = rows([
+    card({ id: "a1", pageName: "Repeat Realty", media: image("a1") }),
+    card({ id: "a2", pageName: "Repeat Realty", media: image("a2") }),
+    card({ id: "a3", pageName: "Repeat Realty", media: image("a3") }),
+    card({ id: "b1", pageName: "Other Realty", media: image("b1") }),
   ]);
 
   assert.deepEqual(
@@ -113,13 +134,34 @@ test("one advertiser does not fill the list before another is shown", () => {
 
 test("Home shows at most four rows and never invents one", () => {
   const many = Array.from({ length: 9 }, (_, index) =>
-    card({ id: `ad-${index}`, pageName: `Agency ${index}` }),
+    card({ id: `ad-${index}`, pageName: `Agency ${index}`, media: image(`ad-${index}`) }),
   );
-  assert.equal(selectHomeLocalAds(many).length, 4);
+  assert.equal(rows(many).length, 4);
 
-  const two = selectHomeLocalAds([
-    card({ id: "one", pageName: "One Realty" }),
-    card({ id: "two", pageName: "Two Realty" }),
+  const two = rows([
+    card({ id: "one", pageName: "One Realty", media: image("one") }),
+    card({ id: "two", pageName: "Two Realty", media: image("two") }),
   ]);
   assert.equal(two.length, 2);
+});
+
+test("Home checks spares, so one dead thumbnail does not shorten the row", () => {
+  const cards = Array.from({ length: 9 }, (_, index) =>
+    card({ id: `ad-${index}`, pageName: `Agency ${index}`, media: image(`ad-${index}`) }),
+  );
+  const candidates = homeLocalAdCandidates(cards);
+  assert.equal(candidates.length, HOME_LOCAL_AD_CANDIDATES);
+
+  // The first two stills are dead objects; the four behind them fill the row.
+  const dead = new Set(candidates.slice(0, 2).map((candidate) => candidate.imageUrl));
+  const ads = rows(cards, (url) => !dead.has(url));
+
+  assert.equal(ads.length, HOME_LOCAL_AD_LIMIT);
+  assert.deepEqual(
+    ads.map((ad) => ad.id),
+    candidates.slice(2, 6).map((candidate) => candidate.card.id),
+  );
+
+  // And when nothing answers, Home shows nothing rather than an empty tile.
+  assert.deepEqual(rows(cards, () => false), []);
 });

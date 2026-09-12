@@ -7,7 +7,7 @@ import type { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { listTemplates } from "@/lib/adstudio/pack-gallery";
 import { buildHomeCreativeSuggestions, type HomeCreativeSuggestions } from "@/lib/home/creative-suggestions";
 import { homePerformanceFromReporting, mergeHomeSafeReadModel, type HomeSafeReadModel } from "@/lib/home/home-safe-read-model";
-import { HOME_LOCAL_AD_LIMIT, selectHomeLocalAds } from "@/lib/home/home-local-ads";
+import { homeLocalAdCandidates, HOME_LOCAL_AD_LIMIT, toHomeLocalAds } from "@/lib/home/home-local-ads";
 import { leadSourceLabel } from "@/lib/leads/rows";
 import { resolveBrandPackLocation } from "@/lib/research/brand-pack-suburb";
 import { loadPublicAdRadarCards } from "@/lib/research/public-ad-radar";
@@ -22,6 +22,49 @@ type BrandKitRow = {
   contact_json?: { address?: string | null } | null;
 };
 
+/** How many candidates the radar read returns for Home to choose from. */
+const LOCAL_AD_POOL = 24;
+
+/**
+ * How long a thumbnail verdict is trusted, and the most verdicts kept.
+ *
+ * An archived creative that answered once does not need checking again on the
+ * next page view, and a verdict is only ever a hint: the browser still asks for
+ * the image itself.
+ */
+const THUMBNAIL_VERDICT_TTL_MS = 60 * 60 * 1000;
+const THUMBNAIL_VERDICT_LIMIT = 500;
+const thumbnailVerdicts = new Map<string, { loads: boolean; checkedAt: number }>();
+
+/**
+ * Whether the still at this URL actually answers.
+ *
+ * A card whose archived object has gone missing still carries its URL, so
+ * "has an image" is not the same as "has a thumbnail", and a row of empty tiles
+ * is what Home looked like before this check. Verdicts are held in this process
+ * for an hour so a page view does not pay for the same check twice.
+ */
+async function thumbnailLoads(url: string): Promise<boolean> {
+  const cached = thumbnailVerdicts.get(url);
+  const now = Date.now();
+  if (cached && now - cached.checkedAt < THUMBNAIL_VERDICT_TTL_MS) return cached.loads;
+
+  let loads = false;
+  try {
+    loads = (await fetch(url, { method: "HEAD", cache: "no-store" })).ok;
+  } catch {
+    loads = false;
+  }
+
+  if (thumbnailVerdicts.size >= THUMBNAIL_VERDICT_LIMIT) {
+    for (const [key, verdict] of thumbnailVerdicts) {
+      if (now - verdict.checkedAt >= THUMBNAIL_VERDICT_TTL_MS) thumbnailVerdicts.delete(key);
+    }
+  }
+  thumbnailVerdicts.set(url, { loads, checkedAt: now });
+  return loads;
+}
+
 /**
  * Home's local-ads list, keyed on the workspace's own area.
  *
@@ -29,7 +72,8 @@ type BrandKitRow = {
  * one, and a postcode is the strongest Ad Radar search key there is. Until the
  * address yields one, Home falls back to the niche's default area rather than
  * showing no list at all. More cards are read than Home shows, because the ones
- * worth showing are not always the most recent.
+ * worth showing are not always the most recent, and each candidate's still is
+ * checked before it is offered a row.
  */
 async function loadHomeLocalAds(
   serviceSupabase: SupabaseServiceClient,
@@ -43,11 +87,20 @@ async function loadHomeLocalAds(
   };
   const response = await loadPublicAdRadarCards(serviceSupabase, {
     location: area.searchTerm,
-    limit: HOME_LOCAL_AD_LIMIT * 3,
+    limit: LOCAL_AD_POOL,
     sort: "recent",
   });
 
-  return { area, ads: selectHomeLocalAds(response.ads, HOME_LOCAL_AD_LIMIT) };
+  const candidates = homeLocalAdCandidates(response.ads);
+  const verified = await Promise.all(candidates.map((candidate) => thumbnailLoads(candidate.imageUrl)));
+  // Chosen again from the ones that answered, so the row keeps one ad per
+  // advertiser even when a candidate ahead of it was dropped for a dead still.
+  const shown = homeLocalAdCandidates(
+    candidates.filter((_, index) => verified[index]).map((candidate) => candidate.card),
+    HOME_LOCAL_AD_LIMIT,
+  );
+
+  return { area, ads: toHomeLocalAds(shown, HOME_LOCAL_AD_LIMIT) };
 }
 
 // The read-model contract lives in a client-safe module; re-exported here so

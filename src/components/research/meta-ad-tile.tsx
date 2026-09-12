@@ -3,7 +3,6 @@
 import { Play } from "lucide-react";
 
 import { STATUS_TONE, STATUS_TONE_UNKNOWN } from "@/components/research/meta-ad-library-card";
-import type { CustomerMetaAdLibraryCard } from "@/lib/research/customer-meta-card";
 
 /*
  * Compact Ad Radar result tile — the mobile (<640px) counterpart to
@@ -15,27 +14,49 @@ import type { CustomerMetaAdLibraryCard } from "@/lib/research/customer-meta-car
  * Tiles never mount a <video>: a grid of video elements is a mobile
  * performance trap. Video ads render their poster with a play badge.
  */
+
+/**
+ * What a tile draws. Ad Radar hands it a whole card; Home hands it the slim row
+ * it read from the same data, so the tile asks for the fields it actually uses
+ * rather than the whole record.
+ */
+export type AdTileCard = {
+  id: string;
+  pageName: string;
+  headline: string | null;
+  body?: string | null;
+  media: Array<{ kind: string; url: string; posterUrl: string | null }>;
+  activeStatus: string;
+  startedAt: string | null;
+  stoppedAt: string | null;
+  adType?: string | null;
+};
+
 export function MetaAdTile({
   card,
   onOpen,
+  href,
+  thumbnailUrl,
 }: {
-  card: CustomerMetaAdLibraryCard;
-  onOpen: () => void;
+  card: AdTileCard;
+  /** Opens the fullscreen viewer. Ad Radar's grid uses this. */
+  onOpen?: () => void;
+  /** Navigates instead, for a surface that has a destination rather than a viewer. */
+  href?: string;
+  /** A still the caller resolved and checked, preferred over the card's own first media. */
+  thumbnailUrl?: string;
 }) {
   const statusTone = STATUS_TONE[card.activeStatus] ?? STATUS_TONE_UNKNOWN;
   const statusLabel =
     card.activeStatus === "inactive" ? "Inactive" : card.activeStatus === "active" ? "Active" : "Unknown";
   const media = card.media[0] ?? null;
-  const thumbnail = media ? (media.kind === "video" ? (media.posterUrl ?? media.url) : media.url) : null;
+  const thumbnail =
+    thumbnailUrl ?? (media ? (media.kind === "video" ? (media.posterUrl ?? media.url) : media.url) : null);
   const title = card.headline?.trim() || card.body?.trim() || card.pageName;
-
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      aria-label={`Open ${card.pageName} ad`}
-      className="grid w-full min-w-0 cursor-pointer grid-rows-[auto_1fr] overflow-hidden rounded-(--r-card) border border-(--line) bg-(--surface) text-left shadow-card transition-[box-shadow,transform] duration-150 active:scale-[0.985] motion-reduce:transition-none motion-reduce:active:scale-100"
-    >
+  const className =
+    "grid w-full min-w-0 cursor-pointer grid-rows-[auto_1fr] overflow-hidden rounded-(--r-card) border border-(--line) bg-(--surface) text-left shadow-card transition-[box-shadow,transform] duration-150 active:scale-[0.985] motion-reduce:transition-none motion-reduce:active:scale-100";
+  const content = (
+    <>
       <span className="relative block aspect-4/5 w-full overflow-hidden bg-(--surface-subtle)">
         {thumbnail ? (
           // Meta CDN URLs are short-lived signed links; next/image would break them.
@@ -67,12 +88,26 @@ export function MetaAdTile({
         <span className="line-clamp-2 text-[12.5px] leading-[1.32] font-bold text-foreground">{title}</span>
         <span className="text-[10.5px] text-(--faint)">{metaLine(card)}</span>
       </span>
+    </>
+  );
+
+  if (href) {
+    return (
+      <a href={href} aria-label={`Open ${card.pageName} ad`} className={className}>
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <button type="button" onClick={onOpen} aria-label={`Open ${card.pageName} ad`} className={className}>
+      {content}
     </button>
   );
 }
 
 /** "Running 34 days · Video" — duration plus creative format. */
-export function metaLine(card: CustomerMetaAdLibraryCard): string {
+export function metaLine(card: AdTileCard): string {
   const parts = [runLabel(card.startedAt, card.stoppedAt), formatLabel(card)].filter(Boolean);
   return parts.join(" · ");
 }
@@ -89,7 +124,7 @@ export function runLabel(startedAt: string | null, stoppedAt: string | null): st
   return stoppedAt ? `Ran ${days} ${unit}` : `Running ${days} ${unit}`;
 }
 
-export function formatLabel(card: CustomerMetaAdLibraryCard): string {
+export function formatLabel(card: AdTileCard): string {
   if (card.media.length === 0) return "Text only";
   if (card.media.length > 1) return "Carousel";
   return card.media[0].kind === "video" ? "Video" : "Image";
