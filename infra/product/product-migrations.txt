@@ -106,3 +106,4 @@
 20260907010000_postcode_outreach_drafts.sql
 202609080001_ad_radar_customer_interest_source.sql
 20260912030000_workspace_publishing_defaults.sql
+20260912040000_crm_workspace_sites_and_delivery.sql
