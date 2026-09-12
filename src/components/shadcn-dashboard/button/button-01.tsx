@@ -1,14 +1,13 @@
 import Link from "next/link";
 
-import { Button, ButtonDisc, ButtonLabel, type ButtonProps } from "@/components/ui/button";
+import { Button, type ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /*
  * ButtonArrow (shadcn-dashboard) — the signature Blockwise CTA, now the system
  * default: `<Button>` renders the same ink pill with the trailing arrow disc on
- * its own. This stays as a thin, named entry point for the primary "next
- * action" slots, and as the `asChild` composition for link CTAs, where the disc
- * has to be placed inside the anchor by hand.
+ * its own, for a button and for a link alike. This stays as a thin, named entry
+ * point for the primary "next action" slots.
  */
 
 type ButtonArrowProps = {
@@ -44,10 +43,12 @@ export function ButtonArrow({
         arrow={arrow}
         className={cn("group/button", className)}
       >
+        {/* Label and disc are the Button's to place on both paths: `asChild`
+            clones them into the anchor itself. Handing them in here as well put
+            two discs in every link CTA and squeezed the label into the lane of
+            the first one. */}
         <Link href={href} {...props}>
-          <ButtonLabel>{children}</ButtonLabel>
-          {/* Mirrors the Button's own rule: no disc on a link variant. */}
-          {arrow === null || variant === "link" ? null : <ButtonDisc arrow={arrow} />}
+          {children}
         </Link>
       </Button>
     );
