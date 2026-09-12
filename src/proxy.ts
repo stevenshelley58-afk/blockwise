@@ -15,7 +15,7 @@ export async function proxy(request: NextRequest) {
 
   // Preview is a read-only UI: do not refresh auth or expose product endpoints.
   if (process.env.BLOCKWISE_HOMEPAGE_PREVIEW === "true") {
-    if (pathname === "/concept" || pathname.startsWith("/_next/")) {
+    if (pathname === "/concept" || pathname === "/motion-study" || pathname.startsWith("/_next/")) {
       return NextResponse.next();
     }
     return new NextResponse("Not found", { status: 404 });

@@ -82,3 +82,10 @@ test("study is finite, activity-aware and reduced-motion safe", () => {
   assert.match(motion, /workflowStudy:/);
   assert.doesNotMatch(source, /customise: customise && !reduced/);
 });
+
+test("preview allows the study without exposing product routes", async () => {
+  const proxy = await readFile(new URL("../src/proxy.ts", import.meta.url), "utf8");
+  assert.match(proxy, /BLOCKWISE_HOMEPAGE_PREVIEW/);
+  assert.ok(proxy.includes('pathname === "/motion-study"'));
+  assert.ok(proxy.includes('new NextResponse("Not found", { status: 404 })'));
+});
