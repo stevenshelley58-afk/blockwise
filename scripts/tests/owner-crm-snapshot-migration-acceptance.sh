@@ -3,16 +3,44 @@ set -Eeuo pipefail
 
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 migration="$root/supabase/migrations/20260912060000_owner_crm_customer_snapshot.sql"
-container="blockwise-owner-crm-snapshot-native-$$"
-volume="blockwise-owner-crm-snapshot-native-$$-data"
 image="${POSTGRES_TEST_IMAGE:-postgres:17.6-alpine}"
+resource_suffix="${OWNER_CRM_TEST_RESOURCE_SUFFIX:-$$-${RANDOM}-${RANDOM}}"
+ownership_label="com.blockwise.owner-crm-snapshot-native.owner"
+ownership_token="$$-${RANDOM}-${RANDOM}-${RANDOM}"
+container="blockwise-owner-crm-snapshot-native-$resource_suffix"
+volume="blockwise-owner-crm-snapshot-native-$resource_suffix-data"
+container_created=false
+volume_created=false
 
 cleanup() {
-  docker rm -f "$container" >/dev/null 2>&1 || true
-  docker volume rm -f "$volume" >/dev/null 2>&1 || true
+  local original_status=$?
+  local cleanup_failed=false
+  trap - EXIT
+
+  if [[ "$container_created" == true ]] \
+    && ! docker rm -f "$container" >/dev/null; then
+    echo "Failed to remove owned migration-test container: $container" >&2
+    cleanup_failed=true
+  fi
+  if [[ "$volume_created" == true ]] \
+    && ! docker volume rm "$volume" >/dev/null; then
+    echo "Failed to remove owned migration-test volume: $volume" >&2
+    cleanup_failed=true
+  fi
+
+  if (( original_status != 0 )); then
+    exit "$original_status"
+  fi
+  if [[ "$cleanup_failed" == true ]]; then
+    exit 1
+  fi
 }
 trap cleanup EXIT
 
+if [[ ! "$resource_suffix" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$ ]]; then
+  echo "Invalid owner CRM migration-test resource suffix." >&2
+  exit 2
+fi
 if docker container inspect "$container" >/dev/null 2>&1 \
   || docker volume inspect "$volume" >/dev/null 2>&1; then
   echo "Refusing to reuse an existing owner CRM migration-test resource." >&2
@@ -20,13 +48,23 @@ if docker container inspect "$container" >/dev/null 2>&1 \
 fi
 [[ -f "$migration" ]] || { echo "Missing migration: $migration" >&2; exit 2; }
 
-docker volume create "$volume" >/dev/null
-docker run -d \
+docker volume create --label "$ownership_label=$ownership_token" "$volume" >/dev/null
+if [[ "$(docker volume inspect --format "{{ index .Labels \"$ownership_label\" }}" "$volume")" \
+  != "$ownership_token" ]]; then
+  echo "Refusing to claim a migration-test volume created by another run." >&2
+  exit 2
+fi
+volume_created=true
+
+docker create \
   --name "$container" \
+  --label "$ownership_label=$ownership_token" \
   --network none \
   -e POSTGRES_HOST_AUTH_METHOD=trust \
   -v "$volume:/var/lib/postgresql/data" \
   "$image" >/dev/null
+container_created=true
+docker start "$container" >/dev/null
 
 ready=false
 for _ in $(seq 1 60); do
