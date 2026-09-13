@@ -104,20 +104,29 @@ export async function loadCrmSiteCredential(
  * Store the credential for a workspace. Provisioning and rotation both call
  * this; it upserts on the workspace so a retry can never add a second row.
  *
- * Returns the secret's last four characters so the caller can record the
- * non-secret reference on the mapping row without re-reading the secret.
+ * `lastFour` is the non-secret reference an operator uses to confirm which
+ * credential is live. It is the API KEY's last four characters, matching what
+ * `scripts/provision-api-user.py` reports as `credential_last_four` and what
+ * `provision-site.sh` prints, so the number in the vault and the number in the
+ * provisioning log describe the same thing. A caller that already holds that
+ * value from the provisioning output should pass it in rather than let it be
+ * recomputed. The secret is never partly echoed: it is the password half, and
+ * the key is the identifier half.
  */
 export async function upsertCrmSiteCredential(input: {
   serviceSupabase: SupabaseClient;
   workspaceId: string;
   apiKey: string;
   apiSecret: string;
+  lastFour?: string;
 }): Promise<{ lastFour: string }> {
   const apiKey = input.apiKey.trim();
   const apiSecret = input.apiSecret.trim();
   if (!apiKey || !apiSecret) {
     throw new Error("A CRM site credential requires both an API key and an API secret.");
   }
+
+  const lastFour = (input.lastFour ?? "").trim() || apiKey.slice(-4);
 
   const payload: CredentialPayload = { key: apiKey, secret: apiSecret };
   const encrypted = encryptToken(JSON.stringify(payload));
@@ -126,11 +135,11 @@ export async function upsertCrmSiteCredential(input: {
     p_workspace_id: input.workspaceId,
     p_encrypted_credential: tokenCiphertextToPostgresBytea(encrypted.ciphertext),
     p_credential_nonce: encrypted.nonce,
-    p_credential_last_four: apiSecret.slice(-4),
+    p_credential_last_four: lastFour,
   });
 
   if (error) throw new Error(`crm_site_credential_upsert failed: ${error.message}`);
-  return { lastFour: apiSecret.slice(-4) };
+  return { lastFour };
 }
 
 /**

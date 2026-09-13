@@ -91,9 +91,73 @@ test("the plaintext secret never reaches the vault", async () => {
   assert.ok(stored, "a row was written");
   assert.doesNotMatch(stored.encrypted_credential, /secret-a-abcd/);
   assert.doesNotMatch(stored.encrypted_credential, /key-a-1234/);
+});
 
+test("the recorded reference is the api key's last four, not the secret's", async () => {
+  const vault = fakeVault();
+
+  await upsertCrmSiteCredential({
+    serviceSupabase: vault.client,
+    workspaceId: WORKSPACE_A,
+    apiKey: "key-a-1234",
+    apiSecret: "secret-a-abcd",
+  });
+
+  // provision-api-user.py reports credential_last_four = api_key[-4:], and that
+  // is the number an operator sees while provisioning. The vault has to record
+  // the same number or "which credential is live" cannot be answered by
+  // comparing the two.
   const upsertCall = vault.calls.find((call) => call.name === "crm_site_credential_upsert");
-  assert.equal(upsertCall?.args.p_credential_last_four, "abcd");
+  assert.equal(upsertCall?.args.p_credential_last_four, "1234");
+
+  const stored = vault.rows.get(WORKSPACE_A);
+  assert.notEqual(stored?.credential_last_four, "abcd", "the secret must not be partly echoed");
+});
+
+test("an explicit reference from the provisioning output is kept as given", async () => {
+  const vault = fakeVault();
+
+  const result = await upsertCrmSiteCredential({
+    serviceSupabase: vault.client,
+    workspaceId: WORKSPACE_A,
+    apiKey: "key-a-1234",
+    apiSecret: "secret-a-abcd",
+    lastFour: "94a4",
+  });
+
+  assert.equal(result.lastFour, "94a4");
+  assert.equal(vault.rows.get(WORKSPACE_A)?.credential_last_four, "94a4");
+});
+
+test("a blank explicit reference falls back to the api key's last four", async () => {
+  const vault = fakeVault();
+
+  const result = await upsertCrmSiteCredential({
+    serviceSupabase: vault.client,
+    workspaceId: WORKSPACE_A,
+    apiKey: "key-a-1234",
+    apiSecret: "secret-a-abcd",
+    lastFour: "   ",
+  });
+
+  assert.equal(result.lastFour, "1234");
+});
+
+test("a credential missing either half is refused before any write", async () => {
+  const vault = fakeVault();
+
+  await assert.rejects(
+    () =>
+      upsertCrmSiteCredential({
+        serviceSupabase: vault.client,
+        workspaceId: WORKSPACE_A,
+        apiKey: "key-a",
+        apiSecret: "   ",
+      }),
+    /both an API key and an API secret/,
+  );
+  assert.equal(vault.rows.size, 0);
+  assert.equal(vault.calls.length, 0, "nothing reached the vault");
 });
 
 test("two workspaces never share a credential or a vault row", async () => {
