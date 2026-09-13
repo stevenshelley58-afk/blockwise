@@ -155,7 +155,7 @@ export function WorkflowMotionStudy() {
   const selectStep = (next: number) => {
     setManual(true);
     if (next === step) return;
-    setScene(next === 0 && !reduced ? -2 : reduced && next === 2 ? 3 : next);
+    setScene(reduced && next === 2 ? 3 : next);
   };
 
   return <div className={"tw " + styles.bwStudy} data-narrow={narrow ? "true" : "false"}>
@@ -174,7 +174,7 @@ export function WorkflowMotionStudy() {
         <motion.div className={styles.bwStudyGallery} style={{ opacity: galleryOpacity }} aria-hidden={step !== 0}>
           {SIDE_ADS.map(ad => <BrowseAd key={ad.id} ad={ad} browse={browse} start={start} stride={stride} />)}
         </motion.div>
-        <motion.div className={styles.bwStudyAdMotion} ref={adRef} style={geometryReady ? { left: 0, x, y, scale } : undefined}>
+        <motion.div className={styles.bwStudyAdMotion} ref={adRef} style={geometryReady ? { left: 0, x, y, scale } : { visibility: "hidden" }}>
           <StudyAd original={originalOpacity} updated={updatedOpacity} customised={step !== 0} />
         </motion.div>
         <div className={styles.bwStudyEditSlot} inert={step === 0} aria-hidden={step === 0}>

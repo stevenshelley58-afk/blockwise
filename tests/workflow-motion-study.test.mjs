@@ -124,3 +124,8 @@ test("right panel shrinks out then grows before text while ad remains unchanged"
  assert.equal(text.shell,1); assert.ok(text.review>0);
  for(let t=0;t<=1;t+=.01) { const f=studyTransition(a,b,t); assert.equal(f.ad,1); assert.equal(f.updated,1); assert.equal(f.browse,1); }
 });
+
+test("initial selected card waits for geometry and returning to Choose preserves it", () => {
+ assert.match(source,/visibility: "hidden"/);
+ assert.match(source,/setScene\(reduced && next === 2 \? 3 : next\)/);
+});
