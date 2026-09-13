@@ -22,11 +22,35 @@ const VIEWPORTS = [
 const providerOrMutationUrl = (url: string) =>
   /(?:\/api\/|\/auth\/|oauth|facebook\.com|meta\.com|supabase)/i.test(url);
 
-const WALKTHROUGH_STEPS = [
-  "Open Partners",
-  "Give Blockwise access",
-  "Paste the Blockwise Business ID",
-  "Choose assets and permissions",
+const STEP_HELP = [
+  {
+    panelId: "meta-step-1",
+    helpId: "step-help-1",
+    headings: ["Open Partners"],
+    explanation: /Meta Business Settings, under Users/i,
+    imageCount: 1,
+  },
+  {
+    panelId: "meta-step-2",
+    helpId: "step-help-2",
+    headings: ["Give Blockwise access", "Paste the Blockwise Business ID"],
+    explanation: /Give a partner access|Partner business ID/i,
+    imageCount: 2,
+  },
+  {
+    panelId: "meta-step-3",
+    helpId: "step-help-3",
+    headings: ["Choose assets and permissions"],
+    explanation: /Manage campaigns.*View performance.*Full control off/i,
+    imageCount: 1,
+  },
+  {
+    panelId: "meta-step-4",
+    helpId: "step-help-4",
+    headings: ["Choose assets and permissions"],
+    explanation: /Assign assets.*return here.*I've added Blockwise.*example results/i,
+    imageCount: 1,
+  },
 ] as const;
 
 async function waitForImages(locator: Locator) {
@@ -201,41 +225,90 @@ test.describe("isolated Meta connection preview contract", () => {
     });
   }
 
-  test("expands the four-step walkthrough and serves every linked full-size image", async ({ page }) => {
+  test("keeps four independent in-panel screenshot instructions", async ({ page }) => {
     for (const viewport of [
       { width: 1440, height: 1000, label: "desktop" },
       { width: 390, height: 844, label: "mobile" },
     ] as const) {
       await openPreview(page, viewport.width, viewport.height);
 
-      const walkthrough = page
-        .locator("details")
-        .filter({ hasText: "Need the full walkthrough?" })
-        .first();
-      await expect(walkthrough).toBeVisible();
-      await walkthrough.locator("summary").click();
-      await expect(walkthrough).toHaveAttribute("open", "");
-
-      for (const title of WALKTHROUGH_STEPS) {
-        await expect(walkthrough).toContainText(title);
+      await expect(page.getByText("Need the full walkthrough?", { exact: true })).toHaveCount(0);
+      const helps = STEP_HELP.map((step) => page.getByTestId(step.helpId));
+      for (const help of helps) {
+        await expect(help).toBeVisible();
+        await expect(help).not.toHaveAttribute("open", "");
+        await expect(help.getByRole("button", { name: "Show me how" })).toHaveCount(0);
+        await expect(help.locator("summary")).toHaveText("Show me how");
       }
 
-      const shots = walkthrough.locator("img");
-      await expect(shots).toHaveCount(4);
-      await waitForImages(shots);
+      for (const [index, step] of STEP_HELP.entries()) {
+        const panel = page.getByTestId(step.panelId);
+        const help = page.getByTestId(step.helpId);
+        await expect(panel.getByTestId(step.helpId)).toHaveCount(1);
 
-      for (let index = 0; index < 4; index += 1) {
-        const link = shots.nth(index).locator("xpath=..");
-        const href = await link.getAttribute("href");
-        expect(href, "walkthrough screenshot " + (index + 1) + " needs a full-size link").toBeTruthy();
-        const response = await page.request.get(new URL(href!, page.url()).toString());
-        expect(response.status(), "walkthrough screenshot " + (index + 1) + " must be served").toBe(200);
+        const otherStates = await Promise.all(
+          helps.map(async (other, otherIndex) =>
+            otherIndex === index ? null : await other.getAttribute("open"),
+          ),
+        );
+        const summary = help.locator("summary");
+        await summary.focus();
+        await page.keyboard.press("Enter");
+        await expect(help).toHaveAttribute("open", "");
+
+        for (const heading of step.headings) {
+          await expect(help.getByRole("heading", { name: heading })).toBeVisible();
+        }
+        await expect(help).toContainText(step.explanation);
+        const shots = help.locator("img");
+        await expect(shots).toHaveCount(step.imageCount);
+        await waitForImages(shots);
+
+        for (let shotIndex = 0; shotIndex < step.imageCount; shotIndex += 1) {
+          const link = shots.nth(shotIndex).locator("xpath=..");
+          const href = await link.getAttribute("href");
+          expect(
+            href,
+            step.helpId + " screenshot " + (shotIndex + 1) + " needs a full-size link",
+          ).toBeTruthy();
+          const response = await page.request.get(new URL(href!, page.url()).toString());
+          expect(
+            response.status(),
+            step.helpId + " screenshot " + (shotIndex + 1) + " must be served",
+          ).toBe(200);
+        }
+
+        for (const [otherIndex, other] of helps.entries()) {
+          if (otherIndex !== index) {
+            expect(await other.getAttribute("open")).toBe(otherStates[otherIndex]);
+          }
+        }
+
+        await summary.focus();
+        await page.keyboard.press("Enter");
+        await expect(help).not.toHaveAttribute("open", "");
+        for (const [otherIndex, other] of helps.entries()) {
+          if (otherIndex !== index) {
+            expect(await other.getAttribute("open")).toBe(otherStates[otherIndex]);
+          }
+        }
       }
 
+      const finalHelp = helps[helps.length - 1];
+      await finalHelp.locator("summary").click();
+      await expect(finalHelp).toHaveAttribute("open", "");
       expect(await noHorizontalScroll(page)).toBe(true);
       mkdirSync(REVIEW_DIR, { recursive: true });
       await page.screenshot({
-        path: REVIEW_DIR + "/meta-connect-preview-revision2-walkthrough-" + viewport.label + "-" + viewport.width + "x" + viewport.height + ".png",
+        path:
+          REVIEW_DIR +
+          "/meta-connect-preview-revision3-expanded-" +
+          viewport.label +
+          "-" +
+          viewport.width +
+          "x" +
+          viewport.height +
+          ".png",
         fullPage: true,
       });
     }
@@ -245,14 +318,12 @@ test.describe("isolated Meta connection preview contract", () => {
 
     await expect(page.getByRole("heading", { name: /Connect Facebook & Instagram/i })).toHaveCount(1);
     await expect(page.getByRole("main")).toBeVisible();
-    const walkthrough = page
-      .locator("details")
-      .filter({ hasText: "Need the full walkthrough?" })
-      .first();
-    await expect(walkthrough.locator("summary")).toBeVisible();
-    await walkthrough.locator("summary").click();
-    for (const title of WALKTHROUGH_STEPS) {
-      await expect(walkthrough.getByRole("heading", { name: title })).toBeVisible();
+    await expect(page.getByText("Need the full walkthrough?", { exact: true })).toHaveCount(0);
+    for (const step of STEP_HELP) {
+      const panel = page.getByTestId(step.panelId);
+      const help = page.getByTestId(step.helpId);
+      await expect(panel.getByTestId(step.helpId)).toHaveCount(1);
+      await expect(help.locator("summary")).toHaveText("Show me how");
     }
 
     await openPreviewOptions(page);
@@ -294,19 +365,21 @@ test.describe("isolated Meta connection preview contract", () => {
         .first();
       await expect(previewOptions).not.toHaveAttribute("open", "");
       await page.evaluate(() => window.scrollTo(0, 0));
-      mkdirSync(REVIEW_DIR, { recursive: true });
-      await page.screenshot({
-        path:
-          REVIEW_DIR +
-          "/meta-connect-preview-revision2-" +
-          viewport.label +
-          "-" +
-          viewport.width +
-          "x" +
-          viewport.height +
-          ".png",
-        fullPage: true,
-      });
+      if (viewport.label === "desktop" || viewport.label === "mobile") {
+        mkdirSync(REVIEW_DIR, { recursive: true });
+        await page.screenshot({
+          path:
+            REVIEW_DIR +
+            "/meta-connect-preview-revision3-main-" +
+            viewport.label +
+            "-" +
+            viewport.width +
+            "x" +
+            viewport.height +
+            ".png",
+          fullPage: true,
+        });
+      }
     });
   }
 });
