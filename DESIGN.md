@@ -185,3 +185,7 @@ The native editor starts on the actual edited ad preview. Template headings wrap
 - 2026-09-12: Homepage workflow now uses a measured, finite Choose → Customise → Review sequence with one persistent ad preview and a concise setup check.
 
 - 2026-09-12: Homepage workflow keeps one persistent ad through Choose, Customise and Review. Its finite marketing sequence uses the shared workflowStudy timings, holds the approval state long enough to read, and follows the study container rather than the browser viewport for its responsive geometry.
+
+
+### Homepage workflow, September 13
+The workflow keeps copy beside the Ad Studio at wide widths and stacks below 1100px. One persistent ad moves from the three-card choice into the editing column. Phones use a compact image crop and stacked fields, not a scaled-down desktop form. Autoplay starts only when 60% of the actual stage is visible, stops after approval, and gives way permanently to the three screen selectors. No playback controls or added animation dependency. Reduced motion shows the completed review and permits each screen to be selected. Motion uses the existing Motion library, transform and opacity; imagery is lazy-loaded at its displayed size.

@@ -15,8 +15,8 @@ test("study keeps one selected ad across Choose, Customise and Review", () => {
   assert.match(source, /label: "Choose"/);
   assert.match(source, /label: "Customise"/);
   assert.match(source, /label: "Review"/);
-  assert.equal((source.match(/<StudyAd /g) ?? []).length, 1);
-  assert.match(source, /const SIDE_ADS = \[AD_LIBRARY\[0\], AD_LIBRARY\[2\]\]/);
+  assert.equal((source.match(/<StudyAd /g) ?? []).length, 2);
+  assert.match(source, /const SIDE_ADS = \[AD_EXAMPLES\[1\], AD_EXAMPLES\[2\]\]/);
   assert.ok(source.includes("<Button") && source.includes("arrow={null}"));
   assert.match(source, /aria-pressed=\{step === item\.label\}/);
   assert.ok(source.includes('className={"tw " + styles.bwStudy}'));
@@ -60,7 +60,7 @@ test("geometry centres the desktop group and stays inside actual stage widths", 
       assert.ok(end.y + item.adHeight * end.scale <= layout.panelTop);
       assert.equal(layout.panelWidth, item.width - 28);
     } else {
-      assert.ok(layout.gap >= 48);
+      assert.ok(layout.gap >= 24);
       assert.equal(layout.gap, STUDY_PANEL_GAP);
       assert.ok(end.x + item.adWidth * end.scale + layout.gap <= layout.panelLeft + 0.01);
       assert.ok(Math.abs((end.x + layout.panelLeft + layout.panelWidth) / 2 - item.width / 2) < 0.01);
@@ -110,3 +110,11 @@ test("study restores the workflow heading, trial terms, measured container state
   assert.doesNotMatch(styles, /@media \(max-width: (700|360)px\)/);
   assert.doesNotMatch(styles, /bwStudyConfirm|bwStudyApprove/);
 });
+
+ test("autoplay observes the actual stage and preserves completed approval", () => {
+ assert.match(source, /useState\(false\);/);
+ assert.match(source, /entry.intersectionRatio >= 0.6/);
+ assert.match(source, /rootRef.current = node/);
+ assert.match(source, /if \(reviewConfirmed\) return/);
+ assert.ok(source.indexOf("setManual(true)") < source.indexOf("if (next === step) return"));
+ });

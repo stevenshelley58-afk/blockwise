@@ -1,9 +1,9 @@
-export const STUDY_NARROW_BREAKPOINT = 700;
+export const STUDY_NARROW_BREAKPOINT = 560;
 export const STUDY_AD_SCALE = 0.78;
-export const STUDY_PANEL_GAP = 56;
+export const STUDY_PANEL_GAP = 24;
 export const STUDY_PANEL_MAX_WIDTH = 410;
 const DESKTOP_SIDE_PAD = 24;
-const MOBILE_STACK_GAP = 48;
+const MOBILE_STACK_GAP = 16;
 
 export type StudyAdMotion = { x: number; y: number; scale: number };
 export type StudyEditLayout = { panelLeft: number; panelTop: number; panelWidth: number; gap: number };
