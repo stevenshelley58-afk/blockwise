@@ -18,6 +18,11 @@ export type OwnerCrmSnapshotPageRequest = {
 };
 
 export type OwnerCrmSnapshotRpcRow = {
+  billing_event_created?: number | null;
+  billing_checkout_completed_at?: string | null;
+  cancel_at_period_end?: boolean | null;
+  current_period_end?: string | null;
+  workspace_created_at?: string | null;
   workspace_id: string;
   billing_access_state: string | null;
   stripe_subscription_status: string | null;
@@ -39,6 +44,11 @@ export type OwnerCrmSnapshotRpcRow = {
 };
 
 export type OwnerCrmCustomerSnapshot = {
+  billingEventCreated: number | null;
+  billingCheckoutCompletedAt: string | null;
+  cancelAtPeriodEnd: boolean | null;
+  currentPeriodEnd: string | null;
+  workspaceCreatedAt: string | null;
   workspaceId: string;
   owner: {
     profileId: string;
@@ -111,6 +121,11 @@ export async function readOwnerCrmCustomerSnapshotPage(
 export function mapOwnerCrmSnapshotRow(row: OwnerCrmSnapshotRpcRow): OwnerCrmCustomerSnapshot {
   const mappingAmbiguities = ownerAmbiguities(row);
   return {
+    billingEventCreated: row.billing_event_created ?? null,
+    billingCheckoutCompletedAt: row.billing_checkout_completed_at ?? null,
+    cancelAtPeriodEnd: row.cancel_at_period_end ?? null,
+    currentPeriodEnd: row.current_period_end ?? null,
+    workspaceCreatedAt: row.workspace_created_at ?? null,
     workspaceId: row.workspace_id,
     owner: mappingAmbiguities.some((ambiguity) => ambiguity.startsWith("owner_"))
       ? null

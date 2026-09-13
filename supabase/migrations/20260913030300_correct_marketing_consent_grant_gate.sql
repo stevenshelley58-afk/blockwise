@@ -1,4 +1,3 @@
-begin;
 create or replace function public.record_workspace_marketing_consent(p_workspace_id uuid,p_granted boolean) returns public.workspace_marketing_consent_events language plpgsql security definer set search_path='' as $$
 declare e public.workspace_marketing_consent_events;
 begin
@@ -7,4 +6,3 @@ begin
  insert into public.workspace_marketing_consent_events(workspace_id,profile_id,granted) values(p_workspace_id,auth.uid(),p_granted) returning * into e; return e;
 end $$;
 revoke all on function public.record_workspace_marketing_consent(uuid,boolean) from public,anon; grant execute on function public.record_workspace_marketing_consent(uuid,boolean) to authenticated;
-commit;

@@ -235,3 +235,13 @@ test("snapshot mirrors explicit consent facts without inferring eligibility", ()
     assert.doesNotMatch(sql, /grant execute on function public\.owner_crm_owner_email_verified_at[\s\S]*to authenticated/);
   }
 });
+
+test("lifecycle projection preserves authoritative fields without manufacturing dates", () => {
+  const snapshot = mapOwnerCrmSnapshotRow(row({billing_event_created: 1234, billing_checkout_completed_at: OBSERVED_AT, cancel_at_period_end: false, current_period_end: OBSERVED_AT, workspace_created_at: OBSERVED_AT}));
+  assert.equal(snapshot.billingEventCreated, 1234);
+  assert.equal(snapshot.billingCheckoutCompletedAt, OBSERVED_AT);
+  assert.equal(snapshot.cancelAtPeriodEnd, false);
+  assert.equal(snapshot.currentPeriodEnd, OBSERVED_AT);
+  assert.equal(snapshot.workspaceCreatedAt, OBSERVED_AT);
+  assert.equal(mapOwnerCrmSnapshotRow(row()).billingEventCreated, null);
+});

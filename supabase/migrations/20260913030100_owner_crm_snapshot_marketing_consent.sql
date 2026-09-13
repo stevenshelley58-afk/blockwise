@@ -1,7 +1,6 @@
 -- Bounded, read-only customer projection for the signed owner CRM bridge.
 -- This is intentionally not a CRM sync engine and exposes no token, card,
 -- provider-secret, arbitrary metadata, lead-delivery, or research fields.
-begin;
 drop function if exists public.owner_crm_owner_email_verified_at(uuid);
 create or replace function public.owner_crm_owner_email_verified_at(p_workspace_id uuid, p_profile_id uuid)
 returns timestamptz
@@ -158,5 +157,3 @@ grant execute on function public.owner_crm_customer_snapshot_page(uuid, integer)
 
 comment on function public.owner_crm_customer_snapshot_page(uuid, integer) is
   'Service-role-only bounded read projection for the signed owner CRM snapshot. It never changes billing, access, delivery, CRM, or provider state.';
-
-commit;

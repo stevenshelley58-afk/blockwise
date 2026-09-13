@@ -1,7 +1,6 @@
 -- Bounded, read-only customer projection for the signed owner CRM bridge.
 -- This is intentionally not a CRM sync engine and exposes no token, card,
 -- provider-secret, arbitrary metadata, lead-delivery, or research fields.
-begin;
 drop function if exists public.owner_crm_owner_email_verified_at(uuid);
 create or replace function public.owner_crm_owner_email_verified_at(p_workspace_id uuid, p_profile_id uuid)
 returns timestamptz
@@ -54,7 +53,12 @@ returns table (
   marketing_consent_event_id uuid,
   marketing_consent_granted boolean,
   marketing_consent_occurred_at timestamptz,
-  marketing_consent_policy_version text
+  marketing_consent_policy_version text,
+  billing_event_created bigint,
+  billing_checkout_completed_at timestamptz,
+  cancel_at_period_end boolean,
+  current_period_end timestamptz,
+  workspace_created_at timestamptz
 )
 language plpgsql
 stable
@@ -77,6 +81,11 @@ begin
       w.trial_state,
       w.trial_started_at,
       w.trial_ends_at,
+      w.billing_event_created,
+      w.billing_checkout_completed_at,
+      w.stripe_cancel_at_period_end as cancel_at_period_end,
+      w.stripe_current_period_end,
+      w.created_at,
       statement_timestamp() as source_observed_at
     from public.workspaces w
     where p_after_workspace_id is null or w.id > p_after_workspace_id
@@ -108,7 +117,12 @@ begin
     consent.id,
     consent.granted,
     consent.occurred_at,
-    consent.policy_version
+    consent.policy_version,
+    workspace_page.billing_event_created,
+    workspace_page.billing_checkout_completed_at,
+    workspace_page.cancel_at_period_end,
+    workspace_page.stripe_current_period_end,
+    workspace_page.created_at
   from workspace_page
   -- Candidate membership is always constrained to the current workspace.
   left join lateral (
@@ -158,5 +172,3 @@ grant execute on function public.owner_crm_customer_snapshot_page(uuid, integer)
 
 comment on function public.owner_crm_customer_snapshot_page(uuid, integer) is
   'Service-role-only bounded read projection for the signed owner CRM snapshot. It never changes billing, access, delivery, CRM, or provider state.';
-
-commit;
