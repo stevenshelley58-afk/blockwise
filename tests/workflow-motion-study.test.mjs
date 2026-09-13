@@ -96,3 +96,13 @@ test("interruption resumes at the captured visual frame", () => {
   assert.equal(studyTransition(studyFrame(2),studyFrame(0),.4).gallery,0);
   assert.equal(studyTransition(studyFrame(2),studyFrame(0),.2).edit,0);
 });
+
+ test("text layers hand over without double exposure", () => {
+  for (const [a,b] of [[0,1],[1,0],[1,2],[2,1]]) {
+    for(let t=0;t<=1;t+=.01) {
+      const f=studyTransition(studyFrame(a),studyFrame(b),t);
+      assert.ok(f.original*f.updated<1e-10);
+      if(a>=1 && b>=1) assert.ok(f.edit*f.review<1e-10);
+    }
+  }
+});
