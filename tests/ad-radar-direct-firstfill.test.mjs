@@ -39,6 +39,27 @@ test('media failures and assets beyond the capture batch cannot report completio
  assert.ok(supervisor.includes('blocked_reason: archiveComplete ? null : "media_archive_incomplete"'));
 });
 
+test('an unverified zero-ad scan finishes the first fill without retiring or re-queueing', () => {
+  // The adapter marks the zero, the collector records it before ingest, and the
+  // page is stamped complete with the proof label kept alongside it.
+  assert.match(supervisor, /outcome\.unverifiedZero === true \|\| outcome\.metadata\?\.unverifiedZero === true/);
+  assert.ok(supervisor.includes('"ads_not_found_unverified_zero_after_prior_ads"'));
+  assert.ok(supervisor.includes('zeroScanProof: zeroCanBeTrusted ? "confirmed" : "unverified"'));
+  // An unverified zero must never drive lifecycle retirement.
+  const zeroBlock = supervisor.slice(
+    supervisor.indexOf('const unverifiedZero = outcome.unverifiedZero'),
+    supervisor.indexOf('const ingested = [];'),
+  );
+  assert.ok(zeroBlock.length > 0);
+  assert.ok(zeroBlock.includes('coverageComplete: false'));
+  assert.ok(zeroBlock.includes('reconcileMissingObservedAds'));
+});
+
+test('zero-scan proof is counted on the page rather than overwritten', () => {
+  assert.ok(supervisor.includes('confirmed_zero_scans: Number(current.confirmed_zero_scans || 0) + 1'));
+  assert.ok(supervisor.includes('last_zero_scan_proof: zeroScanProof'));
+});
+
 test('release installs locked image runtime before import preflight', () => {
  const release = readFileSync(new URL('../scripts/vps/hermes-ad-db-release.sh', import.meta.url),'utf8');
  assert.ok(release.indexOf('npm ci --omit=dev --ignore-scripts') < release.indexOf('"$launcher" --preflight'));

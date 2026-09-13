@@ -3903,11 +3903,11 @@ function pageScheduleAfterSuccess({ activeCount, everRanAds }) {
   return new Date(Date.now() + hours * 3_600_000).toISOString();
 }
 
-async function markAdvertiserPageScanSucceeded(advertiserPageId, { activeCount = 0, lastActiveSeenAt = null } = {}) {
+async function markAdvertiserPageScanSucceeded(advertiserPageId, { activeCount = 0, lastActiveSeenAt = null, zeroScanProof = null } = {}) {
   if (!advertiserPageId) return;
   const page = await rest(
     "research",
-    `advertiser_pages?select=has_ever_run_ads,scan_state,initial_fill_completed_at&id=eq.${advertiserPageId}&limit=1`,
+    `advertiser_pages?select=has_ever_run_ads,scan_state,initial_fill_completed_at,confirmed_zero_scans,metadata&id=eq.${advertiserPageId}&limit=1`,
   );
   const current = page?.[0] || {};
   const everRanAds = current.has_ever_run_ads === true || activeCount > 0;
@@ -3930,6 +3930,15 @@ async function markAdvertiserPageScanSucceeded(advertiserPageId, { activeCount =
       has_ever_run_ads: everRanAds,
       current_active_ad_count: activeCount,
       ...(lastActiveSeenAt ? { last_active_ad_seen_at: lastActiveSeenAt } : {}),
+      // A zero-ad capture is the one success that cannot be distinguished from a
+      // degraded scrape by the provider response alone. Count the scans that
+      // observed it and keep the proof label with the page evidence, so a single
+      // ambiguous zero is never treated as a proven absence.
+      ...(zeroScanProof ? {
+        confirmed_zero_scans: Number(current.confirmed_zero_scans || 0) + 1,
+        last_confirmed_zero_at: checkedAt,
+        metadata: { ...(current.metadata || {}), last_zero_scan_proof: zeroScanProof, last_zero_scan_at: checkedAt },
+      } : {}),
       initial_fill_completed_at: current.initial_fill_completed_at || checkedAt,
       scan_state: scanState,
     }),
@@ -4565,6 +4574,50 @@ async function handleAdCollector(job) {
       resolution: { handler: "blockwise-ad-collector", provider: sourceProvider, confirmed_absence: true },
     });
     return { status: "complete", result: { handler: "blockwise-ad-collector", advertiser_page_id: payload.advertiserPageId, meta_page_id: payload.metaPageId, provider: sourceProvider, ads_seen: 0, confirmed_absence: true, reconciliation, ingest_tables: ingestTables } };
+  }
+  // The Apify adapter reports a completed scan whose only payload is the actor's
+  // per-URL ADS_NOT_FOUND row. The deployed actor build omits the page identity,
+  // so the zero cannot be *proven* page-scoped; it is still a finished scan and
+  // must not be re-queued forever as a provider failure. Trusted absence keeps
+  // the confirmed-absence path above. An unverified zero is recorded as such:
+  // it completes the first-fill obligation only when the page has no observed ad
+  // history, never retires any existing ad, and is visibly labelled unverified.
+  const unverifiedZero = outcome.unverifiedZero === true || outcome.metadata?.unverifiedZero === true;
+  if (unverifiedZero && outcome.itemCount === 0) {
+    const zeroCanBeTrusted = await isTrustedConfirmedZeroAdCapture({ advertiserPageId: payload.advertiserPageId, sourceProvider });
+    const stopReason = zeroCanBeTrusted ? "ads_not_found_unverified_zero" : "ads_not_found_unverified_zero_after_prior_ads";
+    await updateFetchRun(adFetchRunId, {
+      source_provider: sourceProvider,
+      status: "success",
+      result_summary: {
+        provider: sourceProvider,
+        item_count: 0,
+        confirmed_absence: false,
+        unverified_zero: true,
+        verified_zero: zeroCanBeTrusted,
+        metadata: outcome.metadata || {},
+      },
+      cost_usd: outcome.costUsd || 0,
+      ...runTelemetryPatch(outcome),
+      coverage_complete: coverageComplete,
+      pagination_exhausted: paginationExhausted,
+      stop_reason: stopReason,
+    });
+    const zeroReconciliation = await reconcileMissingObservedAds({
+      advertiserPageId: payload.advertiserPageId,
+      seenExternalAdIds: [],
+      adFetchRunId,
+      // An unverified zero never retires ads.
+      coverageComplete: false,
+    });
+    await markAdvertiserPageScanSucceeded(payload.advertiserPageId, { activeCount: 0, zeroScanProof: zeroCanBeTrusted ? "confirmed" : "unverified" });
+    await resolveCoverageDefects({
+      subject_type: "advertiser_page",
+      subject_key: payload.advertiserPageId,
+      reason: "ad_collector_capture_failed",
+      resolution: { handler: "blockwise-ad-collector", provider: sourceProvider, unverified_zero: true, verified_zero: zeroCanBeTrusted },
+    });
+    return { status: "complete", result: { handler: "blockwise-ad-collector", advertiser_page_id: payload.advertiserPageId, meta_page_id: payload.metaPageId, provider: sourceProvider, ads_seen: 0, unverified_zero: true, verified_zero: zeroCanBeTrusted, reconciliation: zeroReconciliation, ingest_tables: ingestTables } };
   }
   const ingested = [];
   try {

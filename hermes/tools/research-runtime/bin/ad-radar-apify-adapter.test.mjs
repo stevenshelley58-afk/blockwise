@@ -43,9 +43,31 @@ test("page outcomes never turn ADS_NOT_FOUND or mismatched identity into trusted
     { error_code: "ADS_NOT_FOUND", url: "https://www.facebook.com/2" },
     { ad_archive_id: "foreign", page_id: "9" },
   ], { urls: [{ url: "https://www.facebook.com/1" }, { url: "https://www.facebook.com/2" }, { url: "https://www.facebook.com/3" }] });
-  assert.deepEqual(outcomes.map((item) => item.outcome), ["success", "mismatched_identity", "failure", "mismatched_identity"]);
+  assert.deepEqual(outcomes.map((item) => item.outcome), ["success", "ads_not_found_unverified", "failure", "mismatched_identity"]);
   assert.equal(outcomes.every((item) => item.trustedZero === false), true);
   assert.equal(outcomes.find((item) => item.pageId === "3").reason, "missing_page");
+  assert.equal(outcomes.find((item) => item.pageId === "2").reason, "ADS_NOT_FOUND_no_page_echo");
+});
+
+test("ADS_NOT_FOUND is a completed scan, not a failed capture, and never a page mismatch", () => {
+  // The deployed actor build returns exactly one ADS_NOT_FOUND row per submitted
+  // URL and omits the page identity. That used to fail every first fill on pages
+  // with zero live ads and re-queue them forever.
+  const url = "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=ALL&view_all_page_id=674158585783249&media_type=all";
+  const unverified = derivePageOutcomes([{ error_code: "ADS_NOT_FOUND", url }], { pages: [{ pageId: "674158585783249", url }] });
+  assert.deepEqual(unverified.map((item) => item.outcome), ["ads_not_found_unverified"]);
+
+  const echoed = derivePageOutcomes(
+    [{ error_code: "ADS_NOT_FOUND", url, page_info: { page_id: "674158585783249" } }],
+    { pages: [{ pageId: "674158585783249", url }] },
+  );
+  assert.deepEqual(echoed.map((item) => item.outcome), ["ads_not_found"]);
+
+  const mismatched = derivePageOutcomes(
+    [{ error_code: "ADS_NOT_FOUND", url, page_info: { page_id: "999999999999" } }],
+    { pages: [{ pageId: "674158585783249", url }] },
+  );
+  assert.deepEqual(mismatched.map((item) => item.outcome), ["mismatched_identity"]);
 });
 
 test("successful first fill returns the stable integration outcome and provider-enforced cap", async () => {
@@ -66,6 +88,23 @@ test("successful first fill returns the stable integration outcome and provider-
   assert.equal(result.coverageComplete, true);
   assert.equal(result.costUsd, 0.24305);
   assert.equal(result.metadata.platformUsageBillingModel, "DEVELOPER");
+});
+
+test("a page with no live ads completes the first fill instead of failing and re-queueing", async () => {
+  const store = new Map(); const ledger = fakeLedger();
+  const url = "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=ALL&view_all_page_id=674158585783249&media_type=all";
+  const client = {
+    async startActor() { return { id: "run-zero", defaultDatasetId: "dataset-zero" }; },
+    async getRun() { return { id: "run-zero", status: "SUCCEEDED", defaultDatasetId: "dataset-zero", usageTotalUsd: 0.0008, platformUsageBillingModel: "DEVELOPER", chargedEventCounts: { "apify-default-dataset-item": 1, "apify-actor-start": 1 } }; },
+    async getDatasetItems() { return [{ error: "Ads not found", errorCode: "ADS_NOT_FOUND", url }]; },
+  };
+  const adapter = createApifyFirstFillAdapter({ client, store: { get: async (key) => store.get(key) ?? null, put: async (key, value) => { store.set(key, value); } }, ledger, pollIntervalMs: 0 });
+  const result = await adapter.run({ runKey: "fill-zero", maxTotalChargeUsd: 0.5, maxItems: 666, pages: [{ pageId: "674158585783249", url }], providerInput: { urls: [{ url }] } });
+  assert.equal(result.status, "SUCCEEDED");
+  assert.equal(result.coverageComplete, true);
+  assert.equal(result.unverifiedZero, true);
+  assert.equal(result.metadata.pageOutcomes[0].outcome, "ads_not_found_unverified");
+  assert.equal(result.metadata.pageOutcomes[0].trustedZero, false);
 });
 
 test("unknown actor start is persisted and a retry never posts a second run", async () => {
