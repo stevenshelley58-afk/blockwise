@@ -59,6 +59,7 @@ export type SettingsViewProps = {
     timezone: string;
     emailVerified: boolean;
     notificationPreferences: Record<string, boolean>;
+    marketingConsent: boolean;
   };
   workspace: {
     id: string;

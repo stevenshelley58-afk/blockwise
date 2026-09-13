@@ -13,6 +13,7 @@ import { BillingSection } from "./billing-section";
 import { ConnectionsSection } from "./connections-section";
 import { DangerSection } from "./danger-section";
 import { NotificationsSection } from "./notifications-section";
+import { MarketingConsentSection } from "./marketing-consent-section";
 import { TeamSection } from "./team-section";
 import { WorkspaceSection } from "./workspace-section";
 import type { SettingsViewProps } from "./settings-shared";
@@ -113,6 +114,7 @@ export function SettingsView(props: SettingsViewProps) {
         <TabsContent value="account" className="mt-6 grid gap-6">
           <AccountSection supabase={supabase} router={router} user={props.user} profile={props.profile} />
           <PasswordSection supabase={supabase} />
+          <MarketingConsentSection supabase={supabase} workspaceId={props.workspace.id} emailVerified={props.profile.emailVerified} initial={props.profile.marketingConsent} />
           <NotificationsSection
             supabase={supabase}
             userId={props.user.id}

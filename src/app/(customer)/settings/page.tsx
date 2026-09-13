@@ -65,6 +65,7 @@ export default async function SettingsPage() {
     { data: brandKit },
     { data: wallet },
     activation,
+    { data: marketingConsentRows },
   ] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", access.userId).maybeSingle(),
     supabase.from("workspaces").select("*").eq("id", access.workspaceId).maybeSingle(),
@@ -85,6 +86,7 @@ export default async function SettingsPage() {
       .limit(1)
       .maybeSingle(),
     resolveCustomerActivation({ workspaceId: access.workspaceId, serviceSupabase: service }),
+    supabase.from("workspace_marketing_consent_events").select("granted").eq("workspace_id", access.workspaceId).eq("profile_id", access.userId).order("occurred_at", { ascending: false }).limit(1),
   ]);
 
   const w = (workspace as WorkspaceRow | null) ?? null;
@@ -187,7 +189,8 @@ export default async function SettingsPage() {
             typeof userMetadata.timezone === "string"
               ? userMetadata.timezone
               : Intl.DateTimeFormat().resolvedOptions().timeZone,
-          emailVerified: Boolean(auth.claims?.email),
+          emailVerified: Boolean((auth.claims as { email_confirmed_at?: string } | undefined)?.email_confirmed_at),
+          marketingConsent: Boolean((marketingConsentRows as Array<{ granted?: boolean }> | null)?.[0]?.granted),
           notificationPreferences: p?.notification_preferences ?? {},
         }}
         workspace={{
