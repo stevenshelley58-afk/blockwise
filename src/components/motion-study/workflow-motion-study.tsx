@@ -42,7 +42,7 @@ function usePageActivity() {
   return { rootRef, inView, pageVisible };
 }
 
-function StudyAd({ headlineChars, ad = SELECTED_AD, selected = true }: { headlineChars: number; ad?: (typeof AD_EXAMPLES)[number]; selected?: boolean }) {
+function StudyAd({ headlineChars, ad = AD_EXAMPLES[0], selected = true }: { headlineChars: number; ad?: (typeof AD_EXAMPLES)[number]; selected?: boolean }) {
   const headline = headlineChars > 0 ? SELECTED_AD.adTitle.slice(0, headlineChars) : TEMPLATE_HEADLINE;
   return (
     <article className={styles.bwStudySelectedAd} aria-label={selected ? "Selected ad preview" : "Ready-made ad"}>
