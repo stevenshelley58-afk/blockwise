@@ -492,9 +492,10 @@ function StepHelp({
       data-testid={testId}
       className="mt-auto pt-5"
     >
-      <summary className="cursor-pointer text-sm font-semibold text-data underline underline-offset-4">
+      <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-data underline underline-offset-4">
         Show me how
       </summary>
+      <p className="mt-1 text-xs text-muted-foreground">Select image to enlarge.</p>
       <div className="mt-3 space-y-4 border-t border-border pt-4">
         {steps.map((step) => {
           const image = "/meta-connect-preview" + step.image;
@@ -587,54 +588,5 @@ function AssetConfirmation({
         </Button>
       ) : null}
     </div>
-  );
-}
-
-function WalkthroughStep({ step }: { step: MetaPartnerStep }) {
-  const image = "/meta-connect-preview" + step.image;
-  const fullImage =
-    "/meta-connect-preview" + (step.fullImage ?? step.image);
-  const caption =
-    step.title === "Choose assets and permissions"
-      ? "Use this image to locate the controls. Turn on Manage campaigns and View performance. Leave Full control off."
-      : step.where;
-
-  return (
-    <article className="overflow-hidden rounded-(--r-card) border border-border bg-(--surface-subtle)">
-      <div className="p-4">
-        <h3 className="font-display text-lg font-semibold">{step.title}</h3>
-        <p className="mt-1 text-xs font-medium text-muted-foreground">
-          {caption}
-        </p>
-      </div>
-      <a
-        href={fullImage}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block border-y border-border bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <img
-          src={image}
-          alt={step.alt}
-          width={step.width}
-          height={step.height}
-          className="mx-auto h-auto max-h-[460px] w-full object-contain"
-        />
-      </a>
-      <div className="space-y-3 p-4 text-sm leading-5">
-        <ul className="space-y-1.5 text-muted-foreground">
-          {step.detail.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-        {step.tips.length ? (
-          <ul className="space-y-1.5 text-muted-foreground">
-            {step.tips.map((tip) => (
-              <li key={tip}>{tip}</li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
-    </article>
   );
 }
