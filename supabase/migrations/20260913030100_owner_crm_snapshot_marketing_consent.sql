@@ -2,6 +2,7 @@
 -- This is intentionally not a CRM sync engine and exposes no token, card,
 -- provider-secret, arbitrary metadata, lead-delivery, or research fields.
 begin;
+drop function if exists public.owner_crm_customer_snapshot_page(uuid, integer);
 
 create or replace function public.owner_crm_customer_snapshot_page(
   p_after_workspace_id uuid default null,
