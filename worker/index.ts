@@ -73,6 +73,20 @@ export async function resolveHandler(kind: string): Promise<Handler | null> {
           fetchImpl: context.fetchImpl,
         });
     }
+    case "deliver.lead.crm": {
+      const { executeLeadCrmDeliveryJobById } = await import("../src/lib/crm/delivery-worker.ts");
+      return (payload, supabase, context) => {
+        const workspaceId = String(payload.workspaceId ?? "");
+        const jobId = String(payload.jobId ?? "");
+        if (!workspaceId || !jobId) throw new Error("CRM delivery payload is incomplete.");
+        return executeLeadCrmDeliveryJobById({
+          serviceSupabase: supabase,
+          workspaceId,
+          jobId,
+          fetchImpl: context.fetchImpl,
+        });
+      };
+    }
     case "reporting.refresh": {
       const { refreshReportingSnapshot } = await import("../src/lib/meta-monitor/reporting-snapshots.ts");
       return (payload, supabase) =>

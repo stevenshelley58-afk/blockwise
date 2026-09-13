@@ -108,4 +108,19 @@ export {
   resolveCrmSite,
 } from "./site-resolution.ts";
 export type { CrmSiteMapping, CrmSiteStatus } from "./site-resolution.ts";
+export {
+  LEAD_CRM_DELIVERY_KIND,
+  LEAD_CRM_DELIVERY_TABLE,
+  crmCaptureCommandId,
+  crmDeliveryEnabled,
+  ensureLeadCrmDeliveryJob,
+  loadLeadCrmDeliveryJob,
+  markLeadCrmDeliveryDelivered,
+  markLeadCrmDeliveryError,
+  queueLeadCrmDelivery,
+} from "./delivery.ts";
+export type { LeadCrmDeliveryJob, LeadCrmDeliveryState } from "./delivery.ts";
+// `./delivery-worker.ts` is deliberately not re-exported here: it imports
+// `createWorkspaceCrm` from this module, so re-exporting it would close a cycle.
+// The VPS worker imports it directly by path.
 export * from "./types.ts";

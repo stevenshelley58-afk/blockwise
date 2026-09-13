@@ -2,6 +2,11 @@ import { randomUUID } from "node:crypto";
 
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 import { buildLeadDedupeKey } from "../leads/dedupe.ts";
+import {
+  crmDeliveryEnabled,
+  ensureLeadCrmDeliveryJob,
+  queueLeadCrmDelivery,
+} from "../crm/delivery.ts";
 import { loadMetaPublishPlan } from "./meta-execution.ts";
 import { syncMetaLeads, type LeadDeliveryAction, type MetaLeadRepository, type NormalizedMetaLead } from "./meta-leads.ts";
 import { assertProviderConnectionActive, loadStoredProviderTokens } from "./provider-connections.ts";
@@ -148,6 +153,33 @@ export function createSupabaseMetaLeadRepository(
         status,
         response,
       });
+    },
+
+    async ensureCrmDelivery({ workspaceId, leadId, sourceProvider, sourceSubmissionId, backfill }) {
+      // Delivery is off unless explicitly enabled. Registering nothing while it
+      // is off is deliberate: a pending row would show the customer a "waiting
+      // for CRM" state that nothing is going to resolve.
+      if (!crmDeliveryEnabled()) return;
+
+      // A CRM that is slow or down must never fail the capture, or block the
+      // rest of the batch. The job row is durable, so a delivery missed here can
+      // be picked up by a backfill instead of being lost.
+      try {
+        const job = await ensureLeadCrmDeliveryJob({
+          serviceSupabase,
+          workspaceId,
+          leadId,
+          sourceProvider,
+          sourceSubmissionId,
+          backfill,
+        });
+        await queueLeadCrmDelivery({ workspaceId, jobId: job.id });
+      } catch (error) {
+        console.error(
+          `[crm-delivery] could not register CRM delivery for lead ${leadId}:`,
+          error instanceof Error ? error.message : error,
+        );
+      }
     },
   };
 }

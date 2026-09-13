@@ -51,6 +51,20 @@ export type MetaLeadRepository = {
     status: "queued" | "delivered" | "failed" | "manual_review";
     response?: Record<string, unknown>;
   }): Promise<void>;
+  /**
+   * Register CRM delivery for a captured lead.
+   *
+   * Optional so a repository that does not deliver to a CRM stays valid, and so
+   * tests exercising only the Meta read path do not have to fake it. The real
+   * implementation creates the durable delivery job and hands it to the worker.
+   */
+  ensureCrmDelivery?(input: {
+    workspaceId: string;
+    leadId: string;
+    sourceProvider: string;
+    sourceSubmissionId: string;
+    backfill?: boolean;
+  }): Promise<void>;
 };
 
 export function normalizeMetaLead(raw: RawMetaLead): NormalizedMetaLead {
@@ -157,6 +171,16 @@ export async function syncMetaLeads(input: {
           },
         });
       }
+
+      // Getting the lead into the workspace's CRM is a separate durable step, so
+      // a CRM that is slow or down cannot fail the capture. The source id is the
+      // Meta lead id, which is what makes the CRM capture idempotent on retry.
+      await input.repository.ensureCrmDelivery?.({
+        workspaceId: input.workspaceId,
+        leadId: result.leadId,
+        sourceProvider: "meta",
+        sourceSubmissionId: lead.externalId,
+      });
     }
   }
 
