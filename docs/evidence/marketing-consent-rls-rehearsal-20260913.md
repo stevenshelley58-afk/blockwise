@@ -13,7 +13,7 @@ Observed passes: 9
 5. Unverified member is denied for a grant.
 6. An unverified member with a prior grant records a revoke.
 7. Cross-workspace member is denied and sees no events.
-9. Anonymous RPC is denied.
+8. Anonymous RPC is denied.
 9. `service_role` snapshot returns verified timestamp and latest revoked consent fact.
 
 No fixture rows survived the rollback.
