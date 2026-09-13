@@ -2,9 +2,33 @@
 -- This is intentionally not a CRM sync engine and exposes no token, card,
 -- provider-secret, arbitrary metadata, lead-delivery, or research fields.
 begin;
-create or replace function public.owner_crm_owner_email_verified_at(p_profile_id uuid) returns timestamptz language sql stable security definer set search_path='' as $$ select coalesce(u.email_confirmed_at,u.confirmed_at) from auth.users u where u.id=p_profile_id $$;
-revoke all on function public.owner_crm_owner_email_verified_at(uuid) from public,anon,authenticated;
-grant execute on function public.owner_crm_owner_email_verified_at(uuid) to service_role;
+drop function if exists public.owner_crm_owner_email_verified_at(uuid);
+create or replace function public.owner_crm_owner_email_verified_at(p_workspace_id uuid, p_profile_id uuid)
+returns timestamptz
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select u.email_confirmed_at
+  from auth.users u
+  where u.id = p_profile_id
+    and exists (
+      select 1
+      from public.workspace_members member
+      where member.workspace_id = p_workspace_id
+        and member.profile_id = p_profile_id
+        and member.role = 'owner'
+        and 1 = (
+          select count(*)
+          from public.workspace_members peer
+          where peer.workspace_id = p_workspace_id
+            and peer.role = 'owner'
+        )
+    )
+$$;
+revoke all on function public.owner_crm_owner_email_verified_at(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.owner_crm_owner_email_verified_at(uuid, uuid) to service_role;
 grant select on table public.workspace_marketing_consent_events to service_role;
 drop function if exists public.owner_crm_customer_snapshot_page(uuid, integer);
 
@@ -77,7 +101,10 @@ begin
         then workspace_page.created_by is null or workspace_page.created_by = owner_members.profile_ids[1]
       else null
     end,
-    public.owner_crm_owner_email_verified_at(owner_members.profile_ids[1]),
+    case when cardinality(owner_members.profile_ids) = 1
+      then public.owner_crm_owner_email_verified_at(workspace_page.id, owner_members.profile_ids[1])
+      else null
+    end,
     consent.id,
     consent.granted,
     consent.occurred_at,

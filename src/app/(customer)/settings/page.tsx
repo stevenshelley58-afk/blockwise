@@ -190,7 +190,7 @@ export default async function SettingsPage() {
             typeof userMetadata.timezone === "string"
               ? userMetadata.timezone
               : Intl.DateTimeFormat().resolvedOptions().timeZone,
-          emailVerified: Boolean(authenticatedUser?.user?.email_confirmed_at || authenticatedUser?.user?.confirmed_at),
+          emailVerified: Boolean(authenticatedUser?.user?.email_confirmed_at),
           marketingConsent: Boolean((marketingConsentRows as Array<{ granted?: boolean }> | null)?.[0]?.granted),
           notificationPreferences: p?.notification_preferences ?? {},
         }}

@@ -211,4 +211,27 @@ test("owner CRM refuses reuse of the global credential", async () => {
 });
 
 
-test("snapshot mirrors explicit consent facts without inferring eligibility", () => { const item = mapOwnerCrmSnapshotRow(row()); assert.deepEqual(item.marketingConsent, { eventId: "55555555-5555-4555-8555-555555555555", granted: true, occurredAt: OBSERVED_AT, policyVersion: "2026-09-13" }); assert.equal(item.ownerEmailVerifiedAt, OBSERVED_AT); const sql=readFileSync(new URL("../supabase/migrations/20260913030100_owner_crm_snapshot_marketing_consent.sql",import.meta.url),"utf8"); assert.match(sql,/order by e\.occurred_at desc,e\.id desc limit 1/); });
+test("snapshot mirrors explicit consent facts without inferring eligibility", () => {
+  const item = mapOwnerCrmSnapshotRow(row());
+  assert.deepEqual(item.marketingConsent, {
+    eventId: "55555555-5555-4555-8555-555555555555",
+    granted: true,
+    occurredAt: OBSERVED_AT,
+    policyVersion: "2026-09-13",
+  });
+  assert.equal(item.ownerEmailVerifiedAt, OBSERVED_AT);
+
+  for (const migrationName of [
+    "20260913030100_owner_crm_snapshot_marketing_consent.sql",
+    "20260913030200_correct_owner_crm_snapshot_marketing_consent.sql",
+  ]) {
+    const sql = readFileSync(new URL(`../supabase/migrations/${migrationName}`, import.meta.url), "utf8");
+    assert.match(sql, /order by e\.occurred_at desc,e\.id desc limit 1/);
+    assert.match(sql, /owner_crm_owner_email_verified_at\(p_workspace_id uuid, p_profile_id uuid\)/);
+    assert.match(sql, /member\.workspace_id = p_workspace_id/);
+    assert.match(sql, /1 = \(\s*select count\(\*\)[\s\S]*peer\.workspace_id = p_workspace_id/);
+    assert.match(sql, /case when cardinality\(owner_members\.profile_ids\) = 1[\s\S]*owner_crm_owner_email_verified_at\(workspace_page\.id/);
+    assert.doesNotMatch(sql, /owner_crm_owner_email_verified_at\(owner_members\.profile_ids\[1\]\)/);
+    assert.doesNotMatch(sql, /grant execute on function public\.owner_crm_owner_email_verified_at[\s\S]*to authenticated/);
+  }
+});
