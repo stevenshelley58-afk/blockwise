@@ -29,6 +29,11 @@ test("preview fixtures stay named and synthetic", () => {
   assert.match(component, /Not selected/);
   assert.match(component, /Continue/);
   assert.match(component, /Preview options/);
+  for (const id of ["meta-step-1", "meta-step-2", "meta-step-3", "meta-step-4", "step-help-1", "step-help-2", "step-help-3", "step-help-4"]) {
+    assert.match(component, new RegExp(id));
+  }
+  assert.match(component, /Show me how/);
+  assert.doesNotMatch(component, /Need the full walkthrough/);
   assert.match(component, /META_PARTNER_STEPS/);
   assert.match(component, /fullImage/);
   assert.match(component, /Manage campaigns and View performance/);

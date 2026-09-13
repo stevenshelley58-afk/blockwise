@@ -220,7 +220,7 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
 
         <ol className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <li>
-            <PreviewPanel number="1" title="Connect your Meta accounts">
+            <PreviewPanel testId="meta-step-1" number="1" title="Connect your Meta accounts">
               <p className="text-sm leading-5 text-muted-foreground">
                 Give Blockwise access to your business assets. You choose what
                 we can access and can remove it anytime.
@@ -237,11 +237,15 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
                   Open Meta settings
                 </a>
               </Button>
+              <StepHelp
+                testId="step-help-1"
+                steps={[META_PARTNER_STEPS[0]]}
+              />
             </PreviewPanel>
           </li>
 
           <li>
-            <PreviewPanel number="2" title="Use our Business Portfolio ID">
+            <PreviewPanel testId="meta-step-2" number="2" title="Use our Business Portfolio ID">
               <p className="text-sm leading-5 text-muted-foreground">
                 Add Blockwise as a partner in Meta Business Settings.
               </p>
@@ -281,11 +285,15 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
                   Copy was unavailable. Select the ID and copy it manually.
                 </p>
               ) : null}
+              <StepHelp
+                testId="step-help-2"
+                steps={[META_PARTNER_STEPS[1], META_PARTNER_STEPS[2]]}
+              />
             </PreviewPanel>
           </li>
 
           <li>
-            <PreviewPanel number="3" title="Share these assets">
+            <PreviewPanel testId="meta-step-3" number="3" title="Share these assets">
               <p className="text-sm leading-5 text-muted-foreground">
                 Choose Partial access. Leave Full control off.
               </p>
@@ -306,11 +314,15 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
                   detail="Optional"
                 />
               </div>
+              <StepHelp
+                testId="step-help-3"
+                steps={[META_PARTNER_STEPS[3]]}
+              />
             </PreviewPanel>
           </li>
 
           <li>
-            <PreviewPanel number="4" title={status.title}>
+            <PreviewPanel testId="meta-step-4" number="4" title={status.title}>
               <p className="text-sm leading-5 text-muted-foreground">
                 {status.body}
               </p>
@@ -370,23 +382,14 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
                   </Button>
                 </div>
               ) : null}
+              <StepHelp
+                testId="step-help-4"
+                steps={[META_PARTNER_STEPS[3]]}
+                caption="Click Assign assets in Meta, then return here and select I've added Blockwise. This preview shows example results."
+              />
             </PreviewPanel>
           </li>
         </ol>
-
-        <details className="mt-6 rounded-(--r-card) border border-border bg-card">
-          <summary className="cursor-pointer px-4 py-4 text-sm font-semibold sm:px-5">
-            Need the full walkthrough?
-          </summary>
-          <div className="grid gap-5 border-t border-border p-4 sm:p-5 lg:grid-cols-2">
-            <p className="text-sm leading-5 text-muted-foreground lg:col-span-2">
-              Meta settings screenshots. Select an image to enlarge.
-            </p>
-            {META_PARTNER_STEPS.map((step) => (
-              <WalkthroughStep step={step} key={step.title} />
-            ))}
-          </div>
-        </details>
 
         <details className="mt-4 rounded-(--r-card) border border-border bg-card px-4 py-3">
           <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">
@@ -430,16 +433,18 @@ export function MetaConnectPreview({ businessId }: { businessId: string | null }
 }
 
 function PreviewPanel({
+  testId,
   number,
   title,
   children,
 }: {
+  testId: string;
   number: string;
   title: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex h-full flex-col rounded-(--r-card) border border-border bg-card p-5 shadow-card xl:min-h-[300px]">
+    <section data-testid={testId} className="flex h-full flex-col rounded-(--r-card) border border-border bg-card p-5 shadow-card xl:min-h-[300px]">
       <span className="grid size-8 place-items-center rounded-full bg-data-soft text-sm font-semibold text-data">
         {number}
       </span>
@@ -470,6 +475,62 @@ function AssetRow({
         <span className="text-xs text-muted-foreground">{detail}</span>
       </span>
     </div>
+  );
+}
+
+function StepHelp({
+  testId,
+  steps,
+  caption,
+}: {
+  testId: string;
+  steps: readonly MetaPartnerStep[];
+  caption?: string;
+}) {
+  return (
+    <details
+      data-testid={testId}
+      className="mt-auto pt-5"
+    >
+      <summary className="cursor-pointer text-sm font-semibold text-data underline underline-offset-4">
+        Show me how
+      </summary>
+      <div className="mt-3 space-y-4 border-t border-border pt-4">
+        {steps.map((step) => {
+          const image = "/meta-connect-preview" + step.image;
+          const fullImage =
+            "/meta-connect-preview" + (step.fullImage ?? step.image);
+          const stepCaption =
+            caption ??
+            (step.title === "Choose assets and permissions"
+              ? "Turn on Manage campaigns and View performance. Leave Full control off."
+              : step.where);
+
+          return (
+            <article key={step.title}>
+              <h3 className="text-sm font-semibold">{step.title}</h3>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                {stepCaption}
+              </p>
+              <a
+                href={fullImage}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 block overflow-hidden rounded-(--r-ctl) border border-border bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <img
+                  src={image}
+                  alt={step.alt}
+                  width={step.width}
+                  height={step.height}
+                  className="mx-auto h-auto max-h-[420px] w-full object-contain"
+                />
+              </a>
+            </article>
+          );
+        })}
+      </div>
+    </details>
   );
 }
 

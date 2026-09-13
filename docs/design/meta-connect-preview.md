@@ -30,9 +30,10 @@ See `docs/releases/2026-09-12-meta-connect-preview.md` for immutable release evi
 
 The refined surface uses four numbered panels with responsive 4/2/1-column
 behavior, shorter copy, and a scoped data-blue treatment for CTA, numbers and
-icons. The full Meta walkthrough is closed below the panels and uses the four
-actual Meta screenshots from `META_PARTNER_STEPS`, each captioned for Manage
-campaigns and View performance while leaving Full control off. `Copy`/`Copied`
+icons. Each panel has its own closed `Show me how` disclosure, reusing the relevant
+Meta settings screenshot(s) from `META_PARTNER_STEPS`. The asset and final-save
+steps are captioned for Manage campaigns and View performance while leaving Full
+control off. `Copy`/`Copied`
 feedback is announced live; the Business ID row wraps at 320px. The preview
 state selector remains below the walkthrough and simulation behavior is retained.
 
