@@ -143,3 +143,8 @@ test("fields enter empty then fill at the same character boundary as the ad", ()
   assert.match(source,/if \(scene === 1\) draft.set\(0\)/);
   assert.match(source,/contentPlayback.current\?\.pause/);
 });
+
+test("typing reserves enough ad copy height for the original three lines", () => {
+  assert.match(styles, /bwStudyAdCopy \{ height: 64px; min-height: 64px/);
+  assert.match(styles, /bwStudyLink \{ height: 58px/);
+});
