@@ -22,6 +22,14 @@ export const CRM_OPEN_TASK_STATUSES = ["Backlog", "Todo", "In Progress"] as cons
 export const CRM_TASK_PURPOSES = ["first_contact", "follow_up", "respond", "appointment", "other"] as const;
 export type CrmTaskPurpose = (typeof CRM_TASK_PURPOSES)[number];
 
+/**
+ * Manual quality label. A separate axis from stage: a junk submission and a
+ * genuine enquiry both start at the same stage, and only a person can tell
+ * them apart, so quality is never inferred from stage or activity.
+ */
+export const CRM_QUALITIES = ["valid", "invalid", "high_intent"] as const;
+export type CrmQuality = (typeof CRM_QUALITIES)[number];
+
 export type CrmLead = {
   name: string;
   firstName: string | null;
@@ -29,6 +37,7 @@ export type CrmLead = {
   email: string | null;
   phone: string | null;
   stage: CrmStage | string;
+  quality: CrmQuality | string | null;
   archived: boolean;
   owner: string | null;
   revision: number;
@@ -73,6 +82,19 @@ export type CrmActivity = {
   note: string | null;
 };
 
+/**
+ * A native FCRM Note. The note is the editable authority for its text; the
+ * activity log records that one was added and points at it by name, so history
+ * stays auditable without a second editable copy of the words.
+ */
+export type CrmNote = {
+  name: string;
+  title: string | null;
+  content: string | null;
+  owner: string | null;
+  createdAt: string | null;
+};
+
 export type CrmCaptureResult = {
   lead: string;
   created: boolean;
@@ -83,7 +105,9 @@ export type CrmCaptureResult = {
 export type CrmMutationResult = {
   lead?: string;
   task?: string;
+  note?: string;
   stage?: CrmStage | string;
+  quality?: CrmQuality | string | null;
   status?: CrmTaskStatus | string;
   revision?: number;
   archived?: boolean;
