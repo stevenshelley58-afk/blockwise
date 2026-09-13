@@ -14,6 +14,8 @@ import type {
   CrmLead,
   CrmLeadSummary,
   CrmMutationResult,
+  CrmNote,
+  CrmQuality,
   CrmStage,
   CrmTask,
   CrmTaskPurpose,
@@ -63,6 +65,18 @@ export type LogReplyInput = LeadCommandInput & { note?: string | null; occurredA
 export type BookAppointmentInput = LeadCommandInput & { appointmentAt: string; note?: string | null; occurredAt?: string | null; eventId?: string | null };
 export type MarkOutcomeInput = LeadCommandInput & { outcome: "Won" | "Lost"; reason?: string | null };
 export type SetStageInput = LeadCommandInput & { stage: CrmStage };
+/**
+ * Quality is a separate axis from stage: a junk submission and a genuine
+ * enquiry both start at the same stage, and only a person can tell them apart.
+ * `null` clears the label.
+ */
+export type SetQualityInput = LeadCommandInput & { quality: CrmQuality | null };
+export type CreateNoteInput = LeadCommandInput & {
+  content: string;
+  title?: string | null;
+  eventId?: string | null;
+};
+export type ListNotesInput = { limit?: number; offset?: number };
 export type CreateTaskInput = CrmActor & {
   commandId: string;
   lead: string;
@@ -103,6 +117,8 @@ export interface CrmCommands {
   bookAppointment(input: BookAppointmentInput): Promise<CrmMutationResult>;
   markOutcome(input: MarkOutcomeInput): Promise<CrmMutationResult>;
   setStage(input: SetStageInput): Promise<CrmMutationResult>;
+  setQuality(input: SetQualityInput): Promise<CrmMutationResult>;
+  createNote(input: CreateNoteInput): Promise<CrmMutationResult>;
   createTask(input: CreateTaskInput): Promise<CrmMutationResult>;
   completeTask(input: TaskCommandInput): Promise<CrmMutationResult>;
   snoozeTask(input: SnoozeTaskInput): Promise<CrmMutationResult>;
@@ -114,6 +130,7 @@ export interface CrmCommands {
   listLeads(input?: ListLeadsInput): Promise<CrmLeadSummary[]>;
   listTasks(input?: ListTasksInput): Promise<CrmTask[]>;
   listActivities(lead: string, limit?: number): Promise<CrmActivity[]>;
+  listNotes(lead: string, input?: ListNotesInput): Promise<CrmNote[]>;
   health(): Promise<{ ok: boolean; site: string | null }>;
 }
 
@@ -226,6 +243,30 @@ export function createCrmCommands(client: CrmClient, workspaceId: string): CrmCo
       );
     },
 
+    async setQuality(input) {
+      return client.call<CrmMutationResult>(
+        `${API}.set_quality`,
+        command(input, {
+          lead: input.lead,
+          expected_revision: input.expectedRevision ?? null,
+          quality: input.quality,
+        }),
+      );
+    },
+
+    async createNote(input) {
+      return client.call<CrmMutationResult>(
+        `${API}.create_note`,
+        command(input, {
+          lead: input.lead,
+          expected_revision: input.expectedRevision ?? null,
+          title: input.title ?? null,
+          content: input.content,
+          event_id: input.eventId ?? null,
+        }),
+      );
+    },
+
     async createTask(input) {
       return client.call<CrmMutationResult>(
         `${API}.create_task`,
@@ -271,7 +312,12 @@ export function createCrmCommands(client: CrmClient, workspaceId: string): CrmCo
     async reopen(input) {
       return client.call<CrmMutationResult>(
         `${API}.reopen`,
-        command(input, { lead: input.lead, stage: input.stage, reason: input.reason }),
+        command(input, {
+          lead: input.lead,
+          expected_revision: input.expectedRevision ?? null,
+          stage: input.stage,
+          reason: input.reason,
+        }),
       );
     },
 
@@ -324,6 +370,16 @@ export function createCrmCommands(client: CrmClient, workspaceId: string): CrmCo
       return (result.activities ?? []).map(mapActivity);
     },
 
+    async listNotes(lead, input = {}) {
+      const result = await client.read<{ notes?: Record<string, unknown>[] }>(`${API}.list_notes`, {
+        ...scope,
+        lead,
+        limit: input.limit ?? 25,
+        offset: input.offset ?? 0,
+      });
+      return (result.notes ?? []).map(mapNote);
+    },
+
     async health() {
       const result = await client.call<{ ok?: boolean; site?: string | null }>(`${API}.health`, { ...scope });
       return { ok: result.ok === true, site: result.site ?? null };
@@ -339,13 +395,14 @@ function mapLead(row: Record<string, unknown>): CrmLead {
     email: nullableString(row.email),
     phone: nullableString(row.mobile_no ?? row.phone),
     stage: String(row.blockwise_stage ?? row.stage ?? "New"),
+    quality: nullableString(row.blockwise_quality ?? row.quality),
     archived: row.blockwise_archived === 1 || row.blockwise_archived === true || row.archived === true,
     owner: nullableString(row.lead_owner ?? row.owner),
     revision: Number(row.blockwise_revision ?? row.revision ?? 0),
     sourceProvider: nullableString(row.blockwise_source_provider ?? row.source_provider),
     sourceSubmissionId: nullableString(row.blockwise_source_submission_id ?? row.source_submission_id),
     propertyContext: nullableString(row.blockwise_property_context ?? row.property_context),
-    receivedAt: nullableString(row.received_at),
+    receivedAt: nullableString(row.blockwise_received_at ?? row.received_at),
     modified: nullableString(row.modified),
   };
 }
@@ -361,7 +418,9 @@ function mapTask(row: Record<string, unknown>): CrmTask {
     referenceDocname: nullableString(row.reference_docname),
     purpose: nullableString(row.blockwise_purpose),
     origin: nullableString(row.blockwise_origin),
-    dueAt: nullableString(row.blockwise_due_at),
+    // Native `due_date` is the authority. `blockwise_due_at` is read only as a
+    // fallback for a task written before due time moved to the native field.
+    dueAt: nullableString(row.due_date ?? row.blockwise_due_at),
     modified: nullableString(row.modified),
   };
 }
@@ -376,6 +435,16 @@ function mapActivity(row: Record<string, unknown>): CrmActivity {
     occurredAt: nullableString(row.occurred_at),
     recordedAt: nullableString(row.recorded_at),
     note: nullableString(row.note),
+  };
+}
+
+function mapNote(row: Record<string, unknown>): CrmNote {
+  return {
+    name: String(row.name ?? ""),
+    title: nullableString(row.title),
+    content: nullableString(row.content),
+    owner: nullableString(row.owner),
+    createdAt: nullableString(row.creation),
   };
 }
 
