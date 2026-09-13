@@ -55,6 +55,7 @@ type InvitationRow = { id: string; email: string; role: string; expires_at: stri
 
 export default async function SettingsPage() {
   const { supabase, access, auth } = await requirePageSurfaceAccess("monitor");
+  const { data: authenticatedUser } = await supabase.auth.getUser();
   const canManage = access.isOperator || access.role === "owner" || access.role === "admin";
   const service = createSupabaseServiceClient();
 
@@ -189,7 +190,7 @@ export default async function SettingsPage() {
             typeof userMetadata.timezone === "string"
               ? userMetadata.timezone
               : Intl.DateTimeFormat().resolvedOptions().timeZone,
-          emailVerified: Boolean((auth.claims as { email_confirmed_at?: string } | undefined)?.email_confirmed_at),
+          emailVerified: Boolean(authenticatedUser?.user?.email_confirmed_at || authenticatedUser?.user?.confirmed_at),
           marketingConsent: Boolean((marketingConsentRows as Array<{ granted?: boolean }> | null)?.[0]?.granted),
           notificationPreferences: p?.notification_preferences ?? {},
         }}
