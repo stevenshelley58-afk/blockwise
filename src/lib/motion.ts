@@ -91,14 +91,11 @@ export function entrance(reduced: boolean | null): {
 export const homepageMotion = {
   workflowStudy: {
     autoHoldMs: 2600,
-    adMoveMs: 680,
-    panelRevealMs: 360,
-    sideFadeMs: 150,
-    typeStartMs: 760,
-    typeMs: 28,
-    reviewHoldMs: 1500,
-    approvalHoldMs: 1500,
-    ease: [0.2, 0.82, 0.28, 1] as const,
+    travelMs: 640,
+    crossfadeMs: 350,
+    reviewHoldMs: 2400,
+    approvalHoldMs: 1600,
+    ease: [0.32, 0, 0.2, 1] as const,
   },
 } as const;
 

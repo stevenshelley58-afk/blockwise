@@ -53,3 +53,20 @@ export function studyAdMotion({
 
   return { x: targetX, y: targetY, scale: STUDY_AD_SCALE };
 }
+
+/** One reversible choreography, shared by every layer. All outputs stay bounded. */
+export function studyFrame(progress: number) {
+  const clamp = (value: number) => Math.max(0, Math.min(1, value));
+  const ad = clamp(progress);
+  const updated = clamp((progress - 0.28) / 0.48);
+  return {
+    ad,
+    gallery: 1 - clamp(progress / 0.32),
+    panel: clamp((progress - 0.08) / 0.5),
+    edit: 1 - clamp(progress - 1),
+    review: clamp(progress - 1),
+    original: 1 - updated,
+    updated,
+    approved: clamp(progress - 2),
+  };
+}
