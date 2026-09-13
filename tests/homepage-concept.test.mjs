@@ -120,12 +120,10 @@ test("the ad-creation headline is set as a block, not shrunk to one line", async
 
 test("the results card holds one height in every view", async () => {
   const css = await readFile(new URL("../src/components/homepage-concept/results-reporting.css", import.meta.url), "utf8");
-  // The card is sized to the chart views; the taller email view scrolls inside
-  // it, because a view that resized the card moved the trial section and the
-  // footer under the reader.
+  // All views fit the stable frame without shifting the following section.
   assert.match(css, /\.rr-stage \{ --rr-stage-h: \d+px;[^}]*height: var\(--rr-stage-h\)/);
   assert.match(css, /\.rr-panel \{ flex: 1 1 auto; min-height: 0; overflow: hidden; \}/);
-  assert.match(css, /\.rr-panel > \.rr-lead-email \{ max-height: 100%; overflow-y: auto/);
+  assert.doesNotMatch(css, /overflow-y: auto/);
   for (const height of [512, 505]) {
     assert.ok(css.includes(`--rr-stage-h: ${height}px`), `missing the ${height}px breakpoint value`);
   }

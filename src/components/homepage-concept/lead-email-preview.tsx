@@ -11,19 +11,14 @@ export function LeadEmailPreview() {
   return (
     <div className="rr-lead-email" aria-label="New lead email preview">
       <div className="rr-lead-email-grid">
-        <figure className="rr-lead-email-creative">
-          <figcaption>Related creative</figcaption>
+        <article className="rr-lead-email-card">
           <img
             className="rr-lead-email-creative-img"
             src={withBasePath(email.creative.src)}
             alt={email.creative.alt}
-            width={190}
-            height={285}
+            width={56}
+            height={56}
           />
-          <strong>{email.creative.label}</strong>
-        </figure>
-
-        <article className="rr-lead-email-card">
           <img
             className="rr-lead-email-brand"
             src={withBasePath("/brand/blockwise-logo.svg")}

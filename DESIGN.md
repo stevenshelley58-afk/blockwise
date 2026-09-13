@@ -193,3 +193,5 @@ The approved three-screen explainer uses one reversible Motion timeline for Choo
 Workflow text handovers fade the outgoing text before introducing the replacement inside the same fixed surface. Headline and field layers must never create double-exposed text during normal forward or reverse playback.
 
 The workflow frame has no bottom hint bar. Customise keeps intrinsic two-line Headline and three-line Ad text fields, never stretching a field to fill the panel.
+
+Reporting Email uses one compact notification with a small creative thumbnail and a two-column details grid. Its full content, including preferences, fits the fixed reporting frame without an inner scrollbar or a fade concealing content. The chart and email views retain the same frame height.
