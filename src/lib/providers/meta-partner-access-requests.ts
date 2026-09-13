@@ -153,6 +153,33 @@ async function loadEvents(
   return (data ?? []) as AuditRow[];
 }
 
+function matchesRequestInput(
+  request: MetaPartnerAccessRequest,
+  input: {
+    workspaceId: string;
+    requestType: MetaPartnerRequestType;
+    adAccountId: string | null;
+    pageId: string | null;
+    instagramAccountId: string | null;
+  },
+) {
+  return (
+    request.workspaceId === input.workspaceId &&
+    request.requestType === input.requestType &&
+    request.adAccountId === (input.adAccountId ?? "") &&
+    request.pageId === (input.pageId ?? "") &&
+    request.instagramAccountId === input.instagramAccountId
+  );
+}
+
+function idempotencyConflict() {
+  return new MetaPartnerAccessRequestError(
+    "idempotency_conflict",
+    "This request ID is already used for a different request.",
+    409,
+  );
+}
+
 export async function createMetaPartnerAccessRequest(input: {
   serviceSupabase: SupabaseClient;
   workspaceId: string;
@@ -192,22 +219,24 @@ export async function createMetaPartnerAccessRequest(input: {
       "Enter a valid numeric ad account ID and Page ID. The optional Instagram ID must also be numeric.",
     );
 
+  const requestInput = {
+    workspaceId,
+    requestType,
+    adAccountId,
+    pageId,
+    instagramAccountId,
+  };
+  // Customer-created requests may only replay an idempotency key inside their
+  // own workspace. Operator reads intentionally use the separate unscoped
+  // lookup guarded by the operator route.
   const existing = toRequest(
-    await loadEvents(input.serviceSupabase, { requestId: mutationId }),
+    await loadEvents(input.serviceSupabase, {
+      workspaceId,
+      requestId: mutationId,
+    }),
   );
   if (existing) {
-    if (
-      existing.workspaceId !== workspaceId ||
-      existing.requestType !== requestType ||
-      existing.adAccountId !== (adAccountId ?? "") ||
-      existing.pageId !== (pageId ?? "") ||
-      existing.instagramAccountId !== instagramAccountId
-    )
-      throw new MetaPartnerAccessRequestError(
-        "idempotency_conflict",
-        "This request ID is already used for different Meta assets.",
-        409,
-      );
+    if (!matchesRequestInput(existing, requestInput)) throw idempotencyConflict();
     return existing;
   }
 
@@ -233,15 +262,25 @@ export async function createMetaPartnerAccessRequest(input: {
       "The Meta partner-access request could not be recorded.",
       500,
     );
+
+  // A unique-key collision can be a concurrent retry or a request owned by a
+  // different workspace. Querying by both keys prevents either case from
+  // returning another customer's request.
   const request = toRequest(
-    await loadEvents(input.serviceSupabase, { requestId: mutationId }),
+    await loadEvents(input.serviceSupabase, {
+      workspaceId,
+      requestId: mutationId,
+    }),
   );
-  if (!request)
+  if (!request) {
+    if (error?.code === "23505") throw idempotencyConflict();
     throw new MetaPartnerAccessRequestError(
       "storage_error",
       "The Meta partner-access request could not be loaded after saving.",
       500,
     );
+  }
+  if (!matchesRequestInput(request, requestInput)) throw idempotencyConflict();
   return request;
 }
 

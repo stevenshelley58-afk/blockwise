@@ -13,6 +13,7 @@ import {
 } from "../src/lib/providers/meta-partner-access-requests.ts";
 
 const WORKSPACE_ID = "11111111-1111-4111-8111-111111111111";
+const OTHER_WORKSPACE_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const ACTOR_ID = "22222222-2222-4222-8222-222222222222";
 
 type Row = Record<string, unknown> & {
@@ -34,13 +35,16 @@ function auditStub() {
       builder._filters.push([column, value]);
       return builder;
     },
-    order: async () =>
-      ({
+    order: async () => {
+      const filters = builder._filters;
+      builder._filters = [];
+      return {
         data: rows.filter((row) =>
-          builder._filters.every(([column, value]) => row[column] === value),
+          filters.every(([column, value]) => row[column] === value),
         ),
         error: null,
-      }) as never,
+      } as never;
+    },
     insert: async (row: Record<string, unknown>) => {
       if (rows.some((existing) => existing.id === row.id))
         return { error: { code: "23505", message: "duplicate" } };
@@ -76,6 +80,88 @@ test("a confirmation-only request carries no asset IDs and accepts none", async 
   assert.equal(request.status, "requested");
   assert.equal(rows.length, 1);
   assert.equal(rows[0]!.metadata?.adAccountId, null);
+});
+
+test("same-workspace retries return the original request", async () => {
+  const { client, rows } = auditStub();
+  const input = {
+    serviceSupabase: client,
+    workspaceId: WORKSPACE_ID,
+    actorProfileId: ACTOR_ID,
+    mutationId: "34343434-3434-4434-8434-343434343434",
+    requestType: "assets" as const,
+    adAccountId: "123456",
+    pageId: "654321",
+  };
+  const created = await createMetaPartnerAccessRequest(input);
+  const retried = await createMetaPartnerAccessRequest(input);
+
+  assert.deepEqual(retried, created);
+  assert.equal(rows.length, 1);
+});
+
+test("same-workspace retries with different inputs are rejected", async () => {
+  const { client, rows } = auditStub();
+  const mutationId = "35353535-3535-4535-8535-353535353535";
+  await createMetaPartnerAccessRequest({
+    serviceSupabase: client,
+    workspaceId: WORKSPACE_ID,
+    actorProfileId: ACTOR_ID,
+    mutationId,
+    requestType: "assets",
+    adAccountId: "123456",
+    pageId: "654321",
+  });
+
+  await assert.rejects(
+    createMetaPartnerAccessRequest({
+      serviceSupabase: client,
+      workspaceId: WORKSPACE_ID,
+      actorProfileId: ACTOR_ID,
+      mutationId,
+      requestType: "assets",
+      adAccountId: "123457",
+      pageId: "654321",
+    }),
+    (error: unknown) =>
+      error instanceof MetaPartnerAccessRequestError &&
+      error.code === "idempotency_conflict" &&
+      error.status === 409,
+  );
+  assert.equal(rows.length, 1);
+});
+
+test("cross-workspace duplicate insert races cannot return another workspace request", async () => {
+  const { client, rows } = auditStub();
+  const mutationId = "36363636-3636-4636-8636-363636363636";
+  await createMetaPartnerAccessRequest({
+    serviceSupabase: client,
+    workspaceId: OTHER_WORKSPACE_ID,
+    actorProfileId: ACTOR_ID,
+    mutationId,
+    requestType: "assets",
+    adAccountId: "123456",
+    pageId: "654321",
+  });
+
+  await assert.rejects(
+    createMetaPartnerAccessRequest({
+      serviceSupabase: client,
+      workspaceId: WORKSPACE_ID,
+      actorProfileId: ACTOR_ID,
+      mutationId,
+      requestType: "assets",
+      adAccountId: "777777",
+      pageId: "888888",
+    }),
+    (error: unknown) =>
+      error instanceof MetaPartnerAccessRequestError &&
+      error.code === "idempotency_conflict" &&
+      error.status === 409 &&
+      error.message === "This request ID is already used for a different request.",
+  );
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]!.workspace_id, OTHER_WORKSPACE_ID);
 });
 
 test("an operator records the verified IDs when marking a request ready", async () => {
