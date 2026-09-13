@@ -24,11 +24,16 @@ test("public audit copy avoids unsupported market and offer claims", () => {
   assert.match(availability, /does not show whether local agencies are advertising/);
   assert.match(availability, /not a complete view of the local market/);
   assert.match(availability, /Coverage is limited/);
+  assert.match(availability, /No verified local ad observations were returned/);
   assert.doesNotMatch(page, /Almost no agencies are advertising|opening to be first|Three ads before Checkout|Six free renders|Create three ads free/);
   assert.match(page, /\["Free Appraisal", "Market Update", "Property Management"\]/);
-  assert.doesNotMatch(form, /follow up about a trial|setup call/i);
+  assert.doesNotMatch(form, /follow up about a trial|setup call|Promote a listing/i);
   assert.match(form, /only use these details to send your requested campaign plan/i);
   assert.match(form, /source: "audit-plan"/);
+  assert.match(form, /property_management/);
+  assert.match(page, /getAuditFooterCopy/);
+  assert.match(page, /<h2>Example campaign<\/h2>/);
+  assert.doesNotMatch(page, /Your campaign, ready to review/);
 });
 
 

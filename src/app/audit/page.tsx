@@ -20,7 +20,7 @@ import {
   type AdAuditStats,
   type ExcludedAdvertiser,
 } from "@/lib/research/ad-audit";
-import { getAuditAvailability, getAuditHeroCopy, type AuditAvailability } from "@/lib/research/audit-availability";
+import { getAuditAvailability, getAuditFooterCopy, getAuditHeroCopy, type AuditAvailability } from "@/lib/research/audit-availability";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 import "../audit.css";
@@ -233,7 +233,7 @@ export default async function AuditPage({ searchParams }: { searchParams?: Searc
             <p className="fine-print">Real estate Meta ads workflow: scan, campaign creation, approval, export and reporting.</p>
           </div>
           <div>
-            <p className="fine-print">{area} audit prepared {prepared}. Figures reflect ads detected at scan time.</p>
+            <p className="fine-print">{getAuditFooterCopy({ availability, area, prepared })}</p>
           </div>
         </div>
       </footer>
@@ -375,8 +375,7 @@ function ExamplePreview({ area }: { area: string }) {
     <section className="section">
       <div className="container preview-grid">
         <div className="preview-panel">
-          <p className="card-kicker">Your campaign, ready to review</p>
-          <h2>Example campaign preview</h2>
+          <h2>Example campaign</h2>
           <p>This is an illustrative campaign setup, not an automatic deliverable.</p>
           <article className="mock-ad">
             <div className="mock-head">

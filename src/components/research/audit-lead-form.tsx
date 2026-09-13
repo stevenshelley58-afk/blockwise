@@ -110,7 +110,7 @@ export function AuditLeadForm({ area, label, signupHref, metrics, analytics }: A
             <option value="" disabled>Choose one</option>
             <option value="vendor_leads">Vendor leads</option>
             <option value="buyer_leads">Buyer leads</option>
-            <option value="listing_promotion">Promote a listing</option>
+            <option value="property_management">Property management leads</option>
             <option value="market_update">Market update</option>
           </select>
         </label>

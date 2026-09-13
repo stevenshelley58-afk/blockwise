@@ -29,3 +29,10 @@ export function getAuditHeroCopy({
   if (availability === "limited") return { headline: `This scan observed ${count.format(detected)} local real estate ads around ${area}.`, lede: `The available public observations include ${count.format(active)} marked active across ${count.format(advertisers)} advertisers. Coverage is limited and does not represent the whole local market.` };
   return { headline: `This scan observed ${count.format(detected)} local real estate ads around ${area}.`, lede: `${count.format(active)} were marked active across ${count.format(advertisers)} advertisers. These are public observations, not a complete view of the local market.` };
 }
+
+export function getAuditFooterCopy({ availability, area, prepared }: { availability: AuditAvailability; area: string; prepared: string }) {
+  if (availability === "unavailable") return `Local ad observations are unavailable for ${area}.`;
+  if (availability === "empty") return `No verified local ad observations were returned for ${area}.`;
+  if (availability === "limited") return `Available observations for ${area}, prepared ${prepared}. Coverage is limited.`;
+  return `Observed local ads for ${area}, prepared ${prepared}. Figures reflect ads detected at scan time.`;
+}
