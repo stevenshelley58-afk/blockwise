@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { studyText, studyFrame, studyTransition, studyAdMotion, studyEditLayout } from "../src/components/motion-study/workflow-motion-study-geometry.ts";
+import { studyTypingSchedule, studyText, studyFrame, studyTransition, studyAdMotion, studyEditLayout } from "../src/components/motion-study/workflow-motion-study-geometry.ts";
 const source = await readFile(new URL("../src/components/motion-study/workflow-motion-study.tsx", import.meta.url), "utf8");
 const styles = await readFile(new URL("../src/components/motion-study/workflow-motion-study.module.css", import.meta.url), "utf8");
 
@@ -147,4 +147,19 @@ test("fields enter empty then fill at the same character boundary as the ad", ()
 test("typing reserves enough ad copy height for the original three lines", () => {
   assert.match(styles, /bwStudyAdCopy \{ height: 64px; min-height: 64px/);
   assert.match(styles, /bwStudyLink \{ height: 58px/);
+});
+
+
+test("both screens type at one character speed with short consistent field gaps", () => {
+  const words=["Homeowners and potential sellers","$20 per day","14 days"];
+  const schedule=studyTypingSchedule(words,38,120);
+  schedule.ranges.forEach((range,i) => {
+    assert.ok(Math.abs((range.end-range.start)*schedule.durationMs-words[i].length*38)<1e-8);
+    assert.equal(studyText(range.start,words[i],range.start,range.end),"");
+    assert.equal(studyText(range.end,words[i],range.start,range.end),words[i]);
+    assert.equal(studyText(range.start+38*1.1/schedule.durationMs,words[i],range.start,range.end),words[i][0]);
+  });
+  assert.equal((source.match(/<StudyReviewValue clock=/g)||[]).length,3);
+  assert.doesNotMatch(source,/audienceOpacity|budgetOpacity|durationOpacity/);
+  assert.match(source,/panelSwap \? "linear"/);
 });

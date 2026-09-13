@@ -86,7 +86,8 @@ export function studyTransition(from: StudyFrame, to: StudyFrame, progress: numb
   const edit = from.panel === 0 ? to.edit : from.edit;
   const review = from.panel === 0 ? to.review : from.review;
   const swapping = from.ad === 1 && to.ad === 1 && (from.edit !== to.edit || from.review !== to.review);
-  const shell = swapping ? (t < .38 ? mix(from.shell, .84, ramp(0, .38)) : mix(.84, 1, ramp(.38, .78))) : mix(from.shell, 1);
+  const soften = (v: number) => v * v * (3 - 2 * v);
+  const shell = swapping ? (t < .38 ? mix(from.shell, .94, soften(ramp(0, .38))) : mix(.94, 1, soften(ramp(.38, .78)))) : mix(from.shell, 1);
   const shellAlpha = swapping ? (t < .38 ? mix(from.shellAlpha, 0, ramp(0, .38)) : ramp(.38, .7)) : mix(from.shellAlpha, 1);
   const content = (a: number, b: number) => swapping ? mix(a, b, b > a ? ramp(.78, 1) : ramp(0, .25)) : fade(a, b);
   return {
@@ -108,4 +109,17 @@ export function studyTransition(from: StudyFrame, to: StudyFrame, progress: numb
 export function studyText(progress: number, text: string, start: number, end: number, fallback = "") {
   if (progress <= start) return fallback;
   return text.slice(0, Math.floor(Math.min(1, (progress - start) / (end - start)) * text.length));
+}
+
+
+/** Equal time per character, with a short breath before each field. */
+export function studyTypingSchedule(texts: readonly string[], characterMs: number, gapMs: number) {
+  let cursor = 0;
+  const ranges = texts.map(text => {
+    const start = cursor + gapMs;
+    cursor = start + text.length * characterMs;
+    return { start, end: cursor };
+  });
+  const durationMs = cursor;
+  return { durationMs, ranges: ranges.map(({ start, end }) => ({ start: start / durationMs, end: end / durationMs })) };
 }

@@ -192,7 +192,7 @@
 .bwStudyReviewList { display: grid; gap: 0; margin: 0; }
 .bwStudyReviewList div { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--study-line); }
 .bwStudyReviewList dt { color: var(--study-muted); font-size: 12px; }
-.bwStudyReviewList dd { margin: 0; color: var(--study-ink); font-size: 13px; font-weight: 700; text-align: right; }
+.bwStudyReviewList dd { width: 58%; min-height: 2.6em; margin: 0; color: var(--study-ink); font-size: 13px; font-weight: 700; text-align: left; }
 .bwStudyApprovalStatus { display: flex; justify-content: center; align-items: center; gap: 8px; margin: 8px 0 0; min-height: 46px; border-radius: 999px; color: #fff; background: #16181d; font-size: 13px; font-weight: 750;  }
 .bwStudyApprovalStatus[data-approved="true"] { background: #067443; }
 .bwStudyApprovalStatus svg { width: 20px; height: 20px; padding: 2px; border-radius: 50%; background: #dff3e8; color: #067443; }

@@ -8,7 +8,7 @@ import { AD_EXAMPLES, withBasePath } from "@/lib/homepage-concept/content";
 import { creativeImageSrcSet } from "@/lib/homepage-concept/creative-image";
 import { TRIAL_SIGNUP_URL } from "@/lib/homepage-concept/pricing";
 import { homepageMotion, useHydratedReducedMotion } from "@/lib/motion";
-import { STUDY_NARROW_BREAKPOINT, studyAdMotion, studyEditLayout, studyText, studyFrame, studyTransition } from "./workflow-motion-study-geometry";
+import { STUDY_NARROW_BREAKPOINT, studyAdMotion, studyEditLayout, studyTypingSchedule, studyText, studyFrame, studyTransition } from "./workflow-motion-study-geometry";
 import styles from "./workflow-motion-study.module.css";
 
 const STUDY_STEPS = [
@@ -26,6 +26,11 @@ const TIMING = homepageMotion.workflowStudy;
 const TEMPLATE_HEADLINE = "Thinking of selling?";
 const AD_TEXT = "Thinking of selling? Find out what your home could be worth.";
 
+const EDIT_TEXTS = [SELECTED_AD.adTitle, AD_TEXT, SELECTED_AD.linkTitle] as const;
+const REVIEW_TEXTS = ["Homeowners and potential sellers", "$20 per day", "14 days"] as const;
+const EDIT_WRITING = studyTypingSchedule(EDIT_TEXTS, TIMING.characterMs, TIMING.fieldGapMs);
+const REVIEW_WRITING = studyTypingSchedule(REVIEW_TEXTS, TIMING.characterMs, TIMING.fieldGapMs);
+
 function useDraftText(clock: MotionValue<number>, text: string, start: number, end: number, fallback = "") {
   const value = useTransform(clock, n => studyText(n, text, start, end, fallback));
   const [display, setDisplay] = useState(value.get());
@@ -42,12 +47,17 @@ function StudyField({ clock, id, label, text, start, end, rows = 2 }: { clock: M
   </div></label>;
 }
 
+function StudyReviewValue({ clock, text, start, end }: { clock: MotionValue<number>; text: string; start: number; end: number }) {
+  const value = useDraftText(clock, text, start, end);
+  return <dd>{value}</dd>;
+}
+
 function StudyAd({ draft, headline, ad = SELECTED_AD }: { ad?: {image: string; postCopy: string; linkTitle: string}; draft?: MotionValue<number>; headline?: string }) {
   const staticClock = useMotionValue(0);
   const clock = draft ?? staticClock;
-  const title = useDraftText(clock, SELECTED_AD.adTitle, .08, .32, TEMPLATE_HEADLINE);
-  const copy = useDraftText(clock, AD_TEXT, .39, .71, SELECTED_AD.postCopy);
-  const link = useDraftText(clock, SELECTED_AD.linkTitle, .77, .97, SELECTED_AD.linkTitle);
+  const title = useDraftText(clock, SELECTED_AD.adTitle, EDIT_WRITING.ranges[0].start, EDIT_WRITING.ranges[0].end, TEMPLATE_HEADLINE);
+  const copy = useDraftText(clock, AD_TEXT, EDIT_WRITING.ranges[1].start, EDIT_WRITING.ranges[1].end, SELECTED_AD.postCopy);
+  const link = useDraftText(clock, SELECTED_AD.linkTitle, EDIT_WRITING.ranges[2].start, EDIT_WRITING.ranges[2].end, SELECTED_AD.linkTitle);
   return <article className={styles.bwStudySelectedAd} aria-label={headline ? "Ready-made ad" : "Selected ad preview"}>
     <header className={styles.bwStudyAdHead}>
       <span className={styles.bwStudyAvatar} aria-hidden="true">AM</span>
@@ -108,10 +118,7 @@ export function WorkflowMotionStudy() {
   const panelY = useTransform(frame, f => narrow ? (1 - f.ad) * geometry.adHeight * 1.2 : 0);
   const editOpacity = useTransform(frame, f => f.edit);
   const reviewOpacity = useTransform(frame, f => f.review);
-  const audienceOpacity = useTransform(reviewFill, [0, .12, .3], [0, 0, 1]);
-  const budgetOpacity = useTransform(reviewFill, [0, .38, .56], [0, 0, 1]);
-  const durationOpacity = useTransform(reviewFill, [0, .64, .82], [0, 0, 1]);
-  const approvalReady = useTransform(reviewFill, [.88, 1], [0, 1]);
+  const approvalReady = useTransform(frame, f => f.approved > 0 ? 1 : 0);
   const pendingOpacity = useTransform(frame, f => 1 - f.approved);
   const approvedOpacity = useTransform(frame, f => f.approved);
   const layout = studyEditLayout({ ...geometry, narrow });
@@ -155,9 +162,10 @@ export function WorkflowMotionStudy() {
     setSettledScene(null);
     // Capture the current visual frame before restarting the clock, never the previous screen endpoint.
     progress.set(0);
+    const panelSwap = from.ad === 1 && to.ad === 1 && (from.edit !== to.edit || from.review !== to.review);
     const controls = animate(progress, 1, {
-      duration: (scene < 0 ? TIMING.browseMs : scene === 2 || (scene === 1 && from.review > 0) ? TIMING.panelSwapMs : scene < 2 ? TIMING.travelMs : TIMING.crossfadeMs) / 1000,
-      ease: TIMING.ease,
+      duration: (scene < 0 ? TIMING.browseMs : panelSwap ? TIMING.panelSwapMs : scene < 3 ? TIMING.travelMs : TIMING.crossfadeMs) / 1000,
+      ease: panelSwap ? "linear" : TIMING.ease,
       onUpdate: value => frame.set(studyTransition(from, to, value)),
       onComplete: () => { frame.set(to); setSettledScene(scene); },
     });
@@ -172,7 +180,7 @@ export function WorkflowMotionStudy() {
     if (settledScene !== scene || (scene !== 1 && scene !== 2)) return;
     const clock = scene === 1 ? draft : reviewFill;
     const controls = animate(clock, 1, {
-      duration: (scene === 1 ? TIMING.writeMs : TIMING.reviewFillMs) / 1000,
+      duration: (scene === 1 ? EDIT_WRITING.durationMs : REVIEW_WRITING.durationMs) / 1000,
       ease: "linear",
       onComplete: () => setContentDone(true),
     });
@@ -224,13 +232,13 @@ export function WorkflowMotionStudy() {
           <motion.div className={styles.bwStudyPanelSurface} style={{ opacity: panelOpacity, scale: panelScale, x: panelX, y: panelY }}>
             <motion.section className={styles.bwStudyEditPanel} style={{ opacity: editOpacity }} aria-label="Customise your ad" aria-hidden={step !== 1} inert={step !== 1}>
               <div className={styles.bwStudyPanelHeading}><h2>Make it yours</h2></div>
-              <StudyField clock={draft} id="study-headline" label="Headline" text={SELECTED_AD.adTitle} start={.08} end={.32} />
-              <StudyField clock={draft} id="study-ad-text" label="Ad text" text={AD_TEXT} start={.39} end={.71} rows={3} />
-              <StudyField clock={draft} id="study-link-title" label="Link title" text={SELECTED_AD.linkTitle} start={.77} end={.97} />
+              <StudyField clock={draft} id="study-headline" label="Headline" text={SELECTED_AD.adTitle} {...EDIT_WRITING.ranges[0]} />
+              <StudyField clock={draft} id="study-ad-text" label="Ad text" text={AD_TEXT} {...EDIT_WRITING.ranges[1]} rows={3} />
+              <StudyField clock={draft} id="study-link-title" label="Link title" text={SELECTED_AD.linkTitle} {...EDIT_WRITING.ranges[2]} />
             </motion.section>
             <motion.section className={styles.bwStudyEditPanel} style={{ opacity: reviewOpacity }} aria-label="Review your ad setup" aria-hidden={step !== 2} inert={step !== 2}>
               <div className={styles.bwStudyPanelHeading}><h2>Ready to review</h2></div>
-              <dl className={styles.bwStudyReviewList}><div><dt>Who sees it</dt><motion.dd style={{ opacity: audienceOpacity }}>Homeowners and potential sellers</motion.dd></div><div><dt>Daily budget</dt><motion.dd style={{ opacity: budgetOpacity }}>$20 per day</motion.dd></div><div><dt>Duration</dt><motion.dd style={{ opacity: durationOpacity }}>14 days</motion.dd></div></dl>
+              <dl className={styles.bwStudyReviewList}><div><dt>Who sees it</dt><StudyReviewValue clock={reviewFill} text={REVIEW_TEXTS[0]} {...REVIEW_WRITING.ranges[0]} /></div><div><dt>Daily budget</dt><StudyReviewValue clock={reviewFill} text={REVIEW_TEXTS[1]} {...REVIEW_WRITING.ranges[1]} /></div><div><dt>Duration</dt><StudyReviewValue clock={reviewFill} text={REVIEW_TEXTS[2]} {...REVIEW_WRITING.ranges[2]} /></div></dl>
               <motion.div className={styles.bwStudyApprovalStack} style={{ opacity: approvalReady }}>
                 <motion.div className={styles.bwStudyApprovalStatus} style={{ opacity: pendingOpacity }} aria-hidden="true">Approving ad</motion.div>
                 <motion.div className={styles.bwStudyApprovalStatus} data-approved="true" style={{ opacity: approvedOpacity }} aria-hidden="true"><Check aria-hidden="true" size={18} /> Ad approved</motion.div>
