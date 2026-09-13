@@ -118,3 +118,7 @@ test("study restores the workflow heading, trial terms, measured container state
  assert.match(source, /if \(reviewConfirmed\) return/);
  assert.ok(source.indexOf("setManual(true)") < source.indexOf("if (next === step) return"));
  });
+
+test("reduced-motion review explicitly settles approval after the screen changes", () => {
+ assert.match(source, /if \(step === "Review" && reduced\) \{\s+setReviewConfirmed\(true\);\s+return;/);
+});

@@ -217,7 +217,11 @@ export function WorkflowMotionStudy() {
   }, [headlineChars, inView, manual, pageVisible, reduced, step]);
 
   useEffect(() => {
-    if (step !== "Review" || reduced || !inView || !pageVisible) {
+    if (step === "Review" && reduced) {
+      setReviewConfirmed(true);
+      return;
+    }
+    if (step !== "Review" || !inView || !pageVisible) {
       if (step !== "Review") setReviewConfirmed(false);
       return;
     }
@@ -288,7 +292,7 @@ export function WorkflowMotionStudy() {
             <div className={styles.bwStudyGallery} aria-hidden={customise}>
               {SIDE_ADS.map((ad) => <SideAd key={ad.id} ad={ad} />)}
             </div>
-            <motion.div className={styles.bwStudyAdMotion} ref={adRef} style={{ left: geometryReady ? 0 : undefined }} initial={false} animate={geometryReady ? adMotion : undefined} transition={{ duration: !motionReady || reduced ? 0 : TIMING.adMoveMs / 1000, ease: TIMING.ease }}>
+            <motion.div className={styles.bwStudyAdMotion} ref={adRef} style={{ left: geometryReady ? 0 : undefined, ...(!motionReady && geometryReady ? adMotion : {}) }} initial={false} animate={geometryReady ? adMotion : undefined} transition={{ duration: !motionReady || reduced ? 0 : TIMING.adMoveMs / 1000, ease: TIMING.ease }}>
               <StudyAd headlineChars={headlineChars} />
             </motion.div>
             <AnimatePresence initial={false} mode="wait">{customise ? <div key={review ? "review" : "edit"} className={styles.bwStudyEditSlot}>{review ? <ReviewPanel approved={reviewConfirmed} reduced={reduced} /> : <EditPanel headlineChars={headlineChars} reduced={reduced} />}</div> : null}</AnimatePresence>
