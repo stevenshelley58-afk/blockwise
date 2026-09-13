@@ -1,25 +1,95 @@
 import { expect, test } from "@playwright/test";
 
-/**
- * Responsive + accessibility coverage for the Meta sharing flow.
- *
- * Two surfaces, both against any authenticated customer session; when a
- * storage state is unavailable the suite is skipped (CI: provide
- * E2E_STORAGE_STATE / PLAYWRIGHT_BASE_URL).
- *
- * /connect-meta is the checklist: one primary action, gated by one
- * confirmation, no asset IDs to type.
- * /help carries the walkthrough, so its real Meta screenshots must stay
- * readable and openable at every width.
- *
- * Readability floors (acceptance):
- *  - connect screen: no horizontal overflow; every control >= 44px tall
- *  - confirmation gates the submit button
- *  - help walkthrough: portrait screenshot renders >= 260px wide, panoramic
- *    (cropped) screenshot >= 500px wide on desktop
- *  - the full-size viewer opens by keyboard and closes on Escape
- *  - mobile keeps the standard headline size
- */
+const controlledCanary = process.env.BLOCKWISE_CONTROLLED_CANARY === "1";
+test.use({
+  storageState: process.env.ADSTUDIO_E2E_STORAGE_STATE,
+  serviceWorkers: "block",
+  ignoreHTTPSErrors: controlledCanary,
+  launchOptions: {
+    executablePath: process.env.ADSTUDIO_E2E_CHROMIUM,
+    args: controlledCanary ? ["--host-resolver-rules=MAP blockwise.sale 127.0.0.1,EXCLUDE localhost"] : undefined,
+  },
+});
+
+// Real authenticated route and server guards, with only the manual request
+// response stubbed for deterministic UI states. No customer/provider mutations.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("bw-consent", "essential"));
+  await page.route("**/*", route =>
+    ["GET", "HEAD", "OPTIONS"].includes(route.request().method())
+      ? route.continue()
+      : route.fulfill({ status: 409, json: { error: "QA blocks live mutations." } }),
+  );
+  await page.route("**/api/integrations/meta/partner-access-request**", route =>
+    route.fulfill({ json: { request: null } }),
+  );
+});
+
+for (const width of [1440, 390, 320]) {
+  test(`four independent help sections at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto("/connect-meta");
+    await expect(page.getByRole("heading", { name: "Connect Facebook & Instagram" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Open Meta settings", exact: true })).toHaveAttribute("href", "https://business.facebook.com/settings/partners");
+    const copy = page.getByRole("button", { name: "Copy Business Portfolio ID" });
+    await expect(copy).toBeEnabled();
+    await expect(page.locator("input")).toHaveCount(0);
+    for (let n = 1; n <= 4; n++) {
+      const panel = page.getByTestId(`meta-step-${n}`);
+      const help = panel.getByTestId(`step-help-${n}`);
+      const summary = help.locator("summary");
+      await expect(help).not.toHaveAttribute("open");
+      expect(await summary.evaluate(el => el.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
+      await summary.focus();
+      await summary.press("Enter");
+      await expect(help).toHaveAttribute("open", "");
+      for (const img of await help.locator("img").all()) {
+        await expect(img).toBeVisible();
+        await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+        const link = img.locator("..");
+        expect((await link.getAttribute("href"))?.startsWith("/help/meta/")).toBe(true);
+      }
+      await summary.press("Enter");
+      await expect(help).not.toHaveAttribute("open");
+    }
+    const geometry = await page.locator("main").evaluate(el => ({
+      fits: el.scrollWidth <= el.clientWidth + 1,
+      viewport: document.documentElement.scrollWidth <= window.innerWidth + 1,
+    }));
+    expect(geometry).toEqual({ fits: true, viewport: true });
+  });
+}
+
+test("confirmation records a request without claiming Meta is connected", async ({ page }) => {
+  let sent: Record<string, unknown> | null = null;
+  await page.route("**/api/integrations/meta/partner-access-request**", async route => {
+    if (route.request().method() === "POST") {
+      sent = route.request().postDataJSON();
+      return route.fulfill({ status: 201, json: { request: {
+        requestId: "33333333-3333-4333-8333-333333333333", status: "requested",
+        adAccountId: "", pageId: "", instagramAccountId: null,
+        statusReason: null, createdAt: "2026-09-13T00:00:00Z", updatedAt: "2026-09-13T00:00:00Z",
+      } } });
+    }
+    return route.fulfill({ json: { request: null } });
+  });
+  await page.goto("/connect-meta");
+  await page.getByRole("button", { name: "I've added Blockwise", exact: true }).click();
+  await expect(page.getByRole("heading", { name: /checking your.*sharing/i })).toBeVisible();
+  expect(sent).toMatchObject({ requestType: "confirmation" });
+  expect(sent).not.toHaveProperty("adAccountId");
+  await expect(page.getByText(/^Connected$|All set!|Meta is connected/i)).toHaveCount(0);
+});
+
+test("request-load failures are visible and retryable", async ({ page }) => {
+  await page.route("**/api/integrations/meta/partner-access-request**", route =>
+    route.fulfill({ status: 503, json: { error: "Unable to load sharing. Try again." } }),
+  );
+  await page.goto("/connect-meta");
+  await expect(page.getByRole("alert")).toContainText("Unable to load sharing");
+  await expect(page.getByRole("button", { name: /try again/i })).toBeVisible();
+});
+
 
 type Viewport = { width: number; height: number; mobile: boolean };
 
@@ -64,65 +134,6 @@ async function dismissConsent(page: import("@playwright/test").Page) {
   if (await consent.count()) await consent.first().click();
 }
 
-test.describe("connect-meta sharing checklist", () => {
-  for (const vp of VIEWPORTS) {
-    test(`viewport ${vp.width}x${vp.height}: checklist and gate`, async ({
-      page,
-    }) => {
-      await page.setViewportSize({ width: vp.width, height: vp.height });
-      await preAcceptConsent(page);
-      await page.goto(GUIDE_PATH);
-      await dismissConsent(page);
-
-      const heading = page.getByRole("heading", {
-        name: /Share your Meta assets/i,
-      });
-      await expect(heading).toBeVisible();
-
-      // The retired intro screen and the typed-ID step must not come back.
-      await expect(
-        page.getByRole("button", { name: /Show me what to do/i }),
-      ).toHaveCount(0);
-      await expect(page.locator("#meta-ad-account-id")).toHaveCount(0);
-
-      if (vp.mobile) {
-        const size = await heading.evaluate((el) =>
-          Number.parseFloat(getComputedStyle(el).fontSize),
-        );
-        expect(size).toBeGreaterThanOrEqual(17);
-      }
-
-      for (const label of CHECKLIST) {
-        await expect(page.getByText(label, { exact: false })).toBeVisible();
-      }
-
-      // Primary controls stay reachable at every width.
-      for (const name of [
-        /Open Meta Business Settings/i,
-        /Confirm my sharing/i,
-      ]) {
-        const button = page.getByRole("button", { name }).first();
-        await expect(button).toBeVisible();
-        const height = await button.evaluate(
-          (el) => el.getBoundingClientRect().height,
-        );
-        expect(height, `button ${name} height`).toBeGreaterThanOrEqual(43.5);
-      }
-
-      // The confirmation gates the submit.
-      const submit = page.getByRole("button", { name: /Confirm my sharing/i });
-      await expect(submit).toBeDisabled();
-      await page
-        .getByRole("checkbox", {
-          name: /I have assigned my Page, ad account and permissions/i,
-        })
-        .click();
-      await expect(submit).toBeEnabled();
-
-      expect(await noHorizontalScroll(page)).toBe(true);
-    });
-  }
-});
 
 test.describe("help carries the full Meta walkthrough", () => {
   for (const vp of VIEWPORTS) {
