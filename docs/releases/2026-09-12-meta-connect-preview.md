@@ -44,3 +44,25 @@ Retain the named preview container, image and worktree until accepted or decline
   passed. Final public E2E: `11/11` pass in `31.0s`, all first attempts with
   no retries; no app/page errors were observed.
 - Browser diagnosis: `/srv/blockwise/previews/meta-connect/browser-network-diagnosis-v3.log`.
+
+## Revision 3 final deployment
+
+- Compiled source SHA: `1e7487192d3162175a21f57fe2b41ea822b48e67`.
+- Container/image: `blockwise-meta-connect-preview-1e7487192d31`.
+- Public E2E: `11/11` pass in `11.2s`, first-attempt results with one worker
+  and no retry used; focused tests `4/4`, typecheck and Next build pass.
+- Detector v3: `[]` (single run). CUA verified one panel expander opens while
+  the other three remain collapsed.
+- Each of the four numbered panels now owns its `Show me how` expander and
+  screenshot: (1) Partners, (2) Give access plus Business ID, (3) permissions,
+  and (4) Assign assets as the final step, with an explicit return to the
+  example preview check. Full-size images are clickable and summaries retain
+  44px-class controls. The global walkthrough was removed.
+- Per-panel test hooks are `meta-step/step-help1` through `step-help4`.
+- Evidence: `/srv/blockwise/previews/meta-connect/{build-v3.log,image-build-v3.log,e2e-v3.log,detector-v3.json}`.
+- Review disposition: **SHIP** for the observed revision 3 UI; no material
+  fixes. No assets were added and no provider changes were made.
+
+The revision 3 container/image is the retained preview artifact pending owner
+decision; earlier revision 2 artifacts may be retired by the parent cleanup
+step. Actual Meta integration remains separately gated as described above.
