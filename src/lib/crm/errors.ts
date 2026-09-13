@@ -6,7 +6,20 @@
  * to log but must not be forwarded verbatim to a client.
  */
 
-export const CRM_ERROR_CODES = ["crm_unavailable", "conflict", "not_found", "forbidden", "unexpected"] as const;
+export const CRM_ERROR_CODES = [
+  "crm_unavailable",
+  "conflict",
+  "not_found",
+  "forbidden",
+  /**
+   * The workspace has no usable CRM yet: no site mapping, no stored
+   * credential, or a provisioning attempt that has not completed. It is a
+   * distinct state so the surface can say setup is in progress instead of
+   * showing a ready, empty CRM or a bare connection error.
+   */
+  "setup_pending",
+  "unexpected",
+] as const;
 export type CrmErrorCode = (typeof CRM_ERROR_CODES)[number];
 
 const SAFE_MESSAGES: Record<CrmErrorCode, string> = {
@@ -14,6 +27,7 @@ const SAFE_MESSAGES: Record<CrmErrorCode, string> = {
   conflict: "This enquiry changed since you loaded it. Refresh and try again.",
   not_found: "That enquiry was not found.",
   forbidden: "You do not have access to that enquiry.",
+  setup_pending: "This workspace's CRM is still being set up.",
   unexpected: "The CRM rejected the request.",
 };
 
@@ -23,6 +37,7 @@ export const CRM_ERROR_STATUS: Record<CrmErrorCode, number> = {
   conflict: 409,
   not_found: 404,
   forbidden: 403,
+  setup_pending: 503,
   unexpected: 502,
 };
 

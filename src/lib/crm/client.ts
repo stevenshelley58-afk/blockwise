@@ -2,7 +2,10 @@
  * Low-level Frappe CRM transport.
  *
  * Server-only. Every request names the agency's site in the
- * `X-Frappe-Site-Name` header and carries a token Authorization header.
+ * `X-Frappe-Site-Name` header and carries a token Authorization header. The
+ * token is that site's own credential, resolved per workspace from the
+ * encrypted vault; this client never holds a deployment-wide secret, so a
+ * credential for one site cannot be replayed against another.
  * Frappe wraps results in {"message": ...}; the envelope is unwrapped here so
  * callers see the payload only.
  *
@@ -18,6 +21,7 @@
  */
 
 import { DEFAULT_CRM_TIMEOUT_MS, type CrmConfig } from "./config.ts";
+import type { CrmSiteCredential } from "./credentials.ts";
 import { CrmError, isCrmError, mapFrappeError } from "./errors.ts";
 
 export type CrmQuery = Record<string, string | number | boolean | null | undefined>;
@@ -30,7 +34,12 @@ export type CrmRequest = {
 };
 
 export type CrmTransportOptions = {
-  config: Pick<CrmConfig, "baseUrl" | "apiKey" | "apiSecret" | "timeoutMs">;
+  config: Pick<CrmConfig, "baseUrl" | "timeoutMs">;
+  /**
+   * The credential for THIS site only. Supplied per workspace from the
+   * encrypted vault; there is no deployment-wide fallback.
+   */
+  credential: CrmSiteCredential;
   site: string;
   fetchImpl?: typeof fetch;
   /** Injectable so tests do not wait on real backoff. */
@@ -76,7 +85,7 @@ const RETRYABLE_ERROR_NAMES = new Set([
 ]);
 
 export function createCrmClient(options: CrmTransportOptions): CrmClient {
-  const { config, site } = options;
+  const { config, site, credential } = options;
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;
   const sleep = options.sleep ?? defaultSleep;
   const maxAttempts = Math.max(1, Math.min(options.maxAttempts ?? 2, 2));
@@ -99,7 +108,7 @@ export function createCrmClient(options: CrmTransportOptions): CrmClient {
       // survives the transport. It reaches gunicorn directly, never nginx, so
       // no request from the internet can choose its own tenant this way.
       "X-Frappe-Site-Name": site,
-      Authorization: "token " + config.apiKey + ":" + config.apiSecret,
+      Authorization: "token " + credential.apiKey + ":" + credential.apiSecret,
     };
     let body: string | undefined;
     if (!isRead) {

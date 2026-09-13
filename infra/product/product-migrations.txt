@@ -110,3 +110,4 @@
 20260912050000_index_missing_public_foreign_keys.sql
 20260912050100_index_ad_radar_suburb_trigram.sql
 20260912060000_owner_crm_customer_snapshot.sql
+20260913010000_crm_site_credentials.sql
