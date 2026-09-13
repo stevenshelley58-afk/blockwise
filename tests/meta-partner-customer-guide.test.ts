@@ -25,23 +25,22 @@ test("the Meta walkthrough carries four real screenshots and next/image", () => 
   }
 });
 
-test("tips and the Business ID live in Help, not on the connect screen", () => {
+test("the connect screen keeps essentials beside each action", () => {
   const guide = read("src/components/meta/connect-meta-guide.tsx");
   const help = read("src/app/(customer)/help/page.tsx");
   const steps = read("src/components/meta/partner-steps.ts");
 
-  // The connect screen is a checklist plus one confirmation.
   assert.match(guide, /META_PARTNER_STEPS/);
-  assert.match(guide, /Confirm my sharing/);
+  assert.match(guide, /I['"]?ve added Blockwise/);
+  assert.match(guide, /Copy Business Portfolio ID/);
+  assert.match(guide, /Show me how/);
+  assert.match(guide, /step-help-1/);
+  assert.match(guide, /step-help-4/);
   assert.doesNotMatch(guide, /<Input/);
   assert.doesNotMatch(guide, /Ad account ID|Page ID/);
-  assert.doesNotMatch(guide, /Before you start/);
-
-  // Help owns the walkthrough: screenshots, the ID and the permission detail.
-  assert.match(help, /CopyBusinessId/);
-  assert.match(steps, /Blockwise Business ID/);
   assert.match(steps, /Leave Full control off/);
   assert.match(steps, /Partners is missing/);
+  assert.match(help, /CopyBusinessId/);
 });
 
 test("the customer flow names the sharing contract honestly", () => {

@@ -191,3 +191,8 @@ The native editor starts on the actual edited ad preview. Template headings wrap
 The approved three-screen explainer uses one reversible Motion timeline for Choose, Customise, Review and approval, not independent entrance timers. Each selection captures the current visual frame and interpolates directly to its destination, so skipping a screen does not flash an unwanted intermediate screen. All layers remain mounted; edit and review crossfade inside the same fixed-size panel. Complete headline layers occupy the same reserved space; no letter-by-letter rendering or text reflow. The marketing-only focal travel lasts 640ms; panel and approval crossfades use 350ms. Autoplay holds start after movement finishes, pause out of view, and yield to screen selection. Reduced motion applies the selected state immediately. Existing imagery and Motion dependency are reused; no video or added animation engine.
 
 Workflow text handovers fade the outgoing text before introducing the replacement inside the same fixed surface. Headline and field layers must never create double-exposed text during normal forward or reverse playback.
+
+
+## Scoped Meta connection surface exception
+
+The production Meta connection surface uses the existing data-blue token for the numbered onboarding panels, asset icons and primary CTA, matching the approved connection concept while keeping all other customer surfaces on the documented palette. This is route-local and does not add a token or reskin the product.

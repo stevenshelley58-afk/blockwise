@@ -46,8 +46,12 @@ for (const width of [1440, 390, 320]) {
       for (const img of await help.locator("img").all()) {
         await expect(img).toBeVisible();
         await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
-        const link = img.locator("..");
-        expect((await link.getAttribute("href"))?.startsWith("/help/meta/")).toBe(true);
+        const viewer = img.locator("..");
+        await viewer.focus();
+        await viewer.press("Enter");
+        await expect(page.getByRole("dialog")).toBeVisible();
+        await page.keyboard.press("Escape");
+        await expect(page.getByRole("dialog")).toBeHidden();
       }
       await summary.press("Enter");
       await expect(help).not.toHaveAttribute("open");
