@@ -5,7 +5,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 
 type DemoRequestRow = {
   id: string; created_at: string; name: string; agency: string; email: string; phone: string | null;
-  suburb: string | null; message: string | null; source: "landing" | "audit-pdf";
+  suburb: string | null; message: string | null; source: "landing" | "audit-pdf" | "audit-plan";
 };
 
 type DemoRequestQuery = {
@@ -35,10 +35,10 @@ function optionalText(value: unknown): string | null {
 
 export function mapOwnerLeadIntakeRow(row: DemoRequestRow) {
   if (!UUID.test(row.id) || typeof row.created_at !== "string" || !row.created_at) throw new Error("invalid_demo_request_row");
-  if (row.source !== "landing" && row.source !== "audit-pdf") throw new Error("invalid_demo_request_source");
+  if (row.source !== "landing" && row.source !== "audit-pdf" && row.source !== "audit-plan") throw new Error("invalid_demo_request_source");
   return {
     sourceKey: `blockwise_demo_request:${row.id}`,
-    sourceKind: row.source === "audit-pdf" ? "audit_request" : "demo_request",
+    sourceKind: row.source === "landing" ? "demo_request" : "audit_request",
     sourceEventId: row.id,
     receivedAt: row.created_at,
     lead: {
@@ -52,7 +52,7 @@ export function mapOwnerLeadIntakeRow(row: DemoRequestRow) {
 export async function readOwnerLeadIntakePage(client: ServiceClient, page: OwnerLeadIntakePageRequest) {
   let query = client.from("demo_requests")
     .select("id,created_at,name,agency,email,phone,suburb,message,source")
-    .in("source", ["landing", "audit-pdf"])
+    .in("source", ["landing", "audit-pdf", "audit-plan"])
     .order("id", { ascending: true });
   if (page.afterId) query = query.gt("id", page.afterId);
   const { data, error } = await query.limit(page.limit);

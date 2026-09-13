@@ -22,7 +22,7 @@ test("lead intake page is bounded, source-filtered, and cursor based on immutabl
   const result = await readOwnerLeadIntakePage({ from: () => {
     const query: any = { select: () => query, in: (_: string, values: string[]) => { calls.push(values.join(",")); return query; }, gt: (_: string, value: string) => { calls.push(value); return query; }, order: () => query, limit: async () => ({ data: [row()], error: null }) }; return query;
   } }, { afterId: id, limit: 1 });
-  assert.deepEqual(calls, ["landing,audit-pdf", id]);
+  assert.deepEqual(calls, ["landing,audit-pdf,audit-plan", id]);
   assert.equal(result.items.length, 1); assert.equal(result.nextAfterId, id);
   assert.deepEqual(parseOwnerLeadIntakePageRequest(new URLSearchParams()), { afterId: null, limit: 50 });
   assert.throws(() => parseOwnerLeadIntakePageRequest(new URLSearchParams("limit=101")), /invalid_page_limit/);
@@ -48,4 +48,15 @@ test("lead intake route is no-store and does not log source errors", () => {
   const compose = readFileSync(new URL("../infra/coolify/docker-compose.product.yml", import.meta.url), "utf8");
   const product = readFileSync(new URL("../infra/product/.env.example", import.meta.url), "utf8");
   assert.match(compose, /OWNER_LEAD_INTAKE_AUTH_SECRET: \$\{OWNER_LEAD_INTAKE_AUTH_SECRET:-\}/); assert.match(product, /^OWNER_LEAD_INTAKE_AUTH_SECRET=replace-in-infisical$/m);
+});
+
+test("current audit-plan submissions enter the same requested-audit intake without granting marketing consent", () => {
+  const item = mapOwnerLeadIntakeRow(row({ source: "audit-plan" }) as never);
+  assert.equal(item.sourceKind, "audit_request");
+  assert.equal(item.sourceEventId, id);
+  assert.equal(item.sourceKey, `blockwise_demo_request:${id}`);
+  assert.equal("marketingConsent" in item, false);
+  assert.equal(mapOwnerLeadIntakeRow(row({ source: "landing" }) as never).sourceKind, "demo_request");
+  const form = readFileSync(new URL("../src/components/research/audit-lead-form.tsx", import.meta.url), "utf8");
+  assert.match(form, /source: "audit-plan"/);
 });
