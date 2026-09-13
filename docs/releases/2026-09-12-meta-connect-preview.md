@@ -60,9 +60,9 @@ Retain the named preview container, image and worktree until accepted or decline
   44px-class controls. The global walkthrough was removed.
 - Per-panel test hooks are `meta-step/step-help1` through `step-help4`.
 - Evidence: `/srv/blockwise/previews/meta-connect/{build-v3.log,image-build-v3.log,e2e-v3.log,detector-v3.json}`.
-- Review disposition: **SHIP** for the observed revision 3 UI; no material
-  fixes. No assets were added and no provider changes were made.
+- Parent visually checked desktop/mobile, closed and expanded states; no further
+  corrections were made. No assets were added and no provider changes were made.
 
 The revision 3 container/image is the retained preview artifact pending owner
-decision; earlier revision 2 artifacts may be retired by the parent cleanup
-step. Actual Meta integration remains separately gated as described above.
+decision; the earlier revision 2 container/image has been retired. Actual Meta
+integration remains separately gated as described above.
