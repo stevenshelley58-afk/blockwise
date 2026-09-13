@@ -103,3 +103,9 @@ export function studyTransition(from: StudyFrame, to: StudyFrame, progress: numb
     approved: mix(from.approved, to.approved),
   };
 }
+
+/** One character boundary drives both the field and its matching ad text. */
+export function studyText(progress: number, text: string, start: number, end: number, fallback = "") {
+  if (progress <= start) return fallback;
+  return text.slice(0, Math.floor(Math.min(1, (progress - start) / (end - start)) * text.length));
+}

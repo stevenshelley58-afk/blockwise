@@ -93,6 +93,8 @@ export const homepageMotion = {
     browseMs: 780,
     browseHoldMs: 700,
     panelSwapMs: 800,
+    writeMs: 4400,
+    reviewFillMs: 1200,
     autoHoldMs: 2600,
     travelMs: 640,
     crossfadeMs: 350,

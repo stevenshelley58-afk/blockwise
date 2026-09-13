@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { studyFrame, studyTransition, studyAdMotion, studyEditLayout } from "../src/components/motion-study/workflow-motion-study-geometry.ts";
+import { studyText, studyFrame, studyTransition, studyAdMotion, studyEditLayout } from "../src/components/motion-study/workflow-motion-study-geometry.ts";
 const source = await readFile(new URL("../src/components/motion-study/workflow-motion-study.tsx", import.meta.url), "utf8");
 const styles = await readFile(new URL("../src/components/motion-study/workflow-motion-study.module.css", import.meta.url), "utf8");
 
@@ -69,9 +69,9 @@ test("editor and review remain mounted in one fixed surface with hidden layers i
   assert.match(styles,/grid-area: 1 \/ 1/);
 });
 
-test("static text, accessible selectors, finite autoplay and reduced motion", () => {
-  assert.equal((source.match(/<textarea/g)||[]).length,3);
-  assert.match(source,/value=\{SELECTED_AD.adTitle\}/);
+test("completion-gated writing, accessible selectors, finite autoplay and reduced motion", () => {
+  assert.equal((source.match(/<StudyField clock=/g)||[]).length,3);
+  assert.match(source,/value=\{value\}/);
   assert.match(source,/aria-pressed=\{step === index\}/);
   assert.match(source,/settledScene !== scene/);
   assert.match(source,/entry.intersectionRatio >= 0.6/);
@@ -128,4 +128,18 @@ test("right panel shrinks out then grows before text while ad remains unchanged"
 test("initial selected card waits for geometry and returning to Choose preserves it", () => {
  assert.match(source,/visibility: "hidden"/);
  assert.match(source,/setScene\(reduced && next === 2 \? 3 : next\)/);
+});
+
+test("fields enter empty then fill at the same character boundary as the ad", () => {
+  const text="Your home could be worth more";
+  assert.equal(studyText(0,text,.08,.32),"");
+  assert.equal(studyText(.08,text,.08,.32),"");
+  assert.equal(studyText(.2,text,.08,.32),text.slice(0,14));
+  assert.equal(studyText(.32,text,.08,.32),text);
+  assert.equal(studyText(.5,text,.08,.32),text);
+  assert.equal(studyText(0,text,.08,.32,"Before"),"Before");
+  assert.match(source,/settledScene !== scene \|\| \(scene !== 1 && scene !== 2\)/);
+  assert.match(source,/!contentDone/);
+  assert.match(source,/if \(scene === 1\) draft.set\(0\)/);
+  assert.match(source,/contentPlayback.current\?\.pause/);
 });
