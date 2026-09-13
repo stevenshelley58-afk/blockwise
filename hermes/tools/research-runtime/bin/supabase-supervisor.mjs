@@ -53,7 +53,7 @@ const AD_RADAR_JOB_TYPES = [
   DEFECT_INVESTIGATOR_JOB_TYPE,
 ];
 const env = process.env;
-const narrowAdDbMode = ["--ad-db-worker", "--job-id", "--historical-replay"].some((flag) => process.argv.includes(flag));
+const narrowAdDbMode = ["--ad-db-worker", "--job-id", "--historical-replay", "--first-fill-discovery"].some((flag) => process.argv.includes(flag));
 const { adRadarEnabled, handledJobTypes: HANDLED_JOB_TYPES } = resolveAdRadarRuntime(
   env,
   CONTENT_RUN_JOB_TYPE,
@@ -2555,7 +2555,7 @@ async function handlePageResolver(job) {
     }
   }
 
-  const exactNameCandidate = await resolveMetaAdLibraryVerifiedNameCandidate(subject, payload, fetched, facebookCandidates, job);
+  const exactNameCandidate = resolved.some((item) => item.metaPageId) ? null : await resolveMetaAdLibraryVerifiedNameCandidate(subject, payload, fetched, facebookCandidates, job);
   if (exactNameCandidate && !resolved.some((item) => item.metaPageId === exactNameCandidate.pageId)) {
     const decisionId = await createPageResolutionDecision({
       subjectKind: subject.kind,
@@ -2631,6 +2631,16 @@ async function handlePageResolver(job) {
       }, job);
     }
   }
+
+  const checkedAt = now();
+  await createPageResolutionDecision({
+    subjectKind: subject.kind, subjectId: subject.id,
+    confidence: resolved.length ? 85 : 0,
+    sourceDocumentIds: [...new Set([...payload.sourceDocumentIds, ...fetched.map((item) => item.sourceDocumentId).filter(Boolean)])],
+    decision: { status: resolved.length ? "attempted" : fetched.some((item) => item.error) ? "failed" : "no_verified_match", checked_at: checkedAt, resolved: false, discovered_pages: resolved.map((item) => item.metaPageId).filter(Boolean) },
+    evidence: { checked_at: checkedAt, fetched, resolved_pages: resolved, original_subject_checked: true },
+    rationale: resolved.length ? "Original subject checked; page ownership remains in the individual page-resolution decisions." : fetched.some((item) => item.error) ? "Page lookup failed or was incomplete; not a verified absence." : "Public evidence checked without a verified page match.",
+  });
 
   if (resolved.length) {
     await resolveCoverageDefects({
@@ -4599,8 +4609,8 @@ async function handleAdCollector(job) {
       },
       cost_usd: outcome.costUsd || 0,
       ...runTelemetryPatch(outcome),
-      coverage_complete: coverageComplete,
-      pagination_exhausted: paginationExhausted,
+      coverage_complete: false,
+      pagination_exhausted: false,
       stop_reason: stopReason,
     });
     const zeroReconciliation = await reconcileMissingObservedAds({
@@ -4610,14 +4620,10 @@ async function handleAdCollector(job) {
       // An unverified zero never retires ads.
       coverageComplete: false,
     });
-    await markAdvertiserPageScanSucceeded(payload.advertiserPageId, { activeCount: 0, zeroScanProof: zeroCanBeTrusted ? "confirmed" : "unverified" });
-    await resolveCoverageDefects({
-      subject_type: "advertiser_page",
-      subject_key: payload.advertiserPageId,
-      reason: "ad_collector_capture_failed",
-      resolution: { handler: "blockwise-ad-collector", provider: sourceProvider, unverified_zero: true, verified_zero: zeroCanBeTrusted },
-    });
-    return { status: "complete", result: { handler: "blockwise-ad-collector", advertiser_page_id: payload.advertiserPageId, meta_page_id: payload.metaPageId, provider: sourceProvider, ads_seen: 0, unverified_zero: true, verified_zero: zeroCanBeTrusted, reconciliation: zeroReconciliation, ingest_tables: ingestTables } };
+    // A completed HTTP request is not evidence of a complete page inventory.
+    // Preserve the explicit attempted outcome without stamping first-fill done.
+    return { status: "blocked", blocked_reason: stopReason, result: { handler: "blockwise-ad-collector", advertiser_page_id: payload.advertiserPageId, provider: sourceProvider, unverified_zero: true, coverage_complete: false, first_fill_pending: true, reconciliation: zeroReconciliation } };
+
   }
   const ingested = [];
   try {
@@ -5508,7 +5514,8 @@ async function maybeRunInactiveAdPurge() {
 const exactJobMode = process.argv.includes("--job-id");
 const adDbWorkerMode = process.argv.includes("--ad-db-worker");
 const adDbWorkerPollMs = positiveInt("HERMES_AD_DB_WORKER_POLL_MS", 10_000);
-const EXACT_CANONICAL_JOB_TYPES = new Set(["blockwise-ad-collector", "blockwise-media-collector"]);
+const discoveryWorkerMode = process.argv.includes("--first-fill-discovery");
+const EXACT_CANONICAL_JOB_TYPES = new Set(["blockwise-ad-collector", "blockwise-media-collector", ...(discoveryWorkerMode ? ["blockwise-page-resolver"] : [])]);
 
 function exactJobId() {
   const marker = process.argv.indexOf("--job-id");
@@ -5710,7 +5717,25 @@ async function runHistoricalReplay(limit) {
   };
 }
 
+async function runFirstFillDiscoveryPass() {
+  const jobs = await rest("research", "work_queue?select=id&queue_name=eq.research&job_type=eq.blockwise-page-resolver&payload->>scanMode=eq.initial_fill&status=eq.pending&available_at=lte." + encode(now()) + "&order=priority.asc,created_at.asc&limit=1");
+  if (!jobs?.[0]) return { handled: 0 };
+  await runExactJob(jobs[0].id);
+  return { handled: 1, job_id: jobs[0].id };
+}
+
 async function main() {
+  if (discoveryWorkerMode) {
+    if (!firstFillOnly || !adRadarEnabled) throw new Error("Discovery requires enabled first-fill-only scope");
+    if (remoteBrowserCdpUrl || env.RESIDENTIAL_PROXY_URL || env.HERMES_META_CAPTURE_PROXY_URL) throw new Error("First-fill discovery forbids paid browser/proxy configuration");
+    for (;;) {
+      const pass = await runFirstFillDiscoveryPass();
+      log("first-fill discovery pass", pass);
+      if (env.HERMES_RESEARCH_RUN_ONCE === "true") break;
+      await sleep(pass.handled ? 100 : 10000);
+    }
+    return;
+  }
   if (adDbWorkerMode) {
     for (;;) {
       const pass = await runAdDbWorkerPass();

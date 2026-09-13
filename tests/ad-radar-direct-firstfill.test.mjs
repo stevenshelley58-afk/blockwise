@@ -39,12 +39,12 @@ test('media failures and assets beyond the capture batch cannot report completio
  assert.ok(supervisor.includes('blocked_reason: archiveComplete ? null : "media_archive_incomplete"'));
 });
 
-test('an unverified zero-ad scan finishes the first fill without retiring or re-queueing', () => {
+test('an unverified zero-ad scan stays visibly incomplete without retiring ads', () => {
   // The adapter marks the zero, the collector records it before ingest, and the
   // page is stamped complete with the proof label kept alongside it.
   assert.match(supervisor, /outcome\.unverifiedZero === true \|\| outcome\.metadata\?\.unverifiedZero === true/);
   assert.ok(supervisor.includes('"ads_not_found_unverified_zero_after_prior_ads"'));
-  assert.ok(supervisor.includes('zeroScanProof: zeroCanBeTrusted ? "confirmed" : "unverified"'));
+  assert.ok(supervisor.includes('blocked_reason: stopReason'));
   // An unverified zero must never drive lifecycle retirement.
   const zeroBlock = supervisor.slice(
     supervisor.indexOf('const unverifiedZero = outcome.unverifiedZero'),
