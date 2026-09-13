@@ -83,7 +83,10 @@ in `cleanup.log` and are the owner's call.
 - `scripts/vps/prune-releases.sh` is the only thing that retires release storage.
   It keeps the revision serving traffic, the revision the environment selector
   names for rollback, and the newest N (autodeploy passes `--keep 10`, the weekly
-  timer uses 5). Retiring a revision removes its worktree and its
+  timer uses 5). It also keeps any release supplying a bind mount to a running
+  or stopped Docker container. Removing such a source can stay invisible until
+  the next host restart, when Docker cannot mount the file and the public route
+  fails. Retiring a revision removes its worktree and its
   `blockwise-app:<sha>` image together.
 - Never delete a release directory or a release image by hand, and never reach for
   `docker image prune -a` to reclaim space. The tag is the only thing protecting a

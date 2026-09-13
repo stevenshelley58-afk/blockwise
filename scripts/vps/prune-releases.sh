@@ -3,8 +3,9 @@
 #
 # Every release adds a worktree under releases/product, and rollback needs the
 # previous one, but nothing ever removed the older ones. This keeps the live
-# revision, the rollback revision and the newest N, then retires the rest, along
-# with the immutable image built for each retired revision.
+# revision, the rollback revision, the newest N and every release supplying a
+# bind mount to a Docker container, then retires the rest with the immutable
+# image built for each retired revision.
 #
 # A release that is not committed and clean is never removed: it is either a
 # broken release or someone's work, and neither is this script's to delete.
@@ -28,9 +29,10 @@ Usage: prune-releases.sh [--keep <n>] [--apply]
 Without --apply this reports what it would remove and removes nothing.
 
 Kept regardless of age: the revision serving traffic, the revision the
-environment selector records for rollback, the newest <n> (default 5), and any
-release worktree that is not clean or not at its own commit. A retired revision
-takes its blockwise-app image with it, unless a container still references it.
+environment selector records for rollback, the newest <n> (default 5), every
+release supplying a bind mount to a Docker container, and any release worktree
+that is not clean or not at its own commit. A retired revision takes its
+blockwise-app image with it, unless a container still references it.
 USAGE
 }
 
@@ -74,17 +76,54 @@ mapfile -t ALL < <(find "$RELEASES" -mindepth 1 -maxdepth 1 -type d -printf '%f\
 mapfile -t NEWEST < <(find "$RELEASES" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %f\n' 2>/dev/null \
   | sort -rn | awk '{print $2}' | grep -E "$SHA_RE" | head -n "$KEEP")
 
+# A container can keep using a bind-mounted file after its source release has
+# been removed, but it cannot mount that file again after Docker or the host
+# restarts. Inspect stopped containers too: restart policies apply to them, and
+# deleting their source creates a delayed outage that appears only on reboot.
+CONTAINER_ID_LIST=""
+if ! CONTAINER_ID_LIST="$(docker ps -aq 2>/dev/null)"; then
+  printf 'could not list Docker containers; refusing to prune\n' >&2
+  exit 1
+fi
+CONTAINER_IDS=()
+if [[ -n "$CONTAINER_ID_LIST" ]]; then
+  mapfile -t CONTAINER_IDS <<< "$CONTAINER_ID_LIST"
+fi
+CONTAINER_REFERENCED=()
+if ((${#CONTAINER_IDS[@]} > 0)); then
+  CONTAINER_MOUNTS=""
+  if ! CONTAINER_MOUNTS="$(docker inspect --format '{{range .Mounts}}{{println .Source}}{{end}}' "${CONTAINER_IDS[@]}" 2>/dev/null)"; then
+    printf 'could not inspect every Docker container; refusing to prune\n' >&2
+    exit 1
+  fi
+  mapfile -t CONTAINER_REFERENCED < <(
+    printf '%s\n' "$CONTAINER_MOUNTS" \
+      | grep -oE "$RELEASES/[a-f0-9]{40}" \
+      | sed 's#^.*/##' \
+      | sort -u
+  )
+fi
+
 is_protected() {
   local sha="$1" kept
   [[ "$sha" == "$LIVE_SHA" || "$sha" == "$PREVIOUS_SHA" ]] && return 0
   for kept in "${NEWEST[@]}"; do [[ "$sha" == "$kept" ]] && return 0; done
+  for kept in "${CONTAINER_REFERENCED[@]}"; do [[ "$sha" == "$kept" ]] && return 0; done
   return 1
 }
 
 freed=0; removed=0; kept=0
 printf 'live: %s\n' "${LIVE_SHA:0:12}"
 printf 'rollback selector: %s\n' "${PREVIOUS_SHA:0:12}"
-printf 'retaining newest %s plus the two above\n\n' "$KEEP"
+printf 'retaining newest %s, live/rollback, and %s container-mounted release(s)\n\n' \
+  "$KEEP" "${#CONTAINER_REFERENCED[@]}"
+
+for sha in "${CONTAINER_REFERENCED[@]}"; do
+  [[ -d "$RELEASES/$sha" ]] || {
+    printf 'container references missing release %s; refusing to prune\n' "$sha" >&2
+    exit 1
+  }
+done
 
 for sha in "${ALL[@]}"; do
   dir="$RELEASES/$sha"

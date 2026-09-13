@@ -123,11 +123,12 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
 });
 
 test("product readiness is fatal while liveness remains process-only", async () => {
-  const [health, live, migration, script] = await Promise.all([
+  const [health, live, migration, script, compose] = await Promise.all([
     read("src/app/api/health/route.ts"),
     read("src/app/api/health/live/route.ts"),
     read("scripts/vps/product-migrate.sh"),
     read("scripts/vps/product-health.sh"),
+    read("infra/coolify/docker-compose.product.yml"),
   ]);
   assert.match(health, /const status = ready \? 200 : 503/);
   assert.match(health, /\{ status \}/);
@@ -139,6 +140,8 @@ test("product readiness is fatal while liveness remains process-only", async () 
   assert.match(migration, /compose restart product-rest/);
   assert.match(script, /\/api\/health/);
   assert.match(script, /status.*ready/);
+  assert.match(compose, /127\.0\.0\.1\/api\/health/);
+  assert.doesNotMatch(compose, /127\.0\.0\.1\/healthz/);
 });
 
 test("migration apply paths are explicitly gated", async () => {

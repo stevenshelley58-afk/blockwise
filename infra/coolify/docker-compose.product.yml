@@ -404,7 +404,9 @@ services:
       - blockwise-product-caddy-config:/config
     networks: [blockwise-product]
     healthcheck:
-      test: [CMD-SHELL, "wget --header=\"Host: $${BLOCKWISE_PRODUCT_DOMAIN}\" -qO- http://127.0.0.1/healthz || exit 1"]
+      # Exercise the real app route so this edge cannot report healthy while
+      # customer requests are returning 502 from a broken upstream.
+      test: [CMD-SHELL, "wget --header=\"Host: $${BLOCKWISE_PRODUCT_DOMAIN}\" -qO- http://127.0.0.1/api/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 12
