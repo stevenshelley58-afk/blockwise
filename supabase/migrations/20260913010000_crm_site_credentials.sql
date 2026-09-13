@@ -36,6 +36,8 @@ comment on column public.crm_workspace_sites.credential_version is
   'Increments on every rotation of this site''s CRM credential. 0 means no per-site credential has been stored yet, which is the legacy shared-credential state.';
 comment on column public.crm_workspace_sites.credential_last_four is
   'Display-only tail of the current API key, so an operator can tell two rotations apart. Matches credential_last_four in the provisioning output. Never the secret.';
+comment on column public.crm_workspace_sites.credential_rotated_at is
+  'When the credential state last changed, by store or by clear. Reads alongside credential_version: version 0 with a rotated_at set means the credential was deliberately removed.';
 comment on column public.crm_workspace_sites.config_version is
   'Version of the applied native field/role configuration on the site.';
 comment on column public.crm_workspace_sites.site_timezone is
@@ -177,6 +179,24 @@ begin
     token_nonce = excluded.token_nonce,
     token_last_four = excluded.token_last_four,
     updated_at = excluded.updated_at;
+
+  -- Keep the mapping row's non-secret reference in step with the vault, in the
+  -- same transaction as the write it describes. Without this the row still reads
+  -- credential_version = 0 after a successful store, and 0 is defined as "no
+  -- per-site credential has been stored yet", which is the legacy
+  -- shared-credential state. Anything that later branches on that value would
+  -- take the wrong path.
+  --
+  -- A workspace with no mapping row has no CRM site and therefore no row that
+  -- needs to describe one, so matching zero rows here is the correct outcome
+  -- rather than an error. The vault is the authority; the mapping row mirrors it.
+  update public.crm_workspace_sites
+  set
+    credential_version = credential_version + 1,
+    credential_last_four = p_credential_last_four,
+    credential_rotated_at = now(),
+    updated_at = now()
+  where workspace_id = p_workspace_id;
 end;
 $$;
 
@@ -197,6 +217,18 @@ as $$
     updated_at = now()
   where runtime_provider = 'blockwise_crm_site'
     and workspace_id = p_workspace_id;
+
+  -- Mirror the vault. The credential is gone, so the mapping row must stop
+  -- advertising one; leaving the last version in place would make a retired site
+  -- look like it still holds a credential. credential_rotated_at is still set,
+  -- so "removed on this date" stays readable from the row.
+  update public.crm_workspace_sites
+  set
+    credential_version = 0,
+    credential_last_four = null,
+    credential_rotated_at = now(),
+    updated_at = now()
+  where workspace_id = p_workspace_id;
 $$;
 
 revoke all on function public.crm_site_credential_get(uuid) from public, anon, authenticated;

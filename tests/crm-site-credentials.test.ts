@@ -24,13 +24,50 @@ type VaultRow = {
 };
 
 /**
+ * The non-secret mirror on `public.crm_workspace_sites`. Both
+ * `crm_site_credential_upsert` and `crm_site_credential_clear` update it in the
+ * same transaction as the vault write, so the fake has to model it. Without it
+ * the tests cannot notice the mapping row going stale, which is the defect this
+ * pairing exists to prevent.
+ */
+type MappingRow = {
+  credential_version: number;
+  credential_last_four: string | null;
+  credential_rotated_at: string | null;
+};
+
+/**
  * Minimal stand-in for the service-role client, backed by an in-memory vault
  * that behaves like the three RPCs in 20260913010000_crm_site_credentials.sql:
  * one row per workspace, upsert on repeat.
+ *
+ * `mappedWorkspaces` are the workspaces that already have a `crm_workspace_sites`
+ * row. A workspace that is not listed has no CRM site, so the real functions
+ * match zero mapping rows and store only in the vault.
  */
-function fakeVault(initial: Record<string, VaultRow> = {}) {
+function fakeVault(initial: Record<string, VaultRow> = {}, mappedWorkspaces: string[] = []) {
   const rows = new Map<string, VaultRow>(Object.entries(initial));
+  const mapping = new Map<string, MappingRow>(
+    mappedWorkspaces.map((workspaceId) => [
+      workspaceId,
+      { credential_version: 0, credential_last_four: null, credential_rotated_at: null },
+    ]),
+  );
   const calls: { name: string; args: Record<string, unknown> }[] = [];
+
+  // Mirrors the `update public.crm_workspace_sites ... where workspace_id = ...`
+  // in both functions. Matching no row is a no-op, exactly as in SQL.
+  const writeMapping = (
+    workspaceId: string,
+    lastFour: string | null,
+    nextVersion: (current: number) => number,
+  ) => {
+    const row = mapping.get(workspaceId);
+    if (!row) return;
+    row.credential_version = nextVersion(row.credential_version);
+    row.credential_last_four = lastFour;
+    row.credential_rotated_at = "2026-09-13T00:00:00.000Z";
+  };
 
   const client = {
     rpc(name: string, args: Record<string, unknown>) {
@@ -48,6 +85,7 @@ function fakeVault(initial: Record<string, VaultRow> = {}) {
           credential_nonce: String(args.p_credential_nonce),
           credential_last_four: String(args.p_credential_last_four),
         });
+        writeMapping(workspaceId, String(args.p_credential_last_four), (current) => current + 1);
         return Promise.resolve({ data: null, error: null });
       }
 
@@ -62,6 +100,7 @@ function fakeVault(initial: Record<string, VaultRow> = {}) {
             credential_last_four: "",
           });
         }
+        writeMapping(workspaceId, null, () => 0);
         return Promise.resolve({ data: null, error: null });
       }
 
@@ -69,7 +108,7 @@ function fakeVault(initial: Record<string, VaultRow> = {}) {
     },
   };
 
-  return { client: client as unknown as SupabaseClient, rows, calls };
+  return { client: client as unknown as SupabaseClient, rows, mapping, calls };
 }
 
 test("a stored per-site credential round-trips through the vault", async () => {
@@ -275,4 +314,96 @@ test("clearing a credential blanks it without touching other workspaces", async 
 
 test("the vault lane name is stable and workspace-scoped", () => {
   assert.equal(CRM_CREDENTIAL_LANE, "blockwise_crm_site");
+});
+
+test("storing a credential moves the mapping row off the legacy state", async () => {
+  const vault = fakeVault({}, [WORKSPACE_A]);
+
+  await upsertCrmSiteCredential({
+    serviceSupabase: vault.client,
+    workspaceId: WORKSPACE_A,
+    apiKey: "key-a-1234",
+    apiSecret: "secret-a-abcd",
+  });
+
+  // credential_version 0 is defined as "no per-site credential has been stored
+  // yet", which is the legacy shared-credential state. A store that leaves it at
+  // 0 makes the row describe the wrong thing, so the store has to move it.
+  const row = vault.mapping.get(WORKSPACE_A);
+  assert.equal(row?.credential_version, 1);
+  assert.equal(row?.credential_last_four, "1234");
+  assert.ok(row?.credential_rotated_at, "the change is timestamped");
+});
+
+test("a rotation increments the version instead of pinning it at one", async () => {
+  const vault = fakeVault({}, [WORKSPACE_A]);
+
+  await upsertCrmSiteCredential({
+    serviceSupabase: vault.client,
+    workspaceId: WORKSPACE_A,
+    apiKey: "key-old-1111",
+    apiSecret: "secret-old",
+  });
+  await upsertCrmSiteCredential({
+    serviceSupabase: vault.client,
+    workspaceId: WORKSPACE_A,
+    apiKey: "key-new-2222",
+    apiSecret: "secret-new",
+  });
+
+  assert.equal(vault.mapping.get(WORKSPACE_A)?.credential_version, 2);
+  assert.equal(vault.mapping.get(WORKSPACE_A)?.credential_last_four, "2222");
+});
+
+test("clearing resets the mapping row so a retired site does not look credentialed", async () => {
+  const vault = fakeVault({}, [WORKSPACE_A]);
+
+  await upsertCrmSiteCredential({
+    serviceSupabase: vault.client,
+    workspaceId: WORKSPACE_A,
+    apiKey: "key-a-1234",
+    apiSecret: "secret-a-abcd",
+  });
+  await clearCrmSiteCredential(vault.client, WORKSPACE_A);
+
+  const row = vault.mapping.get(WORKSPACE_A);
+  assert.equal(row?.credential_version, 0);
+  assert.equal(row?.credential_last_four, null);
+  assert.ok(row?.credential_rotated_at, "removal is timestamped too");
+});
+
+test("a store touches only its own mapping row", async () => {
+  const vault = fakeVault({}, [WORKSPACE_A, WORKSPACE_B]);
+
+  await upsertCrmSiteCredential({
+    serviceSupabase: vault.client,
+    workspaceId: WORKSPACE_A,
+    apiKey: "key-a-1234",
+    apiSecret: "secret-a-abcd",
+  });
+
+  assert.equal(vault.mapping.get(WORKSPACE_A)?.credential_version, 1);
+  assert.equal(vault.mapping.get(WORKSPACE_B)?.credential_version, 0, "untouched");
+  assert.equal(vault.mapping.get(WORKSPACE_B)?.credential_last_four, null);
+});
+
+test("a workspace with no mapping row still stores, and no row is invented", async () => {
+  // demo.crm.internal is bound to a workspace with no crm_workspace_sites row.
+  // Storing its credential must work: the vault is the authority, and the
+  // mapping row only mirrors it. Inventing a mapping row here would create a CRM
+  // site record that nothing provisioned.
+  const vault = fakeVault();
+
+  await upsertCrmSiteCredential({
+    serviceSupabase: vault.client,
+    workspaceId: WORKSPACE_A,
+    apiKey: "key-a-1234",
+    apiSecret: "secret-a-abcd",
+  });
+
+  assert.deepEqual(await loadCrmSiteCredential(vault.client, WORKSPACE_A), {
+    apiKey: "key-a-1234",
+    apiSecret: "secret-a-abcd",
+  });
+  assert.equal(vault.mapping.size, 0, "no mapping row was created");
 });

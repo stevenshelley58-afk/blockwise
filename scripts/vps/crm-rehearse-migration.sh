@@ -294,6 +294,101 @@ check "clearing blanks the credential so it reads as absent" \
 check "the vault's pre-existing lanes are all still present" \
   "$([ "$(q "select count(*) from private.provider_token_vault where runtime_provider is not null and workspace_id is null")" = "${service_rows_before:-0}" ] && echo 1 || echo 0)"
 
+# The mapping row is the non-secret mirror of the vault. If a store leaves
+# credential_version at 0, the row still reads as the legacy shared-credential
+# state, so this walks store -> rotate -> clear on a workspace that actually has
+# a mapping row.
+mapping_outcome="$(probe <<'SQL'
+\set ON_ERROR_STOP on
+create temp table probe (outcome text);
+do $$
+declare
+  w uuid;
+  v1 int; v2 int; v3 int;
+  lf1 text; lf3 text;
+begin
+  select workspace_id into w from public.crm_workspace_sites order by workspace_id limit 1;
+  if w is null then
+    insert into probe values ('no-mapping-row');
+    return;
+  end if;
+
+  delete from private.provider_token_vault
+   where runtime_provider = 'blockwise_crm_site' and workspace_id = w;
+
+  -- Establish a known starting point. The two-workspace probe above may already
+  -- have bumped this row, and this check is about the transition, not the
+  -- absolute value.
+  update public.crm_workspace_sites
+     set credential_version = 0, credential_last_four = null
+   where workspace_id = w;
+
+  perform public.crm_site_credential_upsert(w, '\x21'::bytea, 'nonce-m1', 'aaaa');
+  select credential_version, credential_last_four into v1, lf1
+    from public.crm_workspace_sites where workspace_id = w;
+
+  perform public.crm_site_credential_upsert(w, '\x22'::bytea, 'nonce-m2', 'bbbb');
+  select credential_version into v2
+    from public.crm_workspace_sites where workspace_id = w;
+
+  perform public.crm_site_credential_clear(w);
+  select credential_version, credential_last_four into v3, lf3
+    from public.crm_workspace_sites where workspace_id = w;
+
+  insert into probe values (
+    format('store=%s/%s rotate=%s clear=%s/%s', v1, lf1, v2, v3, coalesce(lf3, 'null'))
+  );
+end;
+$$;
+select outcome from probe;
+SQL
+)"
+
+check "store, rotate and clear all maintain the mapping row's version" \
+  "$([ "$mapping_outcome" = "store=1/aaaa rotate=2 clear=0/null" ] && echo 1 || echo 0)" \
+  "got: $mapping_outcome"
+
+# demo.crm.internal is bound to a workspace with no crm_workspace_sites row, so
+# storing its credential must still work. The vault is the authority and the
+# mapping row only mirrors it; inventing a mapping row here would fabricate a CRM
+# site record that nothing provisioned.
+unmapped_outcome="$(probe <<'SQL'
+\set ON_ERROR_STOP on
+create temp table probe (outcome text);
+do $$
+declare
+  w uuid;
+  stored int;
+  mapping_rows int;
+begin
+  select x.id into w
+    from public.workspaces x
+   where not exists (select 1 from public.crm_workspace_sites s where s.workspace_id = x.id)
+   order by x.id limit 1;
+
+  if w is null then
+    insert into probe values ('no-unmapped-workspace');
+    return;
+  end if;
+
+  perform public.crm_site_credential_upsert(w, '\x23'::bytea, 'nonce-m3', 'cccc');
+
+  select count(*) into stored
+    from public.crm_site_credential_get(w) where credential_nonce is not null;
+  select count(*) into mapping_rows
+    from public.crm_workspace_sites where workspace_id = w;
+
+  insert into probe values (format('stored=%s mapping_rows=%s', stored, mapping_rows));
+end;
+$$;
+select outcome from probe;
+SQL
+)"
+
+check "a workspace with no mapping row still stores, without inventing one" \
+  "$([ "$unmapped_outcome" = "stored=1 mapping_rows=0" ] && echo 1 || echo 0)" \
+  "got: $unmapped_outcome"
+
 # ---------------------------------------------------------------------------
 echo
 if [ "$failures" -eq 0 ]; then
