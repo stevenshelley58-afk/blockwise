@@ -22,9 +22,9 @@
 .rr-stage-brand i { width: 7px; height: 7px; border-radius: 50%; background: var(--hc-success); }
 .rr-stage-slot { display: grid; justify-items: end; gap: 5px; }
 .rr-views { position: relative; display: flex; gap: 4px; width: fit-content; border: 1px solid var(--hc-line); border-radius: 999px; padding: 4px; background: var(--hc-soft); }
-.rr-views button { position: relative; z-index: 1; min-width: 84px; min-height: 32px; border: 0; border-radius: 999px; padding: 0 13px; background: transparent; color: var(--hc-muted); font-family: var(--hc-display); font-size: 12.5px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: color .28s ease; }
-.rr-views button[aria-pressed="true"] { color: var(--rr-accent); }
-.rr-views button:focus-visible { outline: 2px solid var(--rr-accent); outline-offset: 2px; }
+.rr-stage .rr-views button { position: relative; z-index: 1; min-width: 84px; min-height: 32px; border: 0; border-radius: 999px; padding: 0 13px; background: transparent; color: var(--hc-muted); font-family: var(--hc-display); font-size: 12.5px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: color .28s ease; }
+.rr-stage .rr-views button[aria-pressed="true"] { color: var(--rr-accent); }
+.rr-stage .rr-views button:focus-visible { outline: 2px solid var(--rr-accent); outline-offset: 2px; }
 .rr-view-indicator { position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 0; border: 1px solid color-mix(in srgb, var(--rr-accent) 30%, transparent); border-radius: 999px; background: var(--rr-soft); transition: transform .48s cubic-bezier(.4, 0, .2, 1), width .48s cubic-bezier(.4, 0, .2, 1); pointer-events: none; }
 .rr-view-brief { display: block; min-height: 15px; color: var(--hc-muted); font-size: 12px; line-height: 1.25; }
 .rr-panel { animation: rr-panel-in 440ms cubic-bezier(.2, .7, .3, 1) both; }
@@ -94,7 +94,7 @@
   .rr-stage-brand i { width: 6px; height: 6px; }
   .rr-stage-slot { gap: 3px; }
   .rr-views { gap: 3px; }
-  .rr-views button { min-width: 0; min-height: 32px; padding-inline: 7px; font-size: 11px; }
+  .rr-stage .rr-views button { min-width: 0; min-height: 32px; padding-inline: 7px; font-size: 11px; }
   .rr-view-brief { font-size: 11px; }
   .rr-dashboard { padding: 12px; }
   .rr-lead-email { padding: 8px; }
@@ -119,7 +119,7 @@
   /* At 320px the product name is the first thing to go; the dot stays. */
   .rr-stage-brand { gap: 0; font-size: 0; }
   .rr-stage-brand i { width: 8px; height: 8px; }
-  .rr-views button { padding-inline: 6px; font-size: 10.5px; }
+  .rr-stage .rr-views button { padding-inline: 6px; font-size: 10.5px; }
   .rr-metrics dt { font-size: 11px; }
   .rr-metrics dd { font-size: 19px; }
 }
