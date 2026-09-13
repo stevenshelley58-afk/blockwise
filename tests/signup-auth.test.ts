@@ -87,6 +87,10 @@ test("confirm route verifies token hash and only redirects to safe relative next
     source.indexOf("acceptVerifiedWorkspaceInvitations({ user })")
       < source.indexOf("bootstrapVerifiedTrialWorkspace({ user, serviceSupabase: service })"),
   );
+  assert.match(source, /const signupSource = user\.user_metadata\?\.ad_radar_source/);
+  assert.match(source, /signupSource === "audit" \|\| signupSource === "local-ad-radar" \|\| signupSource === "suburb-report"/);
+  assert.match(source, /acquisitionSource,/);
+  assert.doesNotMatch(source, /acquisitionSource:\s*signupSource/);
   assert.match(source, /workspace_bootstrap_failed/i);
   assert.match(source, /\/login\?error=confirm_failed/);
 });

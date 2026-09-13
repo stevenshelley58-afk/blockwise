@@ -106,11 +106,16 @@ export async function GET(request: NextRequest) {
     return bootstrapFailedRedirect(request);
   }
 
+  const signupSource = user.user_metadata?.ad_radar_source;
+  const acquisitionSource = signupSource === "audit" || signupSource === "local-ad-radar" || signupSource === "suburb-report"
+    ? signupSource
+    : "unattributed";
+
   await recordProgressiveFunnelEventBestEffort(service, {
     eventName: "email_verified",
     workspaceId,
     country: null,
-    acquisitionSource: "unattributed",
+    acquisitionSource,
     idempotencyKey: `auth:verified:${user.id}:${workspaceId ?? "unassigned"}`,
     properties: { auth_type: type ?? flow ?? "pkce" },
   });
