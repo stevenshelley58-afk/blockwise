@@ -8,7 +8,7 @@ import { AD_EXAMPLES, withBasePath } from "@/lib/homepage-concept/content";
 import { creativeImageSrcSet } from "@/lib/homepage-concept/creative-image";
 import { TRIAL_SIGNUP_URL } from "@/lib/homepage-concept/pricing";
 import { homepageMotion, useHydratedReducedMotion } from "@/lib/motion";
-import { STUDY_NARROW_BREAKPOINT, studyAdMotion, studyEditLayout, studyFrame } from "./workflow-motion-study-geometry";
+import { STUDY_NARROW_BREAKPOINT, studyAdMotion, studyEditLayout, studyFrame, studyTransition } from "./workflow-motion-study-geometry";
 import styles from "./workflow-motion-study.module.css";
 
 const STUDY_STEPS = [
@@ -60,8 +60,8 @@ export function WorkflowMotionStudy() {
   const stageRef = useRef<HTMLDivElement>(null);
   const adRef = useRef<HTMLDivElement>(null);
   const playback = useRef<{ stop(): void; pause(): void; play(): void } | null>(null);
-  const progress = useMotionValue(0);
-  const frame = useTransform(progress, studyFrame);
+  const progress = useMotionValue(1);
+  const frame = useMotionValue(studyFrame(0));
   const narrow = geometry.stageWidth < STUDY_NARROW_BREAKPOINT;
   const step = Math.min(scene, 2);
   const active = pageVisible && (inView || manual);
@@ -108,21 +108,25 @@ export function WorkflowMotionStudy() {
 
   useEffect(() => {
     playback.current?.stop();
-    if (reduced || progress.get() === scene) {
-      progress.set(scene);
+    const from = frame.get();
+    const to = studyFrame(scene);
+    if (reduced || Object.keys(to).every(key => from[key as keyof typeof from] === to[key as keyof typeof to])) {
+      frame.set(to);
       setSettledScene(scene);
       return;
     }
     setSettledScene(null);
-    // Stop retains the current value, so another selection reverses from the actual visual position.
-    const controls = animate(progress, scene, {
+    // Capture the current visual frame before restarting the clock, never the previous screen endpoint.
+    progress.set(0);
+    const controls = animate(progress, 1, {
       duration: (scene < 2 ? TIMING.travelMs : TIMING.crossfadeMs) / 1000,
       ease: TIMING.ease,
-      onComplete: () => setSettledScene(scene),
+      onUpdate: value => frame.set(studyTransition(from, to, value)),
+      onComplete: () => { frame.set(to); setSettledScene(scene); },
     });
     playback.current = controls;
     return () => controls.stop();
-  }, [progress, reduced, scene]);
+  }, [frame, progress, reduced, scene]);
 
   useEffect(() => {
     if (active) playback.current?.play();

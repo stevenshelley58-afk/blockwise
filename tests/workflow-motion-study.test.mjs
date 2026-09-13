@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { studyFrame, studyAdMotion, studyEditLayout } from "../src/components/motion-study/workflow-motion-study-geometry.ts";
+import { studyFrame, studyTransition, studyAdMotion, studyEditLayout } from "../src/components/motion-study/workflow-motion-study-geometry.ts";
 const source = await readFile(new URL("../src/components/motion-study/workflow-motion-study.tsx", import.meta.url), "utf8");
 const styles = await readFile(new URL("../src/components/motion-study/workflow-motion-study.module.css", import.meta.url), "utf8");
 
 test("one clock owns all transitions; selectors interrupt without resetting progress", () => {
-  assert.match(source, /const progress = useMotionValue\(0\)/);
-  assert.match(source, /animate\(progress, scene/);
+  assert.match(source, /const progress = useMotionValue\(1\)/);
+  assert.match(source, /animate\(progress, 1/);
   assert.match(source, /controls.stop\(\)/);
   assert.ok(source.indexOf("setManual(true);", source.indexOf("const selectStep")) < source.indexOf("if (next === step) return"));
   assert.doesNotMatch(source, /AnimatePresence|headlineChars|headlineIndexRef|requestAnimationFrame/);
@@ -78,7 +78,21 @@ test("static text, accessible selectors, finite autoplay and reduced motion", ()
   assert.match(source,/document.visibilityState/);
   assert.match(source,/if \(reduced\) \{ setManual\(true\); setScene\(3\); \}/);
   assert.match(source,/scene === 3/);
-  assert.match(source,/progress.set\(scene\)/);
+  assert.match(source,/frame.set\(to\)/);
   assert.match(styles,/prefers-reduced-motion/);
   assert.match(source,/Free trial · No card required · Cancel anytime/);
+});
+
+test("direct Choose to Review does not reveal the editor", () => {
+  for (let t=.01;t<1;t+=.02) {
+    const f=studyTransition(studyFrame(0),studyFrame(2),t);
+    assert.equal(f.edit,0);
+    assert.equal(f.review,1);
+  }
+});
+test("interruption resumes at the captured visual frame", () => {
+  const interrupted=studyTransition(studyFrame(0),studyFrame(1),.43);
+  assert.deepEqual(studyTransition(interrupted,studyFrame(0),0),interrupted);
+  assert.equal(studyTransition(studyFrame(2),studyFrame(0),.4).gallery,0);
+  assert.equal(studyTransition(studyFrame(2),studyFrame(0),.2).edit,0);
 });

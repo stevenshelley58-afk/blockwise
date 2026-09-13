@@ -70,3 +70,25 @@ export function studyFrame(progress: number) {
     approved: clamp(progress - 2),
   };
 }
+
+export type StudyFrame = ReturnType<typeof studyFrame>;
+/** Interpolate directly to the requested screen, never through an unwanted intermediate screen. */
+export function studyTransition(from: StudyFrame, to: StudyFrame, progress: number): StudyFrame {
+  const t = Math.max(0, Math.min(1, progress));
+  const ramp = (a: number, b: number) => Math.max(0, Math.min(1, (t - a) / (b - a)));
+  const mix = (a: number, b: number, amount = t) => a + (b - a) * amount;
+  const entering = to.panel > from.panel;
+  const leaving = to.panel < from.panel;
+  const edit = from.panel === 0 ? to.edit : from.edit;
+  const review = from.panel === 0 ? to.review : from.review;
+  return {
+    ad: mix(from.ad, to.ad),
+    gallery: mix(from.gallery, to.gallery, to.gallery > from.gallery ? ramp(.6, 1) : ramp(0, .35)),
+    panel: mix(from.panel, to.panel, entering ? ramp(.08, .7) : leaving ? ramp(0, .45) : t),
+    edit: leaving ? from.edit : mix(edit, to.edit),
+    review: leaving ? from.review : mix(review, to.review),
+    original: mix(from.original, to.original),
+    updated: mix(from.updated, to.updated),
+    approved: mix(from.approved, to.approved),
+  };
+}
