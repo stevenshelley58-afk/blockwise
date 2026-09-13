@@ -9,6 +9,17 @@ database="${OWNER_CRM_CONSENT_RESTORE_DATABASE:-crm_rehearsal}"
 [[ "$container" != "blockwise-product-product-db-1" && "$database" == crm_rehearsal ]] || { echo "refusing production target" >&2; exit 2; }
 [[ "$(docker inspect --format '{{.HostConfig.NetworkMode}}' "$container" 2>/dev/null)" == none ]] || { echo "rehearsal container must have network none" >&2; exit 2; }
 docker exec "$container" pg_isready -U postgres -d "$database" >/dev/null
+root="$(cd "$(dirname "$0")/../.." && pwd)"
+backup="${OWNER_CRM_CONSENT_RESTORE_DUMP:-/srv/blockwise/backups/owner-crm-launch-20260913/database.dump}"
+fresh_database="crm_fresh_rehearsal"
+fresh_created=false
+
+cleanup_fresh() {
+  if [[ "$fresh_created" == true ]]; then
+    docker exec "$container" dropdb -U postgres --if-exists "$fresh_database" >/dev/null
+  fi
+}
+trap cleanup_fresh EXIT
 
 docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 -U postgres -d "$database" <<'SQL'
 begin;
@@ -82,3 +93,68 @@ rollback;
 SQL
 
 echo 'owner CRM restored consent acceptance passed (rollback only)'
+
+# Fresh-path proof uses the same network-isolated container and the actual backup.
+# It never alters crm_rehearsal and removes only the database created by this script.
+[[ -r "$backup" ]] || { echo "missing restore backup" >&2; exit 2; }
+docker exec "$container" dropdb -U postgres --if-exists "$fresh_database" >/dev/null
+docker exec "$container" createdb -U postgres "$fresh_database"
+fresh_created=true
+cat "$backup" | docker exec -i "$container" pg_restore -U postgres -d "$fresh_database" --no-owner --no-privileges
+
+docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 -U postgres -d "$fresh_database" <<'SQL'
+begin;
+do $$ begin
+  if to_regclass('public.workspace_marketing_consent_events') is not null
+     and exists(select 1 from public.workspace_marketing_consent_events) then
+    raise exception 'fresh clone has nonempty consent table';
+  end if;
+end $$;
+drop function if exists public.owner_crm_customer_snapshot_page(uuid,integer);
+drop function if exists public.owner_crm_owner_email_verified_at(uuid,uuid);
+drop function if exists public.record_workspace_marketing_consent(uuid,boolean);
+drop table if exists public.workspace_marketing_consent_events;
+delete from public.blockwise_product_migration_ledger
+where version = any(array[
+  '20260913030000_workspace_marketing_consent.sql',
+  '20260913030100_owner_crm_snapshot_marketing_consent.sql',
+  '20260913030200_correct_owner_crm_snapshot_marketing_consent.sql',
+  '20260913030300_correct_marketing_consent_grant_gate.sql'
+]);
+commit;
+SQL
+
+for migration in \
+  20260913030000_workspace_marketing_consent.sql \
+  20260913030100_owner_crm_snapshot_marketing_consent.sql \
+  20260913030200_correct_owner_crm_snapshot_marketing_consent.sql \
+  20260913030300_correct_marketing_consent_grant_gate.sql; do
+  { printf 'begin;\n'; cat "$root/supabase/migrations/$migration"; printf "\ninsert into public.blockwise_product_migration_ledger(version) values ('%s');\ncommit;\n" "$migration"; } |
+    docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 -U postgres -d "$fresh_database" >/dev/null
+done
+
+docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 -U postgres -d "$fresh_database" <<'SQL'
+do $$ begin
+  if to_regclass('public.workspace_marketing_consent_events') is null
+    or not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='owner_crm_customer_snapshot_page') then
+    raise exception 'fresh consent migration installation incomplete';
+  end if;
+end $$;
+SQL
+
+# Adoption guards must refuse both an unexpected shape and an existing row. Each
+# failing psql session is its own uncommitted transaction and is discarded.
+for mode in nonempty unexpected_shape; do
+  if [[ "$mode" == nonempty ]]; then
+    mutation="insert into public.workspace_marketing_consent_events(workspace_id,profile_id,granted) select w.id,p.id,true from public.workspaces w join public.profiles p on true limit 1;"
+  else
+    mutation="alter table public.workspace_marketing_consent_events add column acceptance_unexpected_shape text;"
+  fi
+  if { printf 'begin;\n%s\n' "$mutation"; cat "$root/supabase/migrations/20260913030000_workspace_marketing_consent.sql"; } |
+      docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 -U postgres -d "$fresh_database" >/dev/null 2>&1; then
+    echo "fresh adoption guard unexpectedly accepted $mode" >&2
+    exit 1
+  fi
+done
+
+echo 'owner CRM fresh clone migration and adoption guards passed'
