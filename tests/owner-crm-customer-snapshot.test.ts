@@ -28,6 +28,11 @@ function row(overrides: Record<string, unknown> = {}) {
     owner_count: 1,
     owner_profile_workspace_count: 1,
     owner_matches_created_by: true,
+    owner_email_verified_at: "2026-09-13T00:00:00.000Z",
+    marketing_consent_event_id: "55555555-5555-4555-8555-555555555555",
+    marketing_consent_granted: true,
+    marketing_consent_occurred_at: "2026-09-13T00:00:00.000Z",
+    marketing_consent_policy_version: "2026-09-13",
     ...overrides,
   };
 }
@@ -204,3 +209,6 @@ test("owner CRM refuses reuse of the global credential", async () => {
     else process.env.BLOCKWISE_INTERNAL_AUTH_SECRET = before.shared;
   }
 });
+
+
+test("snapshot mirrors explicit consent facts without inferring eligibility", () => { const item = mapOwnerCrmSnapshotRow(row()); assert.deepEqual(item.marketingConsent, { eventId: "55555555-5555-4555-8555-555555555555", granted: true, occurredAt: OBSERVED_AT, policyVersion: "2026-09-13" }); assert.equal(item.ownerEmailVerifiedAt, OBSERVED_AT); const sql=readFileSync(new URL("../supabase/migrations/20260913030100_owner_crm_snapshot_marketing_consent.sql",import.meta.url),"utf8"); assert.match(sql,/order by e\.occurred_at desc,e\.id desc limit 1/); });

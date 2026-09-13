@@ -31,6 +31,11 @@ export type OwnerCrmSnapshotRpcRow = {
   owner_count: number | null;
   owner_profile_workspace_count: number | null;
   owner_matches_created_by: boolean | null;
+  owner_email_verified_at: string | null;
+  marketing_consent_event_id: string | null;
+  marketing_consent_granted: boolean | null;
+  marketing_consent_occurred_at: string | null;
+  marketing_consent_policy_version: string | null;
 };
 
 export type OwnerCrmCustomerSnapshot = {
@@ -47,6 +52,8 @@ export type OwnerCrmCustomerSnapshot = {
     startedAt: string | null;
     endsAt: string | null;
   };
+  marketingConsent: { eventId: string; granted: boolean; occurredAt: string; policyVersion: string } | null;
+  ownerEmailVerifiedAt: string | null;
   mappingAmbiguities: string[];
   sourceObservedAt: string;
 };
@@ -117,6 +124,8 @@ export function mapOwnerCrmSnapshotRow(row: OwnerCrmSnapshotRpcRow): OwnerCrmCus
       startedAt: row.trial_started_at,
       endsAt: row.trial_ends_at,
     },
+    ownerEmailVerifiedAt: row.owner_email_verified_at,
+    marketingConsent: row.marketing_consent_event_id && row.marketing_consent_granted !== null && row.marketing_consent_occurred_at && row.marketing_consent_policy_version ? { eventId: row.marketing_consent_event_id, granted: row.marketing_consent_granted, occurredAt: row.marketing_consent_occurred_at, policyVersion: row.marketing_consent_policy_version } : null,
     mappingAmbiguities,
     sourceObservedAt: row.source_observed_at,
   };
