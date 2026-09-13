@@ -90,6 +90,9 @@ export function entrance(reduced: boolean | null): {
  */
 export const homepageMotion = {
   workflowStudy: {
+    browseMs: 780,
+    browseHoldMs: 700,
+    panelSwapMs: 800,
     autoHoldMs: 2600,
     travelMs: 640,
     crossfadeMs: 350,

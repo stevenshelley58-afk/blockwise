@@ -61,6 +61,9 @@ export function studyFrame(progress: number) {
   const updated = clamp((progress - 0.28) / 0.48);
   return {
     ad,
+    browse: clamp((progress + 2) / 2),
+    shell: 1,
+    shellAlpha: 1,
     gallery: 1 - clamp(progress / 0.32),
     panel: clamp((progress - 0.08) / 0.5),
     edit: 1 - clamp(progress - 1),
@@ -82,12 +85,19 @@ export function studyTransition(from: StudyFrame, to: StudyFrame, progress: numb
   const leaving = to.panel < from.panel;
   const edit = from.panel === 0 ? to.edit : from.edit;
   const review = from.panel === 0 ? to.review : from.review;
+  const swapping = from.ad === 1 && to.ad === 1 && (from.edit !== to.edit || from.review !== to.review);
+  const shell = swapping ? (t < .38 ? mix(from.shell, .84, ramp(0, .38)) : mix(.84, 1, ramp(.38, .78))) : mix(from.shell, 1);
+  const shellAlpha = swapping ? (t < .38 ? mix(from.shellAlpha, 0, ramp(0, .38)) : ramp(.38, .7)) : mix(from.shellAlpha, 1);
+  const content = (a: number, b: number) => swapping ? mix(a, b, b > a ? ramp(.78, 1) : ramp(0, .25)) : fade(a, b);
   return {
+    browse: mix(from.browse, to.browse),
+    shell,
+    shellAlpha,
     ad: mix(from.ad, to.ad),
     gallery: mix(from.gallery, to.gallery, to.gallery > from.gallery ? ramp(.6, 1) : ramp(0, .35)),
     panel: mix(from.panel, to.panel, entering ? ramp(.08, .7) : leaving ? ramp(0, .45) : t),
-    edit: leaving ? from.edit : fade(edit, to.edit),
-    review: leaving ? from.review : fade(review, to.review),
+    edit: leaving ? from.edit : content(edit, to.edit),
+    review: leaving ? from.review : content(review, to.review),
     original: fade(from.original, to.original),
     updated: fade(from.updated, to.updated),
     approved: mix(from.approved, to.approved),

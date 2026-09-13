@@ -14,7 +14,7 @@ test("one clock owns all transitions; selectors interrupt without resetting prog
 });
 
 test("complete choreography endpoints", () => {
-  assert.deepEqual(studyFrame(0), { ad:0,gallery:1,panel:0,edit:1,review:0,original:1,updated:0,approved:0 });
+  assert.deepEqual(studyFrame(0), { browse:1,shell:1,shellAlpha:1,ad:0,gallery:1,panel:0,edit:1,review:0,original:1,updated:0,approved:0 });
   assert.equal(studyFrame(1).panel,1);
   assert.equal(studyFrame(1).edit,1);
   assert.equal(studyFrame(2).review,1);
@@ -105,4 +105,22 @@ test("interruption resumes at the captured visual frame", () => {
       if(a>=1 && b>=1) assert.ok(f.edit*f.review<1e-10);
     }
   }
+});
+
+test("browse advances across three distinct positions before selection", () => {
+  assert.equal(studyFrame(-2).browse,0);
+  assert.equal(studyFrame(-1).browse,.5);
+  assert.equal(studyFrame(0).browse,1);
+  assert.match(source,/ad=\{ad\}/);
+  assert.match(source,/withBasePath\(ad.image\)/);
+});
+test("right panel shrinks out then grows before text while ad remains unchanged", () => {
+ const a=studyFrame(1), b=studyFrame(2);
+ const out=studyTransition(a,b,.2), hidden=studyTransition(a,b,.38), growing=studyTransition(a,b,.6), text=studyTransition(a,b,.9);
+ assert.ok(out.shell<1 && out.shellAlpha<1);
+ assert.equal(hidden.shellAlpha,0);
+ assert.ok(growing.shell>hidden.shell && growing.shell<1);
+ assert.equal(growing.review,0);
+ assert.equal(text.shell,1); assert.ok(text.review>0);
+ for(let t=0;t<=1;t+=.01) { const f=studyTransition(a,b,t); assert.equal(f.ad,1); assert.equal(f.updated,1); assert.equal(f.browse,1); }
 });
