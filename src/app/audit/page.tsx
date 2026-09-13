@@ -160,7 +160,7 @@ export default async function AuditPage({ searchParams }: { searchParams?: Searc
 
   let audit: AdAuditResult | null = null;
   try {
-    audit = await buildAdAudit(createSupabaseServiceClient(), { location });
+    audit = await buildAdAudit({ location });
   } catch (error) {
     console.error("audit page build failed", error);
   }

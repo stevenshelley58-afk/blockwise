@@ -1,34 +1,28 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-
 import {
   resolveAdRadarLocationSearch,
   type AdRadarLocationGuess,
 } from "./ad-radar-location.ts";
 import {
   adRunningMs,
-  CUSTOMER_META_AD_LIBRARY_CARD_SELECT,
   formatAdDuration,
-  normaliseCustomerMetaAdLibraryCard,
   type CustomerMetaAdLibraryCard,
-  type CustomerMetaAdLibraryCardRow,
 } from "./customer-meta-card.ts";
 import { toPublicAdRadarCard, type PublicAdRadarCard } from "./public-ad-radar.ts";
+import { mapAdDbRowToCustomerMetaCard } from "./ad-db-card-mapper.ts";
+import { searchAdDbAds, type AdDbSearchInput, type AdDbSearchResult } from "./ad-db-client.ts";
 
 /**
  * Local Ad Market Audit.
  *
- * Aggregates scraped Meta Ad Library cards for a suburb + surrounding area into
+ * Aggregates archived Ad DB observations for a suburb + surrounding area into
  * the report shown on /audit: totals, longest-running creatives (the strongest
  * available public signal an angle keeps running), top advertisers, and format
  * / platform / angle breakdowns. Advertisers are first classified so only real
  * estate advertisers feed the headline numbers. computeAuditStats is pure
- * (unit-tested); buildAdAudit wraps it with the Supabase query over
- * research.v_customer_meta_ad_library_cards.
+ * (unit-tested); buildAdAudit reads only through the authenticated Ad DB gateway.
  */
 
-const RESEARCH_SCHEMA = "research";
-const CARD_VIEW = "v_customer_meta_ad_library_cards";
-const PER_FILTER_LIMIT = 250;
+const PER_REQUEST_LIMIT = 100;
 const FETCH_CAP = 800;
 const MAX_SUBURB_FILTERS = 10;
 const TOP_ADVERTISERS = 12;
@@ -109,25 +103,20 @@ export type AdAuditResult = {
 };
 
 type AreaFilter = { postcodes: string[]; suburbs: string[]; state: string | null };
-
-type AreaQuery = {
-  in(column: string, values: string[]): AreaQuery;
-  overlaps(column: string, values: string[]): AreaQuery;
-  ilike(column: string, pattern: string): AreaQuery;
-  eq(column: string, value: string): AreaQuery;
-};
+type AuditSearch = (input: AdDbSearchInput) => Promise<AdDbSearchResult>;
+type AuditBuildOptions = { searchAds?: AuditSearch; now?: () => number };
 
 /** Build the full audit for a location string; falls back to Perth, WA. */
 export async function buildAdAudit(
-  supabase: SupabaseClient,
   input: { location: string },
+  options: AuditBuildOptions = {},
 ): Promise<AdAuditResult> {
   const searchTerm = input.location.trim();
   const guess =
     resolveAdRadarLocationSearch(searchTerm, { includeSurroundingSuburbs: true }) ??
     resolveAdRadarLocationSearch("Perth, WA", { includeSurroundingSuburbs: true });
 
-  const now = Date.now();
+  const now = options.now?.() ?? Date.now();
 
   if (!guess) {
     return {
@@ -140,8 +129,7 @@ export async function buildAdAudit(
   }
 
   const filter = areaFilterFromGuess(guess);
-  const { rows, capped } = await fetchAreaRows(supabase, filter);
-  const cards = dedupeCards(rows.map(normaliseCustomerMetaAdLibraryCard));
+  const { cards, capped } = await fetchAreaCards(filter, options.searchAds ?? searchAdDbAds);
   const { included, excludedAdvertisers } = partitionRealEstateCards(cards);
 
   return {
@@ -486,63 +474,64 @@ function areaFilterFromGuess(guess: AdRadarLocationGuess): AreaFilter {
   return { postcodes, suburbs: suburbs.slice(0, MAX_SUBURB_FILTERS), state: guess.stateCode };
 }
 
-async function fetchAreaRows(
-  supabase: SupabaseClient,
+async function fetchAreaCards(
   filter: AreaFilter,
-): Promise<{ rows: CustomerMetaAdLibraryCardRow[]; capped: boolean }> {
-  const runners: Array<(query: AreaQuery) => AreaQuery> = [];
+  searchAds: AuditSearch,
+): Promise<{ cards: CustomerMetaAdLibraryCard[]; capped: boolean }> {
+  const searches = areaSearches(filter);
+  const cards: CustomerMetaAdLibraryCard[] = [];
+  const seen = new Set<string>();
 
-  if (filter.postcodes.length > 0) {
-    runners.push((query) => query.in("postcode", filter.postcodes));
-    runners.push((query) => query.overlaps("ad_area_postcodes", filter.postcodes));
+  for (let index = 0; index < searches.length; index += 1) {
+    let cursor: string | undefined;
+    const seenCursors = new Set<string>();
+
+    do {
+      const remaining = FETCH_CAP - cards.length;
+      if (remaining <= 0) return { cards, capped: true };
+
+      const page = await searchAds({
+        ...searches[index],
+        cursor,
+        limit: Math.min(PER_REQUEST_LIMIT, remaining),
+      });
+      for (const row of page.items) {
+        const card = mapAdDbRowToCustomerMetaCard(row);
+        if (seen.has(card.id)) continue;
+        seen.add(card.id);
+        cards.push(card);
+      }
+
+      if (!page.page.nextCursor) break;
+      if (cards.length >= FETCH_CAP) return { cards, capped: true };
+      if (seenCursors.has(page.page.nextCursor))
+        throw new Error("Ad DB returned a repeated pagination cursor.");
+      seenCursors.add(page.page.nextCursor);
+      cursor = page.page.nextCursor;
+    } while (true);
+
+    if (cards.length >= FETCH_CAP && index < searches.length - 1)
+      return { cards, capped: true };
   }
 
-  for (const suburb of filter.suburbs) {
-    const term = escapeLikeTerm(suburb);
-    if (term) runners.push((query) => query.ilike("suburb", `%${term}%`));
-  }
+  return { cards, capped: false };
+}
 
-  if (runners.length === 0 && filter.state) {
-    const state = filter.state;
-    runners.push((query) => query.eq("state", state));
-  }
-
-  if (runners.length === 0) return { rows: [], capped: false };
+function areaSearches(filter: AreaFilter): AdDbSearchInput[] {
+  const searches: AdDbSearchInput[] = [];
+  for (const postcode of filter.postcodes)
+    searches.push({ postcode, state: filter.state ?? undefined });
+  for (const suburb of filter.suburbs)
+    searches.push({ suburb, state: filter.state ?? undefined });
+  if (searches.length === 0 && filter.state) searches.push({ state: filter.state });
 
   const seen = new Set<string>();
-  const rows: CustomerMetaAdLibraryCardRow[] = [];
-  let capped = false;
-
-  for (const applyFilter of runners) {
-    if (rows.length >= FETCH_CAP) {
-      capped = true;
-      break;
-    }
-
-    const baseQuery = supabase
-      .schema(RESEARCH_SCHEMA)
-      .from(CARD_VIEW)
-      .select(CUSTOMER_META_AD_LIBRARY_CARD_SELECT)
-      .order("last_seen_at", { ascending: false, nullsFirst: false })
-      .order("card_id", { ascending: true })
-      .limit(PER_FILTER_LIMIT);
-
-    const query = applyFilter(baseQuery as unknown as AreaQuery);
-    const { data, error } = await (query as unknown as PromiseLike<{
-      data: CustomerMetaAdLibraryCardRow[] | null;
-      error: { message: string } | null;
-    }>);
-    if (error) throw new Error(error.message);
-
-    for (const row of data ?? []) {
-      const key = rowKey(row);
-      if (!key || seen.has(key)) continue;
-      seen.add(key);
-      rows.push(row);
-    }
-  }
-
-  return { rows: rows.slice(0, FETCH_CAP), capped: capped || rows.length > FETCH_CAP };
+  return searches.filter((search) => {
+    const key = JSON.stringify(search);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function dedupeCards(cards: CustomerMetaAdLibraryCard[]): CustomerMetaAdLibraryCard[] {
