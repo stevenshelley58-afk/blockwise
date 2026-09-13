@@ -21,7 +21,6 @@ import {
   type ExcludedAdvertiser,
 } from "@/lib/research/ad-audit";
 import { getAuditAvailability, getAuditFooterCopy, getAuditHeroCopy, type AuditAvailability } from "@/lib/research/audit-availability";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 import "../audit.css";
 

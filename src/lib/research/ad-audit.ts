@@ -23,6 +23,7 @@ import { searchAdDbAds, type AdDbSearchInput, type AdDbSearchResult } from "./ad
  */
 
 const PER_REQUEST_LIMIT = 100;
+const FETCH_PAGE_CAP = 16;
 const FETCH_CAP = 800;
 const MAX_SUBURB_FILTERS = 10;
 const TOP_ADVERTISERS = 12;
@@ -481,6 +482,7 @@ async function fetchAreaCards(
   const searches = areaSearches(filter);
   const cards: CustomerMetaAdLibraryCard[] = [];
   const seen = new Set<string>();
+  let pagesFetched = 0;
 
   for (let index = 0; index < searches.length; index += 1) {
     let cursor: string | undefined;
@@ -488,8 +490,9 @@ async function fetchAreaCards(
 
     do {
       const remaining = FETCH_CAP - cards.length;
-      if (remaining <= 0) return { cards, capped: true };
+      if (remaining <= 0 || pagesFetched >= FETCH_PAGE_CAP) return { cards, capped: true };
 
+      pagesFetched += 1;
       const page = await searchAds({
         ...searches[index],
         cursor,
@@ -532,17 +535,6 @@ function areaSearches(filter: AreaFilter): AdDbSearchInput[] {
     seen.add(key);
     return true;
   });
-}
-
-function dedupeCards(cards: CustomerMetaAdLibraryCard[]): CustomerMetaAdLibraryCard[] {
-  const seen = new Set<string>();
-  const out: CustomerMetaAdLibraryCard[] = [];
-  for (const card of cards) {
-    if (seen.has(card.id)) continue;
-    seen.add(card.id);
-    out.push(card);
-  }
-  return out;
 }
 
 function daysRunning(card: CustomerMetaAdLibraryCard, now: number): number | null {
