@@ -179,3 +179,9 @@ test("two editor fields shorten writing and approval drives the ad hop and Live 
   assert.equal(studyTransition(studyFrame(3),studyFrame(1),.5).hop,0);
   assert.equal(studyTransition(mid,studyFrame(1),0).hop,mid.hop);
 });
+
+test("editor fields stay compact and the redundant bottom bar is absent", () => {
+  assert.doesNotMatch(source, /bwStudyHint|hint:/);
+  assert.doesNotMatch(styles, /bwStudyHint|label:last-child textarea/);
+  assert.match(source, /label="Ad text"[^\n]+rows=\{3\}/);
+});
