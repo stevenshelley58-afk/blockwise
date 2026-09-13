@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -105,6 +105,74 @@ test("a page with no live ads completes the first fill instead of failing and re
   assert.equal(result.unverifiedZero, true);
   assert.equal(result.metadata.pageOutcomes[0].outcome, "ads_not_found_unverified");
   assert.equal(result.metadata.pageOutcomes[0].trustedZero, false);
+});
+
+test("a stale persisted verdict is re-derived from its own dataset without another actor run", async () => {
+  // The 2026-09-12 fleet wrote FAILED/ADS_NOT_FOUND_page_mismatch outcomes under
+  // scoring revision 1. Those datasets are already paid for, so a newer revision
+  // must re-score them instead of replaying the old verdict forever.
+  const dir = await tempDir();
+  try {
+    const url = "https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=ALL&view_all_page_id=674158585783249&media_type=all";
+    const staleOutcome = {
+      runId: "run-old",
+      provider: `apify:${APIFY_ACTOR_ID}`,
+      status: "FAILED",
+      items: [{ error_code: "ADS_NOT_FOUND", url }],
+      itemCount: 1,
+      costUsd: 0.0008,
+      rawDatasetId: "dataset-old",
+      paginationExhausted: false,
+      coverageComplete: false,
+      metadata: {
+        actorId: APIFY_ACTOR_ID,
+        platformUsageBillingModel: "DEVELOPER",
+        chargedEventCounts: { "apify-default-dataset-item": 1, "apify-actor-start": 1 },
+        statusMessage: "Scraped all urls",
+        pageOutcomes: [{ pageId: "674158585783249", outcome: "mismatched_identity", trustedZero: false, itemCount: 1, reason: "ADS_NOT_FOUND_page_mismatch" }],
+      },
+    };
+    await writeFile(join(dir, "apify-runs.json"), JSON.stringify({
+      version: 1,
+      runs: {
+        "fill-stale": {
+          runKey: "fill-stale",
+          scoringRevision: 1,
+          reservationId: `apify:fill-stale`,
+          runId: "run-old",
+          rawDatasetId: "dataset-old",
+          pages: [{ pageId: "674158585783249", url }],
+          maxTotalChargeUsd: 0.5,
+          maxItems: 666,
+          status: "FAILED",
+          outcome: staleOutcome,
+          startedAt: "2026-09-12T17:41:54.055Z",
+          finishedAt: "2026-09-12T18:03:54.254Z",
+        },
+      },
+    }));
+    let starts = 0;
+    let datasetReads = 0;
+    const client = {
+      async startActor() { starts += 1; return { id: "run-new", defaultDatasetId: "dataset-new" }; },
+      async getRun() { return { id: "run-old", status: "SUCCEEDED", defaultDatasetId: "dataset-old", usageTotalUsd: 0.0008, platformUsageBillingModel: "DEVELOPER", chargedEventCounts: { "apify-default-dataset-item": 1, "apify-actor-start": 1 } }; },
+      async getDatasetItems() { datasetReads += 1; return [{ error: "Ads not found", errorCode: "ADS_NOT_FOUND", url }]; },
+    };
+    const ledger = new ApifyBudgetLedger({ rawEvidenceDir: dir, accountUsageGetter: async () => ({ billedUsd: 0.5, verifiedAt: new Date().toISOString() }) });
+    const adapter = createApifyFirstFillAdapter({ client, ledger, rawEvidenceDir: dir, pollIntervalMs: 0 });
+    const result = await adapter.run({ runKey: "fill-stale", maxTotalChargeUsd: 0.5, maxItems: 666, pages: [{ pageId: "674158585783249", url }], providerInput: { urls: [{ url }] } });
+    assert.equal(starts, 0, "a re-derivation must not start another paid actor run");
+    assert.equal(datasetReads, 1);
+    assert.equal(result.status, "SUCCEEDED");
+    assert.equal(result.unverifiedZero, true);
+    assert.equal(result.metadata.pageOutcomes[0].outcome, "ads_not_found_unverified");
+    assert.equal(result.metadata.rederivedFromRevision, 1);
+    const persisted = JSON.parse(await readFile(join(dir, "apify-runs.json"), "utf8"));
+    assert.equal(persisted.runs["fill-stale"].scoringRevision, 2);
+    const second = await adapter.run({ runKey: "fill-stale", maxTotalChargeUsd: 0.5, maxItems: 666, pages: [{ pageId: "674158585783249", url }], providerInput: { urls: [{ url }] } });
+    assert.equal(second.status, "SUCCEEDED");
+    assert.equal(datasetReads, 1, "an up-to-date verdict is returned from the store");
+  } finally { await rm(dir, { recursive: true, force: true }); }
 });
 
 test("unknown actor start is persisted and a retry never posts a second run", async () => {

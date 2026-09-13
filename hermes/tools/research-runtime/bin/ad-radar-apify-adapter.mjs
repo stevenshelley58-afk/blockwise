@@ -291,12 +291,70 @@ async function reconcileBillingEvidence(client, runId, initialRun, datasetItemCo
   return { run, billing, polls };
 }
 
+// Decision logic revisions. Bump SCORING_REVISION whenever how a dataset is
+// scored changes. A persisted outcome written by an older revision is re-derived
+// from its own dataset (already paid for) instead of being replayed forever,
+// which is how the 2026-09-12 ADS_NOT_FOUND verdicts were recovered without a
+// second actor run.
+export const SCORING_REVISION = 2;
+
+function receiptFromOutcome(outcome) {
+  const metadata = outcome?.metadata ?? {};
+  return {
+    id: outcome?.runId ?? null,
+    status: "SUCCEEDED",
+    defaultDatasetId: outcome?.rawDatasetId ?? null,
+    usageTotalUsd: typeof outcome?.costUsd === "number" ? outcome.costUsd : undefined,
+    platformUsageBillingModel: metadata.platformUsageBillingModel,
+    chargedEventCounts: metadata.chargedEventCounts,
+    statusMessage: metadata.statusMessage,
+  };
+}
+
+async function rederivePersistedOutcome({ state, client }) {
+  const datasetId = state?.outcome?.rawDatasetId ?? state?.rawDatasetId;
+  if (!datasetId) return null;
+  const maxItems = Math.max(1, Number(state?.maxItems) || 1);
+  const dataset = await getAllDatasetItems(client, datasetId, maxItems);
+  const outcome = outcomeFromRun({
+    run: receiptFromOutcome(state.outcome),
+    items: dataset.items,
+    input: { pages: state.pages ?? [] },
+    maxItems: state.maxItems,
+    maxTotalChargeUsd: state.maxTotalChargeUsd,
+  });
+  return {
+    ...outcome,
+    metadata: { ...outcome.metadata, rederivedFromRevision: state.scoringRevision ?? 1, rederivedAt: new Date().toISOString(), rederivedScoringRevision: SCORING_REVISION },
+  };
+}
+
+// Returning a persisted outcome is normally the idempotency guarantee that stops a
+// second paid actor run. It must not also freeze an outdated verdict: when the
+// persisted outcome was scored by an older revision, re-derive it from the dataset
+// that run already paid for. Failure to re-read a deleted dataset keeps the
+// original verdict and labels it stale rather than silently changing it.
+async function persistedOutcome({ runKey, state, client, store }) {
+  const scored = Number(state.scoringRevision ?? 1);
+  if (scored >= SCORING_REVISION) return state.outcome;
+  let outcome;
+  try {
+    outcome = await rederivePersistedOutcome({ state, client });
+  } catch (error) {
+    await store.put(runKey, { ...state, scoringRevision: scored, rederiveError: String(error?.message || error), rederiveFailedAt: new Date().toISOString() });
+    return { ...state.outcome, metadata: { ...(state.outcome?.metadata || {}), scoringRevision: scored, scoringRevisionStale: true, rederiveError: String(error?.message || error) } };
+  }
+  if (!outcome) return state.outcome;
+  await store.put(runKey, { ...state, outcome, scoringRevision: SCORING_REVISION, finishedAt: state.finishedAt ?? new Date().toISOString() });
+  return outcome;
+}
+
 export async function runApifyFirstFill(input, dependencies) {
   const deps = dependencies ?? {}; const runKey = input.runKey ?? input.idempotencyKey ?? input.runTag; if (!runKey) throw new ApifyAdapterError("invalid_input", "runKey, idempotencyKey, or runTag is required"); const client = deps.client; if (!client) throw new Error("client is required"); const store = deps.store; if (!store) throw new Error("store is required"); const ledger = deps.ledger; if (!ledger) throw new Error("ledger is required");
   const maxTotalChargeUsd = finiteNonNegative(input.maxTotalChargeUsd ?? 1, "maxTotalChargeUsd"); const requestedMaxItems = input.maxItems === undefined ? Number.POSITIVE_INFINITY : finiteNonNegativeInteger(input.maxItems, "maxItems"); const affordableMaxItems = Math.floor((maxTotalChargeUsd - APIFY_START_PRICE_USD + 1e-12) / APIFY_ITEM_PRICE_USD); if (requestedMaxItems < 1 || affordableMaxItems < 1) throw new ApifyAdapterError("invalid_budget", "per-run cap cannot fund one dataset item and actor start"); const maxItems = Math.min(requestedMaxItems, affordableMaxItems);
-  const fingerprint = inputFingerprint(input, maxTotalChargeUsd, maxItems); let state = await store.get(runKey); if (state?.requestFingerprint && state.requestFingerprint !== fingerprint) throw new ApifyAdapterError("run_input_conflict", `Apify run key ${runKey} was reused with different input`); if (state?.outcome) return state.outcome; if (state?.startUnknown && !state.runId) throw new ApifyAdapterError("start_reconciliation_required", "Apify start outcome is unknown; reconcile the persisted run before retrying"); const reservationId = state?.reservationId ?? `apify:${runKey}`;
+  const fingerprint = inputFingerprint(input, maxTotalChargeUsd, maxItems); let state = await store.get(runKey); if (state?.requestFingerprint && state.requestFingerprint !== fingerprint) throw new ApifyAdapterError("run_input_conflict", `Apify run key ${runKey} was reused with different input`); if (state?.outcome) return await persistedOutcome({ runKey, state, client, store }); if (state?.startUnknown && !state.runId) throw new ApifyAdapterError("start_reconciliation_required", "Apify start outcome is unknown; reconcile the persisted run before retrying"); const reservationId = state?.reservationId ?? `apify:${runKey}`;
   if (!state?.runId) {
-    const reservation = await ledger.reserve({ reservationId, runKey, reservedUsd: maxTotalChargeUsd }); if (reservation.idempotent && reservation.status !== "settled") throw new ApifyAdapterError("run_reconciliation_required", "Apify reservation exists but run state has no run ID; reconcile before starting another run"); if (reservation.status === "settled") throw new ApifyAdapterError("run_reconciliation_required", "Apify reservation is settled but run state is missing"); const providerInput = input.providerInput ?? input.input ?? Object.fromEntries(Object.entries(input).filter(([key]) => !["runKey", "idempotencyKey", "maxTotalChargeUsd", "maxItems", "providerInput", "input", "pages"].includes(key))); state = { runKey, requestFingerprint: fingerprint, reservationId, startUnknown: false, runId: null, rawDatasetId: null, providerInput, pages: input.pages ?? input.urls ?? [], maxTotalChargeUsd, maxItems, startedAt: new Date().toISOString() };
+    const reservation = await ledger.reserve({ reservationId, runKey, reservedUsd: maxTotalChargeUsd }); if (reservation.idempotent && reservation.status !== "settled") throw new ApifyAdapterError("run_reconciliation_required", "Apify reservation exists but run state has no run ID; reconcile before starting another run"); if (reservation.status === "settled") throw new ApifyAdapterError("run_reconciliation_required", "Apify reservation is settled but run state is missing"); const providerInput = input.providerInput ?? input.input ?? Object.fromEntries(Object.entries(input).filter(([key]) => !["runKey", "idempotencyKey", "maxTotalChargeUsd", "maxItems", "providerInput", "input", "pages"].includes(key))); state = { runKey, requestFingerprint: fingerprint, scoringRevision: SCORING_REVISION, reservationId, startUnknown: false, runId: null, rawDatasetId: null, providerInput, pages: input.pages ?? input.urls ?? [], maxTotalChargeUsd, maxItems, startedAt: new Date().toISOString() };
     try { await store.put(runKey, state); } catch (error) { await ledger.settle(reservationId, 0, { knownNoCharge: true }); throw error; }
     let started; try { started = await client.startActor({ input: providerInput, maxTotalChargeUsd, maxItems, timeoutSeconds: APIFY_ACTOR_TIMEOUT_SECONDS }); } catch (error) { const knownRejected = error?.code === "provider_http_error" && typeof error?.httpStatus === "number" && Number.isInteger(error.httpStatus) && error.httpStatus >= 400 && error.httpStatus < 500; if (knownRejected) { await ledger.settle(reservationId, 0, { knownNoCharge: true }); await store.put(runKey, { ...state, status: "failed", error: error.message }); } else { await ledger.markUnknown(reservationId); await store.put(runKey, { ...state, startUnknown: true, status: "start_unknown", error: error.message }); } throw error; }
     const runId = started?.data?.id ?? started?.id; if (!runId) { await ledger.markUnknown(reservationId); await store.put(runKey, { ...state, startUnknown: true, status: "start_unknown" }); throw new ApifyAdapterError("start_reconciliation_required", "Apify accepted an unidentifiable start response; reconcile before retrying"); }
@@ -323,7 +381,7 @@ export async function runApifyFirstFill(input, dependencies) {
     return outcome;
   }
   await ledger.settle(reservationId, outcome.costUsd);
-  await store.put(runKey, { ...state, status: outcome.status, outcome, startUnknown: false, finishedAt: new Date().toISOString() });
+  await store.put(runKey, { ...state, status: outcome.status, outcome, scoringRevision: SCORING_REVISION, startUnknown: false, finishedAt: new Date().toISOString() });
   return outcome;
 }
 export function createApifyFirstFillAdapter(options = {}) {
