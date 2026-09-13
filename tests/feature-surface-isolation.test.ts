@@ -35,7 +35,7 @@ test("disabled customer APIs gate before auth, client, or provider work", () => 
     ["src/app/api/research/locations/guess/route.ts", 'featureDisabledResponse("adRadar")', "resolveAdRadarLocationGuess("],
     ["src/app/api/research/swipe-file/route.ts", 'featureDisabledResponse("adRadar")', "requireApiWorkspace("],
     ["src/app/api/research/audit/lead/route.ts", 'featureDisabledResponse("suburbPages")', "request.json()"],
-    ["src/app/api/research/audit/suggestions/route.ts", 'featureDisabledResponse("suburbPages")', "createSupabaseServiceClient()"],
+    ["src/app/api/research/audit/suggestions/route.ts", 'featureDisabledResponse("suburbPages")', "buildAdAudit({ location })"],
     ["src/app/api/research/local-ad-radar/route.ts", 'featureDisabledResponse("adRadar", "suburbPages")', "createSupabaseServiceClient()"],
   ] as const;
 

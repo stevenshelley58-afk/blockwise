@@ -608,7 +608,3 @@ function escapeLikeTerm(value: string): string {
   return value.replace(/[%_,]/g, " ").replace(/\s+/g, " ").trim();
 }
 
-function rowKey(row: CustomerMetaAdLibraryCardRow): string | null {
-  const composite = [row.page_id, row.page_name, row.last_seen_at].filter(Boolean).join(":");
-  return row.card_id ?? row.library_id ?? (composite || null);
-}
