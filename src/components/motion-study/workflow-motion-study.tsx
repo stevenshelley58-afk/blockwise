@@ -13,7 +13,7 @@ import styles from "./workflow-motion-study.module.css";
 
 const STUDY_STEPS = [
   { label: "Choose", hint: "Pick a ready-made ad" },
-  { label: "Customise", hint: "Add your text and link title" },
+  { label: "Customise", hint: "Add your text" },
   { label: "Review", hint: "Check who sees it and approve the setup" },
 ] as const;
 const SELECTED_AD = AD_EXAMPLES[0];
@@ -26,7 +26,7 @@ const TIMING = homepageMotion.workflowStudy;
 const TEMPLATE_HEADLINE = "Thinking of selling?";
 const AD_TEXT = "Thinking of selling? Find out what your home could be worth.";
 
-const EDIT_TEXTS = [SELECTED_AD.adTitle, AD_TEXT, SELECTED_AD.linkTitle] as const;
+const EDIT_TEXTS = [SELECTED_AD.adTitle, AD_TEXT] as const;
 const REVIEW_TEXTS = ["Homeowners and potential sellers", "$20 per day", "14 days"] as const;
 const EDIT_WRITING = studyTypingSchedule(EDIT_TEXTS, TIMING.characterMs, TIMING.fieldGapMs);
 const REVIEW_WRITING = studyTypingSchedule(REVIEW_TEXTS, TIMING.characterMs, TIMING.fieldGapMs);
@@ -52,12 +52,11 @@ function StudyReviewValue({ clock, text, start, end }: { clock: MotionValue<numb
   return <dd>{value}</dd>;
 }
 
-function StudyAd({ draft, headline, ad = SELECTED_AD }: { ad?: {image: string; postCopy: string; linkTitle: string}; draft?: MotionValue<number>; headline?: string }) {
+function StudyAd({ draft, headline, live, isLive = false, ad = SELECTED_AD }: { live?: MotionValue<number>; isLive?: boolean; ad?: {image: string; postCopy: string; linkTitle: string}; draft?: MotionValue<number>; headline?: string }) {
   const staticClock = useMotionValue(0);
   const clock = draft ?? staticClock;
   const title = useDraftText(clock, SELECTED_AD.adTitle, EDIT_WRITING.ranges[0].start, EDIT_WRITING.ranges[0].end, TEMPLATE_HEADLINE);
   const copy = useDraftText(clock, AD_TEXT, EDIT_WRITING.ranges[1].start, EDIT_WRITING.ranges[1].end, SELECTED_AD.postCopy);
-  const link = useDraftText(clock, SELECTED_AD.linkTitle, EDIT_WRITING.ranges[2].start, EDIT_WRITING.ranges[2].end, SELECTED_AD.linkTitle);
   return <article className={styles.bwStudySelectedAd} aria-label={headline ? "Ready-made ad" : "Selected ad preview"}>
     <header className={styles.bwStudyAdHead}>
       <span className={styles.bwStudyAvatar} aria-hidden="true">AM</span>
@@ -67,12 +66,13 @@ function StudyAd({ draft, headline, ad = SELECTED_AD }: { ad?: {image: string; p
     <p className={styles.bwStudyAdCopy}>{headline ? ad.postCopy : copy}</p>
     <div className={styles.bwStudyAdImage}>
       <img src={withBasePath(ad.image)} srcSet={creativeImageSrcSet(ad.image)} alt="" width="1080" height="1350" sizes="300px" loading="lazy" decoding="async" />
+      {live && <motion.span className={styles.bwStudyLiveBadge} style={{ opacity: live }} aria-hidden={!isLive}><i aria-hidden="true" />Live</motion.span>}
       <span className={styles.bwStudyAdHeadline}>
         <i aria-hidden="true" />
         <span className={styles.bwStudyHeadlineStack}><span>{headline ?? title}</span></span>
       </span>
     </div>
-    <div className={styles.bwStudyLink}><small>BLOCKWISE.EXAMPLE</small><strong>{headline ? ad.linkTitle : link}</strong></div>
+    <div className={styles.bwStudyLink}><small>BLOCKWISE.EXAMPLE</small><strong>{ad.linkTitle}</strong></div>
     <div className={styles.bwStudyActions} aria-hidden="true"><span>Like</span><span>Comment</span><span>Share</span></div>
   </article>;
 }
@@ -109,7 +109,7 @@ export function WorkflowMotionStudy() {
   const stride = geometry.adWidth + 24;
   const browse = useTransform(frame, f => f.browse);
   const x = useTransform(frame, f => start.x + (end.x - start.x) * f.ad + (1 - f.browse) * 2 * stride);
-  const y = useTransform(frame, f => start.y + (end.y - start.y) * f.ad);
+  const y = useTransform(frame, f => start.y + (end.y - start.y) * f.ad - f.hop * 10);
   const scale = useTransform(frame, f => 1 + (end.scale - 1) * f.ad);
   const galleryOpacity = useTransform(frame, f => f.gallery);
   const panelOpacity = useTransform(frame, f => f.panel * f.shellAlpha);
@@ -226,7 +226,7 @@ export function WorkflowMotionStudy() {
           {SIDE_ADS.map(ad => <BrowseAd key={ad.id} ad={ad} browse={browse} start={start} stride={stride} />)}
         </motion.div>
         <motion.div className={styles.bwStudyAdMotion} ref={adRef} style={geometryReady ? { left: 0, x, y, scale } : { visibility: "hidden" }}>
-          <StudyAd draft={draft} />
+          <StudyAd draft={draft} live={approvedOpacity} isLive={scene === 3} />
         </motion.div>
         <div className={styles.bwStudyEditSlot} inert={step === 0} aria-hidden={step === 0}>
           <motion.div className={styles.bwStudyPanelSurface} style={{ opacity: panelOpacity, scale: panelScale, x: panelX, y: panelY }}>
@@ -234,7 +234,6 @@ export function WorkflowMotionStudy() {
               <div className={styles.bwStudyPanelHeading}><h2>Make it yours</h2></div>
               <StudyField clock={draft} id="study-headline" label="Headline" text={SELECTED_AD.adTitle} {...EDIT_WRITING.ranges[0]} />
               <StudyField clock={draft} id="study-ad-text" label="Ad text" text={AD_TEXT} {...EDIT_WRITING.ranges[1]} rows={3} />
-              <StudyField clock={draft} id="study-link-title" label="Link title" text={SELECTED_AD.linkTitle} {...EDIT_WRITING.ranges[2]} />
             </motion.section>
             <motion.section className={styles.bwStudyEditPanel} style={{ opacity: reviewOpacity }} aria-label="Review your ad setup" aria-hidden={step !== 2} inert={step !== 2}>
               <div className={styles.bwStudyPanelHeading}><h2>Ready to review</h2></div>

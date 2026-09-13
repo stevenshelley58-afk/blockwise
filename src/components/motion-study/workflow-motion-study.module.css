@@ -241,3 +241,14 @@
 .bwStudyField { position: relative; }
 .bwStudyField textarea { display: block; }
 .bwStudyFieldFocus { position: absolute; inset: 0; border: 2px solid var(--study-ink); border-radius: 10px; pointer-events: none; }
+
+.bwStudyLiveBadge {
+  position: absolute; top: 12px; left: 12px; z-index: 2;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 9px; border-radius: 999px;
+  background: #067443; color: #fff; font-size: 12px; font-weight: 750; line-height: 1;
+}
+.bwStudyLiveBadge i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.bwStudyEditPanel[aria-label="Customise your ad"] { grid-template-rows: auto auto minmax(0, 1fr); align-content: stretch; }
+.bwStudyEditPanel[aria-label="Customise your ad"] > label:last-child { grid-template-rows: auto minmax(0, 1fr); }
+.bwStudyEditPanel[aria-label="Customise your ad"] > label:last-child textarea { height: 100%; }

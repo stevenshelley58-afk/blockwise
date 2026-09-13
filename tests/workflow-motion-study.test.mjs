@@ -14,7 +14,7 @@ test("one clock owns all transitions; selectors interrupt without resetting prog
 });
 
 test("complete choreography endpoints", () => {
-  assert.deepEqual(studyFrame(0), { browse:1,shell:1,shellAlpha:1,ad:0,gallery:1,panel:0,edit:1,review:0,original:1,updated:0,approved:0 });
+  assert.deepEqual(studyFrame(0), { hop:0,browse:1,shell:1,shellAlpha:1,ad:0,gallery:1,panel:0,edit:1,review:0,original:1,updated:0,approved:0 });
   assert.equal(studyFrame(1).panel,1);
   assert.equal(studyFrame(1).edit,1);
   assert.equal(studyFrame(2).review,1);
@@ -70,7 +70,7 @@ test("editor and review remain mounted in one fixed surface with hidden layers i
 });
 
 test("completion-gated writing, accessible selectors, finite autoplay and reduced motion", () => {
-  assert.equal((source.match(/<StudyField clock=/g)||[]).length,3);
+  assert.equal((source.match(/<StudyField clock=/g)||[]).length,2);
   assert.match(source,/value=\{value\}/);
   assert.match(source,/aria-pressed=\{step === index\}/);
   assert.match(source,/settledScene !== scene/);
@@ -162,4 +162,20 @@ test("both screens type at one character speed with short consistent field gaps"
   assert.equal((source.match(/<StudyReviewValue clock=/g)||[]).length,3);
   assert.doesNotMatch(source,/audienceOpacity|budgetOpacity|durationOpacity/);
   assert.match(source,/panelSwap \? "linear"/);
+});
+
+
+test("two editor fields shorten writing and approval drives the ad hop and Live badge", () => {
+  assert.doesNotMatch(source,/study-link-title|EDIT_WRITING.ranges\[2\]/);
+  assert.match(source,/const EDIT_TEXTS = \[SELECTED_AD.adTitle, AD_TEXT\]/);
+  assert.match(source,/live=\{approvedOpacity\}/);
+  assert.match(source,/f.hop \* 10/);
+  assert.equal(studyFrame(3).hop,0);
+  assert.equal(studyTransition(studyFrame(2),studyFrame(3),0).hop,0);
+  const mid=studyTransition(studyFrame(2),studyFrame(3),.5);
+  assert.equal(mid.hop,1);
+  assert.equal(mid.approved,.5);
+  assert.ok(studyTransition(studyFrame(2),studyFrame(3),1).hop<1e-10);
+  assert.equal(studyTransition(studyFrame(3),studyFrame(1),.5).hop,0);
+  assert.equal(studyTransition(mid,studyFrame(1),0).hop,mid.hop);
 });

@@ -62,6 +62,7 @@ export function studyFrame(progress: number) {
   return {
     ad,
     browse: clamp((progress + 2) / 2),
+    hop: 0,
     shell: 1,
     shellAlpha: 1,
     gallery: 1 - clamp(progress / 0.32),
@@ -92,6 +93,7 @@ export function studyTransition(from: StudyFrame, to: StudyFrame, progress: numb
   const content = (a: number, b: number) => swapping ? mix(a, b, b > a ? ramp(.78, 1) : ramp(0, .25)) : fade(a, b);
   return {
     browse: mix(from.browse, to.browse),
+    hop: mix(from.hop, 0) + (to.approved > from.approved ? Math.sin(Math.PI * t) * (1 - from.hop) : 0),
     shell,
     shellAlpha,
     ad: mix(from.ad, to.ad),
