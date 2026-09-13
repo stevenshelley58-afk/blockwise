@@ -8,8 +8,11 @@
 -- The credential now lives in the existing encrypted vault
 -- (private.provider_token_vault) as one row per workspace, and the mapping row
 -- keeps only a non-secret reference: the API user, a credential version, the
--- secret's last four characters, and when it was last verified. The mapping
+-- API key's last four characters, and when it was last verified. The mapping
 -- table is readable by workspace members, so no secret material is added to it.
+-- The reference is the key's tail, not the secret's, because the key's tail is
+-- what provisioning reports; the secret is the password half and is never
+-- partly echoed anywhere.
 --
 -- The vault already carried two scopes: connection-scoped Meta/Google OAuth
 -- rows, and service-scoped runtime provider rows (openai/google/apify). This
@@ -32,7 +35,7 @@ alter table public.crm_workspace_sites
 comment on column public.crm_workspace_sites.credential_version is
   'Increments on every rotation of this site''s CRM credential. 0 means no per-site credential has been stored yet, which is the legacy shared-credential state.';
 comment on column public.crm_workspace_sites.credential_last_four is
-  'Display-only tail of the current API secret, so an operator can tell two rotations apart. Never the secret.';
+  'Display-only tail of the current API key, so an operator can tell two rotations apart. Matches credential_last_four in the provisioning output. Never the secret.';
 comment on column public.crm_workspace_sites.config_version is
   'Version of the applied native field/role configuration on the site.';
 comment on column public.crm_workspace_sites.site_timezone is
@@ -88,6 +91,24 @@ alter table private.provider_token_vault
     or (provider_connection_id is null and workspace_id is null and runtime_provider in ('openai', 'google', 'apify'))
     or (provider_connection_id is null and workspace_id is not null and runtime_provider = 'blockwise_crm_site')
   );
+
+-- The pre-existing unique index is UNIQUE (runtime_provider) WHERE
+-- runtime_provider IS NOT NULL. That was correct while every runtime provider
+-- row was service-scoped: one row per provider. The CRM site lane stores one
+-- row per WORKSPACE under the same runtime_provider value, so leaving that index
+-- unchanged would admit exactly one customer site in total and the second
+-- workspace's credential would be refused with a duplicate key on
+-- provider_token_vault_runtime_provider_uidx. Narrow it to the service lane,
+-- where its original guarantee still holds, and let the workspace-scoped index
+-- below carry the CRM lane.
+--
+-- Rehearsed against a copy of production: with the index unchanged, the first
+-- workspace stores and the second fails with SQLSTATE 23505.
+drop index if exists private.provider_token_vault_runtime_provider_uidx;
+
+create unique index provider_token_vault_runtime_provider_uidx
+  on private.provider_token_vault (runtime_provider)
+  where runtime_provider is not null and workspace_id is null;
 
 -- One credential per workspace. Two workspaces can never share a vault row,
 -- and a provisioning retry updates the existing row instead of adding one.

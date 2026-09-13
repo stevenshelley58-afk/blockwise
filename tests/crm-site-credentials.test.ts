@@ -52,7 +52,16 @@ function fakeVault(initial: Record<string, VaultRow> = {}) {
       }
 
       if (name === "crm_site_credential_clear") {
-        rows.delete(workspaceId);
+        // The real function blanks the credential columns and keeps the row, so
+        // the provisioning lifecycle stays auditable. Mirror that rather than a
+        // delete, or this fake would hide a divergence from production.
+        if (rows.has(workspaceId)) {
+          rows.set(workspaceId, {
+            encrypted_credential: "",
+            credential_nonce: "",
+            credential_last_four: "",
+          });
+        }
         return Promise.resolve({ data: null, error: null });
       }
 
@@ -234,7 +243,7 @@ test("a corrupt vault payload is reported as missing, not as an empty credential
   );
 });
 
-test("clearing a credential removes it without touching other workspaces", async () => {
+test("clearing a credential blanks it without touching other workspaces", async () => {
   const vault = fakeVault();
 
   await upsertCrmSiteCredential({
@@ -253,6 +262,11 @@ test("clearing a credential removes it without touching other workspaces", async
   await clearCrmSiteCredential(vault.client, WORKSPACE_A);
 
   assert.equal(await loadCrmSiteCredential(vault.client, WORKSPACE_A), null);
+  // The row survives, blanked. crm_site_credential_clear updates rather than
+  // deletes, and the rehearsal against a production copy confirms it: the
+  // credential reads as absent while the row stays for audit.
+  assert.equal(vault.rows.size, 2, "the cleared row is kept");
+  assert.equal(vault.rows.get(WORKSPACE_A)?.credential_nonce, "");
   assert.deepEqual(await loadCrmSiteCredential(vault.client, WORKSPACE_B), {
     apiKey: "key-b",
     apiSecret: "secret-b",
