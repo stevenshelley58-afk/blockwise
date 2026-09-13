@@ -73,6 +73,10 @@ This runs on its own, so nobody has to remember it:
   after every successful release, so releases are bounded as they happen.
 - `blockwise-prune-releases.timer` keeps the live revision, the rollback revision
   and the newest five releases on a weekly sweep, as a backstop.
+- The installed autodeploy runner invokes deploy and prune scripts from the
+  immutable target release. The weekly timer resolves its pruner through the
+  deployed revision selector. Install both from committed source with
+  `scripts/vps/install-product-release-automation.sh`.
 
 To read the history of what was removed, check those logs rather than a session
 transcript. Unmerged checkouts are deliberately never deleted: they are reported

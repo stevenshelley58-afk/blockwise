@@ -144,6 +144,25 @@ test("product readiness is fatal while liveness remains process-only", async () 
   assert.doesNotMatch(compose, /127\.0\.0\.1\/healthz/);
 });
 
+test("release cleanup always uses the deployed immutable implementation", async () => {
+  const [autodeploy, wrapper, install, service] = await Promise.all([
+    read("scripts/vps/blockwise-autodeploy.sh"),
+    read("scripts/vps/prune-current-release.sh"),
+    read("scripts/vps/install-product-release-automation.sh"),
+    read("infra/product/systemd/blockwise-prune-releases.service"),
+  ]);
+  assert.match(autodeploy, /release_script="\$RELEASES\/\$sha\/scripts\/vps\/product-release\.sh"/);
+  assert.match(autodeploy, /prune_script="\$RELEASES\/\$sha\/scripts\/vps\/prune-releases\.sh"/);
+  assert.doesNotMatch(autodeploy, /\$SOURCE\/scripts\/vps\/prune-releases\.sh/);
+  assert.match(wrapper, /STATE=\/srv\/blockwise\/releases\/\.autodeploy\.sha/);
+  assert.match(wrapper, /RELEASES=\/srv\/blockwise\/releases\/product/);
+  assert.match(wrapper, /exec "\$script" "\$@"/);
+  assert.match(install, /scripts\/vps\/blockwise-autodeploy\.sh/);
+  assert.match(install, /scripts\/vps\/prune-current-release\.sh/);
+  assert.match(service, /ExecStart=\/usr\/local\/sbin\/blockwise-prune-current-release --keep 10 --apply/);
+  assert.doesNotMatch(service, /projects\/blockwise\/scripts\/vps\/prune-releases\.sh/);
+});
+
 test("migration apply paths are explicitly gated", async () => {
   const scripts = await Promise.all([
     read("scripts/vps/product-import.sh"),
@@ -322,6 +341,9 @@ test("direct Hermes artifacts and customer saves use the self-hosted transaction
 test("new VPS shell entrypoints are staged with executable Git modes", async () => {
   const files = [
     "infra/product/db-init/002-roles.sh",
+    "scripts/vps/blockwise-autodeploy.sh",
+    "scripts/vps/install-product-release-automation.sh",
+    "scripts/vps/prune-current-release.sh",
     "scripts/vps/product-auth-import.sh",
     "scripts/vps/product-backup.sh",
     "scripts/vps/product-checksums.sh",

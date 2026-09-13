@@ -29,6 +29,9 @@ the route at 05:36 UTC.
 - Release pruning now inspects every running and stopped Docker container and
   retains any release supplying one of its bind mounts.
 - Pruning fails closed if a container already references a missing release.
+- Automatic and weekly pruning resolve their script from the immutable deployed
+  release, so an old canonical checkout cannot silently run obsolete retention
+  rules.
 - The product proxy healthcheck now exercises `/api/health`, so it cannot
   report healthy while the real application route is returning 502.
 - Regression tests simulate the delayed reboot failure and protect both the

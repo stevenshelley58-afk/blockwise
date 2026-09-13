@@ -1,3 +1,18 @@
+# Product service units
+
+## Release automation
+
+Install the committed deployment runner, release-aware pruning wrapper, and
+their units from the release being activated:
+
+    sudo scripts/vps/install-product-release-automation.sh
+
+The deployment runner prepares through the canonical checkout, then deploys
+and prunes with scripts from the immutable target release. The weekly pruner
+reads `.autodeploy.sha` and executes the pruning implementation in that selected
+release. This prevents a dirty or stale canonical checkout from bypassing
+current retention safety.
+
 # Transactional email drain timer
 
 These units are deployment inputs for the existing VPS systemd pattern; they are not installed by Git.

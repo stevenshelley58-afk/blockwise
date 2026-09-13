@@ -1,0 +1,10 @@
+[Unit]
+Description=Deploy Blockwise main to production
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+Environment=HOME=/root
+ExecStart=/usr/local/sbin/blockwise-autodeploy
