@@ -20,6 +20,7 @@ import {
   type AdAuditStats,
   type ExcludedAdvertiser,
 } from "@/lib/research/ad-audit";
+import { getAuditAvailability, getAuditHeroCopy, type AuditAvailability } from "@/lib/research/audit-availability";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 import "../audit.css";
@@ -49,12 +50,12 @@ type AnalyticsData = {
 };
 
 type Metrics = {
-  detected: number;
-  active: number;
-  advertisers: number;
-  topPlatform: string;
-  topFormat: string;
-  topAngles: string;
+  detected?: number;
+  active?: number;
+  advertisers?: number;
+  topPlatform?: string;
+  topFormat?: string;
+  topAngles?: string;
 };
 
 type CampaignCard = {
@@ -128,7 +129,7 @@ const ANGLE_CAMPAIGNS: Record<string, Omit<CampaignCard, "detected">> = {
   },
 };
 
-const DEFAULT_ANGLE_ORDER = ["Just Listed", "Free Appraisal", "Just Sold"];
+const DEFAULT_ANGLE_ORDER = ["Free Appraisal", "Market Update", "Property Management"];
 
 function signupHref(market: string): string {
   return `/signup?source=audit&market=${encodeURIComponent(market)}`;
@@ -144,22 +145,10 @@ function formatDate(value: string): string {
   return new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "long", year: "numeric" }).format(date);
 }
 
-function buildCampaignPack(stats: AdAuditStats | null): CampaignCard[] {
-  const detectedAngles = (stats?.adTypes ?? [])
-    .map((angle) => angle.label)
-    .filter((label) => Boolean(ANGLE_CAMPAIGNS[label]));
-  const chosen: string[] = [];
-  for (const angle of detectedAngles) {
-    if (!chosen.includes(angle)) chosen.push(angle);
-    if (chosen.length === 3) break;
-  }
-  for (const angle of DEFAULT_ANGLE_ORDER) {
-    if (chosen.length >= 3) break;
-    if (!chosen.includes(angle)) chosen.push(angle);
-  }
-  return chosen.slice(0, 3).map((angle) => ({
+function buildCampaignPack(): CampaignCard[] {
+  return DEFAULT_ANGLE_ORDER.map((angle) => ({
     ...ANGLE_CAMPAIGNS[angle],
-    detected: detectedAngles.includes(angle),
+    detected: false,
   }));
 }
 
@@ -180,7 +169,8 @@ export default async function AuditPage({ searchParams }: { searchParams?: Searc
   const area = shortArea(label);
   const prepared = audit ? formatDate(audit.generatedAt) : formatDate(new Date().toISOString());
   const stats = audit?.stats ?? null;
-  const hasData = Boolean(stats && stats.totals.detected > 0);
+  const availability = getAuditAvailability(audit);
+  const hasObservedAds = availability === "observed" || availability === "limited";
 
   const detected = stats?.totals.detected ?? 0;
   const active = stats?.totals.active ?? 0;
@@ -188,9 +178,9 @@ export default async function AuditPage({ searchParams }: { searchParams?: Searc
   const topPlatform = stats?.platforms[0]?.label ?? "Facebook";
   const topFormat = stats?.formats[0]?.label ?? "Image";
   const topAngles = (stats?.adTypes ?? []).slice(0, 3).map((angle) => angle.label);
-  const topAngle = topAngles[0] ?? "Just Listed";
+  const topAngle = topAngles[0] ?? "Free Appraisal";
 
-  const pack = buildCampaignPack(stats);
+  const pack = buildCampaignPack();
   const href = signupHref(label);
 
   const analytics: AnalyticsData = {
@@ -217,9 +207,9 @@ export default async function AuditPage({ searchParams }: { searchParams?: Searc
       </header>
 
       <main>
-        <Hero area={area} hasData={hasData} detected={detected} active={active} advertisers={advertisers} analytics={analytics} />
-        {hasData && stats ? <Stats area={area} stats={stats} /> : null}
-        {hasData ? <WhatThisMeans area={area} topPlatform={topPlatform} topFormat={topFormat} topAngles={topAngles} /> : null}
+        <Hero area={area} availability={availability} detected={detected} active={active} advertisers={advertisers} analytics={analytics} />
+        {hasObservedAds && stats ? <Stats area={area} stats={stats} /> : null}
+        {hasObservedAds ? <WhatThisMeans area={area} topPlatform={topPlatform} topFormat={topFormat} topAngles={topAngles} /> : null}
         <InViewTracker event="campaign_pack_viewed" data={analytics}>
           <CampaignPack area={area} pack={pack} />
         </InViewTracker>
@@ -229,9 +219,11 @@ export default async function AuditPage({ searchParams }: { searchParams?: Searc
           label={label}
           href={href}
           analytics={analytics}
-          metrics={{ detected, active, advertisers, topPlatform, topFormat, topAngles: topAngles.join(", ") }}
+          metrics={hasObservedAds
+            ? { detected, active, advertisers, topPlatform, topFormat, topAngles: topAngles.join(", ") }
+            : { detected: undefined, active: undefined, advertisers: undefined, topPlatform: undefined, topFormat: undefined, topAngles: undefined }}
         />
-        {hasData && stats ? <Evidence stats={stats} excluded={audit?.excludedAdvertisers ?? []} analytics={analytics} /> : null}
+        {hasObservedAds && stats ? <Evidence stats={stats} excluded={audit?.excludedAdvertisers ?? []} analytics={analytics} /> : null}
       </main>
 
       <footer className="site-footer">
@@ -254,32 +246,27 @@ export default async function AuditPage({ searchParams }: { searchParams?: Searc
 
 function Hero({
   area,
-  hasData,
+  availability,
   detected,
   active,
   advertisers,
   analytics,
 }: {
   area: string;
-  hasData: boolean;
+  availability: AuditAvailability;
   detected: number;
   active: number;
   advertisers: number;
   analytics: AnalyticsData;
 }) {
-  const headline = hasData
-    ? `${numberFormat.format(advertisers)} real estate advertisers are running ads around ${area}.`
-    : `Almost no agencies are advertising around ${area} yet.`;
-  const lede = hasData
-    ? `Blockwise found ${numberFormat.format(detected)} local real estate ads, including ${numberFormat.format(active)} still active. Based on the strongest public signals, we recommend three simple campaign angles your agency can launch first.`
-    : `We found few or no local real estate ads here right now. That is an opening to be first in the local feed. Get a simple campaign plan to start.`;
+  const copy = getAuditHeroCopy({ availability, area, detected, active, advertisers });
   return (
     <section className="hero">
       <div className="container">
         <div className="hero-copy">
           <div className="eyebrow"><span className="eyebrow-dot" />{area} ad radar</div>
-          <h1>{headline}</h1>
-          <p className="hero-lede">{lede}</p>
+          <h1>{copy.headline}</h1>
+          <p className="hero-lede">{copy.lede}</p>
           <div className="cta-row">
             <Button asChild size="lg" className="max-[760px]:w-full">
               <TrackedAnchor href="#lead" event="primary_cta_clicked" data={{ ...analytics, placement: "hero" }}>
@@ -287,16 +274,14 @@ function Hero({
               </TrackedAnchor>
             </Button>
             <Button asChild size="lg" variant="outline" className="max-[760px]:w-full">
-              <TrackedAnchor href={hasData ? "#evidence" : "#plan"} event="secondary_cta_clicked" data={{ ...analytics, placement: "hero" }}>
-                {hasData ? "See competitor evidence" : "See the campaign pack"}
+              <TrackedAnchor href={availability === "observed" || availability === "limited" ? "#evidence" : "#plan"} event="secondary_cta_clicked" data={{ ...analytics, placement: "hero" }}>
+                {availability === "observed" || availability === "limited" ? "See observed ads" : "See the campaign pack"}
               </TrackedAnchor>
             </Button>
           </div>
           <div className="trust-row">
-            <span className="trust-item"><span className="trust-dot" />Three ads before Checkout</span>
-            <span className="trust-item"><span className="trust-dot" />Six free renders</span>
-            <span className="trust-item"><span className="trust-dot" />No card to create</span>
-            <span className="trust-item"><span className="trust-dot" />Approve before export</span>
+            <span className="trust-item"><span className="trust-dot" />Lead-generation campaign plan</span>
+            <span className="trust-item"><span className="trust-dot" />Review before export</span>
           </div>
         </div>
       </div>
@@ -341,13 +326,13 @@ function WhatThisMeans({
       <div className="container insight">
         <div>
           <p className="card-kicker">What this means</p>
-          <h2>Competitors are buying local attention now.</h2>
-          <p>Competitors are already buying local attention around {area}. The useful question is not whether ads exist, it is which campaign is simplest to launch first.</p>
+          <h2>Observed local advertising</h2>
+          <p>These observations can inform a starting point. Choose the campaign angle that best fits your lead goal.</p>
         </div>
         <ul className="insight-list">
-          <li><strong>Start with {topPlatform}.</strong><span>{topPlatform} has the strongest detected platform coverage around {area}.</span></li>
-          <li><strong>Lead with {topFormat.toLowerCase()} ads.</strong><span>{topFormat} is the dominant detected format, so production stays simple and fast.</span></li>
-          <li><strong>Use the top detected angles.</strong><span>{anglesText} are the clearest repeat angles in the public data.</span></li>
+          <li><strong>Observed on {topPlatform}.</strong><span>{topPlatform} appears most often in this scan.</span></li>
+          <li><strong>Observed format: {topFormat.toLowerCase()}.</strong><span>This is the most common format in the returned observations.</span></li>
+          <li><strong>Observed angles.</strong><span>{anglesText} appear in the returned observations.</span></li>
         </ul>
       </div>
     </section>
@@ -358,14 +343,14 @@ function CampaignPack({ area, pack }: { area: string; pack: CampaignCard[] }) {
   let counter = 0;
   const items = pack.map((card) => ({
     ...card,
-    pill: card.detected ? `Campaign ${(counter += 1)}` : "Suggested differentiator",
+    pill: card.detected ? `Campaign ${(counter += 1)}` : "Suggested lead angle",
   }));
   return (
     <section className="section" id="plan">
       <div className="container">
         <div className="section-head">
-          <h2>Recommended campaign pack for {area}</h2>
-          <p>Three simple angles, matched to the strongest public signals in your area.</p>
+          <h2>Campaign pack for {area}</h2>
+          <p>Three lead-generation angles to review. Observations inform this pack only where they are available.</p>
         </div>
         <div className="campaign-grid">
           {items.map((card) => (
@@ -392,7 +377,7 @@ function ExamplePreview({ area }: { area: string }) {
         <div className="preview-panel">
           <p className="card-kicker">Your campaign, ready to review</p>
           <h2>Example campaign preview</h2>
-          <p>Every audit turns into a campaign you approve before anything goes live.</p>
+          <p>This is an illustrative campaign setup, not an automatic deliverable.</p>
           <article className="mock-ad">
             <div className="mock-head">
               <div className="avatar" aria-hidden="true" />
@@ -434,21 +419,21 @@ function LeadSection({
         <div className="lead-panel">
           <p className="card-kicker">Your campaign plan</p>
           <h2>Get your {area} campaign plan.</h2>
-          <p>Tell us your goal and we build the angle, ad copy and lead form. Create your free ads after, or book a 15-minute setup.</p>
+          <p>Tell us your goal and we will email the requested campaign plan.</p>
           <AuditLeadForm area={area} label={label} signupHref={href} metrics={metrics} analytics={analytics} />
         </div>
         <aside className="proof-box">
           <h3>What happens after you submit</h3>
           <ul>
-            <li>Blockwise drafts the campaign angle, ad copy and lead form.</li>
-            <li>Your team reviews everything before it is exported.</li>
+            <li>We email a starting campaign plan and launch checklist to the address you provide.</li>
+            <li>You review campaign details before export.</li>
             <li>Campaigns run from your own Meta ad account.</li>
-            <li>The free creation allowance includes six renders for three complete Feed + Story ads.</li>
+            <li>You can choose whether to start a free trial after reviewing the plan.</li>
           </ul>
           <div className="cta-row">
             <Button asChild variant="outline" className="max-[760px]:w-full">
               <AuditCtaButton href={href} event="signup_clicked" data={analytics}>
-                Create three ads free
+                Start your free trial
               </AuditCtaButton>
             </Button>
           </div>
