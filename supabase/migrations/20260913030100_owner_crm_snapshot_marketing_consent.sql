@@ -2,6 +2,10 @@
 -- This is intentionally not a CRM sync engine and exposes no token, card,
 -- provider-secret, arbitrary metadata, lead-delivery, or research fields.
 begin;
+create or replace function public.owner_crm_owner_email_verified_at(p_profile_id uuid) returns timestamptz language sql stable security definer set search_path='' as $$ select coalesce(u.email_confirmed_at,u.confirmed_at) from auth.users u where u.id=p_profile_id $$;
+revoke all on function public.owner_crm_owner_email_verified_at(uuid) from public,anon,authenticated;
+grant execute on function public.owner_crm_owner_email_verified_at(uuid) to service_role;
+grant select on table public.workspace_marketing_consent_events to service_role;
 drop function if exists public.owner_crm_customer_snapshot_page(uuid, integer);
 
 create or replace function public.owner_crm_customer_snapshot_page(
@@ -73,7 +77,7 @@ begin
         then workspace_page.created_by is null or workspace_page.created_by = owner_members.profile_ids[1]
       else null
     end,
-    owner_auth.email_confirmed_at,
+    public.owner_crm_owner_email_verified_at(owner_members.profile_ids[1]),
     consent.id,
     consent.granted,
     consent.occurred_at,
@@ -95,7 +99,6 @@ begin
   left join public.profiles owner_profile
     on cardinality(owner_members.profile_ids) = 1
     and owner_profile.id = owner_members.profile_ids[1]
-  left join auth.users owner_auth on owner_auth.id = owner_members.profile_ids[1] and cardinality(owner_members.profile_ids) = 1
   left join lateral (
     select e.id,e.granted,e.occurred_at,e.policy_version
     from public.workspace_marketing_consent_events e
