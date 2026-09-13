@@ -90,6 +90,12 @@ function nameMatches(title, fullName) {
   return parts.length > 1 && parts.every((part) => a.includes(part.replace(/[^a-z]/gu, "")));
 }
 const realEstateSignal = (value) => /real estate|realty|property|lj hooker|ray white|harcourts|re\/max|remax|elders|professionals|acton|belle|century 21|first national|reiwa/i.test(String(value || ""));
+// A same-name page in another country is a different person. Batches have already
+// caught US, Canadian and NZ realtors on WA names, so a foreign jurisdiction token in
+// the page title disqualifies the match.
+const FOREIGN = /\b(vancouver|toronto|calgary|edmonton|ottawa|montreal|canada|united states|usa|\bu\.?s\.?a?\b|california|texas|florida|michigan|arizona|nevada|new york|north carolina|boise|idaho|new braunfels|dearborn|united kingdom|\buk\b|england|london|scotland|ireland|dubai|uae|new zealand|auckland|wellington|christchurch|singapore|malaysia|philippines|india|south africa)\b/iu;
+const foreignLocation = (value) => FOREIGN.test(String(value || ""));
+const AUSTRALIAN = /\b(australia|australian|wa|w\.a\.|western australia|perth|fremantle|mandurah|bunbury|geraldton|albany|broome|karratha|port hedland|kalgoorlie|joondalup|rockingham|armadale|midland|swan valley|rewa|reiwa)\b/iu;
 
 const limit = Number(args.limit || 100);
 const paceMs = Number(args.pace || 5000);
@@ -101,11 +107,16 @@ const [linked, decided, roster] = await Promise.all([
   readAll("agents?select=id,full_name,given_name,family_name,primary_suburb,primary_postcode,agency_id,agency:agencies(name)&status=eq.licensed_verified&state=eq.WA&order=full_name"),
 ]);
 const seen = new Set([...linked.map((row) => row.agent_id), ...decided.map((row) => String(row.subject_id))]);
+const shard = Math.max(1, Number(args.shard || 1));
+const shardCount = Math.max(1, Number(args.shards || 1));
 const queue = roster
   .filter((row) => !seen.has(row.id))
-  .filter((row) => /^[A-Za-z]/u.test(String(row.full_name || "").trim()) && !/\(no (first|given) ?name\)/iu.test(String(row.full_name || "")));
+  .filter((row) => /^[A-Za-z]/u.test(String(row.full_name || "").trim()) && !/\(no (first|given) ?name\)/iu.test(String(row.full_name || "")))
+  // Disjoint slices so N workers cover the queue without coordinating: each shard
+  // re-reads the durable decisions first, so finished rows are never repeated.
+  .filter((row, index) => index % shardCount === (shard - 1));
 
-console.log(JSON.stringify({ mode: dryRun ? "dry-run" : "apply", rosterVerifiedWa: roster.length, alreadyResearched: seen.size, queue: queue.length, planned: Math.min(limit, queue.length), paceMs }, null, 1));
+console.log(JSON.stringify({ mode: dryRun ? "dry-run" : "apply", shard, shardCount, rosterVerifiedWa: roster.length, alreadyResearched: seen.size, queue: queue.length, planned: Math.min(limit, queue.length), paceMs }, null, 1));
 if (dryRun) { console.log(JSON.stringify(queue.slice(0, 5).map((row) => ({ name: row.full_name, suburb: row.primary_suburb, agency: row.agency?.name ?? null })), null, 1)); process.exit(0); }
 
 const startedAt = Date.now();
@@ -129,6 +140,7 @@ for (const [index, agent] of queue.slice(0, limit).entries()) {
   await sleep(paceMs);
   searched += 1;
   let hit = null;
+  let foreignRejected = [];
   for (const slug of search.slugs.slice(0, 6)) {
     let proof;
     try { proof = await embed(slug); } catch { continue; }
@@ -136,6 +148,12 @@ for (const [index, agent] of queue.slice(0, limit).entries()) {
     if (!proof.id) continue;
     const titleMatch = nameMatches(proof.title, agent.full_name);
     const agencyMatch = agent.agency?.name ? nameMatches(proof.title, agent.agency.name) : false;
+    // A same-name page outside Australia is a different person; keep the URL as
+    // evidence on the row instead of silently dropping it.
+    if (foreignLocation(proof.title) && !AUSTRALIAN.test(proof.title)) {
+      if (titleMatch || agencyMatch) foreignRejected.push({ slug, page_id: proof.id, title: proof.title });
+      continue;
+    }
     if (titleMatch && (realEstateSignal(slug) || realEstateSignal(proof.title))) { hit = { slug, proof, kind: "person_page" }; break; }
     if (titleMatch) { hit = { slug, proof, kind: "person_page_uncorroborated" }; break; }
     if (agencyMatch) { hit = { slug, proof, kind: "agency_page" }; break; }
@@ -147,6 +165,7 @@ for (const [index, agent] of queue.slice(0, limit).entries()) {
     search_bytes: search.bytes,
     query_suburb: agent.primary_suburb ?? null,
     candidate_slugs: search.slugs.slice(0, 10),
+    foreign_name_match_rejected: foreignRejected,
     embed: hit ? { slug: hit.slug, page_id: hit.proof.id, title: hit.proof.title, bytes: hit.proof.bytes } : null,
   };
   try {
@@ -172,6 +191,31 @@ for (const [index, agent] of queue.slice(0, limit).entries()) {
         }),
       });
       resolved += 1; appendFileSync(LOG, `${new Date().toISOString()} RESOLVED ${agent.full_name} -> ${hit.proof.id} "${hit.proof.title}"\n`);
+    } else if (hit && hit.kind === "agency_page") {
+      // An agency/team page is a genuine discovery. Register it as an agency-owned
+      // advertiser page (never as the agent's page) so its live ads can be collected.
+      const rows = await rest("advertiser_pages?on_conflict=platform,page_id", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+        body: JSON.stringify({
+          platform: "facebook", page_id: hit.proof.id, page_name: hit.proof.title, page_url: `https://www.facebook.com/${hit.slug}`,
+          agent_id: null, agency_id: agent.agency_id ?? null, status: "resolved_collectable", scan_enabled: true,
+          scan_state: "needs_first_fill", confidence: 70, owner_type: agent.agency_id ? "agency" : "unknown",
+          resolved_at: new Date().toISOString(),
+          metadata: { source: "discovery-first-pass", page_slug: hit.slug, page_kind: "agency_page", discovered_from_agent: agent.id, embed_title: hit.proof.title },
+        }),
+      });
+      const pageId = rows?.[0]?.id ?? null;
+      await rest("agent_decisions", {
+        method: "POST", headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({
+          decision_type: "page_resolution", subject_type: "agent", subject_id: agent.id, decided_at: new Date().toISOString(),
+          decision: { resolved: false, collectable: false, page_id: hit.proof.id, page_url: `https://www.facebook.com/${hit.slug}`, page_kind: "agency_page", attributed: false, agency_advertiser_page_id: pageId },
+          rationale: "Embed proved the agency/team page that employs this agent. Registered as an agency-owned advertiser page; not linked as the agent's personal page.",
+          confidence: 70, evidence, hermes_skill: "ad-radar-discovery-first-pass",
+        }),
+      });
+      unresolved += 1; appendFileSync(LOG, `${new Date().toISOString()} AGENCY-PAGE ${agent.full_name} -> ${hit.proof.id} "${hit.proof.title}"\n`);
     } else if (hit) {
       await rest("agent_decisions", {
         method: "POST", headers: { Prefer: "return=minimal" },
@@ -191,7 +235,9 @@ for (const [index, agent] of queue.slice(0, limit).entries()) {
         body: JSON.stringify({
           decision_type: "page_resolution", subject_type: "agent", subject_id: agent.id, decided_at: new Date().toISOString(),
           decision: { resolved: false, collectable: false, page_id: null, page_url: null },
-          rationale: "Searched public web results for the agent's name and suburb; no candidate Facebook slug produced a name-matched page.",
+          rationale: foreignRejected.length
+            ? "Searched public web results; the only name-matched pages belong to foreign jurisdictions (recorded in evidence.foreign_name_match_rejected), so no page was linked."
+            : "Searched public web results for the agent's name and suburb; no candidate Facebook slug produced a name-matched page.",
           confidence: 40, evidence, hermes_skill: "ad-radar-discovery-first-pass",
         }),
       });
