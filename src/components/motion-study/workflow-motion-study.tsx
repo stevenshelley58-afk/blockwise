@@ -12,9 +12,9 @@ import { STUDY_NARROW_BREAKPOINT, studyAdMotion, studyEditLayout, studyTypingSch
 import styles from "./workflow-motion-study.module.css";
 
 const STUDY_STEPS = [
-  { label: "Choose", hint: "Pick a ready-made ad" },
-  { label: "Customise", hint: "Add your text" },
-  { label: "Review", hint: "Check who sees it and approve the setup" },
+  { label: "Choose" },
+  { label: "Customise" },
+  { label: "Review" },
 ] as const;
 const SELECTED_AD = AD_EXAMPLES[0];
 const SIDE_ADS = [
@@ -247,7 +247,6 @@ export function WorkflowMotionStudy() {
           </motion.div>
         </div>
       </div>
-      <p className={styles.bwStudyHint} aria-live="polite">{STUDY_STEPS[step].hint}</p>
     </section>
   </div>;
 }

@@ -177,7 +177,6 @@
 }
 .bwStudyEditPanel textarea[rows="3"] { min-height: calc(3 * 1.45em + 18px); }
 
-.bwStudyHint { min-height: 34px; padding: 8px 18px; border-top: 1px solid var(--study-line); color: var(--study-muted); font-size: 12px; text-align: center; }
 
 @media (prefers-reduced-motion: reduce) {
   .bwStudy *, .bwStudy *::before, .bwStudy *::after {
@@ -227,7 +226,6 @@
 .bwStudy[data-narrow="true"] .bwStudyAdCopy, .bwStudy[data-narrow="true"] .bwStudyLink, .bwStudy[data-narrow="true"] .bwStudyActions { display: none; }
 .bwStudy[data-narrow="true"] .bwStudyAdImage { aspect-ratio: 1.7; }
 .bwStudy[data-narrow="true"] .bwStudyAdHeadline { font-size: 14px; }
-.bwStudy[data-narrow="true"] .bwStudyHint { font-size: 11.5px; }
 .bwStudy[data-narrow="true"] .bwStudyReviewList dd { max-width: 58%; }
 
 @container (max-width: 360px) {
@@ -249,6 +247,3 @@
   background: #067443; color: #fff; font-size: 12px; font-weight: 750; line-height: 1;
 }
 .bwStudyLiveBadge i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
-.bwStudyEditPanel[aria-label="Customise your ad"] { grid-template-rows: auto auto minmax(0, 1fr); align-content: stretch; }
-.bwStudyEditPanel[aria-label="Customise your ad"] > label:last-child { grid-template-rows: auto minmax(0, 1fr); }
-.bwStudyEditPanel[aria-label="Customise your ad"] > label:last-child textarea { height: 100%; }
