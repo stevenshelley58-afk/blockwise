@@ -156,3 +156,78 @@ deleted on the owner's instruction and is recoverable from the
 `deleted/20260914-adstudio-video-generation` tag and from
 `chore/zero-branch-consolidation`. Human editing fulfils launch; automated
 generation is not a prerequisite and is not referenced by this feature.
+## Release plan
+
+Branch `adstudio-video-launch` is rebased onto `origin/main` = `e558f256d`, which
+is the revision production is currently serving, so the branch applies directly
+to the live release point. The rebase replayed 20 commits with no conflicts,
+including `studio-shell.tsx`, which upstream had also changed for the design
+system work; the Video navigation entry survived, `tsc` is clean, 137 video
+assertions pass and `next build` succeeds.
+
+### The order, and why it is this order
+
+Migrations run **before** merge, because a merge is live in about two minutes
+and the app must never serve code whose schema is not yet present. The product
+migration runner is idempotent per its own ledger, so a re-run is safe.
+
+```bash
+# 1. Rehearse on a restore, as the runner's guard requires.
+bash scripts/vps/product-backup.sh
+bash scripts/vps/product-restore.sh <the backup just written>   # into a scratch database
+BLOCKWISE_PRODUCT_MIGRATION_DIR=<restore>/supabase/migrations \
+  bash scripts/vps/product-migrate.sh --plan     # confirm the five files and their order
+
+# 2. Apply to production. The guard is deliberate: it requires evidence that
+#    the set was rehearsed, not a promise that it was.
+BLOCKWISE_MIGRATION_APPROVED=I_HAVE_REHEARSED_ON_A_RESTORE \
+  bash scripts/vps/product-migrate.sh --apply
+
+# 3. Merge the branch, which releases through the watched path.
+git -C /projects/blockwise merge --no-ff adstudio-video-launch
+
+# 4. Verify the deployed revision and the live journey, not the release record.
+docker ps --format '{{.Image}}' | grep blockwise-app
+```
+
+### Five migrations, in order
+
+| File | What it adds |
+| --- | --- |
+| `20260914100000_adstudio_video.sql` | The eight video tables, RLS, the privacy boundary, the working-day deadline function |
+| `20260914110000_adstudio_video_storage.sql` | The private `adstudio-video` bucket |
+| `20260914130000_video_deadline_rpc.sql` | The service-role-only deadline wrapper |
+| `20260914140000_video_single_brief_draft.sql` | The one-unfrozen-draft-per-project index |
+
+`20260914100000`, `20260914110000`, `20260914130000` and `20260914140000` were
+each applied to the local product database during development, out of process,
+so **the ledger has no rows for them**. The runner will insert those rows on
+its first `--apply`; it is idempotent, so it will re-run the DDL and record what
+it did. Do not insert the ledger rows by hand: that repeats the out-of-process
+change rather than repairing it.
+
+### Feature gates this release must leave in this state
+
+| Gate | Required state at release | Why |
+| --- | --- | --- |
+| Paid video checkout | **closed** | `VIDEO_OFFER.taxTreatment` is `undetermined` and `checkoutEnabled` is `false`, and `assertCheckoutEnabled` requires both to flip plus `STRIPE_VIDEO_AUD_ID` configured. The GST treatment is not confirmed. |
+| Video upload | open | The free path is the launch scope. |
+| Provider writes | **disabled** | The release preflight requires `BLOCKWISE_ENABLE_PROVIDER_WRITES=false`. |
+
+There is no `STRIPE_VIDEO_AUD_PRICE_ID` configured and no payment-mode session
+code, so no video payment can be created by this release even if the gate were
+flipped by accident.
+
+### Rollback
+
+Use `scripts/vps/product-rollback.sh` to return to `e558f256d`. That revision
+does not read the video tables, so the migrations may stay applied: they are
+additive and nothing else references them. Do not drop them to roll back, and
+do not unapply payment events.
+
+### What this release does not deliver
+
+The paid path cannot be sold: no Stripe payment-mode session exists, by design,
+pending the GST decision. Fulfilment, notifications, upload, inspection,
+resizing and downloading are all built, but the operator queue has never been
+used on a live order and no uploaded file has crossed a real network.
