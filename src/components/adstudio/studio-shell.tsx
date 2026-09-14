@@ -2,6 +2,7 @@
 
 import {
   ArrowLeft,
+  Film,
   Home,
   Library,
   LayoutTemplate,
@@ -25,6 +26,7 @@ type StudioShellProps = {
 const items = [
   { href: "/ad-studio", label: "Home", icon: Home, exact: true },
   { href: "/ad-studio/templates", label: "Templates", icon: LayoutTemplate },
+  { href: "/ad-studio/video", label: "Video", icon: Film },
   { href: "/ad-studio/library", label: "Library", icon: Library, matches: ["/ad-studio/library", "/ad-studio/ads", "/ad-studio/assets"] },
   { href: "/ad-studio/brand", label: "Brand Pack", icon: Palette },
 ];
