@@ -13,6 +13,23 @@ export type CrmStage = (typeof CRM_STAGES)[number];
 export const CRM_TERMINAL_STAGES = ["Won", "Lost"] as const;
 export type CrmTerminalStage = (typeof CRM_TERMINAL_STAGES)[number];
 
+/**
+ * The four stages a customer sees, and the only stage vocabulary a
+ * customer-facing surface may show.
+ *
+ * The working six above stay internal. They exist because the workflow needs to
+ * tell "made contact" from "replied" from "booked", which are different jobs for
+ * the agent. The four collapse those, and they live in the CRM's own
+ * `CRM Lead Status` master. The adapter reads `customer_stage` from the CRM
+ * rather than deriving it, so there is one authority for this and not two.
+ */
+export const CRM_CUSTOMER_STAGES = ["New", "Contacted", "Follow-up", "Closed"] as const;
+export type CrmCustomerStage = (typeof CRM_CUSTOMER_STAGES)[number];
+
+export function isCrmCustomerStage(stage: string | null | undefined): stage is CrmCustomerStage {
+  return (CRM_CUSTOMER_STAGES as readonly string[]).includes(stage ?? "");
+}
+
 /** Real Frappe CRM Task status values. Note the single-l "Canceled". */
 export const CRM_TASK_STATUSES = ["Backlog", "Todo", "In Progress", "Done", "Canceled"] as const;
 export type CrmTaskStatus = (typeof CRM_TASK_STATUSES)[number];
@@ -37,6 +54,8 @@ export type CrmLead = {
   email: string | null;
   phone: string | null;
   stage: CrmStage | string;
+  /** The customer-facing stage, as the CRM's own stage master reports it. */
+  customerStage: CrmCustomerStage | string | null;
   quality: CrmQuality | string | null;
   archived: boolean;
   owner: string | null;
@@ -99,9 +118,20 @@ export type CrmCaptureResult = {
   lead: string;
   created: boolean;
   stage: CrmStage | string;
+  customerStage: CrmCustomerStage | string | null;
   revision: number;
 };
 
+/**
+ * The raw shape a mutating command returns.
+ *
+ * This is a pass-through, not a mapped object: `client.call` hands back the
+ * API's JSON untouched. The API writes snake_case (`completed_tasks`,
+ * `created_task`, `customer_stage`), so the camelCase names below do not match
+ * what actually arrives and reading them yields `undefined` rather than an
+ * error. `CrmLead` is the mapped type; read a stage back with `getLead` instead
+ * of widening this one.
+ */
 export type CrmMutationResult = {
   lead?: string;
   task?: string;

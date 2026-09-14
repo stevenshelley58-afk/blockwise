@@ -175,6 +175,7 @@ export function createCrmCommands(client: CrmClient, workspaceId: string): CrmCo
         lead: String(result.lead ?? ""),
         created: result.created === true,
         stage: String(result.stage ?? "New"),
+        customerStage: nullableString(result.customer_stage),
         revision: Number(result.revision ?? 0),
       } satisfies CrmCaptureResult;
     },
@@ -395,6 +396,9 @@ function mapLead(row: Record<string, unknown>): CrmLead {
     email: nullableString(row.email),
     phone: nullableString(row.mobile_no ?? row.phone),
     stage: String(row.blockwise_stage ?? row.stage ?? "New"),
+    // Read, never derived. The CRM's own stage master is the one authority for
+    // what a customer sees; a second mapping here would be a second answer.
+    customerStage: nullableString(row.customer_stage),
     quality: nullableString(row.blockwise_quality ?? row.quality),
     archived: row.blockwise_archived === 1 || row.blockwise_archived === true || row.archived === true,
     owner: nullableString(row.lead_owner ?? row.owner),

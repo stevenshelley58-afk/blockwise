@@ -3,6 +3,7 @@ import test from "node:test";
 
 import type { CrmClient } from "../src/lib/crm/client.ts";
 import { createCrmCommands, type CrmCommands } from "../src/lib/crm/commands.ts";
+import { CRM_CUSTOMER_STAGES, isCrmCustomerStage } from "../src/lib/crm/types.ts";
 
 const WORKSPACE = "11111111-1111-4111-8111-111111111111";
 const SITE = "demo.crm.internal";
@@ -142,7 +143,7 @@ test("commands that overwrite enquiry state send the revision they expect", asyn
 
 test("a capture carries the scoped source and the backfill flag", async () => {
   const { commands, calls } = build({
-    call: { lead: LEAD, created: true, stage: "New", revision: 0 },
+    call: { lead: LEAD, created: true, stage: "New", customer_stage: "New", revision: 0 },
   });
 
   const result = await commands.captureEnquiry({
@@ -155,7 +156,23 @@ test("a capture carries the scoped source and the backfill flag", async () => {
   assert.equal(calls[0].payload?.source_provider, "facebook");
   assert.equal(calls[0].payload?.source_submission_id, "sub-1");
   assert.equal(calls[0].payload?.backfill, true);
-  assert.deepEqual(result, { lead: LEAD, created: true, stage: "New", revision: 0 });
+  assert.deepEqual(result, {
+    lead: LEAD,
+    created: true,
+    stage: "New",
+    customerStage: "New",
+    revision: 0,
+  });
+});
+
+test("a capture that reports no customer stage says null rather than inventing one", async () => {
+  const { commands } = build({ call: { lead: LEAD, created: true, stage: "New", revision: 0 } });
+  const result = await commands.captureEnquiry({
+    commandId: "cmd",
+    sourceProvider: "facebook",
+    sourceSubmissionId: "sub-1",
+  });
+  assert.equal(result.customerStage, null, "an unreported stage is absent, not guessed");
 });
 
 test("a capture without backfill says so explicitly", async () => {
@@ -173,6 +190,11 @@ test("the lead mapper reads the field names the API actually returns", async () 
     mobile_no: "0400000000",
     lead_owner: "agent@example.com",
     blockwise_stage: "Contacting",
+    // The native stage master, reported alongside the working stage. The two
+    // are different axes on purpose: `Contacting` and `Engaged` are different
+    // jobs for the agent, but both read as `Follow-up` to the customer.
+    status: "Follow-up",
+    customer_stage: "Follow-up",
     blockwise_quality: "high_intent",
     blockwise_archived: 0,
     blockwise_revision: 4,
@@ -192,6 +214,7 @@ test("the lead mapper reads the field names the API actually returns", async () 
   assert.equal(lead.phone, "0400000000");
   assert.equal(lead.owner, "agent@example.com");
   assert.equal(lead.stage, "Contacting");
+  assert.equal(lead.customerStage, "Follow-up", "the customer stage is read, not derived from the working stage");
   assert.equal(lead.quality, "high_intent");
   assert.equal(lead.archived, false);
   assert.equal(lead.revision, 4);
@@ -200,6 +223,25 @@ test("the lead mapper reads the field names the API actually returns", async () 
   assert.equal(lead.propertyContext, "Scarborough WA 6019");
   assert.equal(lead.receivedAt, "2026-09-13 05:00:00");
   assert.equal(lead.modified, "2026-09-13 06:00:00");
+});
+
+test("a lead whose CRM reports no customer stage reads null, not a default", async () => {
+  const { commands } = build({ read: { name: LEAD, blockwise_stage: "Contacting" } });
+  const lead = await commands.getLead(LEAD);
+  assert.equal(lead.stage, "Contacting");
+  assert.equal(lead.customerStage, null, "an older CRM must not be reported as a stage it never sent");
+});
+
+test("the customer stage vocabulary is the four the customer sees, and only those", () => {
+  assert.deepEqual([...CRM_CUSTOMER_STAGES], ["New", "Contacted", "Follow-up", "Closed"]);
+  for (const stage of CRM_CUSTOMER_STAGES) {
+    assert.equal(isCrmCustomerStage(stage), true, `${stage} is a customer stage`);
+  }
+  // The working stages are deliberately not customer stages. If someone adds
+  // one here, a customer surface starts leaking internal workflow language.
+  for (const stage of ["Contacting", "Engaged", "Appointment booked", "Won", "Lost", "", null, undefined]) {
+    assert.equal(isCrmCustomerStage(stage), false, `${String(stage)} is not a customer stage`);
+  }
 });
 
 test("a task read prefers the native due date", async () => {
