@@ -83,6 +83,15 @@ test("completion-gated writing, accessible selectors, finite autoplay and reduce
   assert.match(source,/Free trial · No card required · Cancel anytime/);
 });
 
+test("workflow copy explains the job and the relief from Ads Manager", () => {
+  assert.match(source, /<span>Build lead ads\.<\/span>/);
+  assert.match(source, /<span>Skip Ads Manager\.<\/span>/);
+  assert.match(source, /Get from a proven template to an on-brand lead ad, ready to review in one clear flow\./);
+  assert.match(styles, /\.bwStudyIntro h2 span:last-child \{ color: var\(--hc-blue-bright/);
+  assert.match(styles, /\.bwStudyIntro h2 span \{ display: block; white-space: nowrap; \}/);
+  assert.match(styles, /\.bwStudyIntro > p \{ margin: 0; max-width: 48ch/);
+});
+
 test("direct Choose to Review does not reveal the editor", () => {
   for (let t=.01;t<1;t+=.02) {
     const f=studyTransition(studyFrame(0),studyFrame(2),t);
@@ -186,7 +195,9 @@ test("editor fields stay compact and the redundant bottom bar is absent", () => 
   assert.match(source, /label="Ad text"[^\n]+rows=\{3\}/);
 });
 
-test("workflow uses the approved two-line headline and supporting value copy", () => {
-  assert.match(source, /<span>Be the agent<\/span><span>they think of first\.<\/span>/);
-  assert.match(source, /Spend your time with clients instead\./);
+test("workflow keeps the requested two-line headline and value copy", () => {
+  assert.match(source, /<span>Build lead ads\.<\/span><span>Skip Ads Manager\.<\/span>/);
+  assert.match(source, /Get from a proven template to an on-brand lead ad, ready to review in one clear flow\./);
+  assert.match(styles, /\.bwStudyIntro h2 span \{ display: block; white-space: nowrap; \}/);
+  assert.match(styles, /\.bwStudyIntro > p \{ margin: 0; max-width: 48ch/);
 });
