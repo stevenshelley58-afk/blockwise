@@ -206,3 +206,5 @@ Reporting Email uses one compact notification with a small creative thumbnail an
   No API mutation, persistence, download, creation or activation is available.
 
 The homepage workflow headline reads "Be the agent / they think of first." in two lines, with the second line blue. The approved supporting paragraph explains the simple ad flow and time back for clients. Preserve the existing animation and CTA.
+
+The workflow section reserves equal top and bottom breathing room around the entire copy/demo composition: 64-96px on desktop and 48px in the stacked layout. The animated frame must not touch the section colour boundaries.

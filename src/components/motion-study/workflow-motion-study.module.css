@@ -4,7 +4,7 @@
   align-items: center;
   gap: 40px;
   min-height: 0;
-  padding: 0;
+  padding-block: clamp(64px, 6vw, 96px);
   background: transparent;
   --study-ink: #16181d;
   --study-muted: #5d6571;
@@ -205,7 +205,7 @@
 .bwStudyIntro small { color: var(--study-muted); font-size: 12px; }
 
 @media (max-width: 1099px) {
-  .bwStudy { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+  .bwStudy { grid-template-columns: minmax(0, 1fr); gap: 36px; padding-block: 48px; }
   .bwStudyIntro h2 { font-size: clamp(26px, 8.4vw, 46px); }
 }
 .bwStudy[data-narrow="true"] .bwStudyIntro { gap: 24px; margin-bottom: 0; }

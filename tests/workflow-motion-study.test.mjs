@@ -201,3 +201,8 @@ test("workflow keeps the requested two-line headline and value copy", () => {
   assert.match(styles, /\.bwStudyIntro h2 span \{ display: block; white-space: nowrap; \}/);
   assert.match(styles, /\.bwStudyIntro > p \{ margin: 0; max-width: 48ch/);
 });
+
+test("workflow composition reserves equal outer vertical spacing", () => {
+  assert.match(styles, /padding-block: clamp\(64px, 6vw, 96px\)/);
+  assert.match(styles, /padding-block: 48px/);
+});
