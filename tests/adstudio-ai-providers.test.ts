@@ -7,6 +7,7 @@ import {
   createTextProviderForCandidate,
   resolveAzureOpenAiChatUrl,
   resolveOpenAiImageEditsUrl,
+  supportsFlexibleImageSizes,
 } from "../src/lib/adstudio/ai-providers.ts";
 import { ProviderRequestError, validateProviderJsonOutput } from "../src/lib/adstudio/providers.ts";
 import { buildProviderRunAttempt } from "../src/lib/operator/prompts/redact-prompt-run.ts";
@@ -391,6 +392,45 @@ test("GPT Image 2 generations use the exact AdStudio canvas instead of a crop-pr
 
     assert.equal(dispatchedBody?.size, expectedSize);
   }
+});
+
+test("every GPT Image 2 point release keeps the exact AdStudio canvas size", async () => {
+  // An exact-string model check once sent 2.5 down the legacy branch, where
+  // "4:5" resolves to 1024x1536 (2:3) and the renderer then crops the scene
+  // destructively. Pin the whole family, including dated snapshots.
+  for (const model of ["gpt-image-2", "gpt-image-2.5-flare", "gpt-image-2.5-flare-2026-09-08", "gpt-image-2.5-sunburst"]) {
+    for (const [aspectRatio, expectedSize] of [
+      ["4:5", "1024x1280"],
+      ["9:16", "864x1536"],
+      ["1.91:1", "1952x1024"],
+    ] as const) {
+      let dispatchedBody: Record<string, unknown> | undefined;
+      const provider = createImageProviderForCandidate(candidate("openai", model), {
+        env: { OPENAI_API_KEY: "oa_test" },
+        fetchImpl: async (_url, init) => {
+          dispatchedBody = JSON.parse(String(init?.body));
+          return new Response(JSON.stringify({ data: [{ b64_json: "aW1hZ2U=" }] }), { status: 200 });
+        },
+      });
+
+      await provider.generate({
+        prompt: "Premium local real estate creative",
+        referenceAssets: [],
+        aspectRatio,
+        stylePreset: "real_estate_photography",
+      });
+
+      assert.equal(dispatchedBody?.size, expectedSize, `${model} at ${aspectRatio}`);
+      assert.equal(dispatchedBody?.model, model);
+    }
+  }
+});
+
+test("older GPT Image models keep their native supported sizes", () => {
+  assert.equal(supportsFlexibleImageSizes("gpt-image-1"), false);
+  assert.equal(supportsFlexibleImageSizes("gpt-image-1.5"), false);
+  assert.equal(supportsFlexibleImageSizes("gpt-image-2"), true);
+  assert.equal(supportsFlexibleImageSizes("gpt-image-2.5-flare"), true);
 });
 
 test("OpenAI 2xx response without an image preserves submitted billing evidence", async () => {

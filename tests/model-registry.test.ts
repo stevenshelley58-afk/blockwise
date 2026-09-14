@@ -55,10 +55,10 @@ test("fast image generation defaults to the benchmarked Gemini edit model", () =
   assert.equal(resolved.primary.provider, "google");
   assert.equal(resolved.primary.model, "gemini-3.1-flash-image");
   assert.equal(resolved.primary.imageUsdPerUnit, 0.067);
-  assert.deepEqual(resolved.fallbacks.map((candidate) => candidate.model), ["gpt-image-2"]);
+  assert.deepEqual(resolved.fallbacks.map((candidate) => candidate.model), ["gpt-image-2.5-flare"]);
 });
 
-test("final image generation advances from Flash to Pro to GPT Image", () => {
+test("final image generation advances from Flash to Pro to GPT Image 2.5", () => {
   const resolved = resolveModelProfile("image_final");
   assert.equal(resolved.primary.provider, "google");
   assert.equal(resolved.primary.model, "gemini-3.1-flash-image");
@@ -66,7 +66,7 @@ test("final image generation advances from Flash to Pro to GPT Image", () => {
   assert.equal(resolved.fallbacks[0].provider, "google");
   assert.equal(resolved.fallbacks[0].model, "gemini-3-pro-image");
   assert.equal(resolved.fallbacks[1].provider, "openai");
-  assert.equal(resolved.fallbacks[1].model, "gpt-image-2");
+  assert.equal(resolved.fallbacks[1].model, "gpt-image-2.5-flare");
 });
 
 test("resolveEffectiveModelProfile accepts Azure OpenAI deployment overrides", () => {

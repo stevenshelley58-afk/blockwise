@@ -216,13 +216,17 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
     fallbacks: [
       {
         provider: "openai",
-        model: "gpt-image-2",
+        model: "gpt-image-2.5-flare",
         inputUsdPerMillionTokens: 5,
         outputUsdPerMillionTokens: 30,
+        // OpenAI states 2.5 token rates match GPT Image 2 but that its
+        // calculator does not estimate 2.5 consumption, so this stays at the
+        // GPT Image 2 per-image figure as a documented upper bound. Replace it
+        // with a measured actual_cost_usd from the first funded generation.
         imageUsdPerUnit: 0.211,
         supportsStructuredOutput: false,
         maxContextTokens: 16_000,
-        maxLatencyMs: 90_000,
+        maxLatencyMs: 120_000,
       },
     ],
   },
@@ -257,13 +261,14 @@ const MODEL_PROFILES: Record<ModelProfileKey, ModelProfile> = {
       },
       {
         provider: "openai",
-        model: "gpt-image-2",
+        model: "gpt-image-2.5-flare",
         inputUsdPerMillionTokens: 5,
         outputUsdPerMillionTokens: 30,
+        // Upper bound pending measurement; see the image_draft note above.
         imageUsdPerUnit: 0.211,
         supportsStructuredOutput: false,
         maxContextTokens: 16_000,
-        maxLatencyMs: 90_000,
+        maxLatencyMs: 120_000,
       },
     ],
   },

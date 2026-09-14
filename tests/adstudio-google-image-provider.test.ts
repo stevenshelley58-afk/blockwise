@@ -89,3 +89,56 @@ test("Google direct API transient failures enter the existing provider fallback"
     return true;
   });
 });
+
+test("Google direct API generates from text alone when references are not required", async () => {
+  let capturedInit: RequestInit | undefined;
+  const provider = createGoogleImageProvider(accounting, {
+    env: { GOOGLE_AI_API_KEY: "google-test-key" },
+    fetchImpl: async (_input, init) => {
+      capturedInit = init;
+      return new Response(JSON.stringify({
+        steps: [{
+          type: "model_output",
+          content: [{ type: "image", mime_type: "image/jpeg", data: "c2NlbmUtb25seQ==" }],
+        }],
+      }));
+    },
+  });
+
+  const output = await provider.generate({
+    ...request,
+    prompt: "A modern suburban home exterior at golden hour, no text.",
+    referenceAssets: [],
+    requiresReferenceAssets: false,
+  });
+
+  const body = JSON.parse(String(capturedInit?.body));
+  // Exactly one part: the text prompt. No image parts are fabricated.
+  assert.equal(body.input.length, 1);
+  assert.equal(body.input[0].type, "text");
+  assert.match(body.input[0].text, /no text/);
+  assert.equal(output.assetUrl, "data:image/jpeg;base64,c2NlbmUtb25seQ==");
+  assert.equal(output.providerMetadata.referenceAssets, 0);
+});
+
+test("Google direct API still refuses an edit that declares it must consume references", async () => {
+  let dispatched = false;
+  const provider = createGoogleImageProvider(accounting, {
+    env: { GOOGLE_AI_API_KEY: "google-test-key" },
+    fetchImpl: async () => {
+      dispatched = true;
+      return new Response("{}");
+    },
+  });
+
+  await assert.rejects(
+    () => provider.generate({ ...request, referenceAssets: [], requiresReferenceAssets: true }),
+    (error: unknown) => {
+      assert.ok(error instanceof ProviderRequestError);
+      assert.equal(error.requestSubmitted, false);
+      assert.match(error.message, /requires at least one reference image/);
+      return true;
+    },
+  );
+  assert.equal(dispatched, false, "no provider request may be sent for an unsatisfiable edit");
+});
