@@ -321,6 +321,26 @@ unreleased work remains on a feature branch, not on a competing canonical
 checkout. A failed release is an incident with an explicit retained baseline,
 not a reason to resume ad-hoc worktree deployments.
 
+### Microsoft sign-in Auth activation
+
+The app-only release deliberately does not recreate GoTrue. After the Microsoft
+OAuth wiring is released normally, set the restricted product environment's
+`BLOCKWISE_AUTH_AZURE_ENABLED=true`, client ID, client secret, redirect URI and
+Azure URL. Never put the secret into source or terminal output. The public
+redirect is `https://blockwise.sale/auth/v1/callback`; the Azure URL for work,
+school and personal accounts is `https://login.microsoftonline.com/common`.
+
+Run `scripts/vps/product-auth-release.sh --apply <live-full-sha>` from that
+immutable release. It shares the app release lock, verifies live provenance,
+refuses image or non-Microsoft Auth configuration drift, and recreates only
+`product-auth`. Failed activation restores the prior committed Auth definition.
+This is an explicit separate Auth gate, not part of automatic app deployment.
+Check public Auth settings and the Microsoft authorization redirect afterward.
+A successful interactive customer login is a separate check, not established
+by a healthy container or a successful authorization redirect. Google must
+remain unchanged. Rotate Microsoft secrets in the restricted configuration
+before expiry and repeat the Auth-only activation.
+
 ## Health gate
 
 Run from the committed VPS checkout:

@@ -175,6 +175,7 @@ export function SSOButtons({ mode = "signin" }: { mode?: "signin" | "signup" }) 
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "azure",
         options: {
+          scopes: "email",
           redirectTo: `${window.location.origin}/auth/confirm?next=/self-serve&flow=${mode}`,
         },
       });

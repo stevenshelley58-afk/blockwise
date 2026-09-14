@@ -75,3 +75,30 @@ test("only one sign-in is in flight at a time", () => {
   assert.match(source, /const inFlight = useRef\(false\)/);
   assert.match(source, /if \(inFlight\.current\) return;/);
 });
+
+
+test("Microsoft requests the email scope GoTrue needs for account creation", () => {
+  assert.match(source, /provider: "azure",\s+options: {\s+scopes: "email"/);
+});
+
+test("Microsoft credentials are server-only and opt-in", () => {
+  for (const [key, value] of [
+    ["ENABLED", "BLOCKWISE_AUTH_AZURE_ENABLED:-false"],
+    ["CLIENT_ID", "BLOCKWISE_AUTH_AZURE_CLIENT_ID:-"],
+    ["SECRET", "BLOCKWISE_AUTH_AZURE_CLIENT_SECRET:-"],
+    ["URL", "BLOCKWISE_AUTH_AZURE_URL:-https://login.microsoftonline.com/common"],
+  ]) assert.ok(compose.includes(`GOTRUE_EXTERNAL_AZURE_${key}: \${${value}}`));
+  assert.ok(compose.includes("GOTRUE_EXTERNAL_AZURE_REDIRECT_URI:"));
+  assert.doesNotMatch(source, /AZURE_CLIENT_SECRET|GOTRUE_EXTERNAL_AZURE_SECRET/);
+});
+
+test("Auth activation is separately gated and restricted to the live committed release", async () => {
+  const helper = await readFile(new URL("../scripts/vps/product-auth-release.sh", import.meta.url), "utf8");
+  assert.match(helper, /product-release-preflight.sh" "\$target" --check-live/);
+  assert.match(helper, /flock -x 9/);
+  assert.match(helper, /Non-Microsoft Auth setting changed/);
+  assert.match(helper, /Auth image changed/);
+  assert.match(helper, /trap rollback ERR/);
+  assert.match(helper, /--no-deps --no-build --pull never --force-recreate product-auth/);
+  assert.doesNotMatch(helper, /force-recreate product-app/);
+});
