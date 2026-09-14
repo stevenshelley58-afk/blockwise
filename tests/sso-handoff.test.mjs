@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { spawnSync } from "node:child_process";
 
 const source = await readFile(new URL("../src/components/auth/sso-buttons.tsx", import.meta.url), "utf8");
 const compose = await readFile(new URL("../infra/coolify/docker-compose.product.yml", import.meta.url), "utf8");
@@ -101,4 +102,27 @@ test("Auth activation is separately gated and restricted to the live committed r
   assert.match(helper, /trap rollback ERR/);
   assert.match(helper, /--no-deps --no-build --pull never --force-recreate product-auth/);
   assert.doesNotMatch(helper, /force-recreate product-app/);
+});
+
+test("Auth guard preserves inherited image defaults but rejects removed overrides", async () => {
+  const helper = await readFile(new URL("../scripts/vps/product-auth-release.sh", import.meta.url), "utf8");
+  const guard = helper.split("current=json.loads")[1].split("if desired.get")[0];
+  const script = `
+import json, sys
+container='auth'
+candidate={'image':'auth:fixed', 'environment':{'GOTRUE_EXTERNAL_AZURE_ENABLED':'true'}}
+current={'Image':'sha256:same','Config':{'Image':'auth:fixed','Env':['GOTRUE_DB_MIGRATIONS_PATH='+sys.argv[1]]}}
+image={'Id':sys.argv[2], 'Config':{'Env':['GOTRUE_DB_MIGRATIONS_PATH=/migrations']}}
+def run(args): return json.dumps([image] if args[1]=='image' else [current])
+current=json.loads${guard}
+`;
+  for (const [value, image, expected] of [
+    ["/migrations", "sha256:same", 0],
+    ["/custom", "sha256:same", 1],
+    ["/migrations", "sha256:changed", 1],
+  ]) {
+    const result = spawnSync("python3", ["-c", script, value, image], { encoding: "utf8" });
+    assert.ifError(result.error);
+    assert.equal(result.status, expected, result.stderr);
+  }
 });

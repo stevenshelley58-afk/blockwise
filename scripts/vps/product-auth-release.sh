@@ -23,12 +23,15 @@ candidate=json.loads(run(['docker','compose','--env-file',envfile,'-p','blockwis
 current=json.loads(run(['docker','inspect',container]))[0]
 existing=dict(item.split('=',1) for item in current['Config']['Env'])
 desired=candidate['environment']
+image=json.loads(run(['docker','image','inspect',candidate['image']]))[0]
+if image['Id'] != current['Image']: raise SystemExit('Auth image content changed; separate review required')
+defaults=dict(item.split('=',1) for item in image['Config'].get('Env', []))
 if candidate['image'] != current['Config']['Image']: raise SystemExit('Auth image changed; separate review required')
 for key,value in desired.items():
     if not key.startswith('GOTRUE_EXTERNAL_AZURE_') and str(value) != existing.get(key):
         raise SystemExit('Non-Microsoft Auth setting changed: '+key)
 for key in existing:
-    if key.startswith('GOTRUE_') and key not in desired:
+    if key.startswith('GOTRUE_') and key not in desired and existing[key] != defaults.get(key):
         raise SystemExit('Existing Auth setting removed: '+key)
 if desired.get('GOTRUE_EXTERNAL_AZURE_ENABLED') != 'true': raise SystemExit('Microsoft must be explicitly enabled in protected config')
 for key in ['CLIENT_ID','SECRET','REDIRECT_URI','URL']:
