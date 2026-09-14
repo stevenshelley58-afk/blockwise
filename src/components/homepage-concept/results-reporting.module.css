@@ -1,0 +1,26 @@
+.email { display: none; }
+
+@media (min-width: 1024px) {
+  .previews {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+    align-items: start;
+    gap: 24px;
+    margin-top: clamp(38px, 5vw, 62px);
+  }
+  .previews .report {
+    min-width: 0;
+    height: auto;
+    margin-top: 0;
+  }
+  .report :global(.rr-panel) { overflow: visible; }
+  .report :global(.rr-stage-topbar) { gap: 12px; }
+  .report :global(.rr-chart-plot),
+  .report :global(.rr-chart-scale) { height: 220px; }
+  .email { display: block; min-width: 0; }
+  .email :global(.rr-lead-email) { max-width: none; padding: 0; }
+  .email :global(.rr-lead-email-card) { border-radius: var(--r-panel); padding: 24px; }
+  .email :global(.rr-lead-email-details) { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .email :global(.rr-lead-email-footer),
+  .email :global(.rr-lead-email-footer a) { color: #b7bdc8; }
+}

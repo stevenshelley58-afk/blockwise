@@ -194,7 +194,7 @@ Workflow text handovers fade the outgoing text before introducing the replacemen
 
 The workflow frame has no bottom hint bar. Customise keeps intrinsic two-line Headline and three-line Ad text fields, never stretching a field to fill the panel.
 
-Reporting Email uses one compact notification with a small creative thumbnail and a two-column details grid (compact labelled rows on the narrowest phones). Its full content, including preferences, fits the fixed reporting frame without an inner scrollbar or a fade concealing content. The chart and email views retain the same frame height.
+Reporting Email uses one compact notification with a small creative thumbnail and a two-column details grid (compact labelled rows on the narrowest phones). Its full content, including preferences, fits the fixed reporting frame without an inner scrollbar or a fade concealing content. Below 1024px, the chart and email views retain the same frame height. From 1024px, reporting uses separate side-by-side surfaces: a roughly two-thirds-width chart and a narrow, fully visible email notification. The desktop chart selector contains only 7 days and 30 days; the email remains visible independently. Reuse the existing chart and email components, with locally scoped responsive layout styles rather than a second renderer or dependency.
 
 ## Historical review exception
 

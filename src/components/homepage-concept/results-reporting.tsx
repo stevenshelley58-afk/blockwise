@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { Button } from "@/components/ui/button";
-import { withBasePath } from "@/lib/homepage-concept/content";
+import styles from "./results-reporting.module.css";
 import { TRIAL_CTA_LABEL, TRIAL_SIGNUP_URL } from "@/lib/homepage-concept/pricing";
 import {
   REPORTS,
@@ -33,6 +33,7 @@ const EMAIL_HOLD_MS = 2200;
 const VIEW_TOUR: readonly ReportingView[] = ["month", "email", "week"];
 
 export function ResultsReporting() {
+  const [desktop, setDesktop] = useState(false);
   const [view, setView] = useState<ReportingView>("week");
   const [range, setRange] = useState<ReportRange>("week");
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -59,6 +60,17 @@ export function ResultsReporting() {
     chooseView(next);
   }
 
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const sync = () => {
+      setDesktop(media.matches);
+      if (media.matches) setView((current) => current === "email" ? range : current);
+    };
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, [range]);
+
   /* Arm once, the first time the chart scrolls into view. */
   useEffect(() => {
     const target = chartRef.current ?? sectionRef.current;
@@ -84,7 +96,7 @@ export function ResultsReporting() {
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     const timers: number[] = [];
     let at = DRAW_MS + HOLD_MS;
-    VIEW_TOUR.forEach((step) => {
+    (desktop ? VIEW_TOUR.filter((step) => step !== "email") : VIEW_TOUR).forEach((step) => {
       timers.push(
         window.setTimeout(() => {
           if (touchedRef.current) return;
@@ -94,7 +106,7 @@ export function ResultsReporting() {
       at += step === "email" ? EMAIL_HOLD_MS : DRAW_MS + HOLD_MS;
     });
     return () => timers.forEach((id) => window.clearTimeout(id));
-  }, [armed, chooseView]);
+  }, [armed, chooseView, desktop]);
 
   /* Slide the pill to whichever view is showing. */
   useEffect(() => {
@@ -109,7 +121,7 @@ export function ResultsReporting() {
     const observer = new ResizeObserver(measure);
     observer.observe(tabs);
     return () => observer.disconnect();
-  }, [view]);
+  }, [view, desktop]);
 
   function inspectPoint(event: React.PointerEvent<SVGSVGElement>) {
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -133,7 +145,8 @@ export function ResultsReporting() {
           </div>
         </header>
 
-        <div className="rr-stage hc-demo-card" aria-label="Interactive example report">
+        <div className={styles.previews}>
+        <div className={`rr-stage hc-demo-card ${styles.report}`} aria-label="Interactive example report">
           <header className="rr-stage-topbar">
             <span className="rr-stage-brand"><i aria-hidden="true" /> Blockwise Reporting</span>
 
@@ -146,10 +159,10 @@ export function ResultsReporting() {
                     aria-hidden="true"
                   />
                 ) : null}
-                {REPORT_VIEWS.map((id) => (
-                  <button type="button" key={id} data-view={id} aria-pressed={view === id} onClick={() => selectView(id)}>
+                {REPORT_VIEWS.filter((id) => !desktop || id !== "email").map((id) => (
+                  <Button variant="ghost" size="sm" arrow={null} type="button" key={id} data-view={id} aria-pressed={view === id} onClick={() => selectView(id)}>
                     {VIEW_LABELS[id]}
-                  </button>
+                  </Button>
                 ))}
               </div>
               <span className="rr-view-brief">{REPORT_BRIEFS[view]}</span>
@@ -157,7 +170,7 @@ export function ResultsReporting() {
           </header>
 
           <div className="rr-panel" key={view}>
-            {view !== "email" ? (
+            {desktop || view !== "email" ? (
               <div className="rr-dashboard">
                 <dl className="rr-metrics" aria-live="polite" aria-atomic="true">
                   <div><dt>Leads</dt><dd>{report.leads}</dd></div>
@@ -219,6 +232,10 @@ export function ResultsReporting() {
               <LeadEmailPreview />
             )}
           </div>
+        </div>
+        <aside className={styles.email} aria-label="Example email notification">
+          <LeadEmailPreview />
+        </aside>
         </div>
       </div>
     </section>

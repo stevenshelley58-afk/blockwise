@@ -89,7 +89,7 @@ test("every demo card on the homepage takes one shell", async () => {
 
   // Both surfaces consume it, and each imports it rather than relying on order.
   assert.match(workflow, /className="hc-process-demo hc-demo-card"/);
-  assert.match(results, /className="rr-stage hc-demo-card"/);
+  assert.match(results, /rr-stage hc-demo-card/);
   assert.match(workflow, /import "\.\/demo-card\.css"/);
   assert.match(results, /import "\.\/demo-card\.css"/);
 

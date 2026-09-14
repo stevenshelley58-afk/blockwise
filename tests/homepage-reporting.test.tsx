@@ -86,3 +86,18 @@ test("email fits the stable reporting frame without an inner scroller", async ()
   assert.match(css, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(source, /email.preferenceNote/);
 });
+
+
+test("desktop reporting separates the email from the date controls", async () => {
+  const source = await readFile(new URL("../src/components/homepage-concept/results-reporting.tsx", import.meta.url), "utf8");
+  const css = await readFile(new URL("../src/components/homepage-concept/results-reporting.module.css", import.meta.url), "utf8");
+  assert.ok(source.includes('REPORT_VIEWS.filter((id) => !desktop || id !== "email")'));
+  assert.ok(source.includes('desktop || view !== "email"'));
+  assert.ok(source.includes('VIEW_TOUR.filter((step) => step !== "email")'));
+  assert.ok(source.includes('media.removeEventListener("change", sync)'));
+  assert.ok(source.includes('<aside className={styles.email}'));
+  assert.match(css, /@media \(min-width: 1024px\)/);
+  assert.match(css, /grid-template-columns: minmax\(0, 2fr\) minmax\(320px, 1fr\)/);
+  assert.match(css, /height: auto/);
+  assert.match(css, /\.email \{ display: none; \}/);
+});
