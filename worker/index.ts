@@ -87,6 +87,21 @@ export async function resolveHandler(kind: string): Promise<Handler | null> {
         });
       };
     }
+    case "adstudio.video.optimise_source": {
+      // Resize a large source into a separate playback copy. The original is
+      // never modified, and every failure throws so the queue retries and
+      // finally records the error rather than failing silently.
+      const { optimiseVideoSource } = await import("../src/lib/adstudio/video-optimise-worker.ts");
+      return (payload, supabase) => {
+        const workspaceId = String(payload.workspaceId ?? "");
+        const projectId = String(payload.projectId ?? "");
+        const assetId = String(payload.assetId ?? "");
+        if (!workspaceId || !projectId || !assetId) {
+          throw new Error("Video optimisation payload is incomplete.");
+        }
+        return optimiseVideoSource({ supabase, workspaceId, projectId, assetId });
+      };
+    }
     case "reporting.refresh": {
       const { refreshReportingSnapshot } = await import("../src/lib/meta-monitor/reporting-snapshots.ts");
       return (payload, supabase) =>

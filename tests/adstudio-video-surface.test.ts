@@ -94,7 +94,10 @@ test("the upload reports a retry and never claims success early", () => {
   // Success copy appears only for a ready or needs-optimisation phase.
   assert.match(source, /phase\.kind === "ready"/);
   assert.match(source, /phase\.kind === "needs_optimisation"/);
-  assert.match(source, /Your original is unchanged/);
+  // The copy is queued at this point, not finished, so the wording must not
+  // claim it already exists.
+  assert.match(source, /we are making a lighter copy/);
+  assert.match(source, /Your original is\s+kept unchanged/);
 });
 
 test("every async surface ships loading, empty and error states", () => {

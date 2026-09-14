@@ -6,6 +6,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { UPLOAD_REJECTION_MESSAGES } from "@/lib/adstudio/video-limits";
 import { inspectVideoFile } from "@/lib/adstudio/video-media-inspect";
 import { VIDEO_BUCKET } from "@/lib/adstudio/video-refs";
+import { enqueueVideoOptimise } from "@/lib/adstudio/video-queue";
 import { finaliseUpload, VideoUploadError } from "@/lib/adstudio/video-upload-ledger";
 import {
   appendChunk,
@@ -209,6 +210,26 @@ export async function POST(request: NextRequest, context: RouteContext) {
       assetId: uploadId,
       inspection,
     });
+
+    // A large source is already accepted and downloadable; resizing is minutes
+    // of CPU and belongs in the worker, not in this request. Enqueue failure is
+    // reported rather than swallowed, because the customer has just been told a
+    // lighter copy is coming.
+    if (inspection.needsOptimisation === true) {
+      try {
+        await enqueueVideoOptimise({
+          supabase: service,
+          workspaceId,
+          projectId: upload.project_id,
+          assetId: uploadId,
+        });
+      } catch (enqueueError) {
+        console.error("video optimisation enqueue failed", {
+          reason: enqueueError instanceof Error ? enqueueError.message : "unknown",
+        });
+      }
+    }
+
     await discardScratch(uploadId);
     return NextResponse.json({
       state: settled.state,

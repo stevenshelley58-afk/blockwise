@@ -356,7 +356,8 @@ function UploadCard(props: {
             <div className="grid gap-1">
               <p className="text-sm text-(--success)">Saved to your library.</p>
               <p className="text-xs text-(--muted-foreground)">
-                This file was large, so we made a lighter copy for playback. Your original is unchanged.
+                This file was large, so we are making a lighter copy for playback. Your original is
+                kept unchanged, and you can download it now.
               </p>
             </div>
           ) : null}
