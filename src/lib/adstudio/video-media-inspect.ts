@@ -101,8 +101,9 @@ const defaultRunner: FfprobeRunner = async (filePath) => {
         "-print_format", "json",
         "-show_format",
         "-show_streams",
-        // Never follow an external reference embedded in the file.
-        "-nodata",
+        // NOTE: there is no "-nodata" option in ffprobe; passing one makes it
+        // exit non-zero and every real file look corrupt. Data dumping is off
+        // by default, and no URL is ever passed, so nothing external is read.
         filePath,
       ],
       {
