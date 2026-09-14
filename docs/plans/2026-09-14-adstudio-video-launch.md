@@ -67,8 +67,8 @@ ceiling and an explicit MIME allow list, and the isolation test passes.
 
 Verified by `next build` (exit 0) with `/ad-studio/video` and every
 `/api/adstudio/videos` route in the route manifest, plus `/operator/video`
-and both `/api/operator/video-orders` routes. 120 video test assertions pass
-and `tsc --noEmit` is clean.
+and both `/api/operator/video-orders` routes. 128 unit assertions and 8
+real-media assertions pass, and `tsc --noEmit` is clean.
 
 **Built end to end for the free path:** a customer can create a video, upload a
 resumable source, have it inspected, resume an interrupted transfer, download
@@ -92,11 +92,30 @@ first, claim one, upload a draft or a final through the same inspected path a
 customer uses, and deliver. Claiming never writes the committed deadline, a
 second claim is refused, and a delivery cannot happen twice.
 
+- `a6ebd752d` a fix for an invalid ffprobe flag, plus integration tests that run
+  against real encoded media.
+- `6ae3d3f04` a reproducible generator for those media fixtures.
+
+**Media handling is now verified against real files, not only doubles.** The
+integration suite generates genuine H.264 files with ffmpeg and exercises the
+real pipeline: container sniffing from actual bytes, both inspection entry
+points measuring real geometry and duration, refusal of a contradicted declared
+type, of non-video bytes and of a truncated file with a valid header, and the
+full resize chain executed through the real ffmpeg binary with the output
+probed back. Run it with `bash scripts/dev/make-video-fixtures.sh` first; it
+skips cleanly without the fixtures.
+
+That suite immediately found a defect that would have broken the feature
+outright: the inspection passed ffprobe a `-nodata` flag, which does not exist,
+so ffprobe exited non-zero and **every real video was classified as corrupt**.
+Every unit test had passed because they inject a fake probe.
+
 **Not built yet:** the Stripe payment-mode session itself (blocked on the GST
 decision by design, not by omission), the transactional notifications,
 payment reconciliation, the capacity gate, the retention cleanup job, and the
-release. The wall-clock behaviour of the resumable upload and the resize job
-has not been exercised against a real multi-hundred-megabyte file.
+release. The resumable upload has still not been exercised end to end over a
+slow or interrupted connection, and no resize has been run on a
+multi-hundred-megabyte source.
 
 **Nothing is live to customers.** Production still serves revision `897506271`;
 this branch is 11 commits ahead of it and has not been released.
