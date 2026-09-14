@@ -51,15 +51,37 @@ Built and committed on branch `adstudio-video-launch`:
 - `536714a65` ffmpeg and a bounded, non-executable tmpfs in the sandboxed
   worker, with memory, process and CPU limits.
 
-Applied to the local product database and confirmed: the eight tables exist
-with RLS enabled, the private `adstudio-video` bucket exists with a 2 GB
+- `ddfb825e2` resumable upload (init, chunk at an explicit offset, finalise)
+  and the authorised media read that issues short-lived links.
+- `48e15c0bc` the `/ad-studio/video` surface, the offer contract and the
+  studio navigation entry.
+- `362720342` `.gitignore` correction, without which the page and component
+  were silently excluded from git.
+- `8ce698636` the authorised library download.
+- `4570ecb93` worker-side resizing of large sources onto the existing
+  `job_queue`.
+
+Applied to the local product database and confirmed: eight `video_%` tables
+exist with RLS enabled, the private `adstudio-video` bucket exists with a 2 GB
 ceiling and an explicit MIME allow list, and the isolation test passes.
 
-**Not built yet:** no customer surface, no upload or download route, no Stripe
-one-off checkout, no offer or price configuration, no operator queue, no
-notification, no reconciliation, no capacity gate.
+Verified by `next build` (exit 0) with `/ad-studio/video` and all four
+`/api/adstudio/videos` routes in the route manifest. 75 video test assertions
+pass and `tsc --noEmit` is clean.
 
-**Nothing is live to customers.** There is no video route and no video price.
+**Built end to end for the free path:** a customer can create a video, upload a
+resumable source, have it inspected, resume an interrupted transfer, download
+it, and see it in their library. Oversized sources are queued for a resized
+playback copy that never replaces the original.
+
+**Not built yet:** the paid brief flow and its checkout, the operator
+fulfilment queue, the transactional notifications, payment reconciliation, the
+capacity gate, the retention cleanup job, and the release itself. The wall-clock
+behaviour of the resumable upload and the resize job has not been exercised
+against a real multi-hundred-megabyte file.
+
+**Nothing is live to customers.** Production still serves revision `897506271`;
+this branch is 11 commits ahead of it and has not been released.
 
 ## Known open items
 
