@@ -176,7 +176,7 @@ export function CreativeViewer({
                 type="button"
                 onClick={() => setMuted((current) => !current)}
                 aria-label={muted ? "Unmute video" : "Mute video"}
-                className="absolute right-5 bottom-3 grid size-9 cursor-pointer place-items-center rounded-full bg-(--ink)/70 text-white transition-colors duration-150 hover:bg-(--ink)/85"
+                className="absolute right-5 bottom-3 grid size-9 cursor-pointer place-items-center rounded-full bg-(--ui-scrim) text-white transition-colors duration-150 hover:bg-(--ui-scrim)"
               >
                 {muted ? <VolumeX size={16} aria-hidden /> : <Volume2 size={16} aria-hidden />}
               </button>
@@ -216,7 +216,7 @@ function Stage({ item, muted }: { item: CreativeViewerItem; muted: boolean }) {
 
   if (!item.media) {
     return (
-      <div className="grid max-h-full w-full max-w-sm place-items-center rounded-(--r-card) border border-white/15 px-6 py-16 text-center text-[12.5px] font-bold text-white/60">
+      <div className="grid max-h-full w-full max-w-sm place-items-center rounded-(--r-card) border border-white/15 px-6 py-16 text-center text-meta font-bold text-white/60">
         Preview unavailable
       </div>
     );

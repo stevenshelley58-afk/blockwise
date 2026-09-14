@@ -4,18 +4,23 @@ import { Button, type ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /*
- * ButtonArrow (shadcn-dashboard) — the signature Blockwise CTA, now the system
- * default: `<Button>` renders the same ink pill with the trailing arrow disc on
- * its own, for a button and for a link alike. This stays as a thin, named entry
- * point for the primary "next action" slots.
+ * CtaLink — a thin, named entry point for the primary "next action" slot, which
+ * renders as a Next.js Link when `href` is set and as the shared Button
+ * otherwise.
+ *
+ * It used to be called ButtonArrow and carried a trailing arrow disc. The disc
+ * is gone system-wide: plain text is the default on every text button, so this
+ * wrapper no longer decorates anything. The name follows the behaviour, because
+ * a component called ButtonArrow that draws no arrow is exactly the kind of
+ * drift this consolidation exists to remove.
+ *
+ * See docs/design/design-system.md "Controls".
  */
 
-type ButtonArrowProps = {
+type CtaLinkProps = {
   children: React.ReactNode;
   /** When set, the CTA renders as a Next.js Link. */
   href?: string;
-  /** Override the disc icon (defaults to the up-right arrow). */
-  arrow?: React.ReactNode;
   className?: string;
   variant?: ButtonProps["variant"];
   size?: ButtonProps["size"];
@@ -25,28 +30,22 @@ type ButtonArrowProps = {
   "aria-label"?: string;
 };
 
-export function ButtonArrow({
+export function CtaLink({
   href,
-  arrow,
   className,
   children,
   variant,
   size,
   ...props
-}: ButtonArrowProps) {
+}: CtaLinkProps) {
   if (href) {
     return (
       <Button
         asChild
         variant={variant}
         size={size}
-        arrow={arrow}
         className={cn("group/button", className)}
       >
-        {/* Label and disc are the Button's to place on both paths: `asChild`
-            clones them into the anchor itself. Handing them in here as well put
-            two discs in every link CTA and squeezed the label into the lane of
-            the first one. */}
         <Link href={href} {...props}>
           {children}
         </Link>
@@ -55,10 +54,10 @@ export function ButtonArrow({
   }
 
   return (
-    <Button variant={variant} size={size} arrow={arrow} className={className} {...props}>
+    <Button variant={variant} size={size} className={className} {...props}>
       {children}
     </Button>
   );
 }
 
-export default ButtonArrow;
+export default CtaLink;

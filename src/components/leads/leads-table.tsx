@@ -30,7 +30,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 
-import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
+import { CtaLink } from "@/components/shadcn-dashboard/button/button-01";
 import { LeadQualitySelect } from "@/app/(customer)/leads/lead-quality-select";
 import { Button } from "@/components/ui/button";
 import {
@@ -102,7 +102,7 @@ const columns: ColumnDef<TableLead>[] = [
     accessorFn: (row) => `${row.name} ${row.email} ${row.phone}`,
     cell: ({ row }) => (
       <div className="min-w-0">
-        <p className="truncate text-[13px] font-bold">{row.original.name}</p>
+        <p className="truncate text-support font-bold">{row.original.name}</p>
         {/* Both contact points stay visible: email never hides the phone. */}
         <p className="truncate text-xs leading-[1.4] text-muted-foreground">
           {row.original.email || row.original.phone || "—"}
@@ -326,9 +326,9 @@ export function LeadsTable({
           <p className="text-sm font-bold">{copy.empty.title}</p>
           <p className="mt-1 text-[12.5px] text-muted-foreground">{copy.empty.body}</p>
         </div>
-        <ButtonArrow href="/ad-studio" className="h-11 text-[13px]">
+        <CtaLink href="/ad-studio" className="h-11 text-support">
           {niche.copy.home.states.needsFirstAd.ctaLabel}
-        </ButtonArrow>
+        </CtaLink>
       </div>
     );
   }
@@ -353,7 +353,7 @@ export function LeadsTable({
             value={globalFilter}
             onChange={(event) => setGlobalFilter(event.target.value)}
             placeholder={copy.searchPlaceholder}
-            className="w-full bg-transparent text-[13px] text-foreground outline-none placeholder:text-(--faint)"
+            className="w-full bg-transparent text-support text-foreground outline-none placeholder:text-(--faint)"
           />
         </label>
 
@@ -461,7 +461,7 @@ export function LeadsTable({
               <div key={row.id} className="rounded-(--r-card) border border-(--line) bg-card p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-bold">{lead.name}</p>
+                    <p className="truncate text-support font-bold">{lead.name}</p>
                     <p className="truncate text-xs text-muted-foreground">
                       {lead.suburb} · {lead.email || lead.phone || "—"}
                     </p>

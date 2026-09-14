@@ -12,6 +12,7 @@ alternate production versions.
 
 ## Current authorities
 
+- [Design system](design/design-system.md) — the maintained token tables, component usage, verified contrast, documented exceptions and known gaps. Read with [`DESIGN.md`](../DESIGN.md) before changing any Blockwise visual surface.
 - [Architecture overview](architecture/overview.md)
 - [Product map](architecture/product-map.md)
 - [Extension guide](architecture/extension-guide.md)

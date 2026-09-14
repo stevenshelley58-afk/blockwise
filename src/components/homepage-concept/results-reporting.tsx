@@ -160,7 +160,7 @@ export function ResultsReporting() {
                   />
                 ) : null}
                 {REPORT_VIEWS.filter((id) => !desktop || id !== "email").map((id) => (
-                  <Button variant="ghost" size="sm" arrow={null} type="button" key={id} data-view={id} aria-pressed={view === id} onClick={() => selectView(id)}>
+                  <Button variant="ghost" size="sm" type="button" key={id} data-view={id} aria-pressed={view === id} onClick={() => selectView(id)}>
                     {VIEW_LABELS[id]}
                   </Button>
                 ))}

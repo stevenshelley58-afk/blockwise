@@ -232,7 +232,7 @@ export function PublishFlow({
               [4, "Review & create", "publish-stage-4"],
             ].map(([step, label, target]) => (
               <li key={step} aria-current={activeStage === Number(step) ? "step" : undefined}>
-                <Button arrow={null} variant="ghost" type="button" onClick={() => { setActiveStage(Number(step)); window.setTimeout(() => document.getElementById(String(target))?.focus({ preventScroll: false }), 0); }} className={`flex h-auto min-h-11 w-full items-center justify-start whitespace-normal py-2 text-xs sm:text-sm [&>span]:min-w-0 rounded-(--r-ctl) border border-border px-3 text-left font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${activeStage === Number(step) ? "border-primary bg-primary/5" : ""}`}>
+                <Button variant="ghost" type="button" onClick={() => { setActiveStage(Number(step)); window.setTimeout(() => document.getElementById(String(target))?.focus({ preventScroll: false }), 0); }} className={`flex h-auto min-h-11 w-full items-center justify-start whitespace-normal py-2 text-xs sm:text-sm [&>span]:min-w-0 rounded-(--r-ctl) border border-border px-3 text-left font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${activeStage === Number(step) ? "border-primary bg-primary/5" : ""}`}>
                   {step}. {label}
                 </Button>
               </li>

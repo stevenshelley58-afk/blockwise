@@ -4,16 +4,19 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 
 ## Contract and precedence
 
-- **This document is the design contract.** This is the binding design contract for the Blockwise customer surface. It defines the visual system, the component vocabulary, and the design rules an agent must follow. Change it in the same commit as the design decision it records.
+- **This document is the design contract.** It is the binding design contract for the whole Blockwise website: the customer app, Ad Studio, authentication, legal, marketing and the operator screens. It defines the visual system, the component vocabulary, and the design rules an agent must follow. Change it in the same commit as the design decision it records.
+- **The maintained guide is docs/design/design-system.md.** This file states the binding rules and the token vocabulary. The guide carries the token tables, the component usage detail, the verified contrast figures, the documented exceptions and the worked examples. Change both in the same commit as an approved design decision.
 - **Owner preferences are current authority.** The owner preferences section below is the current authority wherever older guidance in this file conflicts with it. They refine the system; they never authorise a parallel visual language or the removal of useful capability.
-- **Frank keeps its own design contract.** Frank's Window design contract lives at /projects/frank/apps/window/DESIGN.md and is not repeated here. This file covers the customer product surface only.
+- **One system, two themes.** Ad Studio is the dark theme of this same system, not a separate design system. Only the colour roles change there; the type roles, spacing scale, shape roles, controls, state behaviour and action hierarchy are shared.
+- **Frank keeps its own design contract.** Frank's Window design contract lives at /projects/frank/apps/window/DESIGN.md and is not repeated here. Frank remains a separate product: nothing here overrides it, and Blockwise does not import its visual language.
+- **Isolated third-party editors keep their internals.** The Vue/Fabric editor runs in a same-origin, style-isolated frame. Its canvas controls and toolbar are upstream code. The Blockwise interface around it uses this system; the frame's interior does not have to.
 - **Design detail moves to reference files.** Keep this file to binding rules and the token and component vocabulary. Move worked examples, route inventories and screenshots to docs/design/ and link them.
 
 ## Intent and register
 
 - **The Quiet Operations Desk.** Blockwise is a work-focused product used while a real-estate team prepares, checks or improves live advertising. The interface should feel like a calm operations desk: the next action is obvious, system state is legible, and visual craft supports the work without competing with it.
 - **Premium v2 is the current register.** Premium v2 keeps the near-black one-voice accent, neutral surfaces, Manrope/Inter type, compact radius scale and operational density, and adds exactly three things: one vivid configurable data hue for quantitative display, a spring motion system, and complete loading, empty and success states. It is not a redesign.
-- **One visual language.** The customer surface consumes one token and component vocabulary. A surface may be purpose-built, but it may not introduce a new accent family, radius scale, typography system or navigation grammar.
+- **One visual language.** The whole website consumes one token and component vocabulary. A surface may be purpose-built, but it may not introduce a new accent family, radius scale, typography system or navigation grammar.
 - **Design for the distracted phone user first.** Review a new screen as a distracted one-handed mobile user first, then as a desktop operator. Preserve approved sections and safety controls while removing repetition.
 
 ## Owner preferences
@@ -22,7 +25,8 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 - **Use fewer words.** Keep labels, required instructions, prices, terms, validation, status and accessibility text. Remove copy that only explains an obvious image, heading, card or control.
 - **Make the screen self-explanatory through hierarchy.** Improve the headline, preview, grouping or next action. Never add explainer text to compensate for weak hierarchy.
 - **Keep the palette and simple typography.** Use the existing shadcn/Tailwind bridge, Manrope/Inter type, neutral surfaces, ink action colour and shared radii before adding anything route-specific.
-- **Prefer rounded surfaces.** Avoid square cards, sharp image containers and page-local radius systems. Reuse --r-ctl, --r-card, --r-panel and the pill radius.
+- **Prefer rounded surfaces.** Avoid square cards, sharp image containers and page-local radius systems. Use the one role-based scale: controls 10px (`--r-ctl`), cards 16px (`--r-card`), large panels and dialogs 20px (`--r-panel`), and 9999px (`--r-chip`) for status pills and circular controls. Ordinary buttons take the control radius. Do not leave one card at 12px while the others use 16px, and do not redefine a generic radius utility without checking its callers.
+- **Prefer plain text on controls.** Do not decorate a text button with an arrow or a disc. An icon belongs on a control only when it carries a function the label does not already state.
 - **Limit scrolling, not information.** A shorter screen must not come from tiny text, clipped content, hidden controls or invented omissions. Keep long forms, reports and lists when the task needs them; collapse repetition and completed setup.
 - **Make mobile feel like an app.** Use the existing bottom navigation, safe areas, sheets, reachable actions, stable previews and clear Back behaviour. Do not stack a desktop page into a phone.
 - **Keep customer navigation permanent.** Self-serve customer routes keep the five mobile destinations: Home, Ads, Results, Leads and More. Ads owns the full Ad Studio subtree. Never expose an unavailable tool or invent a destination to fill the menu.
@@ -37,6 +41,12 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 ## Tokens
 
 - **One token source.** The bridge in src/app/tailwind.css is the single source of truth. shadcn semantic tokens resolve to the Blockwise values in this document, so a token change here propagates. Never hardcode a value a token already provides.
+- **Three kinds of line, three jobs.** A decorative divider (`--line` / `--ui-border`) separates content and may be faint. A strong decorative border (`--line-heavy`) groups content and may also be faint. An interactive boundary (`--ui-control-border`) is the edge of something a person can act on and must meet the 3:1 non-text contrast bar. Use `border-input` for controls and `border-border` for decoration. Do not darken every divider to fix an input.
+- **Focus is its own role.** `--ui-focus` is solid, not a translucent tint, and is applied with a 2px offset so the ring stays visible against both the control it surrounds and the surface behind it. Without the offset the ring and the primary action's fill are the same colour and the focus disappears on the most important control on the screen.
+- **The colour roles are one vocabulary in two themes.** The role names are the contract; the values are the current implementation. See docs/design/design-system.md for the light and dark values and their verified contrast.
+- **Shape roles are one scale, defined once.** Controls 10px, cards 16px, large panels and dialogs 20px, pills and circular controls 9999px. They are defined in src/app/globals.css and are not restated in theme-monochrome.css. Two live definitions of the same token is how the 12px-card drift started.
+- **Type is chosen by role, not by nearest number.** Manrope for headings, Inter for interface and body, JetBrains Mono for technical values only. The named roles (`text-page-title`, `text-section-title`, `text-component-title`, `text-body`, `text-control`, `text-support`, `text-meta`, `text-metric`) live in src/app/tailwind.css. Comparable metrics use tabular numbers. Important instructions are not small metadata.
+- **Spacing uses the scale.** 4, 8, 12, 16, 24, 32, 48px. Icon to label 8px, related controls 12px, mobile gutter 16px, card padding 16px mobile and 24px desktop.
 - **Never hardcode a chart colour.** The data hue (--ui-data*) is overridden per niche from src/config/niche in the customer layout. Never hardcode a chart colour in a component.
 - **Customer pages contain zero niche nouns.** All surface copy flows from src/config/niche so the same shell white-labels.
 - **Data Blue is the one vivid voice.** The data hue is used only for quantitative display: charts, meters, sparklines and gauge fills. It never becomes a general accent for buttons, links, navigation or decoration.
@@ -59,13 +69,13 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 
 ## Components
 
-- **Reuse the shared vocabulary.** src/components/ui/ is the shared vocabulary for buttons, cards, dialogs, sheets, tables, selects, inputs and navigation. Build from it before creating anything new.
-- **Every button is the CTA.** One button exists on the customer surface: the Blockwise CTA in src/components/ui/button.tsx. A text button renders a full pill in ink with a circular disc on the trailing edge carrying an up-right arrow; the disc is the inverse of the pill (a cta-foreground circle with an ink arrow), sized `height − 6px` so a 3px ink ring is visible at every size. On the quiet variants the disc takes a soft ink wash, because a white disc on a near-white surface disappears. Icon-only controls render the pill with no disc. `arrow={null}` or `disc="none"` removes the disc for a control that is genuinely not a CTA, and `variant="link"` is never a pill.
-- **The CTA variant ladder.** `default` is the ink pill with the disc and is the only primary action on a screen. `outline` is the same pill in surface white with a Control Line boundary, for the secondary action beside it. `ghost` and `ghost-pill` are quiet toolbar and page-head controls. `destructive` stays on the ink pill with error text. Never hand-roll a button, a pill-shaped link or a second primary action; `<Button asChild>` wraps a link and renders it as the same CTA.
-- **CTA colour has one source.** `--ui-cta`, `--ui-cta-foreground` and `--ui-cta-soft` in src/app/tailwind.css bridge onto the ink accent, and theme-monochrome.css restates `--ui-cta` and `--ui-cta-soft` beside the `--accent` they follow. The disc colours are set on the button, never restated per call site.
-- **CTA motion is contained.** On hover the disc's arrow turns 45 degrees to point up and the disc lifts a touch, both transform-only over 500ms, and both still under reduced motion. Nothing in the CTA changes the pill's width or height on hover or focus, so a row of actions cannot shift under the pointer.
-- **The CTA survives the legacy sheets.** `audit.css` and `suburb-report.css` are unlayered, so their `.audit-page a` and `.sr-page button` element rules outrank every Tailwind utility. Their resets exclude the CTA's `bw-cta` marker class, which travels in `className` because that is the one prop every wrapper component forwards. A wrapper that renders its own element must forward the rest of its props, or the CTA loses the markers and padding the button merges onto it.
-- **Every button is a real control.** The CTA renders a `<button>` with its own type, or the caller's link, and never a clickable `div`. Keep accessible names, `aria-pressed`, `aria-expanded` and disabled state on it.
+- **Reuse the shared vocabulary.** src/components/ui/ is the shared vocabulary for buttons, cards, dialogs, sheets, tables, selects, inputs and navigation. Build from it before creating anything new. Never hand-roll a button, dialog, sheet, table or select.
+- **One button, and no decoration on it.** One control exists: the Blockwise button in src/components/ui/button.tsx. It renders a full pill. There is no automatically injected arrow disc. Plain text is the default, and the button adds no arrow, disc or badge of its own. An icon goes inside a button only when it carries a function the label does not already state, such as Back, expand, download or external navigation, and it is written into the children like any other content. Do not replace the removed arrow with another decorative icon. `variant="link"` is never a pill.
+- **The variant ladder.** `default` is the ink pill and is the only primary action in a task area. `outline` is the same pill in surface with an interactive boundary, for the secondary action beside it. `secondary` is a quiet fill for an action inside a card or toolbar. `ghost` and `ghost-pill` are quiet toolbar and page-head controls. `destructive` is the error surface. Never hand-roll a button, a pill-shaped link or a second primary action; `<Button asChild>` wraps a link and renders it as the same control, so a link CTA is an `<a>` and never a clickable `div`.
+- **Action colour has one source.** `--ui-cta`, `--ui-cta-foreground` and `--ui-cta-soft` in src/app/tailwind.css bridge onto the accent, and theme-monochrome.css restates them beside the `--accent` they follow. Never restate them per call site.
+- **Focus is shared, not per-component.** Every interactive control applies the same solid focus ring with a 2px offset, so the indicator is visible against the control and against the surface behind it in both themes. Keep accessible names, `aria-pressed`, `aria-expanded` and the disabled state on the control.
+- **The button survives the legacy sheets.** `audit.css` and `suburb-report.css` are unlayered, so their `.audit-page a` and `.sr-page button` element rules outrank every Tailwind utility. Their resets exclude the button's `bw-cta` marker class, which travels in `className` because that is the one prop every wrapper component forwards. A wrapper that renders its own element must forward the rest of its props, or the control loses the markers and padding merged onto it.
+- **Every control is a real control.** A button renders a `<button>` with its own type, or the caller's link, and never a clickable `div`. Keep accessible names, roles and state on it.
 - **Hierarchy before containers.** Use sections, rows, hairlines and disclosures before rounded cards or chart scaffolds. Keep Home flat by default, with one named exception: the weekly metrics row below.
 - **The weekly metrics row is Home's only card row, and Results opens with the same one.** The four figures — spend, link clicks, cost per link click and leads — each render in the shared KPI card surface: `rounded-(--r-card)`, `border-(--line)`, `bg-card`, `shadow-card`, with that figure's sparkline and prior-period comparison inside its own card. Two cards across on a phone, one row of four from `lg`, because the sidebar takes its width before that. Leads, local ads and everything else on Home stay flat: sections, rows and hairlines. Results leads with the same four cards over the range it is showing and puts every other figure it reports inside More reporting details.
 - **Every figure card draws its own period, or says why it cannot.** A figure's line comes from the days it could measure: a day with no clicks contributes no cost per link click to that line rather than dropping the period's shape, and fewer than two measured days draws nothing. The printed figure is that same set of days summed, so a card's number and its own line can never be two different stories, and the two surfaces that show the same week print the same week. A demo fixture whose figure never moves is a fixture that needs fixing, not a chart to fake.
@@ -89,6 +99,14 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 - **Asset choices save themselves.** A choice whose options come from the provider saves as it is picked, so there is no Save button to forget and no half-saved state. Workspace facts the customer owns keep an explicit Save.
 - **A waiting state always has a way out.** A screen waiting on a person or an external check offers the customer the action that moves it forward, and never traps them behind a status they cannot change.
 
+## Ad Studio theme
+
+- **Ad Studio is the dark theme of the main app.** It is not a separate design system. It uses the same type roles, spacing scale, shape roles, controls, state behaviour and action hierarchy as the light app; only the colour roles change. Anything that differs beyond colour is a bug, not a theme.
+- **The dark scope covers the whole surrounding interface.** The shell, navigation, menus, sheets, dropdowns, dialogs and every portaled overlay, not just the sidebar. Radix portals to `document.body`, so the scope is mirrored onto the document root; a scope that only wrapped the shell would leave every overlay in the light palette.
+- **Dark roles live in one block.** `[data-theme="studio-dark"]` in src/app/theme-monochrome.css. The block restates the `--ui-*` bridge aliases as well as the raw roles, because a custom property's `var()` is substituted on the element that declares it; without the restatement the scope silently keeps light values for everything built from the bridge. See docs/design/design-system.md.
+- **A scrim stays dark in both themes.** Overlays and media viewers use `--ui-scrim`, never `--ink`, which inverts.
+- **Do not theme the isolated editor's interior.** The Vue/Fabric editor's canvas controls and toolbar are upstream code inside a style-isolated frame.
+
 ## Native ad editor
 
 - **Vue Fabric Editor is an upstream interface, not a new Blockwise design system.** The owner chose its ready-made editing experience to avoid maintaining another custom editor. Keep its standard canvas controls and toolbar inside a same-origin, style-isolated frame. Do not rebuild those controls in React or reskin every upstream component.
@@ -96,7 +114,7 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 - **Opening is non-destructive.** The native editor is the default. Reuse an idempotent native copy of an original ad, preserving its saved source. No trial footer or migration choice on the normal editing surface. The original renderer remains accessible only through an explicit legacy URL. Never open a native design in the old renderer.
 - **The preview must show the edited artwork.** Feed and Story ad previews use the native editor's current exports, with the real template/brand text and native Meta CTA outside the artwork. Do not substitute the original template render after a free-form edit.
 
-The native editor starts on the actual edited ad preview. Template headings wrap at words, not arbitrary letters. Initial text is fitted using its actual font, box, line limit and existing overflow policy; saved customer typography is never refitted on reopen. Photos, Words and Adjust design occupy a slim secondary left tool column on desktop, and one equal-width bottom row on mobile. These tool buttons use the shared arrow-free option, with visible icon-and-text labels; the main customer navigation stays separate. Review & publish is primary; Save and its truthful status remain available. Adjust design reveals the stock full-width native canvas, and Done designing returns to the ad. These are two views of one continuously mounted native editor, not two implementations or a conversion. Preserve all freeform edits on transition and keep hidden design tools keyboard-inert. Copy, optional AI help and photo choices use shared Sheets rather than permanent sidebars. Secondary copy settings are disclosed when needed. Feed and Story dimensions remain fixed; native file imports and cloud services are not exposed. Original ads and the old editor remain available. See docs/architecture/adstudio-vue-editor.md for alternatives and trade-offs.
+The native editor starts on the actual edited ad preview. Template headings wrap at words, not arbitrary letters. Initial text is fitted using its actual font, box, line limit and existing overflow policy; saved customer typography is never refitted on reopen. Photos, Words and Adjust design occupy a slim secondary left tool column on desktop, and one equal-width bottom row on mobile. These tool buttons are quiet ghost controls with visible icon-and-text labels, and carry no decorative arrow; the main customer navigation stays separate. Review & publish is primary; Save and its truthful status remain available. Adjust design reveals the stock full-width native canvas, and Done designing returns to the ad. These are two views of one continuously mounted native editor, not two implementations or a conversion. Preserve all freeform edits on transition and keep hidden design tools keyboard-inert. Copy, optional AI help and photo choices use shared Sheets rather than permanent sidebars. Secondary copy settings are disclosed when needed. Feed and Story dimensions remain fixed; native file imports and cloud services are not exposed. Original ads and the old editor remain available. See docs/architecture/adstudio-vue-editor.md for alternatives and trade-offs.
 
 ## Publishing
 
@@ -119,6 +137,71 @@ The native editor starts on the actual edited ad preview. Template headings wrap
 ---
 
 ## Changelog
+
+- 2026-09-14: **one design system, applied to the whole website.** Owner decisions
+  recorded, and the conflicting active rules removed.
+
+  *Controls.* The automatically injected trailing arrow disc is removed. It was added
+  to every text button by src/components/ui/button.tsx and rendered on 207 of 214
+  call sites. Plain text is now the default; an icon stays on a control only where it
+  carries a function the label does not state (Back, expand, download, external
+  navigation). The disc's machinery (`ButtonDisc`, the `disc` variant, the `arrow`
+  prop, `hasTextContent`, the reserved disc lane and the `--cta-disc*` properties) is
+  gone. The secondary, destructive, loading, disabled and icon-only variants are
+  preserved, and there is still one dominant action per task area. The thin wrapper
+  `ButtonArrow` is renamed `CtaLink`, because it no longer draws an arrow.
+
+  *Corners.* One role-based scale, defined once in src/app/globals.css: controls 10px
+  (`--r-ctl`), cards 16px (`--r-card`), large panels and dialogs 20px (`--r-panel`),
+  pills and circular controls 9999px (`--r-chip`). theme-monochrome.css no longer
+  restates them; two live definitions of the same token is how the card drift started.
+  `Card` moves off the generic `rounded-lg` (12px) onto `rounded-(--r-card)` (16px),
+  and dialogs, sheets, popovers, menus, selects, tabs, alerts, skeletons and tooltips
+  move onto their roles. `--r-control`, referenced 13 times but never defined, is now
+  an alias of `--r-ctl`; those 13 elements previously rendered with no radius at all.
+
+  *Contrast.* A decorative divider and an interactive boundary are now separate roles.
+  `--ui-control-border` (#858C99, 3.38:1 on white, 4.93:1 on the dark surface) becomes
+  the input and outline-control boundary via `border-input`, so controls are visible
+  without darkening every hairline. `--ui-focus` becomes a solid, theme-aware focus
+  role with a 2px ring offset; the previous translucent navy tint measured 1.00:1
+  against the primary action's own fill, i.e. no visible focus on the most important
+  control on every screen. `--ui-scrim` is added because a scrim must stay dark in
+  both themes.
+
+  *Type.* Named roles replace nearest-number sizing: `text-page-title`,
+  `text-page-title-sm`, `text-section-title`, `text-component-title`, `text-body`,
+  `text-control`, `text-support`, `text-meta`, `text-metric`. Manrope for headings,
+  Inter for interface and body, JetBrains Mono for technical values only.
+
+  *Ad Studio.* Ad Studio is now the dark theme of this same system, not a separate
+  one. The dark colour roles live in `[data-theme="studio-dark"]`, applied to the
+  shell for a correct first paint and mirrored onto the document root so portaled
+  Radix overlays are themed too. The five elements that were hardcoded near-black
+  (sidebar, mobile header, canvas rail, canvas stage, layer chip) now use role tokens.
+  The block restates the `--ui-*` bridge aliases, because a custom property's `var()`
+  is substituted on the element that declares it.
+
+  *Scope.* The whole website is in scope: customer, Ad Studio, authentication, legal,
+  marketing and operator. The contract no longer describes itself as customer-surface
+  only. Frank remains a separate product and the isolated third-party editor keeps its
+  internals.
+
+  *Detail.* The maintained guide is new at docs/design/design-system.md: token tables,
+  component usage, verified contrast figures, documented exceptions and the known
+  remaining gaps. AGENTS.md gains one binding rule pointing at it. Regression coverage
+  is added in tests/design-system-contract.test.ts.
+
+  Two measured qualifications are recorded in the guide rather than hidden: the light
+  data hue is 4.42:1 on white, which is below the text bar and above the graphics bar,
+  which is why data blue is graphics-only; and `--faint` is 2.62:1 on white, which is
+  why it is a decorative mark colour and never body text.
+
+### Historical changelog
+
+The entries below record what was true when they were written. Where they describe the
+arrow disc, the old radius values or a customer-surface-only scope, they are superseded
+by the 2026-09-14 entry above.
 
 - 2026-09-14: Home local ads use the workspace's explicit, editable postcode. Missing postcodes get an inline owner/admin capture, verified signup email can seed only from the private hashed location projection, and local results use strict ad-area evidence for the selected postcode before distance-bounded nearby postcode areas. Generic area and brand-address fallbacks are retired.
 - 2026-09-12: Results' chart menu says "Leads over time" rather than "Enquiries
@@ -163,7 +246,8 @@ The native editor starts on the actual edited ad preview. Template headings wrap
   phone and one row on desktop; cost per link click now draws a line from the
   days that had clicks, and the demo fixture's cost per click moves day to day
   instead of sitting perfectly flat.
-- 2026-09-12: one button on the customer surface. src/components/ui/button.tsx
+- 2026-09-12: **(superseded 2026-09-14 — the disc is removed.)** one button on the
+  customer surface. src/components/ui/button.tsx
   now renders the CTA itself: an ink pill with a trailing circular disc carrying
   the up-right arrow, added automatically to every text button and link CTA, and
   omitted for icon-only controls. Added `--ui-cta` / `--ui-cta-foreground` /

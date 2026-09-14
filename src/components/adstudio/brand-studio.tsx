@@ -655,7 +655,7 @@ function BrandStudioEditor({ brandKit: initialKit, returnTo }: { brandKit: AdStu
             </small>
           </div>
           <div className="overflow-hidden rounded-(--r-card) border border-border bg-card shadow-card">
-            <div className="grid min-h-24 place-items-center p-4" style={{ background: "#16181d", color: "#fff" }}>
+            <div className="grid min-h-24 place-items-center bg-(--bg) p-4 text-(--ink)">
               <LogoPreview src={reversedLogoUrl} alt={`${brandName} reversed logo`} className="max-h-16 max-w-full object-contain" />
             </div>
             <small className="flex justify-between gap-2 px-3 py-2 text-xs text-muted-foreground">

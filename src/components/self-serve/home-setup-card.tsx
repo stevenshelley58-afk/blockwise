@@ -11,7 +11,7 @@ import { motion } from "motion/react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
+import { CtaLink } from "@/components/shadcn-dashboard/button/button-01";
 import { Button } from "@/components/ui/button";
 import { niche } from "@/config/niche";
 import { springs, useReducedMotion } from "@/lib/motion";
@@ -96,9 +96,9 @@ export function HomeSetupCard({
           <div className="mt-4 flex flex-1 flex-col">
             <p className="text-[12.5px] leading-relaxed text-muted-foreground">{copy.readyBody}</p>
             <div className="mt-4 flex flex-wrap items-center gap-2.5">
-              <ButtonArrow href="/ad-studio?newAd=1" className="h-11 text-[13px]">
+              <CtaLink href="/ad-studio?newAd=1" className="h-11 text-support">
                 {niche.copy.home.states.ready.ctaLabel}
-              </ButtonArrow>
+              </CtaLink>
               <Button asChild variant="ghost-pill" className="min-h-11">
                 <Link href="/ad-studio">{copy.adLibrary}</Link>
               </Button>
@@ -133,7 +133,7 @@ export function HomeSetupCard({
                     {step.done ? <DrawnCheck delay={0.5 + index * 0.15} /> : index + 1}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] leading-snug font-bold">{stepCopy.title}</span>
+                    <span className="block text-support leading-snug font-bold">{stepCopy.title}</span>
                     <span className="block text-[11.5px] leading-snug text-muted-foreground">
                       {stepCopy.description}
                     </span>

@@ -270,7 +270,7 @@ export function LayeredCanvas({
         </div>
       ) : null}
       {canonicalPreview?.status === "error" ? (
-        <div className="pointer-events-none absolute inset-x-3 top-3 z-20 rounded-(--r-ctl) border border-destructive/40 bg-destructive/90 px-3 py-2 text-[11px] font-semibold text-white" role="status">
+        <div className="pointer-events-none absolute inset-x-3 top-3 z-20 rounded-(--r-ctl) border border-destructive/40 bg-destructive/90 px-3 py-2 text-[11px] font-semibold text-destructive-foreground" role="status">
           {canonicalPreview.error ?? "Server preview unavailable. Editing remains available."}
         </div>
       ) : null}

@@ -6,7 +6,7 @@ import Link from "next/link";
 
 import { MetaAdTile } from "@/components/research/meta-ad-tile";
 import { HomeMetricsBand } from "@/components/self-serve/home-metrics-band";
-import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
+import { CtaLink } from "@/components/shadcn-dashboard/button/button-01";
 import { NoticeBar } from "@/components/ui/notice-bar";
 import { SafeImage } from "@/components/ui/safe-image";
 import { DefaultPostcodeForm } from "@/components/workspace/default-postcode-form";
@@ -98,9 +98,9 @@ function LeadsSection({
             {copy.emptyTitle}
           </p>
           <p className="mt-1 text-[13px] text-muted-foreground">{copy.emptyBody}</p>
-          <ButtonArrow href="/ad-studio" className="mt-5">
+          <CtaLink href="/ad-studio" className="mt-5">
             {copy.ctaLabel}
-          </ButtonArrow>
+          </CtaLink>
         </div>
       </section>
     );

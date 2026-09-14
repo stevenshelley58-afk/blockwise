@@ -9,7 +9,12 @@ test("historical review retains all four original stages and parent combinations
   for (const text of ["1. Creative & copy", "2. Destination & form", "3. Audience, budget & schedule", "4. Review & create paused", "new_campaign_new_adset", "existing_campaign_new_adset", "existing_adset", "Creative variants"]) assert.ok(source.includes(text), text);
   assert.match(source, /aa3b081c53cdb9c331666ae184bdab4b333ef3b1/);
   assert.match(source, /Publish disabled in archive/);
-  assert.match(source, /arrow=\{null\} variant="ghost"/);
+  // The stage control is a quiet ghost button, not a CTA. It used to opt out
+  // of the auto-injected arrow disc with `arrow={null}`; the disc is gone
+  // system-wide, so the ghost variant is now the whole of that intent and no
+  // call site passes an `arrow` prop at all.
+  assert.match(source, /variant="ghost"/);
+  assert.doesNotMatch(source, /arrow=\{/);
   assert.match(source, /whitespace-normal/);
   assert.doesNotMatch(source, /disabled=\{!stageCanContinue\}/);
 });

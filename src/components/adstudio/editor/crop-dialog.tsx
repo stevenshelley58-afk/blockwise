@@ -257,7 +257,7 @@ export function CropDialog({
   return (
     <div
       ref={dialogRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-(--ui-scrim) p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="crop-dialog-title"
@@ -286,7 +286,7 @@ export function CropDialog({
         {/* Crop area — live preview of the slot (image letterboxed to slot ratio) */}
         <div
           ref={containerRef}
-          className="relative select-none overflow-hidden bg-foreground"
+          className="relative select-none overflow-hidden bg-(--bg)"
           style={{ aspectRatio, touchAction: "none" }}
           onPointerMove={handlePointerMove}
           onPointerUp={endDrag}
@@ -436,7 +436,7 @@ function SlotPreview({
   return (
     <div
       ref={ref}
-      className="relative w-24 shrink-0 overflow-hidden rounded-(--r-ctl) border border-(--line) bg-gray-900"
+      className="relative w-24 shrink-0 overflow-hidden rounded-(--r-ctl) border border-(--line) bg-(--bg)"
       style={{ aspectRatio }}
       aria-hidden="true"
       title="Live slot preview"

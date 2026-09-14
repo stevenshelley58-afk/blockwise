@@ -219,7 +219,7 @@ export function WorkflowMotionStudy() {
       <header className={styles.bwStudyToolbar}>
         <span className={styles.bwStudyTitle}><i aria-hidden="true" /> Ad Studio</span>
         <div className={styles.bwStudySelector} role="group" aria-label="Motion study screen">
-          {STUDY_STEPS.map((item, index) => <Button key={item.label} type="button" variant="ghost-pill" size="pill" arrow={null} aria-pressed={step === index} onClick={() => selectStep(index)}>{item.label}</Button>)}
+          {STUDY_STEPS.map((item, index) => <Button key={item.label} type="button" variant="ghost-pill" size="pill" aria-pressed={step === index} onClick={() => selectStep(index)}>{item.label}</Button>)}
         </div>
       </header>
       <div className={styles.bwStudyStage} ref={stageRef} data-step={STUDY_STEPS[step].label.toLowerCase()} data-settled={settledScene === scene} style={{ "--study-panel-left": `${layout.panelLeft}px`, "--study-panel-top": `${layout.panelTop}px`, "--study-panel-width": `${layout.panelWidth}px` } as React.CSSProperties}>
