@@ -137,7 +137,6 @@ export type HomeCopy = {
     title: string;
     viewAll: string;
     /** Searched instead until a brand address supplies a postcode. */
-    fallbackArea: { searchTerm: string; place: string };
   };
 };
 

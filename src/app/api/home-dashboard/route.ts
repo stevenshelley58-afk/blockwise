@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     serviceSupabase: createSupabaseServiceClient(),
     workspaceId: guard.access.workspaceId,
     workspaceName: guard.access.workspaceName,
+    canManageLocation: guard.access.isOperator || guard.access.role === "owner" || guard.access.role === "admin",
   });
   const etag = `"${createHash("sha256").update(JSON.stringify(model.safe)).digest("hex")}"`;
   if (model.reportingNeedsRefresh) {

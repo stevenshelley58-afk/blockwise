@@ -7,6 +7,7 @@ import { acceptVerifiedWorkspaceInvitations } from "@/lib/auth/verified-workspac
 import { bootstrapVerifiedTrialWorkspace } from "@/lib/auth/verified-workspace-bootstrap";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { seedMissingWorkspacePostcode } from "@/lib/workspace/default-postcode";
 
 const DEFAULT_NEXT_PATH = "/self-serve";
 const SAFE_REDIRECT_ORIGIN = "https://blockwise.local";
@@ -101,6 +102,15 @@ export async function GET(request: NextRequest) {
     await acceptVerifiedWorkspaceInvitations({ user });
     const bootstrap = await bootstrapVerifiedTrialWorkspace({ user, serviceSupabase: service });
     workspaceId = bootstrap.workspaceId;
+    if (workspaceId) {
+      await seedMissingWorkspacePostcode({
+        serviceSupabase: service,
+        user,
+        workspaceId,
+      }).catch((locationError) => {
+        console.error("Verified postcode seed failed", locationError);
+      });
+    }
   } catch (bootstrapError) {
     console.error("Verified workspace bootstrap failed", bootstrapError);
     return bootstrapFailedRedirect(request);

@@ -3,6 +3,7 @@ import { resolveCustomerActivation } from "@/lib/activation/customer-activation"
 import { niche } from "@/config/niche";
 import { listProviderConnections } from "@/lib/providers/provider-connections";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { seedMissingWorkspacePostcode } from "@/lib/workspace/default-postcode";
 
 import { SettingsView } from "./settings-view";
 
@@ -17,6 +18,7 @@ type ProfileRow = {
 type WorkspaceRow = {
   name: string | null;
   region: string | null;
+  default_postcode?: string | null;
   approval_required_by_default: boolean | null;
   plan_id: string | null;
   billing_email?: string | null;
@@ -58,6 +60,13 @@ export default async function SettingsPage() {
   const { data: authenticatedUser } = await supabase.auth.getUser();
   const canManage = access.isOperator || access.role === "owner" || access.role === "admin";
   const service = createSupabaseServiceClient();
+  if (canManage && !access.isOperator && authenticatedUser?.user) {
+    await seedMissingWorkspacePostcode({
+      serviceSupabase: service,
+      user: authenticatedUser.user,
+      workspaceId: access.workspaceId,
+    }).catch(() => undefined);
+  }
 
   const [
     { data: profile },
@@ -202,6 +211,10 @@ export default async function SettingsPage() {
           currency: w?.billing_currency ?? (w?.country_code === "US" ? "USD" : "AUD"),
           website: brand?.source_url ?? "",
           brandPackStatus: brand?.review_status ?? null,
+          defaultPostcode:
+            typeof w?.default_postcode === "string" && /^\d{4}$/u.test(w.default_postcode)
+              ? w.default_postcode
+              : null,
           privacyPolicyUrl: w?.privacy_policy_url ?? null,
           publishingCurrency: w?.publishing_currency ?? null,
           publishingTimezone: w?.publishing_timezone ?? null,

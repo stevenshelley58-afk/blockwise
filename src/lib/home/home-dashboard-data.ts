@@ -1,5 +1,4 @@
 import type { HomeData } from "@/components/self-serve/home-dashboard";
-import { niche } from "@/config/niche";
 import { resolveCustomerActivation } from "@/lib/activation/customer-activation";
 import { loadReportingSnapshot } from "@/lib/meta-monitor/reporting-snapshots";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -10,8 +9,10 @@ import { homePerformanceFromReporting, mergeHomeSafeReadModel, type HomeSafeRead
 import { homeLocalAdCandidates, HOME_LOCAL_AD_LIMIT, toHomeLocalAds } from "@/lib/home/home-local-ads";
 import { sampleHomeLeads } from "@/lib/leads/sample-crm-leads";
 import { leadSourceLabel } from "@/lib/leads/rows";
-import { resolveBrandPackLocation } from "@/lib/research/brand-pack-suburb";
-import { loadPublicAdRadarCards } from "@/lib/research/public-ad-radar";
+import { resolveAdRadarLocationSearch } from "@/lib/research/ad-radar-location";
+import { resolveNearbyPostcodes } from "@/lib/research/nearby-postcodes";
+import { loadPublicAdRadarCardsForPostcodes } from "@/lib/research/public-ad-radar";
+import { workspacePostcodeSchema } from "@/lib/workspace/default-postcode";
 import { requestDeadline } from "../providers/request-deadline.ts";
 
 /** A liveness probe only: a miss just hides the tile and is cached for an hour. */
@@ -24,7 +25,6 @@ type BrandKitRow = {
   colours_json?: unknown;
   source_url?: string | null;
   review_status?: string | null;
-  contact_json?: { address?: string | null } | null;
 };
 
 /** How many candidates the radar read returns for Home to choose from. */
@@ -77,32 +77,40 @@ async function thumbnailLoads(url: string): Promise<boolean> {
 }
 
 /**
- * Home's local-ads list, keyed on the workspace's own area.
- *
- * The Brand Pack address carries the postcode when the customer's website gave
- * one, and a postcode is the strongest Ad Radar search key there is. Until the
- * address yields one, Home falls back to the niche's default area rather than
- * showing no list at all. More cards are read than Home shows, because the ones
- * worth showing are not always the most recent, and each candidate's still is
- * checked before it is offered a row.
+ * Home's local-ads list, keyed on the workspace's explicit default postcode.
+ * Nearby areas are distance-bound postcode keys and every returned ad still
+ * needs structured ad-area evidence for one of those keys.
  */
 async function loadHomeLocalAds(
   serviceSupabase: SupabaseServiceClient,
-  brandKit: BrandKitRow | null,
-): Promise<{ area: HomeData["localAdsArea"]; ads: HomeData["localAds"] }> {
-  const copy = niche.copy.home.localAds;
-  const brandLocation = resolveBrandPackLocation(brandKit?.contact_json?.address ?? null);
-  const area = {
-    searchTerm: brandLocation?.searchTerm ?? copy.fallbackArea.searchTerm,
-    place: brandLocation?.place ?? copy.fallbackArea.place,
-  };
-  const response = await loadPublicAdRadarCards(serviceSupabase, {
-    location: area.searchTerm,
-    limit: LOCAL_AD_POOL,
-    sort: "recent",
-  });
+  defaultPostcode: unknown,
+): Promise<{
+  status: HomeData["localAdsStatus"];
+  area: HomeData["localAdsArea"];
+  ads: HomeData["localAds"];
+}> {
+  const parsed = workspacePostcodeSchema.safeParse(defaultPostcode);
+  if (!parsed.success) return { status: "missing", area: null, ads: [] };
 
-  const candidates = homeLocalAdCandidates(response.ads);
+  const postcode = parsed.data;
+  const location = resolveAdRadarLocationSearch(postcode, { includeSurroundingSuburbs: false });
+  const area = {
+    searchTerm: postcode,
+    place: location?.city?.trim() || postcode,
+  };
+
+  let cards: Awaited<ReturnType<typeof loadPublicAdRadarCardsForPostcodes>>;
+  try {
+    cards = await loadPublicAdRadarCardsForPostcodes(serviceSupabase, {
+      postcodes: resolveNearbyPostcodes(postcode),
+      limit: LOCAL_AD_POOL,
+      sort: "recent",
+    });
+  } catch {
+    return { status: "error", area, ads: [] };
+  }
+
+  const candidates = homeLocalAdCandidates(cards);
   const verified = await Promise.all(candidates.map((candidate) => thumbnailLoads(candidate.imageUrl)));
   // Chosen again from the ones that answered, so the row keeps one ad per
   // advertiser even when a candidate ahead of it was dropped for a dead still.
@@ -111,7 +119,8 @@ async function loadHomeLocalAds(
     HOME_LOCAL_AD_LIMIT,
   );
 
-  return { area, ads: toHomeLocalAds(shown, HOME_LOCAL_AD_LIMIT) };
+  const ads = toHomeLocalAds(shown, HOME_LOCAL_AD_LIMIT);
+  return { status: ads.length > 0 ? "ready" : "empty", area, ads };
 }
 
 // The read-model contract lives in a client-safe module; re-exported here so
@@ -123,6 +132,7 @@ export async function loadHomeDashboardData(input: {
   serviceSupabase: SupabaseServiceClient;
   workspaceId: string;
   workspaceName?: string | null;
+  canManageLocation?: boolean;
 }): Promise<{
   data: HomeData;
   safe: HomeSafeReadModel;
@@ -131,13 +141,16 @@ export async function loadHomeDashboardData(input: {
 }> {
   const brandKitsQuery = input.supabase
     .from("adstudio_brand_kits")
-    .select("business_name, colours_json, source_url, review_status, contact_json")
+    .select("business_name, colours_json, source_url, review_status")
     .eq("workspace_id", input.workspaceId)
     .limit(1);
   // A builder re-runs its request on every `then`, so the one brand-kit read is
   // memoised: the dashboard needs the pack itself, and the local-ads list needs
   // the address inside it.
   const brandKitRead = Promise.resolve(brandKitsQuery);
+  const workspaceRead = Promise.resolve(
+    input.supabase.from("workspaces").select("*").eq("id", input.workspaceId).maybeSingle(),
+  );
 
   const [campaigns, customerAds, brandKits, connections, workspace, wallet, activation, reporting, templates, leadsResult, localAdsResult] =
     await Promise.all([
@@ -152,7 +165,7 @@ export async function loadHomeDashboardData(input: {
         .select("id, provider, status, external_account_name, updated_at")
         .eq("workspace_id", input.workspaceId)
         .neq("status", "revoked"),
-      input.supabase.from("workspaces").select("*").eq("id", input.workspaceId).maybeSingle(),
+      workspaceRead,
       input.supabase
         .from("workspace_credit_wallets")
         .select("*")
@@ -189,9 +202,11 @@ export async function loadHomeDashboardData(input: {
           })),
         )
         .catch(() => []),
-      brandKitRead
-        .then(({ data }) => loadHomeLocalAds(input.serviceSupabase, (data?.[0] as BrandKitRow | undefined) ?? null))
-        .catch(() => ({ area: null, ads: [] })),
+      workspaceRead
+        .then(({ data, error }) => error
+          ? { status: "error" as const, area: null, ads: [] }
+          : loadHomeLocalAds(input.serviceSupabase, (data as { default_postcode?: unknown } | null)?.default_postcode))
+        .catch(() => ({ status: "error" as const, area: null, ads: [] })),
     ]);
 
   const results = reporting?.snapshot.payload ?? null;
@@ -274,6 +289,11 @@ export async function loadHomeDashboardData(input: {
     creativeSuggestions,
     leads: leadsAreExamples ? sampleHomeLeads() : leadsResult,
     leadsAreExamples,
+    defaultPostcode: workspacePostcodeSchema.safeParse(workspaceRow.default_postcode).success
+      ? String(workspaceRow.default_postcode)
+      : null,
+    canManageLocation: input.canManageLocation === true,
+    localAdsStatus: localAdsResult.status,
     localAds: localAdsResult.ads,
     localAdsArea: localAdsResult.area,
   };
@@ -316,4 +336,3 @@ export async function loadHomeDashboardData(input: {
     reportingGeneratedAt: new Date().toISOString(),
   };
 }
-

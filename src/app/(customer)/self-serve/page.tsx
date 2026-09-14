@@ -11,12 +11,21 @@ import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { loadHomeDashboardData } from "@/lib/home/home-dashboard-data";
 import { queueReportingRefresh } from "@/lib/meta-monitor/reporting-refresh-queue";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { seedMissingWorkspacePostcode } from "@/lib/workspace/default-postcode";
 
 export const dynamic = "force-dynamic";
 
 export default async function SelfServeHome() {
   const { supabase, access } = await requirePageSurfaceAccess("self_serve");
   const serviceSupabase = createSupabaseServiceClient();
+  const { data: authUser } = await supabase.auth.getUser();
+  if (authUser.user) {
+    await seedMissingWorkspacePostcode({
+      serviceSupabase,
+      user: authUser.user,
+      workspaceId: access.workspaceId,
+    }).catch(() => undefined);
+  }
   const model = await Sentry.startSpan(
     {
       name: "Load Home read model",
@@ -29,6 +38,7 @@ export default async function SelfServeHome() {
         serviceSupabase,
         workspaceId: access.workspaceId,
         workspaceName: access.workspaceName,
+        canManageLocation: access.isOperator || access.role === "owner" || access.role === "admin",
       }),
   );
   if (model.reportingNeedsRefresh) {

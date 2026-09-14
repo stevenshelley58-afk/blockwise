@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StatusPill } from "@/components/status-pill";
+import { DefaultPostcodeForm } from "@/components/workspace/default-postcode-form";
 import { niche } from "@/config/niche";
 
 import {
@@ -176,6 +177,20 @@ export function WorkspaceSection({
           </Button>
         </div>
       </form>
+
+      <div className="mt-2 grid gap-3 border-t border-(--line) pt-4">
+        <div className="flex flex-col gap-1">
+          <strong className="text-sm font-medium">Local ads</strong>
+          <span className="text-sm text-muted-foreground">
+            Your workspace postcode sets the local ads shown on Home. You can change it any time.
+          </span>
+        </div>
+        <DefaultPostcodeForm
+          key={`${workspace.id}:${workspace.defaultPostcode ?? "missing"}`}
+          initialPostcode={workspace.defaultPostcode}
+          workspaceId={workspace.id}
+        />
+      </div>
 
       <div className="mt-2 grid gap-4 border-t border-(--line) pt-4">
         <div className="flex flex-col gap-1">
