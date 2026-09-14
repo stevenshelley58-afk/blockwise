@@ -119,3 +119,4 @@
 20260914010000_workspace_default_postcode.sql
 20260914020000_research_email_location_projection.sql
 20260914020100_atomic_research_email_location_projection_snapshot.sql
+20260914100000_adstudio_video.sql
