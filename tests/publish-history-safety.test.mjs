@@ -39,3 +39,16 @@ test("archive is authenticated and the current flow links to it separately", () 
   const current = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/page.tsx", "utf8");
   assert.match(current, /href="\/ad-studio\/publish-history" target="_blank" rel="noopener noreferrer"/);
 });
+
+test("historical catalogue distinguishes evidence and keeps the July mockup static", () => {
+  const page = readFileSync(base + "page.tsx", "utf8");
+  const julyMockup = readFileSync("public/publish-history/july-guided-mockup.html", "utf8");
+  assert.match(page, /9<\/b> real implementations/);
+  assert.match(page, /Design mockup, never live/);
+  assert.match(page, /Proposal image, never live/);
+  assert.match(page, /Genuine live implementation/);
+  assert.match(page, /Closest to your brief/);
+  assert.doesNotMatch(julyMockup, /fetch\s*\(/);
+  assert.doesNotMatch(julyMockup, /XMLHttpRequest/);
+  assert.doesNotMatch(julyMockup, /<form\b/i);
+});
