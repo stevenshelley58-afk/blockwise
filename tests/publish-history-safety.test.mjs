@@ -9,6 +9,8 @@ test("historical review retains all four original stages and parent combinations
   for (const text of ["1. Creative & copy", "2. Destination & form", "3. Audience, budget & schedule", "4. Review & create paused", "new_campaign_new_adset", "existing_campaign_new_adset", "existing_adset", "Creative variants"]) assert.ok(source.includes(text), text);
   assert.match(source, /aa3b081c53cdb9c331666ae184bdab4b333ef3b1/);
   assert.match(source, /Publish disabled in archive/);
+  assert.match(source, /arrow=\{null\} variant="ghost"/);
+  assert.match(source, /whitespace-normal/);
   assert.doesNotMatch(source, /disabled=\{!stageCanContinue\}/);
 });
 
