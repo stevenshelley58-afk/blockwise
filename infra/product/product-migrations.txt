@@ -121,3 +121,5 @@
 20260914020100_atomic_research_email_location_projection_snapshot.sql
 20260914100000_adstudio_video.sql
 20260914110000_adstudio_video_storage.sql
+20260914130000_video_deadline_rpc.sql
+20260914140000_video_single_brief_draft.sql
