@@ -31,13 +31,15 @@ test("archive client has no network, persistence, mutation or download capabilit
   }
 });
 
-test("archive is authenticated and the current flow links to it separately", () => {
+test("archive is authenticated and the current publish route uses it as a safe test flow", () => {
   const page = readFileSync(base + "page.tsx", "utf8");
   assert.match(page, /await requirePageSurfaceAccess\("adstudio"\)/);
   assert.match(page, /Example data/);
   assert.match(page, /Publishing disabled/);
   const current = readFileSync("src/app/(customer)/ad-studio/templates/[templateId]/publish/page.tsx", "utf8");
-  assert.match(current, /href="\/ad-studio\/publish-history" target="_blank" rel="noopener noreferrer"/);
+  assert.match(current, /publish-history\/publish-history-flow/);
+  assert.match(current, /const providerWrites = false/);
+  assert.match(current, /Test flow · nothing will be created/);
 });
 
 test("historical catalogue distinguishes evidence and keeps the July mockup static", () => {

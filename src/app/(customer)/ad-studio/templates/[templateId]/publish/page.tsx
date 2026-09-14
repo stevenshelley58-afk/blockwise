@@ -1,13 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 
-import { PublishFlow } from "./publish-flow";
+import { PublishFlow } from "../../../publish-history/publish-history-flow";
 import { normalizeSavedPublishAudienceLocations } from "./publish-controls";
 import { CustomerAdNotFoundError, loadCustomerAd, parseCustomerAdId } from "@/lib/adstudio/create-customer-ad";
 import { getTemplateForExistingCustomerAd } from "@/lib/adstudio/pack-gallery";
 import { loadPublishState, PublishError, readTemplatePublishRequirements, validatePublishState } from "@/lib/adstudio/publish-adapter";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
-import { metaPublishProviderWritesEnabled } from "@/lib/providers/meta-provider-write-gate";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
@@ -15,8 +14,8 @@ export const dynamic = "force-dynamic";
 // ---------------------------------------------------------------------------
 // Ad Studio — Publish flow.
 //
-// One final approval freezes the saved creative and authorises the durable
-// create-then-activate workflow. Provider writes remain separately gated.
+// Recovered 8 September four-stage flow for customer UX testing.
+// It is deliberately read-only: provider writes remain disabled.
 // ---------------------------------------------------------------------------
 
 export default async function PublishPage({
@@ -79,10 +78,7 @@ export default async function PublishPage({
   const issues = state
     ? validatePublishState(state, { controls: validationControls }).filter((issue) => !isInteractiveDependencyIssue(issue))
     : [];
-  const { data: publishDefaults } = await supabase.from("workspaces")
-    .select("country_code,publishing_currency,lead_destination_type,lead_destination_label")
-    .eq("id", access.workspaceId).maybeSingle();
-  const providerWrites = metaPublishProviderWritesEnabled(access.workspaceId);
+  const providerWrites = false;
   const { data: metaConnection } = await supabase
     .from("provider_connections")
     .select("status")
@@ -92,7 +88,7 @@ export default async function PublishPage({
     .limit(1)
     .maybeSingle();
   const metaConnectionConnected = metaConnection?.status === "connected";
-  const automatedPublishAvailable = providerWrites && metaConnectionConnected;
+  const automatedPublishAvailable = false;
   const metadata = (pack as unknown as { metadata?: { title?: string } }).metadata;
   const templateName = metadata?.title?.trim() || pack.metadata.title || pack.templateId;
 
@@ -115,15 +111,11 @@ export default async function PublishPage({
           Back to editor
         </Link>
         <span className="ml-4 min-w-0 flex-1 truncate text-sm font-medium">
-          Review · {templateName}
+          Publish · {templateName}
         </span>
-        <Link href="/ad-studio/publish-history" target="_blank" rel="noopener noreferrer"
-          className="inline-flex min-h-11 items-center px-3 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          Previous flow<span className="sr-only"> (opens in a new tab)</span>
-        </Link>
         {!providerWrites && (
           <span className="ml-auto rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
-            Preview only · nothing will be created
+            Test flow · nothing will be created
           </span>
         )}
       </header>
@@ -139,13 +131,6 @@ export default async function PublishPage({
           initialIssues={issues}
           providerWritesEnabled={providerWrites}
           audienceLocations={audienceLocations}
-          publishingDefaults={{
-            country: publishDefaults?.country_code ?? "",
-            currency: publishDefaults?.publishing_currency ?? "",
-            leadDestination: publishDefaults?.lead_destination_type === "manual"
-              ? publishDefaults?.lead_destination_label || "Manual lead collection"
-              : publishDefaults?.lead_destination_label || "",
-          }}
           canRequestManualPublish={access.isOperator || access.role === "owner" || access.role === "admin"}
           automatedPublishAvailable={automatedPublishAvailable}
           metaConnectionConnected={metaConnectionConnected}
