@@ -42,6 +42,14 @@
   color: var(--hc-blue-bright);
 }
 
+.hc-process-value {
+  max-width: 32rem;
+  margin-top: 20px;
+  color: var(--hc-muted);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
 /* Step control in the card header, matching the reporting section's tab control. */
 .hc-process-stage {
   display: grid;
@@ -729,6 +737,7 @@
   .hc-process { padding-block: 64px; }
   .hc-process-layout { gap: 32px; }
   .hc-process-copy h2 { font-size: clamp(30px, 8vw, 40px); }
+  .hc-process-value { max-width: 30rem; font-size: 15px; }
   .hc-process-actions { justify-items: stretch; margin-top: 26px; text-align: center; }
   .hc-process-actions .hc-button { width: 100%; }
   /* 764 clears the review scene's copy by two pixels at phone widths. */

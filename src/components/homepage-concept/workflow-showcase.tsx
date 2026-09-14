@@ -781,9 +781,12 @@ export function WorkflowShowcase() {
     >
       <motion.div className="hc-process-copy" variants={COPY_CASCADE}>
         <motion.h2 variants={COPY_ITEM}>
-          <span>Lead generating ads for</span>
-          <span className="hc-process-prompt">Facebook &amp; Instagram</span>
+          <span>Build lead-generating ads.</span>
+          <span className="hc-process-prompt">Without Ads Manager.</span>
         </motion.h2>
+        <motion.p className="hc-process-value" variants={COPY_ITEM}>
+          Turn a proven template into a branded lead ad you can review with confidence, without learning Ads Manager.
+        </motion.p>
 
         <motion.div className="hc-process-actions" variants={COPY_ITEM}>
           <Button asChild size="lg" className="max-[600px]:w-full">
