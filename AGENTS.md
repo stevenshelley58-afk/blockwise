@@ -37,10 +37,15 @@ Verified by tooling or an explicit pre-release check, never by good intentions. 
 - Work inside the requested scope is pre-approved: code, database changes, commits, pushes, merges to main, dependencies, CI, infrastructure, DNS, backups, deployments. Never require or invent a pull request, reviewer or sign-off. Push directly to main and merge your own work once your checks are green.
 - Stop only for real harm: destroyed data, an exposed secret or customer record, spend, or scope beyond the ask. A review, research or diagnosis request authorises the answer, not the implementation.
 
+## Completion
+
+- Carry implementation requests through the requested outcome: make the change, run relevant checks, inspect the result, and fix failures within scope. Do not stop at a plan or first draft when implementation was requested. Research and audit requests still end with findings unless implementation is requested.
+- Continue safe independent work when one part is blocked. Finish with what changed, what was verified, and any specific remaining blocker; distinguish prepared or committed work from merged, deployed and live-verified work. Do not invent new scope or leave unrequested background work running.
+
 ## Verification
 
-- Run checks proportionate to the change. Never weaken acceptance criteria or report a result you did not observe. It informs the report and never blocks finishing.
-- Acceptance happens on the VPS: localhost, previews, a passing test and an old release record are all not evidence. Vercel and managed Supabase are retired, not fallbacks.
+- Run checks proportionate to the change and its risk. Documentation changes need content and diff checks; behaviour changes need relevant tests and inspection. Fix failures caused by the change, and name unrelated failures or unavailable checks. Never weaken acceptance criteria or report a result you did not observe.
+- Production acceptance happens on the VPS: localhost, previews and passing tests support development checks but do not prove live behaviour. Verify the deployed revision and affected live journey before claiming production success; an old release record is not current evidence. Vercel and managed Supabase are retired, not fallbacks.
 - Merged to `main` is live in about two minutes: a watcher releases every new commit through `scripts/vps/product-release.sh`, reading an immutable worktree of that exact commit. **Never push work in progress, and never merge another branch into `main` to unblock yourself.** Keep each commit green and self-contained.
 - One release path: `scripts/vps/product-release.sh` into a clean immutable checkout under `/srv/blockwise/releases/product/<full-sha>`, with the release source given as a worktree of `/projects/blockwise`. Its guard is an automated check for a clean committed revision, not a human gate, and it makes rollback possible. Never bypass it with ad-hoc Compose. Rollback uses a retained verified release and reconciles `main` before the next normal release.
 - Deploy migrations and trigger.dev tasks before merge and confirm they register.
@@ -65,7 +70,7 @@ Verified by tooling or an explicit pre-release check, never by good intentions. 
 
 ## Agents
 
-- **Always reach for a swarm of cheap agents when parallel work would finish sooner.** One agent is the fallback, not the default. Give each a bounded task, clear file ownership and the applicable rules, and state the model.
+- Use bounded parallel agents when independent tasks provide a material speed or quality benefit after coordination and token costs. Work directly for small or tightly coupled tasks. Give each agent clear file ownership and the applicable rules, choose the least costly capable model, and state the model. Avoid duplicated exploration and integrate and verify delegated results.
 - Escalate capability only on evidence after a bounded attempt, never to work around an access failure. Read narrowly and reuse findings.
 
 ## Keeping this file small
