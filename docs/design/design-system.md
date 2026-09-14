@@ -378,6 +378,16 @@ Each of these is deliberate. Do not "fix" one without changing this list.
 
 Honest status as of the consolidation commit. These are not fixed.
 
+- **Page-local arbitrary type sizes remain.** The named roles are defined and the
+  shared primitives use them, but roughly 70 arbitrary sizes (`text-[9px]` through
+  `text-[15.5px]`) survive in page and feature components: `home-dashboard.tsx`,
+  `home-setup-card.tsx`, `leads-table.tsx`, `brand-studio.tsx`, `editor-shell.tsx`,
+  `studio-shell.tsx`, `command-menu.tsx`. They are deliberately left rather than
+  swept: most are 1 to 2px off a role, and replacing them by nearest number would
+  change the density of tight rows and table cells that have not been visually
+  re-reviewed. This is the next batch. Migrate a call site when you touch it, choosing
+  the role that names the job. Sizes inside simulated provider previews (a mock Meta
+  ad's own chrome) are content and stay.
 - Roughly 250 generic radius utilities (`rounded-sm|md|lg|xl`) remain across
   `src/components/**`. They resolve through `--ui-radius` rather than a role. Migrate a
   call site to a role token when you touch it.
