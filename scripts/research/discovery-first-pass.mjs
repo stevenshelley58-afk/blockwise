@@ -109,19 +109,44 @@ const [linked, decided, roster] = await Promise.all([
 const seen = new Set([...linked.map((row) => row.agent_id), ...decided.map((row) => String(row.subject_id))]);
 const shard = Math.max(1, Number(args.shard || 1));
 const shardCount = Math.max(1, Number(args.shards || 1));
-const queue = roster
+const unreviewed = roster
   .filter((row) => !seen.has(row.id))
-  .filter((row) => /^[A-Za-z]/u.test(String(row.full_name || "").trim()) && !/\(no (first|given) ?name\)/iu.test(String(row.full_name || "")))
+  .filter((row) => /^[A-Za-z]/u.test(String(row.full_name || "").trim()) && !/\(no (first|given) ?name\)/iu.test(String(row.full_name || "")));
+// The roster lists the same person once per suburb, so search once per distinct name
+// and then decide every roster row carrying that name. A handful of genuinely common
+// names may group different people; the rationale records that the decision is
+// name-based and the outcome is one search per group, not one per row.
+const groups = [];
+const groupIndex = new Map();
+for (const row of unreviewed) {
+  const key = String(row.full_name || "").trim().toLowerCase();
+  if (!groupIndex.has(key)) { groupIndex.set(key, groups.length); groups.push({ name: row.full_name, rows: [] }); }
+  groups[groupIndex.get(key)].rows.push(row);
+}
+const queue = groups
   // Disjoint slices so N workers cover the queue without coordinating: each shard
   // re-reads the durable decisions first, so finished rows are never repeated.
-  .filter((row, index) => index % shardCount === (shard - 1));
+  .filter((group, index) => index % shardCount === (shard - 1));
 
-console.log(JSON.stringify({ mode: dryRun ? "dry-run" : "apply", shard, shardCount, rosterVerifiedWa: roster.length, alreadyResearched: seen.size, queue: queue.length, planned: Math.min(limit, queue.length), paceMs }, null, 1));
+console.log(JSON.stringify({ mode: dryRun ? "dry-run" : "apply", shard, shardCount, rosterVerifiedWa: roster.length, alreadyResearched: seen.size, queue: queue.length, rosterRowsInQueue: unreviewed.length, planned: Math.min(limit, queue.length), paceMs }, null, 1));
 if (dryRun) { console.log(JSON.stringify(queue.slice(0, 5).map((row) => ({ name: row.full_name, suburb: row.primary_suburb, agency: row.agency?.name ?? null })), null, 1)); process.exit(0); }
 
 const startedAt = Date.now();
 let resolved = 0, unresolved = 0, notFound = 0, retry = 0, searched = 0;
-for (const [index, agent] of queue.slice(0, limit).entries()) {
+let rowsDecided = 0;
+for (const [index, group] of queue.slice(0, limit).entries()) {
+  const agent = group.rows[0];
+  // Every row of the group carries the same evidence; record the decision on each so
+  // no duplicate roster row is left without a pass.
+  const decideAll = async (body) => {
+    for (const row of group.rows) {
+      await rest("agent_decisions", {
+        method: "POST", headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({ ...body, subject_id: row.id, decision: { ...body.decision, roster_rows_in_group: group.rows.length } }),
+      });
+      rowsDecided += 1;
+    }
+  };
   if (index % 25 === 0) {
     const control = await embed(CONTROL.slug);
     if (control.id !== CONTROL.id) {
@@ -181,14 +206,11 @@ for (const [index, agent] of queue.slice(0, limit).entries()) {
         }),
       });
       const pageId = rows?.[0]?.id ?? null;
-      await rest("agent_decisions", {
-        method: "POST", headers: { Prefer: "return=minimal" },
-        body: JSON.stringify({
-          decision_type: "page_resolution", subject_type: "agent", subject_id: agent.id, decided_at: new Date().toISOString(),
-          decision: { resolved: true, collectable: true, page_id: hit.proof.id, page_url: `https://www.facebook.com/${hit.slug}`, advertiser_page_id: pageId, page_kind: "person_page" },
-          rationale: "Discovered a verified real-estate Facebook page from the agent's own name via public search, confirmed by the page-plugin embed's numeric id and display title.",
-          confidence: 80, evidence, hermes_skill: "ad-radar-discovery-first-pass",
-        }),
+      await decideAll({
+        decision_type: "page_resolution", subject_type: "agent", decided_at: new Date().toISOString(),
+        decision: { resolved: true, collectable: true, page_id: hit.proof.id, page_url: `https://www.facebook.com/${hit.slug}`, advertiser_page_id: pageId, page_kind: "person_page" },
+        rationale: "Discovered a verified real-estate Facebook page from the agent's own name via public search, confirmed by the page-plugin embed's numeric id and display title.",
+        confidence: 80, evidence, hermes_skill: "ad-radar-discovery-first-pass",
       });
       resolved += 1; appendFileSync(LOG, `${new Date().toISOString()} RESOLVED ${agent.full_name} -> ${hit.proof.id} "${hit.proof.title}"\n`);
     } else if (hit && hit.kind === "agency_page") {
@@ -206,40 +228,31 @@ for (const [index, agent] of queue.slice(0, limit).entries()) {
         }),
       });
       const pageId = rows?.[0]?.id ?? null;
-      await rest("agent_decisions", {
-        method: "POST", headers: { Prefer: "return=minimal" },
-        body: JSON.stringify({
-          decision_type: "page_resolution", subject_type: "agent", subject_id: agent.id, decided_at: new Date().toISOString(),
-          decision: { resolved: false, collectable: false, page_id: hit.proof.id, page_url: `https://www.facebook.com/${hit.slug}`, page_kind: "agency_page", attributed: false, agency_advertiser_page_id: pageId },
-          rationale: "Embed proved the agency/team page that employs this agent. Registered as an agency-owned advertiser page; not linked as the agent's personal page.",
-          confidence: 70, evidence, hermes_skill: "ad-radar-discovery-first-pass",
-        }),
+      await decideAll({
+        decision_type: "page_resolution", subject_type: "agent", decided_at: new Date().toISOString(),
+        decision: { resolved: false, collectable: false, page_id: hit.proof.id, page_url: `https://www.facebook.com/${hit.slug}`, page_kind: "agency_page", attributed: false, agency_advertiser_page_id: pageId },
+        rationale: "Embed proved the agency/team page that employs this agent. Registered as an agency-owned advertiser page; not linked as the agent's personal page.",
+        confidence: 70, evidence, hermes_skill: "ad-radar-discovery-first-pass",
       });
       unresolved += 1; appendFileSync(LOG, `${new Date().toISOString()} AGENCY-PAGE ${agent.full_name} -> ${hit.proof.id} "${hit.proof.title}"\n`);
     } else if (hit) {
-      await rest("agent_decisions", {
-        method: "POST", headers: { Prefer: "return=minimal" },
-        body: JSON.stringify({
-          decision_type: "page_resolution", subject_type: "agent", subject_id: agent.id, decided_at: new Date().toISOString(),
-          decision: { resolved: false, collectable: false, page_id: hit.proof.id, page_url: `https://www.facebook.com/${hit.slug}`, page_kind: hit.kind, attributed: false },
-          rationale: hit.kind === "agency_page"
-            ? "Embed proved an agency/team page, not the agent's own page; recorded for agency attribution without linking it as the agent's page."
-            : "Embed proved a page whose title matches the agent's name but carries no real-estate corroboration; recorded without a page link.",
-          confidence: 45, evidence, hermes_skill: "ad-radar-discovery-first-pass",
-        }),
+      await decideAll({
+        decision_type: "page_resolution", subject_type: "agent", decided_at: new Date().toISOString(),
+        decision: { resolved: false, collectable: false, page_id: hit.proof.id, page_url: `https://www.facebook.com/${hit.slug}`, page_kind: hit.kind, attributed: false },
+        rationale: hit.kind === "agency_page"
+          ? "Embed proved an agency/team page, not the agent's own page; recorded for agency attribution without linking it as the agent's page."
+          : "Embed proved a page whose title matches the agent's name but carries no real-estate corroboration; recorded without a page link.",
+        confidence: 45, evidence, hermes_skill: "ad-radar-discovery-first-pass",
       });
       unresolved += 1; appendFileSync(LOG, `${new Date().toISOString()} UNRESOLVED ${agent.full_name} (${hit.kind}) ${hit.slug}\n`);
     } else {
-      await rest("agent_decisions", {
-        method: "POST", headers: { Prefer: "return=minimal" },
-        body: JSON.stringify({
-          decision_type: "page_resolution", subject_type: "agent", subject_id: agent.id, decided_at: new Date().toISOString(),
-          decision: { resolved: false, collectable: false, page_id: null, page_url: null },
-          rationale: foreignRejected.length
-            ? "Searched public web results; the only name-matched pages belong to foreign jurisdictions (recorded in evidence.foreign_name_match_rejected), so no page was linked."
-            : "Searched public web results for the agent's name and suburb; no candidate Facebook slug produced a name-matched page.",
-          confidence: 40, evidence, hermes_skill: "ad-radar-discovery-first-pass",
-        }),
+      await decideAll({
+        decision_type: "page_resolution", subject_type: "agent", decided_at: new Date().toISOString(),
+        decision: { resolved: false, collectable: false, page_id: null, page_url: null },
+        rationale: foreignRejected.length
+          ? "Searched public web results; the only name-matched pages belong to foreign jurisdictions (recorded in evidence.foreign_name_match_rejected), so no page was linked."
+          : "Searched public web results for the agent's name and suburb; no candidate Facebook slug produced a name-matched page.",
+        confidence: 40, evidence, hermes_skill: "ad-radar-discovery-first-pass",
       });
       notFound += 1;
     }
@@ -247,4 +260,4 @@ for (const [index, agent] of queue.slice(0, limit).entries()) {
     retry += 1; appendFileSync(LOG, `${new Date().toISOString()} WRITE-ERROR ${agent.full_name}: ${String(error?.message || error).slice(0, 120)}\n`);
   }
 }
-console.log(JSON.stringify({ searched, resolved, unresolved, notFound, retry, seconds: Math.round((Date.now() - startedAt) / 1000) }, null, 1));
+console.log(JSON.stringify({ searched, resolved, unresolved, notFound, retry, rosterRowsDecided: rowsDecided, seconds: Math.round((Date.now() - startedAt) / 1000) }, null, 1));
