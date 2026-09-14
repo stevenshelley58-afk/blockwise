@@ -28,6 +28,9 @@ export type VideoProjectRow = {
   title: string;
   status: string;
   createdAt: string;
+  /** Authorised download reference for a ready source, when one exists. */
+  mediaHref?: string;
+  mediaLabel?: string;
 };
 
 type Props = {
@@ -202,7 +205,7 @@ export function AdStudioVideoHome({ workspaceId, projects, loadError, priceLabel
           <ul className="grid gap-2">
             {projects.map((row) => (
               <li key={row.id}>
-                <Card className="flex items-center justify-between gap-4 rounded-(--r-card) border-(--line) bg-card p-4 shadow-card">
+                <Card className="grid gap-3 rounded-(--r-card) border border-(--line) bg-card p-4 shadow-card sm:flex sm:items-center sm:justify-between sm:gap-4">
                   <div className="grid min-w-0 gap-0.5">
                     <p className="truncate text-sm font-semibold">{row.title}</p>
                     <p className="text-xs text-(--muted-foreground)">
@@ -210,9 +213,20 @@ export function AdStudioVideoHome({ workspaceId, projects, loadError, priceLabel
                       {new Date(row.createdAt).toLocaleDateString()}
                     </p>
                   </div>
-                  <span className="shrink-0 rounded-full border border-(--line) px-2.5 py-1 text-xs font-semibold">
-                    {row.status === "draft" ? "Not finished" : row.status}
-                  </span>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="rounded-full border border-(--line) px-2.5 py-1 text-xs font-semibold">
+                      {row.status === "draft" ? "Not finished" : row.status}
+                    </span>
+                    {row.mediaHref ? (
+                      // A download, not a publish: saving a video is not
+                      // publishing an ad, so no campaign action is offered here.
+                      <Button asChild variant="outline">
+                        <a href={`${row.mediaHref}&download=1&filename=${encodeURIComponent(row.mediaLabel ?? "video")}`}>
+                          Download
+                        </a>
+                      </Button>
+                    ) : null}
+                  </div>
                 </Card>
               </li>
             ))}
