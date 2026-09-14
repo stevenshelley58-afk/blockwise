@@ -1,21 +1,25 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtempSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 
-const scratchRoot = await mkdtemp(join(tmpdir(), "blockwise-scratch-test-"));
+// Synchronous on purpose. The scratch root is read when the module first
+// loads, and this suite must run under both node's type stripping and tsx,
+// which compiles to CommonJS where top-level await is unavailable.
+const scratchRoot = mkdtempSync(join(tmpdir(), "blockwise-scratch-test-"));
 process.env.BLOCKWISE_VIDEO_SCRATCH_DIR = scratchRoot;
 
-const {
+import {
   appendChunk,
   discardScratch,
   readHead,
   receivedBytes,
   scratchFilePath,
   VideoScratchError,
-} = await import("../src/lib/adstudio/video-upload-scratch.ts");
+} from "../src/lib/adstudio/video-upload-scratch.ts";
 
 const ASSET = "c0000000-0000-4000-8000-0000000000c1";
 
