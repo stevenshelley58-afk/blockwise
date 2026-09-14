@@ -130,14 +130,12 @@ test("the review step writes its values, presses, and puts the ad live", () => {
 
 test("the copy column leads with the offer and nothing else", () => {
   // Two lines, the second in the hero's blue, and no eyebrow above it.
-  assert.match(source, /<span>Build lead-generating ads\.<\/span>/);
-  assert.match(source, /<span className="hc-process-prompt">Without Ads Manager\.<\/span>/);
-  assert.match(source, /Turn a proven template into a branded lead ad you can review with confidence, without learning Ads Manager\./);
+  assert.match(source, /<span>Lead generating ads for<\/span>/);
+  assert.match(source, /<span className="hc-process-prompt">Facebook &amp; Instagram<\/span>/);
   assert.doesNotMatch(source, /hc-process-eyebrow/);
   assert.doesNotMatch(styles, /hc-process-eyebrow/);
   assert.match(styles, /\.hc-process-copy h2 > span \{\s*display: block/);
   assert.match(styles, /\.hc-process-prompt \{\s*color: var\(--hc-blue-bright\)/);
-  assert.match(styles, /\.hc-process-value \{\s*max-width: 32rem/);
   // The note matches the real offer wording.
   assert.match(source, /Free trial · No card required · Cancel anytime/);
   assert.doesNotMatch(source, /Free 14-day trial/);
