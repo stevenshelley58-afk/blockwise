@@ -177,6 +177,44 @@ export function resetFfprobeAvailabilityCache(): void {
   cachedAvailability = null;
 }
 
+/**
+ * Inspect a file already on disk. This is the entry point for real uploads:
+ * a 500 MB source is probed in place rather than buffered into memory, and the
+ * caller is responsible for deleting the scratch file afterwards.
+ *
+ * `head` is the first bytes of the same file, used for container sniffing so
+ * the whole file is never read just to identify it.
+ */
+export async function inspectVideoFile(input: {
+  filePath: string;
+  sizeBytes: number;
+  head: Uint8Array;
+  declaredMime?: string | null;
+  runner?: FfprobeRunner;
+}): Promise<MediaInspection> {
+  if (input.sizeBytes <= 0) return { ok: false, reason: "corrupt_media" };
+  if (input.sizeBytes > VIDEO_ABSOLUTE_MAX_BYTES) return { ok: false, reason: "too_large" };
+
+  const container = sniffVideoContainer(input.head);
+  if (!container) return { ok: false, reason: "unsupported_type" };
+
+  if (
+    input.declaredMime &&
+    VIDEO_ALLOWED_SOURCE_MIME.includes(input.declaredMime as never) &&
+    input.declaredMime !== container.mime
+  ) {
+    return { ok: false, reason: "type_mismatch" };
+  }
+
+  const runner = input.runner ?? defaultRunner;
+  const probeOutput = await runner(input.filePath);
+  if (!probeOutput.ok) {
+    return { ok: false, reason: "corrupt_media" };
+  }
+
+  return interpretProbe(probeOutput.stdout, container.mime, input.sizeBytes);
+}
+
 export async function inspectVideoBytes(input: {
   bytes: Uint8Array;
   declaredMime?: string | null;
@@ -223,13 +261,25 @@ export async function inspectVideoBytes(input: {
   }
 
   if (!probeOutput.ok) {
-    // A probe that fails or is killed has not proved the media is usable.
+    // A probe that failed or was killed has not proved the media is usable.
     return { ok: false, reason: "corrupt_media" };
   }
 
+  return interpretProbe(probeOutput.stdout, container.mime, bytes.length);
+}
+
+/**
+ * Turn raw ffprobe JSON into an inspection verdict. Shared by the in-memory and
+ * on-disk entry points so both apply exactly the same acceptance rules.
+ */
+function interpretProbe(
+  stdout: string,
+  containerMime: (typeof VIDEO_ALLOWED_SOURCE_MIME)[number],
+  sizeBytes: number,
+): MediaInspection {
   let parsed: ProbeResult;
   try {
-    parsed = JSON.parse(probeOutput.stdout) as ProbeResult;
+    parsed = JSON.parse(stdout) as ProbeResult;
   } catch {
     return { ok: false, reason: "corrupt_media" };
   }
@@ -249,21 +299,19 @@ export async function inspectVideoBytes(input: {
   // A zero-length or unreadable duration is not a usable source clip.
   if (duration !== undefined && duration <= 0) return { ok: false, reason: "corrupt_media" };
 
-  // The plan proposes accepting clips longer than the deliverable and trimming
-  // an edit from them, so an over-long source is accepted and flagged for the
-  // editor instead of rejected. Only a missing video track is fatal.
-  const needsOptimisation = bytes.length > VIDEO_MAX_SOURCE_BYTES;
-
+  // A clip longer than the deliverable is accepted and flagged for the editor
+  // rather than rejected, because an edit is cut from it. Only a missing video
+  // track is fatal.
   return {
     ok: true,
-    mime: container.mime,
-    bytes: bytes.length,
+    mime: containerMime,
+    bytes: sizeBytes,
     width,
     height,
     durationSeconds: duration,
     hasVideoStream: true,
     hasAudioStream: streams.some((stream) => stream.codec_type === "audio"),
-    needsOptimisation,
+    needsOptimisation: sizeBytes > VIDEO_MAX_SOURCE_BYTES,
   };
 }
 
