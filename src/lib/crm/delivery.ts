@@ -192,6 +192,40 @@ export async function queueLeadCrmDelivery(input: {
 }
 
 /**
+ * One lead's delivery state, as a customer-facing surface needs it.
+ *
+ * Deliberately not the whole job row: `last_error` is an operator detail and
+ * `command_id` is an internal identity, so neither is exposed to a member. The
+ * table's RLS policy already limits a member to their own workspace, so a caller
+ * reading with their own client cannot see another workspace's row.
+ */
+export type LeadCrmDeliverySummary = {
+  lead_id: string;
+  state: LeadCrmDeliveryState;
+  crm_lead: string | null;
+};
+
+/**
+ * The label the customer sees for a lead's CRM delivery, or null when there is
+ * nothing to say.
+ *
+ * A missing row means no delivery was ever registered for that lead. With the
+ * gate off the producer registers nothing at all, so silence is the honest
+ * rendering here: printing "Waiting for CRM" on every lead would promise a
+ * handoff nothing is going to perform, which is the exact state this mechanism
+ * exists to make visible rather than to fake. The pending label is only used
+ * once a job actually exists.
+ */
+export function formatLeadCrmDelivery(summary: LeadCrmDeliverySummary | undefined): string | null {
+  if (!summary) return null;
+  if (summary.state === "delivered") {
+    return summary.crm_lead ? `In CRM as ${summary.crm_lead}` : "In CRM";
+  }
+  if (summary.state === "error") return "CRM delivery failed";
+  return "Waiting for CRM";
+}
+
+/**
  * `ensure_lead_crm_delivery_job` returns a composite row. PostgREST hands that
  * back as a one-element array or as a bare object depending on the call, so both
  * shapes are accepted rather than assuming one.

@@ -70,6 +70,7 @@ export default async function LeadsPage() {
     createdAt: lead.createdAt,
     duplicateCandidate: Boolean(lead.duplicateCandidate),
     delivery: lead.delivery,
+    crmDelivery: lead.crmDelivery,
   }));
 
   return (

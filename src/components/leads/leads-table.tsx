@@ -55,6 +55,12 @@ export type LeadListItem = {
   createdAt: string;
   duplicateCandidate: boolean;
   delivery: string;
+  /**
+   * Whether this lead reached the workspace's own CRM, already worded for a
+   * customer. Null means no handoff was registered, so the surface stays quiet
+   * rather than claiming a state nothing is going to change.
+   */
+  crmDelivery: string | null;
 };
 
 type Facet = "all" | "high" | "dup";
@@ -147,6 +153,15 @@ const columns: ColumnDef<TableLead>[] = [
         {deliveryHint(row.original.delivery) ? (
           <p className="mt-1 max-w-56 text-xs leading-5 text-muted-foreground">{deliveryHint(row.original.delivery)}</p>
         ) : null}
+        {/* The CRM handoff belongs on this column: reaching the customer's CRM is
+            the delivery they care about most, and it must be visible on the
+            surface rather than only in an export. */}
+        {row.original.crmDelivery ? (
+          <p className="mt-1 max-w-56 text-xs leading-5 text-muted-foreground">{row.original.crmDelivery}</p>
+        ) : null}
+        {crmDeliveryHint(row.original.crmDelivery) ? (
+          <p className="mt-1 max-w-56 text-xs leading-5 text-muted-foreground">{crmDeliveryHint(row.original.crmDelivery)}</p>
+        ) : null}
       </div>
     ),
   },
@@ -200,6 +215,17 @@ function safeEmail(value: string) {
 function deliveryHint(delivery: string) {
   if (delivery === "Failed") return "Delivery failed. Ask a workspace owner or Blockwise support to review the saved delivery attempt.";
   if (delivery === "Manual review") return "This lead is waiting for your team to follow up.";
+  return null;
+}
+
+/**
+ * Extra wording for a CRM handoff that needs explaining. Only the failure case
+ * does: the queue retries it, so the customer should not be told to act.
+ */
+function crmDeliveryHint(crmDelivery: string | null) {
+  if (crmDelivery === "CRM delivery failed") {
+    return "This lead has not reached your CRM yet. Blockwise retries this handoff automatically.";
+  }
   return null;
 }
 
@@ -453,6 +479,10 @@ export function LeadsTable({
                   <span className="min-w-0 truncate text-xs text-muted-foreground">{lead.delivery}</span>
                 </div>
                 {deliveryHint(lead.delivery) ? <p className="mt-2 text-xs leading-5 text-muted-foreground">{deliveryHint(lead.delivery)}</p> : null}
+                {lead.crmDelivery ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{lead.crmDelivery}</p> : null}
+                {crmDeliveryHint(lead.crmDelivery) ? (
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">{crmDeliveryHint(lead.crmDelivery)}</p>
+                ) : null}
                 <div className="mt-3 flex min-w-0 items-center justify-between gap-2">
                   <SourceAd label={sourceAdLabel(lead)} />
                   <LeadQualitySelect
