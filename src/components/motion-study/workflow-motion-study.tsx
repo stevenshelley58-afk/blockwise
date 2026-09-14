@@ -211,7 +211,8 @@ export function WorkflowMotionStudy() {
 
   return <div className={"tw " + styles.bwStudy} data-narrow={narrow ? "true" : "false"}>
     <header className={styles.bwStudyIntro}>
-      <h2><span>Lead generating ads for</span><span>Facebook &amp; Instagram</span></h2>
+      <h2><span>Be the agent</span><span>they think of first.</span></h2>
+      <p>Blockwise simplifies your Facebook and Instagram ads. Pick an ad, make it yours and approve it without wrestling with Ads Manager. Spend your time with clients instead.</p>
       <div><Button asChild size="lg"><a href={TRIAL_SIGNUP_URL}>Start free trial</a></Button><small>Free trial · No card required · Cancel anytime</small></div>
     </header>
     <section className={styles.bwStudyFrame} aria-label="Ad Studio motion study">

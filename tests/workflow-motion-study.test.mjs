@@ -185,3 +185,8 @@ test("editor fields stay compact and the redundant bottom bar is absent", () => 
   assert.doesNotMatch(styles, /bwStudyHint|label:last-child textarea/);
   assert.match(source, /label="Ad text"[^\n]+rows=\{3\}/);
 });
+
+test("workflow uses the approved two-line headline and supporting value copy", () => {
+  assert.match(source, /<span>Be the agent<\/span><span>they think of first\.<\/span>/);
+  assert.match(source, /Spend your time with clients instead\./);
+});

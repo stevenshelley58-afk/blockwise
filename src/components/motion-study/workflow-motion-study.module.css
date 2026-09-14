@@ -197,15 +197,16 @@
 .bwStudyApprovalStatus svg { width: 20px; height: 20px; padding: 2px; border-radius: 50%; background: #dff3e8; color: #067443; }
 
 .bwStudyIntro { display: grid; gap: 28px; margin-bottom: 0; }
-.bwStudyIntro h2 { max-width: 760px; margin: 0; font-family: var(--font-manrope), Manrope, sans-serif; font-size: clamp(40px, 4.2vw, 64px); font-weight: 800; letter-spacing: -.035em; line-height: 1.02; }
+.bwStudyIntro h2 { max-width: 760px; margin: 0; font-family: var(--font-manrope), Manrope, sans-serif; font-size: clamp(32px, 3.2vw, 46px); font-weight: 800; letter-spacing: -.035em; line-height: 1.02; }
 .bwStudyIntro h2 span { display: block; }
 .bwStudyIntro h2 span:last-child { color: var(--hc-blue-bright, #2d6cf6); }
+.bwStudyIntro > p { margin: 0; max-width: 48ch; color: var(--study-muted); font-size: 17px; line-height: 1.6; }
 .bwStudyIntro > div { display: grid; justify-items: start; gap: 11px; }
 .bwStudyIntro small { color: var(--study-muted); font-size: 12px; }
 
 @media (max-width: 1099px) {
   .bwStudy { grid-template-columns: minmax(0, 1fr); gap: 36px; }
-  .bwStudyIntro h2 { font-size: clamp(40px, 5.8vw, 74px); }
+  .bwStudyIntro h2 { font-size: clamp(26px, 8.4vw, 46px); }
 }
 .bwStudy[data-narrow="true"] .bwStudyIntro { gap: 24px; margin-bottom: 0; }
 .bwStudy[data-narrow="true"] .bwStudyIntro > div { justify-items: stretch; text-align: center; }

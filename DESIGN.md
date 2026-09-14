@@ -204,3 +204,5 @@ Reporting Email uses one compact notification with a small creative thumbnail an
   form stand-in. Its archived terminology, native selects and duplicated
   controls are historical evidence, not patterns for new customer screens.
   No API mutation, persistence, download, creation or activation is available.
+
+The homepage workflow headline reads "Be the agent / they think of first." in two lines, with the second line blue. The approved supporting paragraph explains the simple ad flow and time back for clients. Preserve the existing animation and CTA.
