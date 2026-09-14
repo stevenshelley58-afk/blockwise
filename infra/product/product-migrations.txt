@@ -120,3 +120,4 @@
 20260914020000_research_email_location_projection.sql
 20260914020100_atomic_research_email_location_projection_snapshot.sql
 20260914100000_adstudio_video.sql
+20260914110000_adstudio_video_storage.sql
