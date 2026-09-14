@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { VIDEO_BUCKET, versionObjectPath } from "./video-refs.ts";
 import type { VideoOrderFulfilmentState } from "./video-types.ts";
+import { enqueueVideoNotification, resolveOrderContact } from "./video-notifications.ts";
 
 /**
  * Operator actions on a paid video order.
@@ -23,10 +24,61 @@ export class FulfilmentError extends Error {
   }
 }
 
+
+/**
+ * Tell the customer their order moved. Best effort by design: the draft or the
+ * delivery is already recorded, so a notification problem is reported and not
+ * allowed to fail the operator's action or lose the order.
+ */
+async function notifyCustomer(input: {
+  supabase: SupabaseClient;
+  kind: "draft_ready" | "final_ready";
+  workspaceId: string;
+  orderId: string;
+  projectId: string;
+  firstDraftDueAt: string | null;
+  dueTimezone: string;
+  revisionEntitlement: number;
+  revisionsUsed: number;
+  versionNumber: number;
+}): Promise<void> {
+  try {
+    const contact = await resolveOrderContact(input.supabase, input.workspaceId);
+    if (!contact) return;
+
+    const { data: project } = await input.supabase
+      .from("video_projects")
+      .select("title")
+      .eq("id", input.projectId)
+      .maybeSingle();
+
+    await enqueueVideoNotification({
+      supabase: input.supabase,
+      kind: input.kind,
+      to: contact,
+      versionNumber: input.versionNumber,
+      order: {
+        workspaceId: input.workspaceId,
+        orderId: input.orderId,
+        projectTitle: String((project as { title?: string } | null)?.title ?? "your video"),
+        firstDraftDueAt: input.firstDraftDueAt,
+        dueTimezone: input.dueTimezone,
+        revisionEntitlement: input.revisionEntitlement,
+        revisionsUsed: input.revisionsUsed,
+      },
+    });
+  } catch (error) {
+    console.error("video notification failed", {
+      kind: input.kind,
+      reason: error instanceof Error ? error.message : "unknown",
+    });
+  }
+}
+
 async function loadOrder(supabase: SupabaseClient, orderId: string) {
   const { data, error } = await supabase
     .from("video_orders")
-    .select("id, workspace_id, project_id, payment_state, fulfilment_state, assigned_operator, revision_entitlement, revisions_used, brief_version_id")
+    .select("id, workspace_id, project_id, payment_state, fulfilment_state, assigned_operator, revision_entitlement, revisions_used, brief_version_id, first_draft_due_at, due_timezone")
     .eq("id", orderId)
     .maybeSingle();
   if (error) throw new FulfilmentError("storage", "The order could not be loaded.");
@@ -193,6 +245,19 @@ export async function publishDraft(input: {
     idempotencyKey: `order.draft_ready:${input.orderId}:${versionNumber}`,
   });
 
+  await notifyCustomer({
+    supabase: input.supabase,
+    kind: "draft_ready",
+    workspaceId,
+    orderId: input.orderId,
+    projectId,
+    firstDraftDueAt: order.first_draft_due_at ? String(order.first_draft_due_at) : null,
+    dueTimezone: String(order.due_timezone ?? "Australia/Sydney"),
+    revisionEntitlement: Number(order.revision_entitlement ?? 1),
+    revisionsUsed: Number(order.revisions_used ?? 0),
+    versionNumber,
+  });
+
   return { versionNumber };
 }
 
@@ -280,6 +345,19 @@ export async function deliverFinal(input: {
     to: "delivered",
     detail: { versionNumber, assetId: input.assetId },
     idempotencyKey: `order.delivered:${input.orderId}:${versionNumber}`,
+  });
+
+  await notifyCustomer({
+    supabase: input.supabase,
+    kind: "final_ready",
+    workspaceId,
+    orderId: input.orderId,
+    projectId,
+    firstDraftDueAt: order.first_draft_due_at ? String(order.first_draft_due_at) : null,
+    dueTimezone: String(order.due_timezone ?? "Australia/Sydney"),
+    revisionEntitlement: Number(order.revision_entitlement ?? 1),
+    revisionsUsed: Number(order.revisions_used ?? 0),
+    versionNumber,
   });
 
   return { versionNumber };

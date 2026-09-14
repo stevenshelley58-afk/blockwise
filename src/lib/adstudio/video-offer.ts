@@ -143,7 +143,9 @@ function setLocalHour(at: Date, timezone: string, parts: ZonedParts, hour: numbe
 }
 
 /** The exact date and time a customer sees, in their own timezone. */
-export function formatDeadline(at: Date, timezone = VIDEO_OFFER.defaultTimezone): string {
+// The timezone is widened to string on purpose: an order carries its own
+// stored zone, which may differ from today's default.
+export function formatDeadline(at: Date, timezone: string = VIDEO_OFFER.defaultTimezone): string {
   return new Intl.DateTimeFormat("en-AU", {
     timeZone: timezone,
     weekday: "short",

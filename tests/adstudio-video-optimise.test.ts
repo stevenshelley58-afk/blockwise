@@ -3,8 +3,7 @@ import test from "node:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
-const { optimiseVideoSource, VideoOptimiseError } = await import("../src/lib/adstudio/video-optimise-worker.ts");
+import { optimiseVideoSource, VideoOptimiseError } from "../src/lib/adstudio/video-optimise-worker.ts";
 
 const WS = "aaaaaaaa-0000-4000-8000-00000000000a";
 const PROJECT = "a0000000-0000-4000-8000-0000000000a1";
