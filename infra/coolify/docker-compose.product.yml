@@ -378,6 +378,23 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     stop_grace_period: 30s
+    # Media inspection and resizing need scratch space, and the root filesystem
+    # is read only. This is bounded, executable-denied memory rather than a
+    # persistent volume: a temporary render file is never the durable copy of
+    # anything, so losing it on restart is correct. `noexec` stops an uploaded
+    # file from ever being run from here.
+    tmpfs:
+      - /tmp:size=2g,mode=1777,noexec,nosuid,nodev
+    # ffmpeg runs on customer-supplied media, which is untrusted input. Bound
+    # the blast radius: no single job can exhaust the host, and a fork bomb or
+    # runaway filter chain hits a wall instead of the host's limits.
+    mem_limit: 2g
+    memswap_limit: 2g
+    pids_limit: 256
+    cpus: 1.5
+    ulimits:
+      nofile: { soft: 1024, hard: 2048 }
+      nproc: 256
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?NEXT_PUBLIC_SUPABASE_URL is required}

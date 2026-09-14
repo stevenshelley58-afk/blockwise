@@ -15,7 +15,13 @@ COPY package.json package-lock.json .npmrc ./
 RUN npm ci --omit=dev --ignore-scripts
 
 FROM node:22-slim
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tini \
+# ffmpeg provides ffprobe, which is the only thing allowed to read uploaded
+# media before it is accepted. Uploaded bytes are untrusted, so the binary is
+# invoked without a shell, with a hard timeout and bounded output, and it never
+# receives a URL. Installing it here keeps media inspection inside the same
+# sandboxed, non-root, capability-free container instead of the host.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates tini ffmpeg \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd -r worker && useradd -r -g worker worker
 
@@ -44,7 +50,9 @@ ENV BLOCKWISE_WORKER_REVISION="${GIT_SHA}"
 
 RUN test -r worker/index.ts \
     && test -r src/lib/providers/meta-publish-worker.ts \
-    && test -r src/lib/meta-monitor/reporting-snapshots.ts
+    && test -r src/lib/meta-monitor/reporting-snapshots.ts \
+    && ffprobe -version > /dev/null \
+    && ffmpeg -version > /dev/null
 
 # tini reaps zombies / forwards signals so compose stop kills the worker cleanly.
 ENTRYPOINT ["tini", "--"]
