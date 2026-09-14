@@ -195,3 +195,12 @@ Workflow text handovers fade the outgoing text before introducing the replacemen
 The workflow frame has no bottom hint bar. Customise keeps intrinsic two-line Headline and three-line Ad text fields, never stretching a field to fill the panel.
 
 Reporting Email uses one compact notification with a small creative thumbnail and a two-column details grid (compact labelled rows on the narrowest phones). Its full content, including preferences, fits the fixed reporting frame without an inner scrollbar or a fade concealing content. The chart and email views retain the same frame height.
+
+## Historical review exception
+
+- `/ad-studio/publish-history` preserves the recovered 12 September four-stage
+  publish layout and its legacy local controls for owner comparison only. It
+  uses current shared styles, explicit example artwork/data and a read-only
+  form stand-in. Its archived terminology, native selects and duplicated
+  controls are historical evidence, not patterns for new customer screens.
+  No API mutation, persistence, download, creation or activation is available.

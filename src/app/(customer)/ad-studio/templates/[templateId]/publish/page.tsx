@@ -98,7 +98,7 @@ export default async function PublishPage({
 
   return (
     <div className="flex h-[calc(100dvh-54px-4.75rem-env(safe-area-inset-top)-env(safe-area-inset-bottom)-var(--consent-banner-height,0px))] min-h-[200px] flex-col bg-background text-foreground md:h-[calc(100dvh-60px)] md:min-h-[360px]">
-      <header className="flex min-h-12 shrink-0 items-center border-b border-border bg-card px-4 md:px-5">
+      <header className="flex min-h-12 shrink-0 flex-wrap items-center gap-y-1 border-b border-border bg-card px-4 md:px-5">
         <Link
           href={`/ad-studio/ads/${encodeURIComponent(adId)}`}
           className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -114,9 +114,13 @@ export default async function PublishPage({
           </svg>
           Back to editor
         </Link>
-        <span className="ml-4 truncate text-sm font-medium">
+        <span className="ml-4 min-w-0 flex-1 truncate text-sm font-medium">
           Review · {templateName}
         </span>
+        <Link href="/ad-studio/publish-history" target="_blank" rel="noopener noreferrer"
+          className="inline-flex min-h-11 items-center px-3 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          Previous flow<span className="sr-only"> (opens in a new tab)</span>
+        </Link>
         {!providerWrites && (
           <span className="ml-auto rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
             Preview only · nothing will be created
