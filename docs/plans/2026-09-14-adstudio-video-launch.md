@@ -1,0 +1,99 @@
+# Ad Studio Video — launch record
+
+Owner decisions recorded 14 September 2026. This file supersedes the proposed
+defaults in the 14 September build handoff wherever the two disagree, and it
+records what is actually built versus still outstanding. A plan is not evidence
+of deployment: the verified state of each item is stated below.
+
+## Offer, as approved
+
+| Item | Decision |
+| --- | --- |
+| Existing video | Upload, keep, preview and download. No production charge, and no payment record is created for this path. |
+| Commissioned video | A$100, **ex-GST placeholder**. Live checkout stays gated until the accountant confirms GST treatment. |
+| Deliverable | One 20-30 second vertical 1080x1920 MP4. |
+| Sound | No narration. A customer-supplied transcript, or a house-licensed music bed. Any track must have confirmed usage rights. |
+| Deadline | First draft on the **2nd working day**, Monday to Friday, in the workspace timezone. The exact local date and time is shown at checkout. |
+| Revision | One consolidated revision, due 24 hours after feedback is submitted. |
+| Refunds | Full refund on request at any time before final delivery. |
+| Retention | 7 days abandoned unpaid uploads; 90 days paid source and editing files; finals while the account is active. |
+| Support | support@blockwise.sale |
+| Oversized uploads | Accepted and optimised. The original is kept unchanged and the optimisation is disclosed to the customer. |
+| Large sources | A clip longer than the deliverable is accepted and flagged for the editor, not rejected. |
+
+### Why the deadline is stated in working days
+
+The approved wording was "48 business hours, Mon-Fri". Taken literally that is
+48 *accumulated* working hours, which at 8 hours a day is **six** working days,
+so a Friday-afternoon order would be due the Monday week. The owner confirmed
+the intent is a deadline on the **2nd working day**. The function is therefore
+defined in working days so the code cannot disagree with the promise, and
+weekends never consume the commitment:
+
+```
+Monday    09:00 -> Tuesday   17:00
+Friday    16:00 -> Monday    17:00
+Monday    19:00 -> Wednesday 17:00   (after hours, counting starts next day)
+Saturday  12:00 -> Tuesday   17:00
+```
+
+`ready_at` is the later of verified payment and a complete, validated brief.
+Operator pickup and retries never reset it.
+
+## Verified state
+
+Built and committed on branch `adstudio-video-launch`:
+
+- `8ab28d278` eight workspace-scoped tables with RLS, the privacy boundary and
+  the working-day deadline function.
+- `126bf9bc6` object paths, upload limits, ffprobe-based media inspection and
+  the upload ledger state machine, plus 31 passing test assertions.
+- `536714a65` ffmpeg and a bounded, non-executable tmpfs in the sandboxed
+  worker, with memory, process and CPU limits.
+
+Applied to the local product database and confirmed: the eight tables exist
+with RLS enabled, the private `adstudio-video` bucket exists with a 2 GB
+ceiling and an explicit MIME allow list, and the isolation test passes.
+
+**Not built yet:** no customer surface, no upload or download route, no Stripe
+one-off checkout, no offer or price configuration, no operator queue, no
+notification, no reconciliation, no capacity gate.
+
+**Nothing is live to customers.** There is no video route and no video price.
+
+## Known open items
+
+1. **GST is unconfirmed.** This blocks enabling live checkout, by agreement.
+2. **Migration ledger.** `20260914100000` was applied out of process during
+   development, so the ledger has no row for it. The sanctioned
+   `scripts/vps/product-migrate.sh --apply` is idempotent and will record it on
+   the next run. Do not insert the row by hand.
+3. **The original handoff's media layout** named separate `adstudio-video`
+   bucket paths `sources/`, `previews/`, `thumbnails/`, `production/`,
+   `drafts/` and `finals/`. Those are implemented as written.
+
+## Security decisions worth not re-litigating
+
+- **Server-mediated upload, not TUS direct-to-storage.** The proposed TUS flow
+  would need a `storage.objects` policy, letting a browser client reach the
+  object store directly. Uploads are mediated by authenticated routes holding
+  the service role, exactly like the existing customer image path, so no new
+  storage policy is needed and the bucket keeps its own type and size
+  enforcement.
+- **Four tables are server-only.** `video_assets`, `video_brief_versions`,
+  `video_payment_attempts` and `video_order_events` are excluded in
+  `infra/product/post-migrate-api-grants.sql`. Without that exclusion the
+  central grants file grants the browser role full DML on every RLS-enabled
+  table, which would have exposed the payment-attempt and audit tables.
+- **Production material stays operator-only**, including inside the customer's
+  own workspace, and is enforced in RLS rather than only in application code.
+- **Stored media references are API routes, never signed URLs**, because a
+  persisted signed URL becomes a dead reference once it expires.
+
+## The AI generation path
+
+An earlier unmerged branch contained an AI video-generation system. It was
+deleted on the owner's instruction and is recoverable from the
+`deleted/20260914-adstudio-video-generation` tag and from
+`chore/zero-branch-consolidation`. Human editing fulfils launch; automated
+generation is not a prerequisite and is not referenced by this feature.
