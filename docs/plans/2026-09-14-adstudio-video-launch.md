@@ -66,8 +66,9 @@ exist with RLS enabled, the private `adstudio-video` bucket exists with a 2 GB
 ceiling and an explicit MIME allow list, and the isolation test passes.
 
 Verified by `next build` (exit 0) with `/ad-studio/video` and every
-`/api/adstudio/videos` route in the route manifest. 97 video test assertions
-pass and `tsc --noEmit` is clean.
+`/api/adstudio/videos` route in the route manifest, plus `/operator/video`
+and both `/api/operator/video-orders` routes. 120 video test assertions pass
+and `tsc --noEmit` is clean.
 
 **Built end to end for the free path:** a customer can create a video, upload a
 resumable source, have it inspected, resume an interrupted transfer, download
@@ -83,12 +84,19 @@ frozen offer snapshot, and a checkout route that refuses before it does any
 work. `assertCheckoutEnabled` requires both a determined tax treatment and an
 explicit switch, so editing one constant cannot start charging customers.
 
+- `6ab91de93` the operator fulfilment queue read model and its audited actions.
+- `d7ab41402` the `/operator/video` surface and operator draft and final uploads.
+
+**Built for fulfilment:** an operator can see paid orders soonest deadline
+first, claim one, upload a draft or a final through the same inspected path a
+customer uses, and deliver. Claiming never writes the committed deadline, a
+second claim is refused, and a delivery cannot happen twice.
+
 **Not built yet:** the Stripe payment-mode session itself (blocked on the GST
-decision by design, not by omission), the operator fulfilment queue, the
-transactional notifications, payment reconciliation, the capacity gate, the
-retention cleanup job, and the release. The wall-clock behaviour of the
-resumable upload and the resize job has not been exercised against a real
-multi-hundred-megabyte file.
+decision by design, not by omission), the transactional notifications,
+payment reconciliation, the capacity gate, the retention cleanup job, and the
+release. The wall-clock behaviour of the resumable upload and the resize job
+has not been exercised against a real multi-hundred-megabyte file.
 
 **Nothing is live to customers.** Production still serves revision `897506271`;
 this branch is 11 commits ahead of it and has not been released.
