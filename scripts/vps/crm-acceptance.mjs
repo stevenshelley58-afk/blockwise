@@ -100,6 +100,22 @@ function psql(query) {
   ).trim();
 }
 
+/**
+ * The expression that evaluates to one enquiry's `blockwise_source_key`.
+ *
+ * The key is sha256("<workspace>|<provider>|<submission>"), computed by
+ * `blockwise_crm.api.source_key`. There must be one derivation on each side and
+ * they must agree, so it is expressed once here rather than inlined per check.
+ */
+function probeKeyExpr(submissionId) {
+  return `sha2(concat(${sql(WORKSPACE)}, '|meta|', ${sql(submissionId)}), 256)`;
+}
+
+/** The predicate that matches exactly one enquiry, by its key. */
+function probeKey(submissionId) {
+  return `blockwise_source_key = ${probeKeyExpr(submissionId)}`;
+}
+
 let cachedDbName = null;
 let cachedPassword = null;
 let cachedClient = null;
@@ -415,16 +431,21 @@ group("D. Revision guards");
 
 let probeLead = null;
 
+// A replay is only a replay if the payload is identical: `_run` refuses a
+// command_id reused with different content, which A26 asserts. A24 depends on
+// this exact object, so it is built once and reused rather than restated.
+const probeCapture = {
+  commandId: `${STAMP}-capture`,
+  sourceProvider: "meta",
+  sourceSubmissionId: `${STAMP}-sub`,
+  firstName: "Acceptance",
+  lastName: "Probe",
+  email: `${STAMP}@example.test`,
+  propertyContext: "Acceptance probe",
+};
+
 await attempt("A18", "capture creates an enquiry that starts at New", async () => {
-  const first = await commands.captureEnquiry({
-    commandId: `${STAMP}-capture`,
-    sourceProvider: "meta",
-    sourceSubmissionId: `${STAMP}-sub`,
-    firstName: "Acceptance",
-    lastName: "Probe",
-    email: `${STAMP}@example.test`,
-    propertyContext: "Acceptance probe",
-  });
+  const first = await commands.captureEnquiry(probeCapture);
   probeLead = first.lead;
   return { ok: first.created === true && first.stage === "New", detail: `lead=${probeLead} stage=${first.stage}` };
 });
@@ -500,14 +521,8 @@ await attempt("A23", "the database enforces enquiry identity natively", async ()
 });
 
 await attempt("A24", "a repeated command_id returns the stored result, not a second write", async () => {
-  const again = await commands.captureEnquiry({
-    commandId: `${STAMP}-capture`,
-    sourceProvider: "meta",
-    sourceSubmissionId: `${STAMP}-sub`,
-    firstName: "Acceptance",
-    lastName: "Probe",
-  });
-  const count = csql(`select count(*) from \`tabCRM Lead\` where blockwise_source_key like ${sql(`${STAMP}%`)}`);
+  const again = await commands.captureEnquiry(probeCapture);
+  const count = csql(`select count(*) from \`tabCRM Lead\` where ${probeKey(`${STAMP}-sub`)}`);
   return {
     ok: again.lead === probeLead && Number(count) === 1,
     detail: `lead=${again.lead} matching leads=${count}`,
@@ -651,7 +666,10 @@ await attempt("A32", "redelivering the same job does not capture the enquiry twi
     else process.env.BLOCKWISE_ENABLE_CRM_DELIVERY = previous;
   }
 
-  const inCrm = csql(`select count(*) from \`tabCRM Lead\` where blockwise_source_key like ${sql(`%${STAMP}%`)}`);
+  // A30 ensured the job with `sourceSubmissionId: STAMP`, so counting by that
+  // enquiry's key proves no second one was captured. A LIKE on the stamp cannot:
+  // the key is a hash and never contains it.
+  const inCrm = csql(`select count(*) from \`tabCRM Lead\` where ${probeKey(STAMP)}`);
   return {
     ok: outcome.created === false && Number(inCrm) === 1,
     detail: `created=${outcome.created} crm leads for this probe=${inCrm}`,
@@ -854,10 +872,39 @@ if (probeLeadId) {
   }
 }
 
+// The matrix captures exactly three enquiries, so the residue it can leave is
+// exactly three known keys. A LIKE on the stamp never matched any of them,
+// which is why every earlier run left its probe leads behind.
+const probeSubmissions = [`${STAMP}-sub`, STAMP, `${STAMP}-stage-sub`];
+
 try {
-  const probeCount = Number(csql(`select count(*) from \`tabCRM Lead\` where blockwise_source_key like ${sql(`${STAMP}%`)}`));
+  const probeKeys = probeSubmissions.map(probeKeyExpr);
+  const probeNames = csql(
+    `select name from \`tabCRM Lead\` where workspace_id = ${sql(WORKSPACE)} and blockwise_source_key in (${probeKeys.join(", ")})`,
+  )
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const probeCount = probeNames.length;
+
+  // Three enquiries, so three keys, so at most three rows. More than that means
+  // the predicate is not the one this block intends, and deleting on it would
+  // reach rows the matrix never created. Refuse rather than guess.
+  if (probeCount > probeSubmissions.length) {
+    throw new Error(
+      `refusing to delete: ${probeCount} rows matched ${probeSubmissions.length} probe keys`,
+    );
+  }
+
   if (probeCount > 0 && process.env.ACCEPTANCE_CLEANUP === "1") {
-    csql(`delete from \`tabCRM Lead\` where blockwise_source_key like ${sql(`${STAMP}%`)}`);
+    const names = probeNames.map((name) => sql(name)).join(", ");
+    // Activities, tasks and notes are doctypes of their own rather than child
+    // tables, so they do not go with the lead. Clear them first or the delete
+    // leaves them pointing at a row that no longer exists.
+    csql(`delete from \`tabBlockwise Activity\` where enquiry in (${names})`);
+    csql(`delete from \`tabCRM Task\` where reference_doctype = 'CRM Lead' and reference_docname in (${names})`);
+    csql(`delete from \`tabFCRM Note\` where reference_doctype = 'CRM Lead' and reference_docname in (${names})`);
+    csql(`delete from \`tabCRM Lead\` where name in (${names})`);
     console.log(`residue: removed ${probeCount} CRM probe lead(s) under ${STAMP}`);
   } else if (probeCount > 0) {
     console.log(`residue: ${probeCount} CRM probe lead(s) remain on ${SITE} under ${STAMP} (ACCEPTANCE_CLEANUP=1 removes them)`);
