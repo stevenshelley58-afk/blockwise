@@ -317,7 +317,11 @@ test("OSS product build and reconciliation contracts avoid local secrets and est
     [],
     "new production migrations must be added to the product allowlist",
   );
-  assert.ok(allowlistedMigrations.every((line) => !/research|hermes/i.test(line)));
+  const productOwnedResearchProjections = new Set([
+    "20260914020000_research_email_location_projection.sql",
+    "20260914020100_atomic_research_email_location_projection_snapshot.sql",
+  ]);
+  assert.ok(allowlistedMigrations.every((line) => productOwnedResearchProjections.has(line) || !/research|hermes/i.test(line)));
   assert.deepEqual([...allowlistedMigrations].sort(), allowlistedMigrations);
 });
 

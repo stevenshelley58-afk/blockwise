@@ -1,0 +1,12 @@
+[Unit]
+Description=Refresh Blockwise private research email location projection
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+RandomizedDelaySec=45s
+Persistent=true
+Unit=blockwise-research-email-location-projection.service
+
+[Install]
+WantedBy=timers.target

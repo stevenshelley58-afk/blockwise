@@ -1,0 +1,29 @@
+[Unit]
+Description=Blockwise private research email location projection
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=hermes
+Group=hermes
+WorkingDirectory=/srv/blockwise/location-projection/current/hermes/tools/research-runtime
+Environment=NODE_ENV=production
+EnvironmentFile=/srv/hermes/secrets/email-location-projection.env
+ExecStart=/usr/bin/node --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON /srv/blockwise/location-projection/current/hermes/tools/research-runtime/bin/research-email-location-projection-sync.mjs
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX

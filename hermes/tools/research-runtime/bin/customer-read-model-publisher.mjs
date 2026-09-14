@@ -10,7 +10,7 @@ const HISTORY_VIEW = "v_customer_agent_ad_history";
 const PAGE_SIZE = 500;
 const WRITE_BATCH_SIZE = 100;
 
-const EMAIL_LOCATION_SOURCE = "ad_radar_agent_contact_projection";
+export const EMAIL_LOCATION_SOURCE = "ad_radar_agent_contact_projection";
 
 export function normalizeProjectionEmail(value) {
   const email = String(value ?? "").trim().toLowerCase();
@@ -20,9 +20,9 @@ function isDemoOrTestEmail(email) {
   const [local, domain] = email.split("@");
   return !local || !domain || /(^|[.+_-])(test|demo)([.+_-]|$)/iu.test(local) || /(^|\.)(example|test|invalid|localhost)(\.|$)/iu.test(domain);
 }
-function validPostcode(value) {
+function validPostcode(value, knownPostcodes) {
   const postcode = String(value ?? "").trim();
-  return /^\d{4}$/u.test(postcode) ? postcode : null;
+  return /^\d{4}$/u.test(postcode) && knownPostcodes?.has(postcode) ? postcode : null;
 }
 function cleanSuburb(value) {
   const suburb = String(value ?? "").trim();
@@ -35,13 +35,13 @@ function sourceObservationTimestamp(value) {
 export function emailLocationHash(normalizedEmail) {
   return createHash("sha256").update(normalizedEmail).digest("hex");
 }
-export function buildEmailLocationProjections(agentRows, revision, projectedAt) {
+export function buildEmailLocationProjections(agentRows, revision, projectedAt, knownPostcodes) {
   const candidates = new Map();
   for (const agent of agentRows) {
-    const postcode = validPostcode(agent.primary_postcode);
+    const postcode = validPostcode(agent.primary_postcode, knownPostcodes);
     if (!postcode) continue;
     const enrichment = asObject(asObject(agent.metadata).cold_email_enrichment).v1;
-    for (const candidate of [{ email: agent.email, observedAt: agent.updated_at, kind: "direct" }, { email: asObject(enrichment).email, observedAt: asObject(enrichment).enriched_at ?? agent.updated_at, kind: "enrichment" }]) {
+    for (const candidate of [{ email: agent.email, observedAt: agent.updated_at, kind: "direct" }, { email: asObject(enrichment).email, observedAt: asObject(enrichment).enriched_at, kind: "enrichment" }]) {
       const email = normalizeProjectionEmail(candidate.email);
       if (!email || isDemoOrTestEmail(email)) continue;
       const observedAt = sourceObservationTimestamp(candidate.observedAt);
@@ -54,7 +54,7 @@ export function buildEmailLocationProjections(agentRows, revision, projectedAt) 
   }
   return [...candidates].flatMap(([email, entry]) => {
     if (entry.postcodes.size !== 1) return [];
-    entry.values.sort((left, right) => right.observedAt.localeCompare(left.observedAt) || right.kind.localeCompare(left.kind));
+    entry.values.sort((left, right) => right.observedAt.localeCompare(left.observedAt) || Number(right.kind === "direct") - Number(left.kind === "direct"));
     const selected = entry.values[0];
     return [{ email_sha256: emailLocationHash(email), postcode: selected.postcode, suburb: selected.suburb, source: EMAIL_LOCATION_SOURCE, source_observed_at: selected.observedAt, projected_at: projectedAt, source_revision: revision }];
   });
@@ -72,7 +72,7 @@ function asObject(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
-function buildCustomerRest(env, fetchImpl) {
+export function buildCustomerRest(env, fetchImpl) {
   const url = cleanUrl(env.HERMES_CUSTOMER_SUPABASE_URL);
   const credential = resolveHermesCustomerSupabaseCredential(env);
   if (!url || !credential) return null;
@@ -93,15 +93,26 @@ function buildCustomerRest(env, fetchImpl) {
   };
 }
 
-async function readAll(researchRest, relation, select = "*") {
+export async function readAll(researchRest, relation, select = "*", query = "", cursorColumn = null) {
   const rows = [];
+  let cursor = null;
   for (let offset = 0; ; offset += PAGE_SIZE) {
+    const cursorQuery = cursorColumn && cursor !== null
+      ? `&${cursorColumn}=gt.${encodeURIComponent(cursor)}`
+      : "";
     const page = await researchRest(
       "research",
-      `${relation}?select=${encodeURIComponent(select)}&limit=${PAGE_SIZE}&offset=${offset}`,
+      `${relation}?select=${encodeURIComponent(select)}${query ? `&${query}` : ""}${cursorQuery}&limit=${PAGE_SIZE}${cursorColumn ? "" : `&offset=${offset}`}`,
     );
     rows.push(...(page || []));
     if (!page || page.length < PAGE_SIZE) return rows;
+    if (cursorColumn) {
+      const nextCursor = page.at(-1)?.[cursorColumn];
+      if (nextCursor === null || nextCursor === undefined || nextCursor === cursor) {
+        throw new Error(`cursor pagination failed for ${relation}.${cursorColumn}`);
+      }
+      cursor = nextCursor;
+    }
   }
 }
 
@@ -229,11 +240,10 @@ export async function publishCustomerReadModels({
   });
 
   try {
-    const [cardRows, historyRows, creativeRows, agentRows] = await Promise.all([
+    const [cardRows, historyRows, creativeRows] = await Promise.all([
       readAll(researchRest, CARD_VIEW),
       readAll(researchRest, HISTORY_VIEW),
       readAll(researchRest, "ad_creatives", "id,observed_ad_id,updated_at"),
-      readAll(researchRest, "agents", "email,primary_postcode,primary_suburb,metadata,updated_at"),
     ]);
     creativeRows.sort((left, right) => String(right.updated_at || "").localeCompare(String(left.updated_at || "")));
     const publishedAt = now();
@@ -249,11 +259,8 @@ export async function publishCustomerReadModels({
     await writeBatches(customerRest, "customer_ad_radar_cards", cards, "card_id");
     await writeBatches(customerRest, "customer_ad_radar_creative_versions", versions, "id");
 
-    const emailLocations = buildEmailLocationProjections(agentRows, revision, publishedAt);
-    await writeBatches(customerRest, "research_email_location_projections", emailLocations, "email_sha256");
     await customerRest(`customer_ad_radar_creative_versions?source_revision=neq.${revision}`, { method: "DELETE" });
     await customerRest(`customer_ad_radar_cards?source_revision=neq.${revision}`, { method: "DELETE" });
-    await customerRest(`research_email_location_projections?source=eq.${EMAIL_LOCATION_SOURCE}&projected_at=lt.${encodeURIComponent(publishedAt)}`, { method: "DELETE" });
     await customerRest(`customer_ad_radar_publications?source_revision=eq.${revision}`, {
       method: "PATCH",
       body: JSON.stringify({
@@ -264,7 +271,7 @@ export async function publishCustomerReadModels({
         error: null,
       }),
     });
-    return { skipped: false, revision, cards: cards.length, versions: versions.length, emailLocations: emailLocations.length };
+    return { skipped: false, revision, cards: cards.length, versions: versions.length };
   } catch (error) {
     await customerRest(`customer_ad_radar_publications?source_revision=eq.${revision}`, {
       method: "PATCH",
