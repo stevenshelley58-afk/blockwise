@@ -23,14 +23,14 @@ type VerifyOptions = {
 
 const DEFAULT_MAX_AGE_SECONDS = 10 * 60;
 const ALLOWED_RETURN_PATHS = new Set([
-  "/results",
+  "/performance",
   "/ad-builder",
   "/settings#connections",
 ]);
 
 export function sanitizeOAuthReturnPath(value: string | null | undefined): string {
   const path = value?.trim();
-  return path && ALLOWED_RETURN_PATHS.has(path) ? path : "/results";
+  return path && ALLOWED_RETURN_PATHS.has(path) ? path : "/performance";
 }
 
 export function createOAuthStatePayload(input: {

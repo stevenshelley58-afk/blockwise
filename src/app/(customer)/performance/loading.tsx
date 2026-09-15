@@ -5,9 +5,9 @@ import {
   SkeletonStatRow,
 } from "@/components/skeletons/page-skeletons";
 
-export default function ResultsLoading() {
+export default function PerformanceLoading() {
   return (
-    <SkeletonPage label="Results">
+    <SkeletonPage label="Performance">
       <SkeletonPageHead />
       <SkeletonStatRow count={6} />
       <div className="grid gap-3.5 md:grid-cols-3">

@@ -104,7 +104,7 @@ export function HomeSetupCard({
               </Button>
             </div>
             <Link
-              href="/results"
+              href="/performance"
               className="mt-auto inline-flex items-center gap-1.5 pt-4 text-[12.5px] font-bold text-muted-foreground transition-colors duration-150 hover:text-foreground"
             >
               {copy.viewPerformance}

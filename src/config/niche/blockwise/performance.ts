@@ -1,7 +1,7 @@
 import type { PerformanceCopy } from "../niche";
 
 export const performance: PerformanceCopy = {
-  title: "Results",
+  title: "Performance",
   subtitle: "Spend, leads and cost per lead across your live ads.",
   ranges: { d1: "1 day", d7: "7 days", d30: "30 days" },
   charts: {

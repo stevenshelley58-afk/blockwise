@@ -182,7 +182,7 @@ export function PublishFlow({
   const creationLocked = receipt?.mode === "publish" && Boolean(receipt.planId);
   const pending = submitting || (receipt?.mode === "publish" && ["publishing", "activating"].includes(receipt.status ?? ""));
   const outcome = publishOutcome(receipt);
-  const performanceUrl = "/results?planId=" + encodeURIComponent(receipt?.planId ?? "");
+  const performanceUrl = "/performance?planId=" + encodeURIComponent(receipt?.planId ?? "");
   const previewPath = format === "feed" ? initialState?.revision.feedPngPath : initialState?.revision.storyPngPath;
 
   const onPinStateChange = useCallback((state: { pinned: boolean; revision: number | null; form: InstantForm | null }) => {

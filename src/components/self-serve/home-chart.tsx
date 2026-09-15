@@ -74,7 +74,7 @@ export function HomePerformanceChart({ daily }: { daily: HomeDailyPoint[] | null
           <p className="mt-0.5 text-[12.5px] text-muted-foreground">{copy.subtitle}</p>
         </div>
         <Button asChild variant="ghost-pill" size="pill" className="shrink-0">
-          <Link href="/results">{copy.viewPerformance}</Link>
+          <Link href="/performance">{copy.viewPerformance}</Link>
         </Button>
       </div>
 

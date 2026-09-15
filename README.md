@@ -6,9 +6,9 @@ Frank supplies the template-generation interface; Hermes executes generation and
 
 ## Product surfaces
 
-- Customer routes: `/ad-builder`, `/leads`, `/results`, `/settings`, and `/connect-meta`
+- Customer routes: `/ad-builder`, `/leads`, `/performance`, `/settings`, and `/connect-meta`
 - Restricted operator routes: `/operator`, `/workforce`, and `/model-control`
-- Monitor/reporting: `/results` (`/monitor` redirects there)
+- Monitor/reporting: `/performance` (`/monitor` redirects there)
 
 The ordinary customer flow uses plain language and keeps campaigns, ad sets,
 placements, provider IDs, and latitude/longitude details out of the way. Exact

@@ -33,7 +33,7 @@ const SHEET_DANGER_CLASS =
 function customerItems(): { primaryItems: MobileNavItem[]; overflowItems: MobileNavItem[] } {
   const allItems = navByVariant.self_serve;
   const byHref = (href: string) => allItems.find((item) => item.href === href);
-  const primaryItems = [byHref("/self-serve"), byHref("/ad-builder"), byHref("/results"), byHref("/leads")]
+  const primaryItems = [byHref("/self-serve"), byHref("/ad-builder"), byHref("/performance"), byHref("/leads")]
     .filter((item): item is NavItem => Boolean(item));
   const primaryHrefs = new Set(primaryItems.map((item) => item.href));
   return { primaryItems, overflowItems: allItems.filter((item) => !primaryHrefs.has(item.href)) };
@@ -83,7 +83,7 @@ export function MobileBottomNav({ homeHref = "/self-serve", account, homePilot =
               ? House
               : item.href === "/ad-builder"
                 ? Palette
-                : item.href === "/results"
+                : item.href === "/performance"
                   ? ChartNoAxesCombined
                   : item.href === "/leads"
                     ? UsersRound

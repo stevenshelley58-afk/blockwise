@@ -28,7 +28,7 @@ test("only a missing Meta connection counts as the connect decision", () => {
 
 test("Results opens the example report when nothing is connected", async () => {
   const page = await readFile(
-    new URL("../src/app/(customer)/results/page.tsx", import.meta.url),
+    new URL("../src/app/(customer)/performance/page.tsx", import.meta.url),
     "utf8",
   );
 
@@ -42,7 +42,7 @@ test("Results opens the example report when nothing is connected", async () => {
 
 test("Results opens on the same week Home's figure row shows", async () => {
   const page = await readFile(
-    new URL("../src/app/(customer)/results/page.tsx", import.meta.url),
+    new URL("../src/app/(customer)/performance/page.tsx", import.meta.url),
     "utf8",
   );
 

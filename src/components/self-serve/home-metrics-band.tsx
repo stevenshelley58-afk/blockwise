@@ -145,7 +145,7 @@ export function HomeMetricsBand({
         ? {
             text: copy.unavailableNote,
             action: hasProvider ? copy.viewPerformance : copy.unavailableAction,
-            href: hasProvider ? "/results" : "/connect-meta",
+            href: hasProvider ? "/performance" : "/connect-meta",
           }
         : null;
 
@@ -167,7 +167,7 @@ export function HomeMetricsBand({
             demo and unavailable tones carry a single recovery action instead. */}
         {tone === "live" ? (
           <Link
-            href="/results"
+            href="/performance"
             className="ml-auto inline-flex items-center gap-1 text-[13px] font-semibold text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {copy.viewPerformance}

@@ -156,7 +156,7 @@ test("reset and denied access flows avoid dead-end redirects", () => {
   assert.doesNotMatch(resetPassword, /router\.replace\("\/login"\)/);
 
   assert.match(pageGuards, /\/access-unavailable\?reason=/);
-  assert.doesNotMatch(pageGuards, /\/results\?error=access_denied/);
+  assert.doesNotMatch(pageGuards, /\/performance\?error=access_denied/);
   assert.match(accessPage, /No workspace found/);
   assert.match(accessActions, /supabase\.auth\.signOut\(\)/);
   assert.match(accessActions, /router\.replace\(target === "signup" \? "\/signup" : "\/login"\)/);

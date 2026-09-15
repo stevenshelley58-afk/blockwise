@@ -26,7 +26,7 @@ test.describe("simple customer app acceptance", () => {
   for (const width of [320, 375, 390, 414, 768, 1440]) {
     test(`key app screens fit at ${width}px`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: width >= 768 ? 900 : 844 });
-      for (const route of ["/ad-builder", "/ad-builder/templates", "/ad-builder/library?view=assets", "/ad-builder/library?view=ads", "/ad-builder/brand", "/results", "/results?example=1", "/leads", "/settings", "/connect-meta"]) {
+      for (const route of ["/ad-builder", "/ad-builder/templates", "/ad-builder/library?view=assets", "/ad-builder/library?view=ads", "/ad-builder/brand", "/performance", "/performance?example=1", "/leads", "/settings", "/connect-meta"]) {
         await page.goto(route);
         await expect(page).not.toHaveURL(/\/login/);
         await expect(page.getByRole("main")).toBeVisible();
@@ -58,7 +58,7 @@ test.describe("simple customer app acceptance", () => {
 
   test("working screens keep controls available at double-size zoom", async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
-    for (const route of ["/ad-builder", "/settings", "/results"]) {
+    for (const route of ["/ad-builder", "/settings", "/performance"]) {
       await page.goto(route);
       await page.evaluate(() => { document.body.style.zoom = "2"; });
       await expect(page.locator("main[aria-busy=true]")).toHaveCount(0);

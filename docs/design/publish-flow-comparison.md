@@ -30,7 +30,7 @@ campaign cannot reuse an ad set belonging to another campaign. Validate objectiv
 account, capture destination and category compatibility before reusing parents.
 Multiple destinations must disclose duplication, parent-level budget effects,
 partial failures and retry behaviour. Existing campaigns and ads are managed
-from Results, not through a miniature Ads Manager in the default publish path.
+from Performance, not through a miniature Ads Manager in the default publish path.
 
 Separate ad sets are warranted for independently controlled geography, schedule,
 budget or optimisation. Existing parent settings must not be silently overwritten,

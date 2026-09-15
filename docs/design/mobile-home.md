@@ -2,7 +2,7 @@
 
 This document supersedes the earlier September 2026 mobile Home pilot guidance.
 It applies only to `/self-serve` and refines the existing Blockwise design
-system. It does not change Ads, Results, Leads, operator pages, or the shared
+system. It does not change Ads, Performance, Leads, operator pages, or the shared
 navigation contract.
 
 ## Product intent
@@ -24,7 +24,7 @@ Home must not become an identity, setup, reporting, or administration surface:
   details remain available inside the accessible account menu.
 - Do not put a setup checklist, progress dashboard, activation summary, or
   onboarding administration panel on Home.
-- Do not put Results metrics, performance telemetry, billing, provider controls,
+- Do not put Performance metrics, performance telemetry, billing, provider controls,
   or operator/admin tools on Home. Link to the permitted route when needed.
 - Do not use placeholder “recommended” cards to fill an empty state.
 
@@ -42,7 +42,7 @@ Home must not become an identity, setup, reporting, or administration surface:
   route or resolver-backed action and must preserve return/back state.
 - Keep recommendations secondary to the creative. Show only useful, actionable
   items, with a concise rationale when the rationale is supplied by data.
-- Avoid identity/setup/results/admin summaries, decorative hero copy, and
+- Avoid identity/setup/performance/admin summaries, decorative hero copy, and
   repeated headings.
 
 ## Actions and controls
@@ -57,7 +57,7 @@ Home must not become an identity, setup, reporting, or administration surface:
   container; it remains an accessible 44px target on mobile.
 - Home does not show the sidebar theme toggle. This does not add a full-page
   dark Home theme; the existing sidebar theme behavior remains intact.
-- The five mobile destinations remain Home, Ads, Results, Leads, and More.
+- The five mobile destinations remain Home, Ads, Performance, Leads, and More.
   Home's pilot vocabulary is `House`, `Megaphone`,
   `ChartNoAxesCombined`, `UsersRound`, and `Ellipsis`, using consistent 22px
   strokes. Other routes retain their current navigation treatment.
@@ -90,7 +90,7 @@ keyboard focus.
 - Are every recommendation and action backed by existing product data and a
   real route?
 - Is the CTA bounded rather than full width at every viewport?
-- Is Home free of identity, setup, Results, billing, and admin summaries?
+- Is Home free of identity, setup, Performance, billing, and admin summaries?
 - Does the account menu retain details without putting them in the closed
   header?
 - Does the Home-only icon/header treatment leave other routes unchanged?

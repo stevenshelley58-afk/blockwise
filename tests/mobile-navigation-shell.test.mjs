@@ -16,10 +16,10 @@ test("customer mobile navigation keeps the five permanent destinations", () => {
   assert.deepEqual(tabs.map((item) => [item.href, item.mobileLabel]), [
     ["/self-serve", "Home"],
     ["/ad-builder", "Ads"],
-    ["/results", "Results"],
+    ["/performance", "Performance"],
     ["/leads", "Leads"],
   ]);
-  assert.match(mobileNav, /const primaryItems = \[byHref\("\/self-serve"\), byHref\("\/ad-builder"\), byHref\("\/results"\), byHref\("\/leads"\)\]/);
+  assert.match(mobileNav, /const primaryItems = \[byHref\("\/self-serve"\), byHref\("\/ad-builder"\), byHref\("\/performance"\), byHref\("\/leads"\)\]/);
   assert.match(mobileNav, /<span>\{copy\.more\}<\/span>/);
 });
 

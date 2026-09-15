@@ -100,12 +100,12 @@ test("provider tokens encrypt with last-four metadata and decrypt with the same 
 });
 
 test("OAuth return paths are allowlisted to live customer routes", () => {
-  assert.equal(sanitizeOAuthReturnPath("/results"), "/results");
+  assert.equal(sanitizeOAuthReturnPath("/performance"), "/performance");
   assert.equal(sanitizeOAuthReturnPath("/ad-builder"), "/ad-builder");
   // The retired /onboarding screen is no longer an allowed return path.
-  assert.equal(sanitizeOAuthReturnPath("/onboarding"), "/results");
-  assert.equal(sanitizeOAuthReturnPath("https://evil.example/ad-builder"), "/results");
-  assert.equal(sanitizeOAuthReturnPath("/settings"), "/results");
+  assert.equal(sanitizeOAuthReturnPath("/onboarding"), "/performance");
+  assert.equal(sanitizeOAuthReturnPath("https://evil.example/ad-builder"), "/performance");
+  assert.equal(sanitizeOAuthReturnPath("/settings"), "/performance");
 
   const payload = createOAuthStatePayload({
     provider: "meta",
@@ -137,7 +137,7 @@ test("Meta OAuth state signs a safe Ad Builder resume path and campaign identifi
   assert.equal(payload.returnPath, "/ad-builder");
   assert.equal(verified.ok && verified.payload.campaignId, "campaign_123");
   assert.equal(sanitizeOAuthCampaignId("../../billing"), null);
-  assert.equal(sanitizeOAuthReturnPath("//evil.example"), "/results");
+  assert.equal(sanitizeOAuthReturnPath("//evil.example"), "/performance");
 });
 
 test("Meta connect and callback preserve the signed resume path and campaign", () => {
@@ -150,5 +150,5 @@ test("Meta connect and callback preserve the signed resume path and campaign", (
   assert.match(connectRoute, /campaignId,/);
   assert.match(callbackRoute, /providerReturnUrl\(verified\.payload\.returnPath/);
   assert.match(callbackRoute, /verified\.payload\.campaignId/);
-  assert.doesNotMatch(callbackRoute, /const finalUrl = .*\/results/);
+  assert.doesNotMatch(callbackRoute, /const finalUrl = .*\/performance/);
 });

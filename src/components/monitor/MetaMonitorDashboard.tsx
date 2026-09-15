@@ -48,7 +48,7 @@ import { PerformanceFigureRow, compareTail } from "./PerformanceFigureRow";
 import { SuburbBarChart } from "./SuburbBarChart";
 
 // Recharts is heavy; load the chart bundles on demand so they don't ship in the
-// initial /results JS on mobile. Behaviour is unchanged — charts still render client-side.
+// initial /performance JS on mobile. Behaviour is unchanged — charts still render client-side.
 const SmoothAreaChart = dynamic(() => import("./SmoothAreaChart").then((m) => m.SmoothAreaChart), { ssr: false });
 const BudgetPacingChart = dynamic(() => import("./BudgetPacingChart").then((m) => m.BudgetPacingChart), { ssr: false });
 

@@ -20,7 +20,7 @@ export default function robots(): MetadataRoute.Robots {
           "/ad-builder",
           "/property-check",
           "/leads",
-          "/results",
+          "/performance",
           "/connect-meta",
           "/help",
           "/ad-radar",

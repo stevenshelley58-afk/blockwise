@@ -57,7 +57,7 @@ test("dynamic customer navigation has reusable loading boundaries and router cac
 test("Home and Performance read database snapshots without blocking on Meta", () => {
   const home = read("src/app/(customer)/self-serve/page.tsx");
   const homeLoader = read("src/lib/home/home-dashboard-data.ts");
-  const performance = read("src/app/(customer)/results/page.tsx");
+  const performance = read("src/app/(customer)/performance/page.tsx");
 
   assert.match(home, /op: "db\.home_dashboard"/);
   assert.match(homeLoader, /loadReportingSnapshot/);

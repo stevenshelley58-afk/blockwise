@@ -37,7 +37,7 @@ export function EmptyMetaState({
           </a>
           <Link
             className="inline-flex h-10 items-center rounded-full border border-(--line-heavy) bg-(--surface) px-4 text-[13px] font-bold text-foreground transition-colors hover:bg-(--surface-subtle)"
-            href="/results?example=1"
+            href="/performance?example=1"
           >
             {niche.copy.performance.viewExample}
           </Link>

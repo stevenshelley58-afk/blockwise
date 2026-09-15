@@ -26,7 +26,7 @@ async function handleCallback(request: NextRequest) {
   const origin = request.nextUrl.origin;
 
   if (!state) {
-    return NextResponse.redirect(new URL("/results?integration=meta&error=missing_code", origin));
+    return NextResponse.redirect(new URL("/performance?integration=meta&error=missing_code", origin));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -44,7 +44,7 @@ async function handleCallback(request: NextRequest) {
   });
 
   if (!verified.ok) {
-    return NextResponse.redirect(new URL("/results?integration=meta&error=invalid_state", origin));
+    return NextResponse.redirect(new URL("/performance?integration=meta&error=invalid_state", origin));
   }
 
   if (!code) {

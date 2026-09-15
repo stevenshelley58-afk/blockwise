@@ -20,7 +20,7 @@ test("reporting snapshots are versioned, service-owned, and Realtime-invalidated
 
 test("customer reporting routes never call Meta and manual refresh only queues work", () => {
   const route = read("src/app/api/monitor-dashboard/route.ts");
-  const page = read("src/app/(customer)/results/page.tsx");
+  const page = read("src/app/(customer)/performance/page.tsx");
   assert.match(route, /loadReportingSnapshot/);
   assert.match(route, /status: 304/);
   assert.match(route, /status: 202/);

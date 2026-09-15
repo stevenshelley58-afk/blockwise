@@ -103,12 +103,12 @@ const nextConfig: NextConfig = {
         destination: "https://blockwise.sale/:path*",
         permanent: true,
       },
-      { source: "/monitor", destination: "/results", permanent: false },
+      { source: "/monitor", destination: "/performance", permanent: false },
       { source: "/blog", destination: "/guides", permanent: true },
       { source: "/blog/:path*", destination: "/guides/:path*", permanent: true },
       { source: "/research", destination: "/self-serve", permanent: false },
       { source: "/research/:path*", destination: "/self-serve", permanent: false },
-      { source: "/campaigns", destination: "/results", permanent: false },
+      { source: "/campaigns", destination: "/performance", permanent: false },
     ];
   },
 

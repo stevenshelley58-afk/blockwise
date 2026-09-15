@@ -35,7 +35,7 @@ async function expectNav(page: Page, active?: string) {
   await expect(nav).toBeVisible();
   await expect(nav.getByRole("link", { name: "Home", exact: true })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Ads", exact: true })).toBeVisible();
-  await expect(nav.getByRole("link", { name: "Results", exact: true })).toBeVisible();
+  await expect(nav.getByRole("link", { name: "Performance", exact: true })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Leads", exact: true })).toBeVisible();
   await expect(nav.getByRole("button", { name: "More" })).toBeVisible();
   if (active) {
@@ -78,7 +78,7 @@ test.describe("customer mobile navigation regression", () => {
       await page.goto(`/self-serve`); await expectNav(page, "Home"); await expectNoOverlap(page); await page.screenshot({ path: testInfo.outputPath(`home-${viewport.width}-top.png`) });
       await page.evaluate(() => scrollTo(0, document.body.scrollHeight)); await expectNav(page, "Home"); await expectNoOverlap(page); await page.screenshot({ path: testInfo.outputPath(`home-${viewport.width}-scrolled.png`) });
       await page.goto(`/ad-builder`); await expectNav(page, "Ads"); await expectNoOverlap(page);
-      await page.goto(`/results`); await expectNav(page, "Results");
+      await page.goto(`/performance`); await expectNav(page, "Performance");
       await page.goto(`/leads`); await expectNav(page, "Leads");
     });
   }
@@ -137,11 +137,11 @@ test.describe("customer mobile navigation regression", () => {
     await page.keyboard.press("Escape"); await expect(contentSheet).toBeHidden();
     const original = page.url(); let asked = 0;
     page.once("dialog", async dialog => { asked += 1; await dialog.dismiss(); });
-    await page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("link", { name: "Results", exact: true }).click();
+    await page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("link", { name: "Performance", exact: true }).click();
     await expect(page).toHaveURL(original); expect(asked).toBe(1);
     page.once("dialog", async dialog => { asked += 1; await dialog.accept(); });
-    await page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("link", { name: "Results", exact: true }).click();
-    await expect(page).toHaveURL(/\/results/); expect(asked).toBe(2);
+    await page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("link", { name: "Performance", exact: true }).click();
+    await expect(page).toHaveURL(/\/performance/); expect(asked).toBe(2);
   });
 
   test("keeps the desktop shell available", async ({ page }) => {

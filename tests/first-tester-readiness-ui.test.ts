@@ -38,7 +38,7 @@ test("billing settings prefer friendly portal messages and hide billing manageme
 });
 
 test("Meta OAuth notices handle missing code and never echo unknown provider errors", () => {
-  const source = read("src/app/(customer)/results/page.tsx");
+  const source = read("src/app/(customer)/performance/page.tsx");
 
   assert.match(source, /error === "missing_code"/);
   assert.match(source, /Meta connection was cancelled or did not complete\. Try again\./);

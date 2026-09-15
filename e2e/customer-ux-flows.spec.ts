@@ -74,9 +74,9 @@ test.describe("customer UX flows", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     // No Meta connection: Performance goes straight to the labelled example
     // report, keeping Connect Meta in reach instead of a connect interstitial.
-    await page.goto("/results");
-    await expect(page).toHaveURL(/\/results$/);
-    await expect(page.getByRole("heading", { name: "Results", exact: true })).toBeVisible();
+    await page.goto("/performance");
+    await expect(page).toHaveURL(/\/performance$/);
+    await expect(page.getByRole("heading", { name: "Performance", exact: true })).toBeVisible();
     await expect(page.getByText("Demo numbers for an example account", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: "Connect Meta", exact: true }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Setup guide", exact: true })).toHaveCount(0);

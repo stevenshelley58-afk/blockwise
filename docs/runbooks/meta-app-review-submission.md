@@ -152,7 +152,7 @@ No follower content is displayed.
 >    Grant them with your test user.
 > 3. Settings shows the connected ad account, the Pages list
 >    (pages_show_list / pages_read_engagement) and asset pickers.
-> 4. Results/Monitor shows campaign insights: impressions, reach, clicks,
+> 4. Performance/Monitor shows campaign insights: impressions, reach, clicks,
 >    spend, leads (ads_read).
 > 5. Leads shows lead-form submissions retrieved from Meta
 >    (leads_retrieval). Use the Lead Ads Testing Tool to submit a test lead.
@@ -174,7 +174,7 @@ No follower content is displayed.
 ## 7. Screencasts — required content vs current script
 
 `scripts/record-meta-app-review.mjs` already walks privacy → data deletion →
-settings/connect → results → leads → ad-builder publish → approvals with
+settings/connect → performance → leads → ad-builder publish → approvals with
 per-permission annotations. Gaps to close before recording the final take:
 
 - [ ] **Show the real Facebook consent dialog.** Meta's screencast

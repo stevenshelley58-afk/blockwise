@@ -20,7 +20,7 @@ test("the customer registry declares unique destinations and at most five mobile
   assert.ok(items.every(item => item.icon && item.label));
   const tabs = items.filter(item => item.mobileLabel && (!item.feature || blockwise.features[item.feature]));
   assert.ok(tabs.length > 0 && tabs.length <= 5);
-  assert.deepEqual(tabs.map(item => item.href), ["/self-serve", "/ad-builder", "/results", "/leads"]);
+  assert.deepEqual(tabs.map(item => item.href), ["/self-serve", "/ad-builder", "/performance", "/leads"]);
 });
 
 

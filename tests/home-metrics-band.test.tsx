@@ -252,7 +252,7 @@ test("the band reports unavailable rather than guessing when reporting is absent
   assert.match(html, /No reporting for this workspace yet\./);
   // It says what is missing and offers the one way forward, rather than
   // rendering three empty figure slots that read as a broken table.
-  assert.match(html, /href="\/results"/);
+  assert.match(html, /href="\/performance"/);
   assert.match(html, /View performance/);
   assert.doesNotMatch(html, /Spend/);
   // A missing figure is never a zero, and never a demo dressed as delivery.

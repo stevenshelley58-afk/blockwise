@@ -562,7 +562,7 @@ async function recordWalkthrough({ baseUrl, session, workspaceId, campaignPack, 
 
   await gotoStep(
     page,
-    `${baseUrl}/results`,
+    `${baseUrl}/performance`,
     "ads_read",
     "Monitor reads Meta reporting so the customer can see spend, leads, CPL, and campaign status.",
   );

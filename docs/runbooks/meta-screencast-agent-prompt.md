@@ -35,7 +35,7 @@ Management Standard Access feature). Output goes to
    - `pages_show_list` / `pages_read_engagement`: Settings shows the Pages
      list and connected Page metadata after OAuth.
    - `ads_read` / `ads_management` / `business_management`: the
-     Results/Monitor screen displaying REAL insights for the connected ad
+     Performance/Monitor screen displaying REAL insights for the connected ad
      account — impressions, reach, clicks, spend must be visible on screen.
      Sample/demo-labelled data is an automatic rejection; verify the
      workspace has a live Meta connection first.
@@ -69,7 +69,7 @@ Management Standard Access feature). Output goes to
 
 1. Dry-run `node scripts/record-meta-app-review.mjs` against the review URL.
    It automates the in-product walkthrough (privacy page → data-deletion page
-   → Settings connect → Results → Leads → Ad Builder publish → Approvals) with
+   → Settings connect → Performance → Leads → Ad Builder publish → Approvals) with
    on-screen captions naming each permission, and outputs an annotated MP4.
    Reuse its flow and captions.
 2. The script cannot record the facebook.com consent dialog or Ads Manager.

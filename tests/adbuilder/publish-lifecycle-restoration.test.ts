@@ -5,7 +5,7 @@ import test from "node:test";
 const publishRoute = readFileSync("src/app/api/adbuilder/ads/[id]/publish/route.ts", "utf8");
 const activateRoute = readFileSync("src/app/api/adbuilder/ads/[id]/activate/route.ts", "utf8");
 const activation = readFileSync("src/lib/providers/adbuilder-activation.ts", "utf8");
-const resultsPage = readFileSync("src/app/(customer)/results/page.tsx", "utf8");
+const resultsPage = readFileSync("src/app/(customer)/performance/page.tsx", "utf8");
 const resultsDashboard = readFileSync("src/components/monitor/MetaMonitorDashboard.tsx", "utf8");
 const mutationWorker = readFileSync("src/lib/providers/meta-mutation-worker.ts", "utf8");
 

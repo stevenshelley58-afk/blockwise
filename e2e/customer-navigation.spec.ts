@@ -139,10 +139,10 @@ test.describe("customer navigation canary", () => {
     await settle(page);
     await assertNothingClipped(page);
     await page.screenshot({ path: testInfo.outputPath("customer-studio-desktop.png"), fullPage: true });
-    await page.goto("/results?workspaceId=" + encodeURIComponent(workspaceId!));
+    await page.goto("/performance?workspaceId=" + encodeURIComponent(workspaceId!));
     await expect(page.getByText(/recent sync/i)).toHaveCount(0);
-    await expect(page).toHaveURL(/\/results/);
-    await expect(page.getByRole("heading", { name: "Results", exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/performance/);
+    await expect(page.getByRole("heading", { name: "Performance", exact: true })).toBeVisible();
     // No Meta connection: Performance opens the example report instead of a
     // connect interstitial, labelled by the banner that carries the way out.
     await expect(page.getByText("Demo numbers for an example account", { exact: true }).first()).toBeVisible();
@@ -195,10 +195,10 @@ test.describe("customer navigation canary", () => {
       await page.screenshot({ path: testInfo.outputPath("customer-studio-" + width + ".png"), fullPage: true });
       await backToBlockwise.click();
       await expect(page).toHaveURL(/\/self-serve/);
-      await page.goto("/results?workspaceId=" + encodeURIComponent(workspaceId!));
+      await page.goto("/performance?workspaceId=" + encodeURIComponent(workspaceId!));
       await expect(page.getByText(/recent sync/i)).toHaveCount(0);
-      await expect(page).toHaveURL(/\/results/);
-      await expect(page.getByRole("heading", { name: "Results", exact: true })).toBeVisible();
+      await expect(page).toHaveURL(/\/performance/);
+      await expect(page.getByRole("heading", { name: "Performance", exact: true })).toBeVisible();
       // The example report replaces the connect interstitial, and is labelled.
       await expect(page.getByText("Demo numbers for an example account", { exact: true }).first()).toBeVisible();
       await expect(page.getByRole("link", { name: "Connect Meta", exact: true }).first()).toBeVisible();
