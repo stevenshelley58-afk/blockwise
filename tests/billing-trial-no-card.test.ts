@@ -7,7 +7,17 @@ import {
   findReusableCheckoutSession,
   markCheckoutSession,
 } from "../src/lib/billing/checkout-sessions.ts";
-import { validateStripePriceForOffer } from "../src/lib/billing/stripe-scaffold.ts";
+import { subscriptionRunsFullCheckoutTrial } from "../src/lib/billing/first-live-campaign.ts";
+import {
+  AD_STUDIO_CHECKOUT_TRIAL_VERSIONS,
+  BILLING_OFFERS,
+  getBillingOffer,
+  offerRunsCheckoutTrial,
+} from "../src/lib/billing/offers.ts";
+import {
+  buildCheckoutSessionRequest,
+  validateStripePriceForOffer,
+} from "../src/lib/billing/stripe-scaffold.ts";
 import { reportIndicatesMetaDelivery } from "../src/lib/trial/first-delivery.ts";
 import { loadTrialStatus } from "../src/lib/trial/trial-status.ts";
 
@@ -66,7 +76,12 @@ const okFacts = {
   billingAccessState: "unbilled",
   stripeSubscriptionId: null,
   managedScopeApprovedAt: null,
+  trialConsumedAt: null,
 };
+
+// Trial activation is a rollout control and is off unless explicitly enabled,
+// so every trial-expecting case states the rollout state it is testing.
+const trialOn = { activationEnabled: true } as const;
 
 test("checkout requires an owner or admin", () => {
   for (const role of ["member", "viewer", "operator"]) {
@@ -80,8 +95,10 @@ test("checkout requires an owner or admin", () => {
   const owner = evaluateCheckoutRequest({
     facts: okFacts,
     context: { role: "owner", product: "ad_studio" },
+    ...trialOn,
   });
   assert.equal(owner.ok, true);
+  if (owner.ok) assert.equal(owner.trialDays, 7);
 });
 
 test("checkout rejects unconfirmed or unsupported billing markets", () => {
@@ -136,12 +153,46 @@ test("checkout prevents duplicate subscriptions for paid, trialing, or recoverin
   });
   assert.equal(liveSubscription.ok, false);
 
-  // A fully canceled subscription may resubscribe.
+  // A fully canceled subscription may resubscribe, but never receives a
+  // second trial: the trial is a one-per-workspace cohort, not a per-attempt
+  // grant that reopens with Checkout.
   const resubscribe = evaluateCheckoutRequest({
     facts: { ...okFacts, stripeSubscriptionId: "sub_123", billingAccessState: "canceled" },
     context: { role: "owner", product: "ad_studio" },
+    ...trialOn,
   });
   assert.equal(resubscribe.ok, true);
+  if (resubscribe.ok) assert.equal(resubscribe.trialDays, 0);
+});
+
+test("trial activation is paused unless the rollout control is enabled", () => {
+  const paused = evaluateCheckoutRequest({
+    facts: okFacts,
+    context: { role: "owner", product: "ad_studio" },
+    activationEnabled: false,
+  });
+  assert.equal(paused.ok, false);
+  if (!paused.ok) assert.equal(paused.status, 503);
+
+  // Managed service is not part of the self-serve trial rollout and is
+  // unaffected by the control.
+  const managed = evaluateCheckoutRequest({
+    facts: { ...okFacts, managedScopeApprovedAt: "2026-09-06T00:00:00.000Z" },
+    context: { role: "owner", product: "managed" },
+    activationEnabled: false,
+  });
+  assert.equal(managed.ok, true);
+  if (managed.ok) assert.equal(managed.trialDays, 0);
+});
+
+test("a workspace that already consumed a trial subscribes without a second one", () => {
+  const returning = evaluateCheckoutRequest({
+    facts: { ...okFacts, trialConsumedAt: "2026-09-01T00:00:00.000Z" },
+    context: { role: "owner", product: "ad_studio" },
+    ...trialOn,
+  });
+  assert.equal(returning.ok, true);
+  if (returning.ok) assert.equal(returning.trialDays, 0);
 });
 
 // ---------------------------------------------------------------------------
@@ -182,26 +233,10 @@ async function withFetch(payload: unknown, run: () => Promise<void>) {
 
 test("the configured Stripe price is validated for amount, currency, interval, and active status", async () => {
   process.env.STRIPE_SECRET_KEY = "sk_test_placeholder";
+  // The real approved offer, so the guard cannot drift from shipping terms.
+  const offer = getBillingOffer("AU", "ad_studio");
   await withFetch(pricePayload({}), async () => {
-    await assert.doesNotReject(() =>
-      validateStripePriceForOffer(
-        {
-          key: "ad_studio_AU",
-          version: "2026-09-06",
-          market: "AU",
-          currency: "AUD",
-          product: "ad_studio",
-          recurringAmount: 24_900,
-          firstInvoiceAmount: 24_900,
-          trialDays: 0,
-          taxBehavior: "inclusive",
-          priceEnvKey: "STRIPE_AD_STUDIO_AUD_PRICE_ID",
-          triggeringRule: "trigger",
-          checkoutDisclosure: "disclosure",
-        },
-        billingEnv,
-      ),
-    );
+    await assert.doesNotReject(() => validateStripePriceForOffer(offer, billingEnv));
   });
 
   for (const overrides of [
@@ -212,25 +247,7 @@ test("the configured Stripe price is validated for amount, currency, interval, a
     { type: "one_time", recurring: null },
   ]) {
     await withFetch(pricePayload(overrides), async () => {
-      await assert.rejects(() =>
-        validateStripePriceForOffer(
-          {
-            key: "ad_studio_AU",
-            version: "2026-09-06",
-            market: "AU",
-            currency: "AUD",
-            product: "ad_studio",
-            recurringAmount: 24_900,
-            firstInvoiceAmount: 24_900,
-            trialDays: 0,
-            taxBehavior: "inclusive",
-            priceEnvKey: "STRIPE_AD_STUDIO_AUD_PRICE_ID",
-            triggeringRule: "trigger",
-            checkoutDisclosure: "disclosure",
-          },
-          billingEnv,
-        ),
-      );
+      await assert.rejects(() => validateStripePriceForOffer(offer, billingEnv));
     });
   }
 });
@@ -347,4 +364,126 @@ test("trial status passes through the pending-delivery state", async () => {
   );
   assert.equal(status?.trialState, "pending_delivery");
   assert.equal(status?.trialExpired, false);
+});
+
+// ---------------------------------------------------------------------------
+// Self-serve offer contract: 7-day card-collected trial, zero trial-start
+// invoice, renewal at the approved price.
+// ---------------------------------------------------------------------------
+
+test("the self-serve offer is a 7-day card-collected trial that renews at the approved price", () => {
+  const offer = BILLING_OFFERS.ad_studio_AU;
+
+  assert.equal(offer.trialDays, 7);
+  assert.equal(offer.trialStart, "stripe_checkout_trial");
+  assert.equal(offerRunsCheckoutTrial(offer), true);
+  // Zero due at trial start; the paid renewal is unchanged.
+  assert.equal(offer.firstInvoiceAmount, 0);
+  assert.equal(offer.recurringAmount, 24_900);
+  assert.equal(offer.currency, "AUD");
+  assert.equal(offer.taxBehavior, "inclusive");
+
+  // Renewal terms must be visible at the point of consent.
+  assert.match(offer.checkoutDisclosure, /renews automatically/i);
+  assert.match(offer.checkoutDisclosure, /A\$249 per month/i);
+  assert.match(offer.checkoutDisclosure, /Cancel any time/i);
+  assert.match(offer.checkoutDisclosure, /Meta ad spend is separate/i);
+});
+
+test("self-serve copy never advertises a no-card trial", () => {
+  const offer = BILLING_OFFERS.ad_studio_AU;
+  for (const copy of [offer.triggeringRule, offer.checkoutDisclosure, offer.checkoutDisclosureNoTrial]) {
+    assert.doesNotMatch(copy, /never requires a card/i);
+    assert.doesNotMatch(copy, /no[- ]card trial/i);
+  }
+  // Download legitimately needs no card, and must stay stated.
+  assert.match(offer.triggeringRule, /download/i);
+});
+
+test("the trial cohort is explicit and covers the current offer version", () => {
+  assert.ok(
+    AD_STUDIO_CHECKOUT_TRIAL_VERSIONS.includes(BILLING_OFFERS.ad_studio_AU.version),
+    "bumping the ad studio offer version must be paired with a deliberate cohort decision",
+  );
+  // Legacy card-on-file trial cohorts, and the no-trial version that replaced them.
+  assert.equal(AD_STUDIO_CHECKOUT_TRIAL_VERSIONS.includes("2026-07-27"), true);
+  assert.equal(AD_STUDIO_CHECKOUT_TRIAL_VERSIONS.includes("2026-07-30"), true);
+  assert.equal(AD_STUDIO_CHECKOUT_TRIAL_VERSIONS.includes("2026-09-06"), false);
+  // Managed service never runs a Checkout trial.
+  assert.equal(offerRunsCheckoutTrial(BILLING_OFFERS.managed_AU), false);
+});
+
+// ---------------------------------------------------------------------------
+// Checkout request building: the trial is requested, and never invented.
+// ---------------------------------------------------------------------------
+
+function checkoutInput(
+  overrides: Partial<Parameters<typeof buildCheckoutSessionRequest>[0]> = {},
+): Parameters<typeof buildCheckoutSessionRequest>[0] {
+  return {
+    workspaceId: "workspace-1",
+    market: "AU",
+    currency: "AUD",
+    product: "ad_studio",
+    customerEmail: "owner@example.com",
+    successUrl: "https://blockwise.sale/settings?billing=success",
+    cancelUrl: "https://blockwise.sale/settings",
+    ...overrides,
+  };
+}
+
+test("Checkout requests a full 7-day trial with a zero trial-start invoice", () => {
+  const { params } = buildCheckoutSessionRequest(checkoutInput(), billingEnv);
+
+  assert.equal(params["subscription_data[trial_period_days]"], 7);
+  assert.equal(
+    params["subscription_data[trial_settings][end_behavior][missing_payment_method]"],
+    "cancel",
+  );
+  assert.equal(params["metadata[trial_days]"], 7);
+  assert.equal(params["metadata[first_invoice_amount]"], 0);
+  assert.equal(params["metadata[renewal_amount]"], 24_900);
+  // A card is always collected, and consent text describes the real terms.
+  assert.equal(params["payment_method_collection"], "always");
+  assert.equal(params["custom_text[submit][message]"], BILLING_OFFERS.ad_studio_AU.checkoutDisclosure);
+});
+
+test("a non-trial Checkout charges at Checkout and discloses no trial", () => {
+  const { params } = buildCheckoutSessionRequest(checkoutInput({ trialDays: 0 }), billingEnv);
+
+  assert.equal(params["subscription_data[trial_period_days]"], undefined);
+  assert.equal(params["metadata[trial_days]"], 0);
+  assert.equal(params["metadata[first_invoice_amount]"], 24_900);
+  assert.equal(
+    params["custom_text[submit][message]"],
+    BILLING_OFFERS.ad_studio_AU.checkoutDisclosureNoTrial,
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Legacy hook containment: publishing must not end a new-cohort trial early.
+// ---------------------------------------------------------------------------
+
+test("first publish cannot end a new-cohort trial early", () => {
+  const newCohort = {
+    id: "sub_new",
+    status: "trialing",
+    metadata: { offer_key: "ad_studio_AU", offer_version: BILLING_OFFERS.ad_studio_AU.version },
+  };
+  assert.equal(subscriptionRunsFullCheckoutTrial(newCohort), true);
+
+  // The version that replaced the legacy trial is not a trial cohort.
+  const legacyNoTrial = {
+    id: "sub_legacy",
+    status: "trialing",
+    metadata: { offer_key: "ad_studio_AU", offer_version: "2026-09-06" },
+  };
+  assert.equal(subscriptionRunsFullCheckoutTrial(legacyNoTrial), false);
+
+  // Managed service is never in the self-serve trial cohort.
+  const managed = { id: "sub_managed", status: "trialing", metadata: { offer_key: "managed_AU" } };
+  assert.equal(subscriptionRunsFullCheckoutTrial(managed), false);
+
+  // An unknown version must not be treated as a trial cohort.
+  assert.equal(subscriptionRunsFullCheckoutTrial({ id: "sub_unknown" }), false);
 });

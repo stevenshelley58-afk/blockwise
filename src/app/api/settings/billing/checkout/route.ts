@@ -8,6 +8,7 @@ import {
   recordCheckoutSession,
 } from "@/lib/billing/checkout-sessions";
 import { isBillingConfigured, createCheckoutSession, findReusableStripeCheckoutSession } from "@/lib/billing/stripe-scaffold";
+import { findTrialConsumedAt } from "@/lib/billing/trial-cohort";
 import { publicOrigin } from "@/lib/config/public-origin";
 import { getBillingOffer } from "@/lib/billing/offers";
 import type { BillingProduct } from "@/lib/billing/offers";
@@ -43,6 +44,7 @@ export async function POST(request: NextRequest) {
   const [
     { data: ws, error: workspaceError },
     { data: activation, error: activationError },
+    trialConsumedAt,
   ] = await Promise.all([
     service
       .from("workspaces")
@@ -56,6 +58,7 @@ export async function POST(request: NextRequest) {
       .select("country_confirmed_at")
       .eq("workspace_id", access.workspaceId)
       .maybeSingle(),
+    findTrialConsumedAt(service, access.workspaceId),
   ]);
   if (workspaceError) {
     return NextResponse.json({ error: "Couldn't load the workspace billing market." }, { status: 500 });
@@ -79,6 +82,7 @@ export async function POST(request: NextRequest) {
       managedScopeApprovedAt: (ws as { managed_scope_approved_at?: unknown } | null)?.managed_scope_approved_at as
         | string
         | null,
+      trialConsumedAt,
     },
     context: { role: access.role, product },
   });
@@ -120,6 +124,9 @@ export async function POST(request: NextRequest) {
       stripeCustomerId,
       customerEmail,
       userId: profile.user?.id ?? null,
+      // The trial decision is made once, in checkout-policy, so the consent
+      // text and metadata always describe what this customer actually gets.
+      trialDays: decision.trialDays,
       successUrl: `${publicOrigin(request.url)}/settings?billing=success`,
       cancelUrl: `${publicOrigin(request.url)}/settings`,
       idempotencyKey: checkoutIdempotencyKey(access.workspaceId, product, body.clientMutationId),

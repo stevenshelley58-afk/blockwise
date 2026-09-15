@@ -101,6 +101,13 @@ export type CheckoutSessionInput = {
   successUrl: string;
   cancelUrl: string;
   acceptedAt?: string;
+  /**
+   * Effective trial days for this Checkout. Defaults to the offer's own trial.
+   * Callers pass 0 for a customer who is not trial-eligible, so the trial
+   * decision is made once in checkout-policy and the consent text and metadata
+   * always describe what the customer actually receives.
+   */
+  trialDays?: number;
   idempotencyKey?: string | null;
 };
 
@@ -231,6 +238,13 @@ export function buildCheckoutSessionRequest(
   const userId = input.userId?.trim() || null;
   const stripeCustomerId = input.stripeCustomerId?.trim() || null;
   const acceptedAt = input.acceptedAt ?? new Date().toISOString();
+  const effectiveTrialDays = input.trialDays ?? offer.trialDays;
+  const grantsTrial = offer.product === "ad_studio" && effectiveTrialDays > 0;
+  // A granted trial produces a zero-value first invoice; without a trial the
+  // customer is charged the renewal amount at Checkout. Never read this from
+  // offer.firstInvoiceAmount, which describes the trial case only.
+  const firstInvoiceAmount = grantsTrial ? 0 : offer.recurringAmount;
+  const disclosure = grantsTrial ? offer.checkoutDisclosure : offer.checkoutDisclosureNoTrial;
   const acceptanceMetadata: StripeFormParams = {
     "metadata[workspace_id]": input.workspaceId,
     "metadata[offer_key]": offer.key,
@@ -238,7 +252,8 @@ export function buildCheckoutSessionRequest(
     "metadata[accepted_at]": acceptedAt,
     "metadata[market]": offer.market,
     "metadata[currency]": offer.currency,
-    "metadata[first_invoice_amount]": offer.firstInvoiceAmount,
+    "metadata[trial_days]": effectiveTrialDays,
+    "metadata[first_invoice_amount]": firstInvoiceAmount,
     "metadata[renewal_amount]": offer.recurringAmount,
     "metadata[triggering_rule]": offer.triggeringRule,
   };
@@ -267,7 +282,7 @@ export function buildCheckoutSessionRequest(
     "tax_id_collection[enabled]": true,
     "consent_collection[terms_of_service]": "required",
     "managed_payments[enabled]": false,
-    "custom_text[submit][message]": offer.checkoutDisclosure,
+    "custom_text[submit][message]": disclosure,
     payment_method_collection: "always",
     ...(stripeCustomerId
       ? {
@@ -275,9 +290,9 @@ export function buildCheckoutSessionRequest(
           "customer_update[name]": "auto",
         }
       : {}),
-    ...(offer.product === "ad_studio" && offer.trialDays > 0
+    ...(grantsTrial
       ? {
-          "subscription_data[trial_period_days]": offer.trialDays,
+          "subscription_data[trial_period_days]": effectiveTrialDays,
           "subscription_data[trial_settings][end_behavior][missing_payment_method]": "cancel",
         }
       : {}),

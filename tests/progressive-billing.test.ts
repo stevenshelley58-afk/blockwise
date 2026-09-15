@@ -8,6 +8,7 @@ import {
   reconciliationEventForSubscription,
 } from "../src/lib/billing/billing-domain.ts";
 import {
+  AD_STUDIO_TRIAL_OFFER_VERSION,
   BILLING_OFFER_VERSION,
   BILLING_OFFERS,
   currencyForMarket,
@@ -26,17 +27,21 @@ const billingEnv: NodeJS.ProcessEnv = {
 } as NodeJS.ProcessEnv;
 
 test("offer catalog encodes the approved A$ amounts and tax behavior (Australia only)", () => {
-  assert.equal(BILLING_OFFERS.ad_studio_AU.firstInvoiceAmount, 24_900);
+  // The self-serve offer is a card-collected 7-day trial: nothing is due at
+  // trial start, and the paid renewal is the approved A$249.
+  assert.equal(BILLING_OFFERS.ad_studio_AU.firstInvoiceAmount, 0);
   assert.equal(BILLING_OFFERS.ad_studio_AU.recurringAmount, 24_900);
-  assert.equal(BILLING_OFFERS.ad_studio_AU.trialDays, 0);
+  assert.equal(BILLING_OFFERS.ad_studio_AU.trialDays, 7);
+  assert.equal(BILLING_OFFERS.ad_studio_AU.trialStart, "stripe_checkout_trial");
   assert.equal(BILLING_OFFERS.ad_studio_AU.taxBehavior, "inclusive");
   assert.equal(BILLING_OFFERS.managed_AU.recurringAmount, 150_000);
   assert.equal(BILLING_OFFERS.managed_AU.firstInvoiceAmount, 150_000);
   assert.equal(BILLING_OFFERS.managed_AU.trialDays, 0);
+  assert.equal(BILLING_OFFERS.managed_AU.trialStart, "none");
   assert.equal(currencyForMarket("AU"), "AUD");
 });
 
-test("ad-studio Checkout charges the full monthly price with no trial, discount, or coupon", () => {
+test("ad-studio Checkout starts a 7-day trial with a zero trial-start invoice", () => {
   const result = buildCheckoutSessionRequest(
     {
       workspaceId: "workspace-1",
@@ -48,23 +53,27 @@ test("ad-studio Checkout charges the full monthly price with no trial, discount,
       userId: "user-1",
       successUrl: "https://blockwise.sale/settings?billing=success",
       cancelUrl: "https://blockwise.sale/settings",
-      acceptedAt: "2026-09-06T00:00:00.000Z",
+      acceptedAt: "2026-09-15T00:00:00.000Z",
     },
     billingEnv,
   );
 
   assert.equal(result.params["line_items[0][price]"], "price_self_au");
   assert.equal(result.params["discounts[0][coupon]"], undefined);
-  assert.equal(result.params["subscription_data[trial_period_days]"], undefined);
+  // The trial is Stripe's, not an intro coupon or a discount.
+  assert.equal(result.params["subscription_data[trial_period_days]"], 7);
   assert.equal(result.params.payment_method_collection, "always");
   assert.equal(result.params.billing_address_collection, "required");
   assert.equal(result.params["automatic_tax[enabled]"], true);
   assert.equal(result.params["tax_id_collection[enabled]"], true);
   assert.equal(result.params["consent_collection[terms_of_service]"], "required");
-  assert.equal(result.params["metadata[offer_version]"], BILLING_OFFER_VERSION);
-  assert.equal(result.params["metadata[first_invoice_amount]"], 24_900);
+  assert.equal(result.params["metadata[offer_version]"], AD_STUDIO_TRIAL_OFFER_VERSION);
+  assert.equal(result.params["metadata[trial_days]"], 7);
+  assert.equal(result.params["metadata[first_invoice_amount]"], 0);
   assert.equal(result.params["metadata[renewal_amount]"], 24_900);
-  assert.match(String(result.params["metadata[triggering_rule]"]), /never requires a card/);
+  // The triggering rule must state the card requirement, never a no-card trial.
+  assert.match(String(result.params["metadata[triggering_rule]"]), /needs a card/);
+  assert.doesNotMatch(String(result.params["metadata[triggering_rule]"]), /never requires a card/);
   assert.equal(result.params["customer_update[address]"], "auto");
 });
 
@@ -137,11 +146,32 @@ test("billing domain applies a Checkout event once and records its accepted offe
   assert.equal(first.outcome, "applied");
   assert.equal(replay.outcome, "duplicate");
   assert.equal(mock.workspaceUpdates.length, 1);
-  // Current offers have no billing trial: the subscription events decide access.
+  // The no-trial offer version grants no billing trial here: the subscription
+  // events decide access.
   assert.equal("billing_access_state" in mock.workspaceUpdates[0].patch, false);
   assert.equal(mock.acceptances.length, 1);
   assert.equal(mock.acceptances[0].offer_version, BILLING_OFFER_VERSION);
   assert.equal(mock.eventStatuses.get("evt_checkout"), "applied");
+});
+
+test("a new-cohort Checkout event marks the workspace trialing from its offer cohort", async () => {
+  const mock = createBillingMock();
+  const event = checkoutEvent("evt_checkout_trial", AD_STUDIO_TRIAL_OFFER_VERSION);
+
+  await applyStripeBillingEvent(mock.client as never, event);
+
+  assert.equal(mock.workspaceUpdates[0].patch.billing_access_state, "trialing");
+  assert.equal(mock.workspaceUpdates[0].patch.stripe_subscription_status, "trialing");
+  assert.equal(mock.workspaceUpdates[0].patch.billing_offer_version, AD_STUDIO_TRIAL_OFFER_VERSION);
+});
+
+test("an unknown offer version is not treated as a trial cohort", async () => {
+  const mock = createBillingMock();
+  const event = checkoutEvent("evt_checkout_unknown", "2099-01-01");
+
+  await applyStripeBillingEvent(mock.client as never, event);
+
+  assert.equal("billing_access_state" in mock.workspaceUpdates[0].patch, false);
 });
 
 test("legacy ad-studio Checkout events still mark the workspace as trialing", async () => {

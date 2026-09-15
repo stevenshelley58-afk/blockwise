@@ -1,5 +1,6 @@
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 import type { StripeObject } from "./stripe-scaffold.ts";
+import { offerVersionRunsCheckoutTrial } from "./offers.ts";
 import { requestDeadline } from "../providers/request-deadline.ts";
 
 /** Matches the Stripe deadline used by the scaffold client. */
@@ -55,6 +56,21 @@ export async function validateFirstLiveCampaignBilling(input: {
   return { subscriptionId, subscription };
 }
 
+/**
+ * True when this subscription belongs to a cohort whose trial is the
+ * customer's full 7-day Blockwise trial.
+ *
+ * Publishing must never end such a trial early: the customer was promised the
+ * full trial and is charged at trial end. The cohort is read from the offer
+ * version recorded on the subscription by Checkout, never inferred from a
+ * version comparison.
+ */
+export function subscriptionRunsFullCheckoutTrial(subscription: StripeObject): boolean {
+  const offerKey = metadataValue(subscription, "offer_key");
+  const offerVersion = metadataValue(subscription, "offer_version");
+  return (offerKey ?? "").startsWith("ad_studio_") && offerVersionRunsCheckoutTrial("ad_studio", offerVersion);
+}
+
 export async function endTrialAfterFirstLiveCampaign(input: {
   service: BillingServiceClient;
   workspaceId: string;
@@ -64,6 +80,14 @@ export async function endTrialAfterFirstLiveCampaign(input: {
 }): Promise<StripeObject> {
   const gateway = input.gateway ?? stripeGateway;
   let subscription = await gateway.retrieveSubscription(input.subscriptionId);
+
+  // The current self-serve offer's trial is a full 7 days regardless of when
+  // the ad is published. Return the subscription untouched so no early
+  // subscription charge is triggered.
+  if (subscriptionRunsFullCheckoutTrial(subscription)) {
+    return subscription;
+  }
+
   const currentStatus = stringValue(subscription.status);
 
   if (currentStatus === "trialing") {
@@ -149,6 +173,11 @@ function requiredKey(value: string): string {
 }
 
 function stringValue(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function metadataValue(object: StripeObject, key: string): string | null {
+  const value = object.metadata?.[key];
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 

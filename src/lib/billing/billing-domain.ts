@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
-import { BILLING_OFFER_VERSION } from "./offers.ts";
+import { offerVersionRunsCheckoutTrial } from "./offers.ts";
 import type { StripeObject, StripeWebhookEvent } from "./stripe-scaffold.ts";
 
 type BillingServiceClient = ReturnType<typeof createSupabaseServiceClient>;
@@ -114,13 +114,18 @@ async function applyCheckoutCompleted(
   };
   if (customerId) patch.stripe_customer_id = customerId;
   if (subscriptionId) patch.stripe_subscription_id = subscriptionId;
-  if (metadataString(session, "offer_key")) patch.billing_offer_key = metadataString(session, "offer_key");
-  if (metadataString(session, "offer_version")) patch.billing_offer_version = metadataString(session, "offer_version");
-  // Only legacy ad-studio offers carried a card-on-file billing trial. Current
-  // offers have no trial period, so the subscription event decides the state.
+  const offerKey = metadataString(session, "offer_key");
+  const offerVersion = metadataString(session, "offer_version");
+  if (offerKey) patch.billing_offer_key = offerKey;
+  if (offerVersion) patch.billing_offer_version = offerVersion;
+  // A card-collected Checkout trial is claimed here from the accepted offer's
+  // cohort record, so the UI has a truthful state while the subscription event
+  // is in flight. The subscription event then supplies Stripe's actual
+  // trial_start/trial_end. This must never be inferred from a version
+  // comparison: see AD_STUDIO_CHECKOUT_TRIAL_VERSIONS in offers.ts.
   if (
-    (metadataString(session, "offer_key") ?? "").startsWith("ad_studio_") &&
-    metadataString(session, "offer_version") !== BILLING_OFFER_VERSION
+    (offerKey ?? "").startsWith("ad_studio_") &&
+    offerVersionRunsCheckoutTrial("ad_studio", offerVersion)
   ) {
     patch.billing_access_state = "trialing";
     patch.stripe_subscription_status = "trialing";
