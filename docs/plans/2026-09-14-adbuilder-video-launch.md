@@ -249,9 +249,13 @@ have ledger rows, applied by the sanctioned runner from the worktree.
 
 ### Live verification, and its limit
 
-Verified against the running revision: `/ad-studio/video` returns 307 to
+The routes and API paths below were renamed on 15 September 2026 when the
+editor was renamed to Ad Builder. The checks were run against the names in use
+at the time, and the current names are shown here.
+
+Verified against the running revision: `/ad-builder/video` returns 307 to
 `/login`, so the route exists and requires authentication rather than 404;
-`/api/adstudio/videos` returns 401; the private `adstudio-video` bucket exists
+`/api/adbuilder/videos` returns 401; the private `adbuilder-video` bucket exists
 with a 2 GB ceiling; the deadline function returns Tuesday 17:00 Sydney for a
 Monday start; the privilege boundary holds on the live database.
 
