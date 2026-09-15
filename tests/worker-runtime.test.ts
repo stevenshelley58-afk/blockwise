@@ -1,6 +1,4 @@
 import assert from "node:assert/strict";
-import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 import type { MetaPublishPlan } from "../src/lib/providers/meta-execution.ts";
@@ -8,7 +6,7 @@ import {
   buildMetaPlanMutation,
   executeMetaPlanMutation,
 } from "../src/lib/providers/meta-mutations.ts";
-import { runOnce } from "../worker/index.ts";
+import { entrypoint, runOnce } from "../worker/index.ts";
 
 type RpcCall = { name: string; args: Record<string, unknown> };
 
@@ -362,38 +360,21 @@ test("failure settlement rejects a stale or mismatched lease", async () => {
   );
 });
 
-test("preflight loads publish and reporting handlers without printing credentials", () => {
+test("preflight loads publish and reporting handlers without printing credentials", async () => {
   const revision = "a".repeat(40);
-  const workerPath = fileURLToPath(new URL("../worker/index.ts", import.meta.url));
   const secretSentinel = "must-not-appear-in-output";
-  const result = spawnSync(
-    process.execPath,
-    [
-      "--disable-warning=ExperimentalWarning",
-      "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON",
-      workerPath,
-      "--preflight",
-      "--expect-revision",
-      revision,
-    ],
-    {
-      encoding: "utf8",
-      env: {
-        ...process.env,
-        BLOCKWISE_WORKER_REVISION: revision,
-        BLOCKWISE_ENABLE_PROVIDER_WRITES: "true",
-        BLOCKWISE_QUEUED_KINDS: "",
-        SUPABASE_URL: "https://worker-preflight.invalid",
-        SUPABASE_SECRET_KEY: secretSentinel,
-        TOKEN_ENCRYPTION_KEY: secretSentinel,
-        STRIPE_SECRET_KEY: secretSentinel,
-      },
-    },
-  );
+  const output = await captureWorkerPreflight({
+    BLOCKWISE_WORKER_REVISION: revision,
+    BLOCKWISE_ENABLE_PROVIDER_WRITES: "true",
+    BLOCKWISE_QUEUED_KINDS: "",
+    SUPABASE_URL: "https://worker-preflight.invalid",
+    SUPABASE_SECRET_KEY: secretSentinel,
+    TOKEN_ENCRYPTION_KEY: secretSentinel,
+    STRIPE_SECRET_KEY: secretSentinel,
+  }, revision);
 
-  assert.equal(result.status, 0, result.stderr);
-  assert.equal(result.stdout.includes(secretSentinel), false);
-  const report = JSON.parse(result.stdout) as {
+  assert.equal(output.includes(secretSentinel), false);
+  const report = JSON.parse(output) as {
     status: string;
     revision: string;
     handlers: Record<string, string>;
@@ -406,37 +387,46 @@ test("preflight loads publish and reporting handlers without printing credential
   assert.equal(report.routing.vpsOnly, true);
 });
 
-test("preflight does not block non-legacy jobs when optional Stripe billing is unavailable", () => {
+test("preflight does not block non-legacy jobs when optional Stripe billing is unavailable", async () => {
   const revision = "b".repeat(40);
-  const workerPath = fileURLToPath(new URL("../worker/index.ts", import.meta.url));
-  const env: NodeJS.ProcessEnv = {
-    ...process.env,
+  const output = await captureWorkerPreflight({
     BLOCKWISE_WORKER_REVISION: revision,
     BLOCKWISE_ENABLE_PROVIDER_WRITES: "true",
     SUPABASE_URL: "https://worker-preflight.invalid",
     SUPABASE_SECRET_KEY: "preflight-secret",
     TOKEN_ENCRYPTION_KEY: "preflight-secret",
-  };
-  delete env.STRIPE_SECRET_KEY;
+    STRIPE_SECRET_KEY: undefined,
+  }, revision);
 
-  const result = spawnSync(
-    process.execPath,
-    [
-      "--disable-warning=ExperimentalWarning",
-      "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON",
-      workerPath,
-      "--preflight",
-      "--expect-revision",
-      revision,
-    ],
-    { encoding: "utf8", env },
-  );
-
-  assert.equal(result.status, 0, result.stderr);
-  const report = JSON.parse(result.stdout) as {
+  const report = JSON.parse(output) as {
     status: string;
     runtime: { stripeSecretKeyPresent: boolean };
   };
   assert.equal(report.status, "ready");
   assert.equal(report.runtime.stripeSecretKeyPresent, false);
 });
+
+async function captureWorkerPreflight(
+  env: Record<string, string | undefined>,
+  revision: string,
+): Promise<string> {
+  const previous = new Map(Object.keys(env).map((name) => [name, process.env[name]]));
+  const output: string[] = [];
+  const originalLog = console.log;
+  try {
+    for (const [name, value] of Object.entries(env)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+    console.log = (...values: unknown[]) => output.push(values.join(" "));
+    await entrypoint(["--preflight", "--expect-revision", revision]);
+  } finally {
+    console.log = originalLog;
+    for (const [name, value] of previous) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+  assert.equal(output.length, 1);
+  return output[0] ?? "";
+}

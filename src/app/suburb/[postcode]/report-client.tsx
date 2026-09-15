@@ -16,7 +16,7 @@ import type { PublicAdRadarCard } from "@/lib/research/public-ad-radar";
 import type { SuburbReportInsights } from "@/lib/research/suburb-report-insights";
 
 
-import { emailSuburbReport, type ReportEmailState } from "./actions";
+import { saveSuburbReportRequest, type ReportRequestState } from "./actions";
 
 type NearbyArea = { postcode: string; suburb: string; count: number };
 
@@ -30,7 +30,7 @@ type SuburbReportClientProps = {
   suburb: string;
 };
 
-const initialEmailState: ReportEmailState = { ok: false };
+const initialRequestState: ReportRequestState = { ok: false };
 
 export function SuburbReportClient(props: SuburbReportClientProps) {
   const { ads, coverageLabel, insights, nearby, playScan, postcode, suburb } = props;
@@ -69,7 +69,7 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
           <Link className="sr-logo" href="/">blockwise</Link>
           <span className="sr-live-chip"><span />{reportLabel}{coverageLabel ? "" : ` ${postcode}`} · live</span>
           <div className="sr-topbar-actions">
-            <Button variant="outline" size="lg" className="max-[760px]:hidden" type="button" onClick={() => setEmailOpen(true)}>Email me this audit</Button>
+            <Button variant="outline" size="lg" className="max-[760px]:hidden" type="button" onClick={() => setEmailOpen(true)}>Ask about this audit</Button>
             <Button asChild size="lg">
               <GateLink href={trialHref} intent="trial" postcode={postcode}>Create your first ad pack free</GateLink>
             </Button>
@@ -163,7 +163,7 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
 
             <section className="sr-cta-band">
               <div><h2>{reportLabel} changes every week. Keep watching it.</h2><p>This report stays free. A free trial adds tools on top:</p><ul><li>Alerts when a new advertiser appears in {reportLabel}</li><li>Track each advertiser's launches and changes</li><li>Use an observed ad as an AdBuilder starting point</li></ul></div>
-              <div className="sr-cta-actions"><Button asChild size="lg" variant="outline"><GateLink href={trialHref} intent="trial" postcode={postcode}>Start your free trial</GateLink></Button><button type="button" onClick={() => setEmailOpen(true)}>Or just email me this audit</button><small>Free to create · No card to download · Your audit stays free either way</small></div>
+              <div className="sr-cta-actions"><Button asChild size="lg" variant="outline"><GateLink href={trialHref} intent="trial" postcode={postcode}>Start your free trial</GateLink></Button><button type="button" onClick={() => setEmailOpen(true)}>Or ask us about this audit</button><small>Free to create · No card to download · Your audit stays free either way</small></div>
             </section>
           </>
         )}
@@ -197,10 +197,10 @@ function GateLink({ href, intent, postcode, className, children }: { href: strin
 
 function EmailReportDialog({ open, onClose, postcode, suburb }: { open: boolean; onClose: () => void; postcode: string; suburb: string }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const [state, action, pending] = useActionState(emailSuburbReport, initialEmailState);
+  const [state, action, pending] = useActionState(saveSuburbReportRequest, initialRequestState);
   useEffect(() => { const dialog = ref.current; if (!dialog) return; if (open && !dialog.open) dialog.showModal(); else if (!open && dialog.open) dialog.close(); }, [open]);
-  useEffect(() => { if (state.ok) fireSafe("report_email_submitted", { postcode }); }, [postcode, state.ok]);
-  return <dialog className="sr-email-dialog" ref={ref} onCancel={onClose} onClose={onClose}><button className="sr-dialog-close" type="button" onClick={onClose} aria-label="Close">×</button>{state.ok ? <div className="sr-email-success"><span>✓</span><h2>Sent. It's yours.</h2><p>PS: a free account adds alerts and tracking while this audit stays free.</p><Button size="lg" type="button" onClick={onClose}>Back to the audit</Button></div> : <><h2>Send this audit to your inbox</h2><p>One email with a live link to your {suburb} audit. No drip sequence.</p><form action={action}><input type="hidden" name="postcode" value={postcode} /><input type="hidden" name="suburb" value={suburb} /><label htmlFor="report-email">Email address</label><div><input id="report-email" name="email" type="email" autoComplete="email" required placeholder="you@business.com.au" /><Button size="lg" className="max-[760px]:w-full" disabled={pending} type="submit">{pending ? "Sending…" : "Send it"}</Button></div>{state.error ? <p className="sr-form-error" role="alert">{state.error}</p> : null}</form><small>The link remains available as the observed ad set changes.</small></>}</dialog>;
+  useEffect(() => { if (state.ok) fireSafe("report_request_submitted", { postcode }); }, [postcode, state.ok]);
+  return <dialog className="sr-email-dialog" ref={ref} onCancel={onClose} onClose={onClose}><button className="sr-dialog-close" type="button" onClick={onClose} aria-label="Close">×</button>{state.ok ? <div className="sr-email-success"><span>✓</span><h2>Request saved.</h2><p>Our team can follow up about this audit. A free account adds alerts and tracking while the audit stays free.</p><Button size="lg" type="button" onClick={onClose}>Back to the audit</Button></div> : <><h2>Ask about this audit</h2><p>Leave your email and our team can follow up about the {suburb} audit.</p><form action={action}><input type="hidden" name="postcode" value={postcode} /><input type="hidden" name="suburb" value={suburb} /><label htmlFor="report-email">Email address</label><div><input id="report-email" name="email" type="email" autoComplete="email" required placeholder="you@business.com.au" /><Button size="lg" className="max-[760px]:w-full" disabled={pending} type="submit">{pending ? "Saving…" : "Save request"}</Button></div>{state.error ? <p className="sr-form-error" role="alert">{state.error}</p> : null}</form><small>The audit remains available as the observed ad set changes.</small></>}</dialog>;
 }
 
 function gateHref(postcode: string, intent: "track" | "remix" | "trial") { return `/signup?src=suburb-report&postcode=${postcode}&intent=${intent}`; }

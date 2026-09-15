@@ -5,7 +5,6 @@ import {
   type ProviderEnvironment,
 } from "./ai-providers.ts";
 import type { TextProviderAdapter, TextProviderResponse } from "./providers.ts";
-import { emitModelFallbackAlert } from "../alerts/model-fallback-alert.ts";
 import { assembleMetaCopyPrompt } from "../operator/prompts/assemble-prompt.ts";
 import {
   isProviderFallbackEligible,
@@ -505,18 +504,6 @@ async function generateCopyWithProfile(
     }
 
     if (!isProviderFallbackEligible(execution.error)) break;
-
-    // A configured model just failed — tell the owner their chosen model is down.
-    // De-duped by stage+toModel, so a burst of requests sends one alert.
-    const toModel = candidates[index + 1]?.model;
-    if (toModel) {
-      void emitModelFallbackAlert({
-        stage: "adbuilder.copy",
-        fromModel: candidate.model,
-        toModel,
-        reason: execution.error instanceof Error ? execution.error.message : String(execution.error),
-      });
-    }
   }
 
   // Carry the per-candidate outcomes on the error: the failure-path provider

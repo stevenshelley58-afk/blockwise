@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-type OperatorAction = "adjust_credits" | "resend_booking" | "complete_onboarding";
+type OperatorAction = "adjust_credits" | "prepare_booking" | "complete_onboarding";
 
 export function CustomerActions({ workspaceId }: { workspaceId: string }) {
   const [reason, setReason] = useState("");
@@ -40,10 +40,8 @@ export function CustomerActions({ workspaceId }: { workspaceId: string }) {
           ? `Booking link prepared for manual delivery: ${payload.result?.bookingUrl}`
           : action === "adjust_credits"
             ? "Credits adjusted and audited."
-            : action === "resend_booking"
-              ? payload.result?.delivery === "queued"
-                ? "Booking link queued for delivery and audited."
-                : "Booking link sent and audited."
+            : action === "prepare_booking"
+              ? "Booking link prepared for manual delivery and audited."
               : "Onboarding marked completed and audited.",
       });
       setReason("");
@@ -85,8 +83,8 @@ export function CustomerActions({ workspaceId }: { workspaceId: string }) {
         </button>
       </div>
       <div className="actions">
-        <button className="button secondary" type="button" disabled={Boolean(pending)} onClick={() => void run("resend_booking")}>
-          {pending === "resend_booking" ? "Preparing…" : "Resend booking link"}
+        <button className="button secondary" type="button" disabled={Boolean(pending)} onClick={() => void run("prepare_booking")}>
+          {pending === "prepare_booking" ? "Preparing…" : "Prepare booking link"}
         </button>
         <button className="button secondary" type="button" disabled={Boolean(pending)} onClick={() => void run("complete_onboarding")}>
           {pending === "complete_onboarding" ? "Completing…" : "Mark onboarding completed"}

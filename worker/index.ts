@@ -188,6 +188,15 @@ export async function resolveHandler(kind: string): Promise<Handler | null> {
           compensationFetchImpl: context.metaActivationCompensationFetchImpl,
         });
     }
+    case "mautic_sync": {
+      const { executeMauticSync } = await import("../src/lib/mautic/flows.ts");
+      return (payload, supabase, context) =>
+        executeMauticSync(payload as import("../src/lib/mautic/flows.ts").MauticSyncPayload, {
+          fetchImpl: context.fetchImpl,
+          signal: context.signal,
+          serviceSupabase: supabase,
+        });
+    }
     default:
       return null;
   }
@@ -732,7 +741,7 @@ async function main() {
   }
 }
 
-async function entrypoint(args: string[]): Promise<void> {
+export async function entrypoint(args: string[]): Promise<void> {
   if (args[0] === "--preflight") {
     const expectedIndex = args.indexOf("--expect-revision");
     const expectedRevision = expectedIndex >= 0 ? args[expectedIndex + 1] : undefined;

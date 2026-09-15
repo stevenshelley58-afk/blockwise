@@ -18,9 +18,6 @@ test("marketing analytics rejects missing consent and private routes", () => {
       trackMarketingEvent("generate_lead");
     }
     assert.equal(calls.length, 0);
-    stub.location.pathname = "/ad-reports/opaque-recipient-token";
-    trackMarketingEvent("generate_lead");
-    assert.equal(calls.length, 0);
     stub.location.pathname = "/audit/private-id";
     trackMarketingEvent("generate_lead", { form_type: "demo", email: "private@example.com", postcode: "6000", url: "https://example.com" });
     assert.deepEqual(calls, [["event", "generate_lead", { form_type: "demo", page_type: "audit", page_location: "https://blockwise.sale/audit", page_referrer: "", page_title: "audit" }]]);
@@ -53,7 +50,7 @@ test("production build and runtime forward the launch switches", () => {
     assert.ok(docker.includes(`ENV ${name}=$${name}`));
     assert.ok(compose.includes(`${name}: `));
   }
-  assert.ok(compose.includes("EMAIL_OUTBOX_DELIVERY_ENABLED: ${EMAIL_OUTBOX_DELIVERY_ENABLED:-false}"));
+  assert.ok(compose.includes("MAUTIC_API_URL: ${MAUTIC_API_URL:-}"));
 });
 
 test("GA4 opt-out stops a loaded tag and can re-enable only its configured property", () => {

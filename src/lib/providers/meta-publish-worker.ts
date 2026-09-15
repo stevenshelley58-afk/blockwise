@@ -37,6 +37,7 @@ import { BILLING_OFFER_VERSION } from "../billing/offers.ts";
 import { recordWorkspaceFunnelEventBestEffort } from "../analytics/progressive-funnel.ts";
 import { queueReportingRefreshes } from "../meta-monitor/reporting-refresh-queue.ts";
 import { recordAuditLog } from "../supabase/audit.ts";
+import { fireEvent, formatBudget } from "../mautic/flows.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
 
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
@@ -328,6 +329,39 @@ async function finishApprovedAdBuilderPublish(plan: MetaPublishPlan, input: { se
   });
   const outcome = await response.json() as { status?: string; message?: string };
   if (!response.ok || outcome.status !== "activated") throw new Error(outcome.message || "Publishing activation has not completed.");
+  await fireCampaignLiveEvent({ serviceSupabase: input.serviceSupabase, plan });
+}
+
+export async function fireCampaignLiveEvent(input: {
+  serviceSupabase: SupabaseServiceClient;
+  plan: MetaPublishPlan;
+  fireEventImpl?: typeof fireEvent;
+}): Promise<boolean> {
+  const { data: workspace, error } = await input.serviceSupabase
+    .from("workspaces")
+    .select("billing_email")
+    .eq("id", input.plan.workspaceId)
+    .maybeSingle();
+  if (error) throw new Error(`Campaign-live contact lookup failed: ${error.message}`);
+
+  const email = (workspace as { billing_email?: string | null } | null)?.billing_email?.trim();
+  if (!email) return false;
+
+  const dailyBudgetMinorUnits = input.plan.controls.dailyBudgetMinorUnits
+    ?? input.plan.adSets.reduce((sum, adSet) => sum + Math.max(0, adSet.dailyBudgetMinorUnits), 0);
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "") || "https://blockwise.sale";
+  await (input.fireEventImpl ?? fireEvent)({
+    email,
+    workspaceId: input.plan.workspaceId,
+    event: "campaign_live",
+    subjectId: input.plan.planId,
+    campaignName: input.plan.campaign.name,
+    campaignUrl: `${baseUrl}/performance?planId=${encodeURIComponent(input.plan.planId)}`,
+    ...(dailyBudgetMinorUnits > 0
+      ? { budget: formatBudget({ minorUnits: dailyBudgetMinorUnits * 7, currency: input.plan.setup.currency }) }
+      : {}),
+  });
+  return true;
 }
 
 async function queueReportingRefreshAfterProviderChange(

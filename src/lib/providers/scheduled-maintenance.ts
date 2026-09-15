@@ -1,7 +1,7 @@
 import { enqueueQueuedJob } from "./job-queue-enqueue.ts";
 import { queueMetaLeadSync } from "./meta-leads-queue.ts";
 import { recoverStuckMetaPublishPlans } from "./meta-publish-queue.ts";
-import { sendAlertEmail } from "../alerts/notify.ts";
+import { recoverMissingTrialReminders } from "../billing/trial-reminder.ts";
 import { WARMED_REPORTING_RANGES } from "../monitor/dashboard-data.ts";
 import { createSupabaseServiceClient } from "../supabase/service.ts";
 
@@ -84,6 +84,10 @@ export async function queueScheduledMetaLeadSyncs(service: ServiceSupabase) {
 }
 
 export async function queueScheduledProviderMaintenance(service: ServiceSupabase) {
+  // This route survives the retired app-email drain and remains the periodic
+  // catch-up producer for the trial_end - 24h Mautic stage.
+  await recoverMissingTrialReminders(service, 50);
+
   const bucket = Math.floor(Date.now() / (6 * 60 * 60_000));
   let queued = 0;
   let failed = 0;
@@ -217,14 +221,6 @@ export async function runScheduledMetaPublishWatchdog() {
     .order("created_at", { ascending: true })
     .limit(25);
   if (stalledError) throw new Error(`Queue watchdog failed: ${stalledError.message}`);
-  if ((stalled?.length ?? 0) > 0) {
-    const oldest = stalled?.[0];
-    await sendAlertEmail({
-      subject: `[Blockwise CRITICAL] ${stalled?.length} background job(s) stalled`,
-      text: (stalled ?? []).map((job) => `${job.kind} · ${job.status} · created ${job.created_at}${job.last_error ? ` · ${job.last_error}` : ""}`).join("\n"),
-      idempotencyKey: `queue-stalled:${oldest?.id}:${oldest?.status}`,
-    });
-  }
 
   return { ...recovery, reaped: Number(reaped ?? 0), stalled: stalled?.length ?? 0 };
 }

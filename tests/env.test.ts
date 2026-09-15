@@ -53,9 +53,6 @@ test("first-tester environment keys cover launch-critical runtime services", () 
     "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
     "NEXT_PUBLIC_SENTRY_DSN",
     "CRON_SECRET",
-    "RESEND_API_KEY",
-    "DEMO_NOTIFY_FROM",
-    "DEMO_NOTIFY_TO",
   ]);
 });
 
@@ -78,9 +75,6 @@ test("getInvalidFirstTesterEnvKeys includes boot and first-tester requirements w
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: "0x4AAAAAABtest",
     NEXT_PUBLIC_SENTRY_DSN: "https://sentry.example/1",
     CRON_SECRET: "cron-secret",
-    RESEND_API_KEY: "re_test",
-    DEMO_NOTIFY_FROM: "Blockwise <notifications@blockwise.sale>",
-    DEMO_NOTIFY_TO: "hello@blockwise.sale",
   });
 
   assert.equal(readiness.firstTester.ok, true);
@@ -91,11 +85,8 @@ test("getInvalidFirstTesterEnvKeys includes boot and first-tester requirements w
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: "",
       NEXT_PUBLIC_SENTRY_DSN: "replace_me",
       CRON_SECRET: "cron-secret",
-      RESEND_API_KEY: "",
-      DEMO_NOTIFY_FROM: "Blockwise <notifications@blockwise.sale>",
-      DEMO_NOTIFY_TO: "hello@blockwise.sale",
     }),
-    ["NEXT_PUBLIC_TURNSTILE_SITE_KEY", "NEXT_PUBLIC_SENTRY_DSN", "RESEND_API_KEY"],
+    ["NEXT_PUBLIC_TURNSTILE_SITE_KEY", "NEXT_PUBLIC_SENTRY_DSN"],
   );
 });
 
@@ -110,6 +101,9 @@ test(".env.example documents app-read env vars and omits retired ones", () => {
     "META_MONITOR_BUDGET_AUD",
     "NEXT_PUBLIC_BLOCKWISE_SAMPLE_DATA",
     "SUPABASE_SECRET_KEY",
+    "MAUTIC_API_URL",
+    "MAUTIC_API_USER",
+    "MAUTIC_API_PASSWORD",
   ]) {
     assert.match(example, new RegExp(`^${key}=`, "m"));
   }
@@ -120,6 +114,7 @@ test(".env.example documents app-read env vars and omits retired ones", () => {
   // The retired ad provider must not come back as documentation either.
   assert.doesNotMatch(example, /GOOGLE_ADS/i);
   assert.doesNotMatch(example, /^(?:AGENT_ALLOWED|SECURITY_AUDIT)_/m);
+  assert.doesNotMatch(example, /^(?:RESEND_|EMAIL_OUTBOX_|DEMO_NOTIFY_|ALERT_EMAIL_)/m);
 });
 
 test("getInvalidEnvKeys treats placeholder production secrets as invalid", () => {

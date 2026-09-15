@@ -1,7 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { sendPaidServiceAlert, type AlertMessage } from "../alerts/notify.ts";
-
 export const AD_RADAR_ACCURACY_SETTING_KEY = "ad_radar_accuracy_audit_latest";
 export const AD_RADAR_ACCURACY_SAMPLE_SIZE = 30;
 export const AD_RADAR_ACCURACY_WINDOW_DAYS = 7;
@@ -52,8 +50,6 @@ export type AdRadarAccuracyAuditSummary = {
 export type RunAdRadarAccuracyAuditOptions = {
   now?: Date;
   sampleSize?: number;
-  sendAlerts?: boolean;
-  alertSender?: (message: AlertMessage) => Promise<{ email: boolean; whatsapp: boolean }>;
 };
 
 export async function runAdRadarAccuracyAudit(
@@ -73,11 +69,7 @@ export async function runAdRadarAccuracyAudit(
   });
 
   const stored = await saveAdRadarAccuracySummary(supabase, summary);
-  const alert = summary.status === "warn" && options.sendAlerts !== false
-    ? await (options.alertSender ?? sendPaidServiceAlert)(formatAdRadarAccuracyAlert(summary))
-    : null;
-
-  return { summary, stored, alert };
+  return { summary, stored };
 }
 
 export function summariseAdRadarAccuracyRows(
@@ -133,23 +125,6 @@ export function summariseAdRadarAccuracyRows(
     },
     errors: input.errors ?? [],
   };
-}
-
-export function formatAdRadarAccuracyAlert(summary: AdRadarAccuracyAuditSummary): AlertMessage {
-  const subject = `[Blockwise WARN] Ad Radar accuracy ${summary.metrics.typedClassificationPct.toFixed(0)}% typed, ${summary.metrics.resolvedAdvertiserPct.toFixed(0)}% advertiser`;
-  const lines = [
-    "Ad Radar accuracy needs attention:",
-    `  - typed classification: ${summary.metrics.typedClassificationPct.toFixed(1)}% (${summary.counts.typedClassification}/${summary.sampleSize})`,
-    `  - resolved advertiser: ${summary.metrics.resolvedAdvertiserPct.toFixed(1)}% (${summary.counts.resolvedAdvertiser}/${summary.sampleSize})`,
-    `  - suburb/postcode coverage: ${formatOptionalPct(summary.metrics.suburbPostcodeCoveragePct)}`,
-    `  - median last_seen_at age: ${formatOptionalHours(summary.metrics.medianLastSeenAgeHours)}`,
-  ];
-
-  if (summary.errors.length > 0) {
-    lines.push("", "Audit warnings:", ...summary.errors.map((error) => `  - ${error}`));
-  }
-
-  return { subject, text: lines.join("\n") };
 }
 
 async function loadRecentAdSample(
@@ -263,10 +238,3 @@ function cleanString(value: unknown): string | null {
   return null;
 }
 
-function formatOptionalPct(value: number | null): string {
-  return value === null ? "unavailable" : `${value.toFixed(1)}%`;
-}
-
-function formatOptionalHours(value: number | null): string {
-  return value === null ? "unavailable" : `${value.toFixed(1)} hours`;
-}

@@ -2,7 +2,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { VIDEO_OFFER } from "./video-offer.ts";
 import { assessBriefCompleteness, type BriefInput, BRIEF_ISSUE_MESSAGES } from "./video-types.ts";
-import { enqueueVideoNotification, resolveOrderContact } from "./video-notifications.ts";
 
 /**
  * Commissioned video orders.
@@ -337,38 +336,6 @@ export async function markOrderPaid(input: {
     to_state: "queued",
     idempotency_key: `order.paid:${input.orderId}`,
   });
-
-  // Confirmed payment, and only confirmed payment, starts the customer's copy.
-  // A failed notification must not lose the order, so enqueue problems are
-  // reported and swallowed: the order is already durable and queued for work.
-  try {
-    const contact = await resolveOrderContact(input.supabase, String(order.workspace_id));
-    if (contact) {
-      const { data: project } = await input.supabase
-        .from("video_projects")
-        .select("title")
-        .eq("id", order.project_id ?? "")
-        .maybeSingle();
-      await enqueueVideoNotification({
-        supabase: input.supabase,
-        kind: "order_confirmed",
-        to: contact,
-        order: {
-          workspaceId: String(order.workspace_id),
-          orderId: input.orderId,
-          projectTitle: String((project as { title?: string } | null)?.title ?? "your video"),
-          firstDraftDueAt: due ? String(due) : null,
-          dueTimezone: String(order.due_timezone ?? "Australia/Sydney"),
-          revisionEntitlement: Number(order.revision_entitlement ?? 1),
-          revisionsUsed: 0,
-        },
-      });
-    }
-  } catch (error) {
-    console.error("video order confirmation notification failed", {
-      reason: error instanceof Error ? error.message : "unknown",
-    });
-  }
 
   return { firstDraftDueAt: String(due) };
 }

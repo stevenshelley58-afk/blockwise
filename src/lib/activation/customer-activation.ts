@@ -354,7 +354,7 @@ function stageConfiguration(
   record: CustomerActivationRecord,
 ): { nextAction: string; allowedActions: string[]; resumePath: string } {
   const map: Record<CustomerActivationStage, { nextAction: string; allowedActions: string[]; resumePath: string }> = {
-    verify_email: { nextAction: "Verify your email", allowedActions: ["resend_verification"], resumePath: "/signup" },
+    verify_email: { nextAction: "Verify your email", allowedActions: ["send_verification_again"], resumePath: "/signup" },
     confirm_country: { nextAction: "Confirm your country", allowedActions: ["confirm_country"], resumePath: "/ad-builder/brand" },
     submit_website: { nextAction: "Add your business website", allowedActions: ["submit_website"], resumePath: "/ad-builder/brand" },
     approve_brand_pack: { nextAction: "Review your Brand Pack", allowedActions: ["approve_brand_pack", "retry_brand_scan"], resumePath: "/ad-builder/brand" },

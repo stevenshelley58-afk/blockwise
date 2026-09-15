@@ -13,6 +13,7 @@ import {
 } from "../trial/first-delivery.ts";
 import { buildSampleMetaMonitorPayload } from "./sampleMetaMonitorData.ts";
 import type { MetaMonitorPayload, MonitorRange } from "./types.ts";
+import { queueBudgetAlerts } from "./budget-alert.ts";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 type SupabaseServiceClient = ReturnType<typeof createSupabaseServiceClient>;
@@ -177,6 +178,13 @@ export async function refreshReportingSnapshot(input: {
   if (error) {
     throw new Error(`Reporting snapshot could not be saved: ${error.message}`);
   }
+
+  await queueBudgetAlerts({
+    serviceSupabase: input.serviceSupabase,
+    workspaceId: input.workspaceId,
+    payload,
+    now,
+  });
 
   // Meta has reported actual delivery for this workspace: start the 14-day
   // no-card app trial if it is still pending. Durable and idempotent

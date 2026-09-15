@@ -219,6 +219,155 @@ test("subscription and invoice events derive cancellation timing and payment rec
   assert.equal(mock.workspaceUpdates[1].patch.billing_payment_recovery_required, true);
 });
 
+test("billing transitions write each Mautic stage once and do not repeat paid on renewal", async () => {
+  const stageCalls: Array<Record<string, unknown>> = [];
+  const stageSetter = async (input: Record<string, unknown>) => {
+    stageCalls.push(input);
+    return { id: `job-${stageCalls.length}` };
+  };
+  const paid = createBillingMock({
+    billingContact: { subscriptionStatus: "trialing" },
+  });
+
+  await applyStripeBillingEvent(paid.client as never, subscriptionEvent({
+    id: "evt_first_active",
+    created: 100,
+    status: "active",
+  }), { stageSetter: stageSetter as never });
+  await applyStripeBillingEvent(paid.client as never, subscriptionEvent({
+    id: "evt_renewal_active",
+    created: 200,
+    status: "active",
+  }), { stageSetter: stageSetter as never });
+
+  assert.equal(stageCalls.filter((call) => call.stage === "paid").length, 1);
+  assert.deepEqual(stageCalls[0], {
+    email: "owner@example.com",
+    workspaceId: "workspace-1",
+    subjectId: "sub_123",
+    stage: "paid",
+    periodEnd: new Date("2026-08-26T21:20:00.000Z"),
+    plan: "Ad studio",
+    amount: "A$249 per month",
+    timeZone: "Australia/Perth",
+    guard: {
+      kind: "billing_transition",
+      eventId: "evt_first_active",
+      eventCreated: 100,
+      expectedSubscriptionId: "sub_123",
+      expectedSubscriptionStatus: "active",
+      expectedCancelAtPeriodEnd: false,
+    },
+  });
+
+  const endedCalls: Array<Record<string, unknown>> = [];
+  const ended = createBillingMock({ billingContact: { subscriptionStatus: "trialing" } });
+  await applyStripeBillingEvent(ended.client as never, subscriptionEvent({
+    id: "evt_trial_ended",
+    created: 100,
+    status: "past_due",
+  }), { stageSetter: (async (input: Record<string, unknown>) => {
+    endedCalls.push(input);
+    return { id: "job-ended" };
+  }) as never });
+  assert.equal(endedCalls.length, 1);
+  assert.equal(endedCalls[0].stage, "trial_ended");
+
+  const failedCalls: Array<Record<string, unknown>> = [];
+  const failed = createBillingMock({ billingContact: { subscriptionStatus: "active" } });
+  await applyStripeBillingEvent(failed.client as never, {
+    id: "evt_payment_failed_stage",
+    type: "invoice.payment_failed",
+    created: 100,
+    data: {
+      object: {
+        id: "in_failed_stage",
+        subscription: "sub_123",
+        lines: { data: [{ period: { start: 1_785_100_000, end: 1_787_779_200 } }] },
+      },
+    },
+  }, { stageSetter: (async (input: Record<string, unknown>) => {
+    failedCalls.push(input);
+    return { id: "job-failed" };
+  }) as never });
+  assert.equal(failedCalls.length, 1);
+  assert.equal(failedCalls[0].stage, "payment_failed");
+
+  const cancelledCalls: Array<Record<string, unknown>> = [];
+  const cancelled = createBillingMock({ billingContact: { subscriptionStatus: "active" } });
+  const captureCancellation = (async (input: Record<string, unknown>) => {
+    cancelledCalls.push(input);
+    return { id: "job-cancelled" };
+  }) as never;
+  await applyStripeBillingEvent(cancelled.client as never, subscriptionEvent({
+    id: "evt_cancel_at_end",
+    created: 100,
+    status: "active",
+    cancelAtPeriodEnd: true,
+  }), { stageSetter: captureCancellation });
+  await applyStripeBillingEvent(cancelled.client as never, subscriptionEvent({
+    id: "evt_deleted_after_cancel",
+    created: 200,
+    status: "canceled",
+    type: "customer.subscription.deleted",
+  }), { stageSetter: captureCancellation });
+  assert.equal(cancelledCalls.length, 1);
+  assert.equal(cancelledCalls[0].stage, "cancelled");
+
+  const deletedCalls: Array<Record<string, unknown>> = [];
+  const deleted = createBillingMock({ billingContact: { subscriptionStatus: "active" } });
+  await applyStripeBillingEvent(deleted.client as never, subscriptionEvent({
+    id: "evt_deleted_without_advance_notice",
+    created: 100,
+    status: "canceled",
+    type: "customer.subscription.deleted",
+  }), { stageSetter: (async (input: Record<string, unknown>) => {
+    deletedCalls.push(input);
+    return { id: "job-deleted" };
+  }) as never });
+  assert.equal(deletedCalls.length, 1);
+  assert.equal(deletedCalls[0].stage, "cancelled");
+});
+
+test("a failed billing-stage enqueue leaves the transition retryable", async () => {
+  const mock = createBillingMock({ billingContact: { subscriptionStatus: "trialing" } });
+  const event = subscriptionEvent({ id: "evt_retry_paid_stage", created: 100, status: "active" });
+  let attempts = 0;
+  const stageSetter = async () => {
+    attempts += 1;
+    if (attempts === 1) throw new Error("queue unavailable");
+    return { id: "mautic-job-1" };
+  };
+
+  await assert.rejects(
+    applyStripeBillingEvent(mock.client as never, event, { stageSetter: stageSetter as never }),
+    /queue unavailable/,
+  );
+  assert.equal(mock.workspaceUpdates.length, 0);
+  assert.equal(mock.eventStatuses.get(event.id), "failed");
+
+  const retried = await applyStripeBillingEvent(mock.client as never, event, { stageSetter: stageSetter as never });
+  assert.equal(retried.outcome, "applied");
+  assert.equal(mock.workspaceUpdates.length, 1);
+  assert.equal(attempts, 2);
+});
+
+test("recovering an existing subscription does not announce paid again", async () => {
+  const mock = createBillingMock({ billingContact: { subscriptionStatus: "past_due" } });
+  let stageCalls = 0;
+  await applyStripeBillingEvent(
+    mock.client as never,
+    subscriptionEvent({ id: "evt_recovered_active", created: 100, status: "active" }),
+    {
+      stageSetter: (async () => {
+        stageCalls += 1;
+        return { id: "unexpected" };
+      }) as never,
+    },
+  );
+  assert.equal(stageCalls, 0);
+});
+
 test("authoritative paid subscription invoices grant one 100-credit period wallet idempotently", async () => {
   const mock = createBillingMock();
   const paidInvoice: StripeWebhookEvent = {
@@ -513,7 +662,42 @@ function checkoutEvent(id: string, offerVersion: string = BILLING_OFFER_VERSION)
   };
 }
 
-function createBillingMock(options: { workspaceFound?: boolean; activeWalletPeriodStart?: string } = {}) {
+function subscriptionEvent(input: {
+  id: string;
+  created: number;
+  status: string;
+  cancelAtPeriodEnd?: boolean;
+  type?: StripeWebhookEvent["type"];
+}): StripeWebhookEvent {
+  return {
+    id: input.id,
+    type: input.type ?? "customer.subscription.updated",
+    created: input.created,
+    data: {
+      object: {
+        id: "sub_123",
+        customer: "cus_123",
+        status: input.status,
+        cancel_at_period_end: input.cancelAtPeriodEnd ?? false,
+        current_period_start: 1_785_100_000,
+        current_period_end: 1_787_779_200,
+        metadata: { workspace_id: "workspace-1" },
+      },
+    },
+  };
+}
+
+function createBillingMock(options: {
+  workspaceFound?: boolean;
+  activeWalletPeriodStart?: string;
+  billingContact?: {
+    email?: string;
+    timeZone?: string;
+    offerKey?: string;
+    subscriptionStatus?: string;
+    cancelAtPeriodEnd?: boolean;
+  };
+} = {}) {
   const claimed = new Set<string>();
   const eventStatuses = new Map<string, string>();
   const claimAttempts = new Map<string, number>();
@@ -524,6 +708,8 @@ function createBillingMock(options: { workspaceFound?: boolean; activeWalletPeri
   let eventHighWater = 0;
   let riskState: string | null = null;
   let accessState = "unbilled";
+  let subscriptionStatus = options.billingContact?.subscriptionStatus ?? null;
+  let cancelAtPeriodEnd = options.billingContact?.cancelAtPeriodEnd ?? false;
   let activeWalletPeriodStart = options.activeWalletPeriodStart
     ? Date.parse(options.activeWalletPeriodStart)
     : null;
@@ -574,9 +760,21 @@ function createBillingMock(options: { workspaceFound?: boolean; activeWalletPeri
       }
       if (table === "workspaces") {
         return {
-          select: (_columns: string) => ({
+          select: (columns: string) => ({
             eq: async (_column: string, _value: string) => ({
-              data: options.workspaceFound === false ? [] : [{ id: "workspace-1" }],
+              data: options.workspaceFound === false
+                ? []
+                : [columns === "id" || !options.billingContact
+                    ? { id: "workspace-1" }
+                    : {
+                        id: "workspace-1",
+                        billing_email: options.billingContact.email ?? "owner@example.com",
+                        publishing_timezone: options.billingContact.timeZone ?? "Australia/Perth",
+                        billing_offer_key: options.billingContact.offerKey ?? "ad_studio_AU",
+                        stripe_subscription_status: subscriptionStatus,
+                        stripe_cancel_at_period_end: cancelAtPeriodEnd,
+                        billing_event_created: eventHighWater,
+                      }],
               error: null,
             }),
           }),
@@ -605,6 +803,12 @@ function createBillingMock(options: { workspaceFound?: boolean; activeWalletPeri
                   riskState = incomingRisk;
                   if (typeof effectivePatch.billing_access_state === "string") {
                     accessState = effectivePatch.billing_access_state;
+                  }
+                  if (typeof effectivePatch.stripe_subscription_status === "string") {
+                    subscriptionStatus = effectivePatch.stripe_subscription_status;
+                  }
+                  if (typeof effectivePatch.stripe_cancel_at_period_end === "boolean") {
+                    cancelAtPeriodEnd = effectivePatch.stripe_cancel_at_period_end;
                   }
                   eventHighWater = incomingCreated;
                   workspaceUpdates.push({ column, value, patch: effectivePatch });

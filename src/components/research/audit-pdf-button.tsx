@@ -92,9 +92,9 @@ export function AuditPdfButton({ location, className, label = "Download PDF repo
               <X size={18} aria-hidden />
             </Button>
             <p className="audit-modal-kicker">Free PDF report</p>
-            <h3 id="audit-modal-title">Where should we send your audit?</h3>
+            <h3 id="audit-modal-title">Download your audit</h3>
             <p className="audit-modal-sub">
-              Enter your details to download the full {location} ad audit as a branded PDF. No spam — just the report.
+              Enter your details, then download the full {location} ad audit as a branded PDF.
             </p>
             <form onSubmit={onSubmit} className="audit-modal-form">
               <label>

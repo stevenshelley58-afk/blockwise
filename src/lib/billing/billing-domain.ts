@@ -1,12 +1,26 @@
 import { randomUUID } from "node:crypto";
 
+import { formatRecurringAmount, setStage, type MauticStage } from "../mautic/flows.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
-import { offerVersionRunsCheckoutTrial } from "./offers.ts";
+import {
+  BILLING_OFFERS,
+  offerVersionRunsCheckoutTrial,
+  type BillingOffer,
+} from "./offers.ts";
 import type { StripeObject, StripeWebhookEvent } from "./stripe-scaffold.ts";
 
 type BillingServiceClient = ReturnType<typeof createSupabaseServiceClient>;
 type BillingPatch = Record<string, string | number | boolean | null>;
 type BillingEventOrdering = { created: number; id: string };
+type BillingContact = {
+  id: string;
+  billingEmail: string | null;
+  timeZone: string | null;
+  offerKey: string | null;
+  subscriptionStatus: string | null;
+  cancelAtPeriodEnd: boolean;
+  billingEventCreated: number;
+};
 
 export type BillingEventApplyResult =
   | { outcome: "applied"; workspaceIds: string[] }
@@ -24,6 +38,7 @@ const DISPUTE_EVENTS = new Set(["charge.dispute.created", "charge.dispute.update
 export async function applyStripeBillingEvent(
   service: BillingServiceClient,
   event: StripeWebhookEvent,
+  options: { stageSetter?: typeof setStage } = {},
 ): Promise<BillingEventApplyResult> {
   const attemptId = await claimEvent(service, event);
   if (!attemptId) {
@@ -31,7 +46,7 @@ export async function applyStripeBillingEvent(
   }
 
   try {
-    const result = await applyClaimedEvent(service, event);
+    const result = await applyClaimedEvent(service, event, options.stageSetter ?? setStage);
     await finishEvent(service, event.id, attemptId, result.outcome === "ignored" ? "ignored" : "applied");
     return result;
   } catch (error) {
@@ -72,19 +87,20 @@ export function reconciliationEventForSubscription(
 async function applyClaimedEvent(
   service: BillingServiceClient,
   event: StripeWebhookEvent,
+  stageSetter: typeof setStage,
 ): Promise<BillingEventApplyResult> {
   const ordering = eventOrdering(event);
   if (event.type === "checkout.session.completed") {
     return applyCheckoutCompleted(service, event.data.object, ordering);
   }
   if (SUBSCRIPTION_EVENTS.has(event.type)) {
-    return applySubscription(service, event.type, event.data.object, ordering);
+    return applySubscription(service, event.type, event.data.object, ordering, stageSetter);
   }
   if (event.type === "invoice.paid") {
     return applyInvoicePaid(service, event.data.object, ordering);
   }
   if (event.type === "invoice.payment_failed") {
-    return applyInvoicePaymentFailed(service, event.data.object, ordering);
+    return applyInvoicePaymentFailed(service, event.data.object, ordering, stageSetter);
   }
   if (REFUND_EVENTS.has(event.type)) {
     return applyRefund(service, event.data.object, ordering);
@@ -166,6 +182,7 @@ async function applySubscription(
   eventType: string,
   subscription: StripeObject,
   ordering: BillingEventOrdering,
+  stageSetter: typeof setStage,
 ): Promise<BillingEventApplyResult> {
   const status = eventType === "customer.subscription.deleted" ? "canceled" : stringValue(subscription.status);
   if (!status) {
@@ -203,6 +220,18 @@ async function applySubscription(
   if (!lookup) {
     return { outcome: "ignored", workspaceIds: [], reason: "subscription_missing_identity" };
   }
+  const billingContacts = await findBillingContacts(service, lookup);
+  const eligibleContacts = billingContacts.filter((contact) => contact.billingEventCreated <= ordering.created);
+  await setSubscriptionStage({
+    eventType,
+    subscription,
+    status,
+    periodEnd,
+    workspaceIds: eligibleContacts.map((contact) => contact.id),
+    billingContacts: eligibleContacts,
+    stageSetter,
+    ordering,
+  });
   const workspaceIds = await updateWorkspace(service, lookup, patch, ordering);
   return workspaceIds.length
     ? { outcome: "applied", workspaceIds }
@@ -290,6 +319,7 @@ async function applyInvoicePaymentFailed(
   service: BillingServiceClient,
   invoice: StripeObject,
   ordering: BillingEventOrdering,
+  stageSetter: typeof setStage,
 ): Promise<BillingEventApplyResult> {
   const patch: BillingPatch = {
     stripe_latest_invoice_status: "payment_failed",
@@ -300,7 +330,31 @@ async function applyInvoicePaymentFailed(
   const invoiceId = stringValue(invoice.id);
   if (invoiceId) patch.stripe_latest_invoice_id = invoiceId;
 
-  return applyByStripeIdentity(service, invoice, patch, "failed_invoice_workspace_not_found", ordering);
+  const lookup = await resolveWorkspaceLookup(invoice);
+  if (!lookup) {
+    return { outcome: "ignored", workspaceIds: [], reason: "failed_invoice_workspace_not_found" };
+  }
+  const billingContacts = await findBillingContacts(service, lookup);
+  const eligibleContacts = billingContacts.filter((contact) => contact.billingEventCreated <= ordering.created);
+  await setBillingStage({
+    stage: "payment_failed",
+    object: invoice,
+    workspaceIds: eligibleContacts.map((contact) => contact.id),
+    billingContacts: eligibleContacts,
+    periodEnd: invoicePeriod(invoice)?.end ?? null,
+    stageSetter,
+    guard: {
+      kind: "billing_transition",
+      eventId: ordering.id,
+      eventCreated: ordering.created,
+      expectedSubscriptionId: stringValue(invoice.subscription) ?? undefined,
+      expectedAccessState: "payment_recovery",
+    },
+  });
+  const workspaceIds = await updateWorkspace(service, lookup, patch, ordering);
+  return workspaceIds.length
+    ? { outcome: "applied", workspaceIds }
+    : { outcome: "ignored", workspaceIds: [], reason: "failed_invoice_workspace_not_found" };
 }
 
 async function applyRefund(
@@ -427,6 +481,163 @@ async function findWorkspaceIds(
     const id = (row as { id?: unknown }).id;
     return typeof id === "string" ? [id] : [];
   });
+}
+
+async function findBillingContacts(
+  service: BillingServiceClient,
+  lookup: { kind: "id" | "subscription" | "customer" | "charge"; value: string },
+): Promise<BillingContact[]> {
+  const column = {
+    id: "id",
+    subscription: "stripe_subscription_id",
+    customer: "stripe_customer_id",
+    charge: "stripe_latest_charge_id",
+  }[lookup.kind];
+  const { data, error } = await service
+    .from("workspaces")
+    .select(
+      "id,billing_email,publishing_timezone,billing_offer_key,stripe_subscription_status,stripe_cancel_at_period_end,billing_event_created",
+    )
+    .eq(column, lookup.value);
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).flatMap((value) => {
+    const row = value as Record<string, unknown>;
+    const id = stringValue(row.id);
+    if (!id) return [];
+    return [{
+      id,
+      billingEmail: stringValue(row.billing_email),
+      timeZone: stringValue(row.publishing_timezone),
+      offerKey: stringValue(row.billing_offer_key),
+      subscriptionStatus: stringValue(row.stripe_subscription_status),
+      cancelAtPeriodEnd: row.stripe_cancel_at_period_end === true,
+      billingEventCreated: integerValue(row.billing_event_created) ?? 0,
+    }];
+  });
+}
+
+async function setSubscriptionStage(input: {
+  eventType: string;
+  subscription: StripeObject;
+  status: string;
+  periodEnd: number | null;
+  workspaceIds: string[];
+  billingContacts: BillingContact[];
+  stageSetter: typeof setStage;
+  ordering: BillingEventOrdering;
+}) {
+  const cancelAtPeriodEnd = booleanValue(input.subscription.cancel_at_period_end);
+  for (const contact of input.billingContacts) {
+    if (!input.workspaceIds.includes(contact.id) || !contact.billingEmail) continue;
+
+    let stage: MauticStage | null = null;
+    if (
+      (input.eventType === "customer.subscription.deleted" &&
+        contact.subscriptionStatus !== "canceled" &&
+        !contact.cancelAtPeriodEnd) ||
+      (cancelAtPeriodEnd && !contact.cancelAtPeriodEnd)
+    ) {
+      stage = "cancelled";
+    } else if (
+      input.status === "active"
+      && (contact.subscriptionStatus === null || contact.subscriptionStatus === "trialing")
+    ) {
+      // Renewals remain active -> active, so only the first active state or a
+      // trialing -> active transition announces paid access.
+      stage = "paid";
+    } else if (contact.subscriptionStatus === "trialing" && input.status !== "trialing") {
+      stage = "trial_ended";
+    }
+
+    if (stage) {
+      await setBillingStage({
+        stage,
+        object: input.subscription,
+        workspaceIds: [contact.id],
+        billingContacts: [contact],
+        periodEnd: input.periodEnd,
+        stageSetter: input.stageSetter,
+        guard: {
+          kind: "billing_transition",
+          eventId: input.ordering.id,
+          eventCreated: input.ordering.created,
+          expectedSubscriptionId: stringValue(input.subscription.id) ?? undefined,
+          expectedSubscriptionStatus: input.status,
+          expectedCancelAtPeriodEnd: cancelAtPeriodEnd,
+        },
+      });
+    }
+  }
+}
+
+async function setBillingStage(input: {
+  stage: MauticStage;
+  object: StripeObject;
+  workspaceIds: string[];
+  billingContacts: BillingContact[];
+  periodEnd: number | null;
+  stageSetter: typeof setStage;
+  guard?: Parameters<typeof setStage>[0]["guard"];
+}) {
+  for (const contact of input.billingContacts) {
+    if (!input.workspaceIds.includes(contact.id) || !contact.billingEmail) continue;
+    const offer = billingOffer(contact.offerKey);
+    const price = recurringPrice(input.object, offer);
+    await input.stageSetter({
+      email: contact.billingEmail,
+      workspaceId: contact.id,
+      subjectId: stringValue(input.object.subscription) ?? stringValue(input.object.id) ?? contact.id,
+      stage: input.stage,
+      periodEnd: input.periodEnd ? new Date(input.periodEnd * 1000) : undefined,
+      plan: planName(offer, contact.offerKey),
+      amount: price
+        ? formatRecurringAmount({
+            minorUnits: price.minorUnits,
+            currency: price.currency,
+            interval: price.interval,
+          })
+        : undefined,
+      timeZone: contact.timeZone ?? undefined,
+      guard: input.guard,
+    });
+  }
+}
+
+function billingOffer(key: string | null): BillingOffer | null {
+  return key && key in BILLING_OFFERS
+    ? BILLING_OFFERS[key as keyof typeof BILLING_OFFERS]
+    : null;
+}
+
+function planName(offer: BillingOffer | null, offerKey: string | null): string | undefined {
+  if (offer?.product === "ad_studio" || offerKey?.startsWith("ad_studio_")) return "Ad studio";
+  if (offer?.product === "managed" || offerKey?.startsWith("managed_")) return "Managed";
+  return undefined;
+}
+
+function recurringPrice(
+  object: StripeObject,
+  offer: BillingOffer | null,
+): { minorUnits: number; currency: string; interval: string } | null {
+  if (offer) {
+    return {
+      minorUnits: offer.recurringAmount,
+      currency: offer.currency,
+      interval: "month",
+    };
+  }
+
+  const items = objectValue(object.items);
+  const item = objectValue(Array.isArray(items?.data) ? items.data[0] : null);
+  const price = objectValue(item?.price);
+  const recurring = objectValue(price?.recurring);
+  const minorUnits = integerValue(price?.unit_amount);
+  const currency = stringValue(price?.currency);
+  const interval = stringValue(recurring?.interval);
+  return minorUnits !== null && currency && interval
+    ? { minorUnits, currency, interval }
+    : null;
 }
 
 async function claimEvent(service: BillingServiceClient, event: StripeWebhookEvent): Promise<string | null> {

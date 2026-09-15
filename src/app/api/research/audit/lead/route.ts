@@ -2,10 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
 import { featureDisabledResponse } from "@/lib/auth/api-guards";
-import {
-  sendAuditCampaignPlanEmail,
-  sendDemoRequestNotification,
-} from "@/lib/notify/demo-request-email";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { getClientIp } from "@/lib/client-ip";
@@ -102,7 +98,7 @@ export async function POST(request: NextRequest) {
       .filter(Boolean)
       .join(" | ") || (location ? `Free ad audit - ${location}` : "Free ad audit");
 
-  const { data: inserted, error } = await supabase.from("demo_requests").insert({
+  const { error } = await supabase.from("demo_requests").insert({
     name,
     agency: clean(parsed.data.agency),
     email: parsed.data.email,
@@ -112,69 +108,11 @@ export async function POST(request: NextRequest) {
     source,
     user_agent: request.headers.get("user-agent"),
     referrer: request.headers.get("referer"),
-    customer_email_status: "pending",
-  }).select("id").single();
+  });
 
   if (error) {
     console.error("audit-lead insert failed", error);
     return NextResponse.json({ error: "Could not save your details. Please try again." }, { status: 500 });
-  }
-
-  const reportUrl = new URL("/audit", request.url);
-  if (location) reportUrl.searchParams.set("location", location);
-  const [customerEmail, operatorNotification] = await Promise.all([
-    sendAuditCampaignPlanEmail({
-      name,
-      email: parsed.data.email,
-      agency: clean(parsed.data.agency),
-      phone: clean(parsed.data.phone),
-      suburb: location,
-      message,
-      goal,
-      detectedAds: parsed.data.detected_ads,
-      activeAds: parsed.data.active_ads,
-      advertisers: parsed.data.advertisers,
-      topPlatform: clean(parsed.data.top_platform),
-      topFormat: clean(parsed.data.top_format),
-      topAngles: clean(parsed.data.top_angles),
-      reportUrl: reportUrl.toString(),
-      demoRequestId: inserted.id,
-    }),
-    sendDemoRequestNotification({
-      name,
-      email: parsed.data.email,
-      agency: clean(parsed.data.agency),
-      phone: clean(parsed.data.phone),
-      suburb: location,
-      message,
-      demoRequestId: inserted.id,
-    }),
-  ]);
-  const { error: deliveryUpdateError } = await supabase
-    .from("demo_requests")
-    .update({
-      customer_email_status: customerEmail.sent ? "sent" : customerEmail.queued ? "queued" : "failed",
-      customer_emailed_at: customerEmail.sent ? new Date().toISOString() : null,
-      customer_email_error: customerEmail.error,
-      customer_email_message_id: customerEmail.sent ? customerEmail.messageId : null,
-      operator_notification_status: operatorNotification.sent ? "sent" : operatorNotification.queued ? "queued" : "failed",
-      operator_notified_at: operatorNotification.sent ? new Date().toISOString() : null,
-      operator_notification_error: operatorNotification.error,
-      operator_notification_message_id: operatorNotification.sent ? operatorNotification.messageId : null,
-    })
-    .eq("id", inserted.id);
-  if (deliveryUpdateError) {
-    console.error("audit-lead delivery status update failed", deliveryUpdateError);
-  }
-  if (!operatorNotification.sent && !operatorNotification.queued) {
-    console.error("audit-lead operator notification failed", operatorNotification.error);
-  }
-  if (!customerEmail.sent && !customerEmail.queued) {
-    console.error("audit-lead customer email failed", customerEmail.error);
-    return NextResponse.json(
-      { error: "We saved your request but could not send the plan. Please try again shortly." },
-      { status: 502 },
-    );
   }
 
   return NextResponse.json({ ok: true });

@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
     targetId: reservation.invitationId,
     metadata: {
       recipientType: existingUser ? "existing_user" : "new_user",
-      resend: reservation.outcome === "already_pending",
+      repeatedDelivery: reservation.outcome === "already_pending",
     },
   });
 
