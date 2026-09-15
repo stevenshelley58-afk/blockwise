@@ -65,7 +65,7 @@ export function AuditLeadForm({ area, label, signupHref, metrics, analytics }: A
         body: JSON.stringify(payload),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data?.error ?? "Could not send your plan.");
+      if (!response.ok) throw new Error(data?.error ?? "Could not save your request.");
       fireSafe("lead_form_submitted", { ...analytics, goal: payload.goal || "unspecified" });
       setDone(true);
     } catch (submitError) {
@@ -79,7 +79,7 @@ export function AuditLeadForm({ area, label, signupHref, metrics, analytics }: A
     return (
       <div className="audit-lead-done">
         <h3>Your {area} campaign plan request was received.</h3>
-        <p>We will email the requested plan when it is ready.</p>
+        <p>Our team can follow up using the details you provided.</p>
         <Button asChild size="lg">
           <a href={signupHref} onClick={() => fireSafe("signup_clicked", analytics)}>Start your free trial</a>
         </Button>
@@ -129,9 +129,9 @@ export function AuditLeadForm({ area, label, signupHref, metrics, analytics }: A
       />
       {error ? <p className="audit-lead-error">{error}</p> : null}
       <Button className="w-full" type="submit" disabled={submitting}>
-        {submitting ? "Sending..." : `Send my ${area} campaign plan`}
+        {submitting ? "Saving..." : `Request help with my ${area} campaign plan`}
       </Button>
-      <p className="fine-print">We only use these details to send your requested campaign plan.</p>
+      <p className="fine-print">We use these details to respond to your campaign plan request.</p>
     </form>
   );
 }

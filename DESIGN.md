@@ -144,8 +144,8 @@ The native editor starts on the actual edited ad preview. Template headings wrap
   not see `@theme` tokens, so every named role was filed under `text-color`;
   `text-cta-foreground` from the variant and `text-body` from `size="lg"` ended
   up in the same conflict group and tailwind-merge kept only the last one, so the
-  label inherited the button's own fill. Primary CTAs on `/`, `/pricing`,
-  `/concept` and `/ad-reports/demo` are now 10.65 : 1 (light) and ~16.9 : 1
+  label inherited the button's own fill. Primary CTAs on `/`, `/pricing` and
+  `/concept` are now 10.65 : 1 (light) and ~16.9 : 1
   (studio-dark) on their fills. `tests/twmerge-roles.test.ts` pins the
   registration list against the `--text-*` tokens in `src/app/tailwind.css`, so
   adding a new role without registering it fails the contract.

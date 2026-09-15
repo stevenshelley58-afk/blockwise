@@ -417,13 +417,13 @@ function LeadSection({
         <div className="lead-panel">
           <p className="card-kicker">Your campaign plan</p>
           <h2>Get your {area} campaign plan.</h2>
-          <p>Tell us your goal and we will email the requested campaign plan.</p>
+          <p>Tell us your goal and our team can follow up about the requested campaign plan.</p>
           <AuditLeadForm area={area} label={label} signupHref={href} metrics={metrics} analytics={analytics} />
         </div>
         <aside className="proof-box">
           <h3>What happens after you submit</h3>
           <ul>
-            <li>We email a starting campaign plan and launch checklist to the address you provide.</li>
+            <li>We save your request for the Blockwise team to review and follow up.</li>
             <li>You review campaign details before export.</li>
             <li>Campaigns run from your own Meta ad account.</li>
             <li>You can choose whether to start a free trial after reviewing the plan.</li>

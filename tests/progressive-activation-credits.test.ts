@@ -324,6 +324,8 @@ test("verified bootstrap service rejects unconfirmed identities before its RPC",
   );
   assert.equal(called, false);
 
+  const stages: Array<Record<string, unknown>> = [];
+  let signedUpQueuedAt: string | null = null;
   const result = await bootstrapVerifiedTrialWorkspace({
     user: {
       id: "user-1",
@@ -345,8 +347,119 @@ test("verified bootstrap service rejects unconfirmed identities before its RPC",
           error: null,
         };
       },
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            maybeSingle: async () => ({ data: { mautic_signed_up_queued_at: signedUpQueuedAt }, error: null }),
+          }),
+        }),
+        update: (patch: { mautic_signed_up_queued_at: string }) => ({
+          eq: () => ({
+            is: async () => {
+              signedUpQueuedAt = patch.mautic_signed_up_queued_at;
+              return { error: null };
+            },
+          }),
+        }),
+      }),
     } as never,
+    stageSetter: async (stage) => {
+      stages.push(stage);
+      return { id: "mautic-job-1" };
+    },
   });
   assert.equal(result.workspaceId, "workspace-1");
   assert.equal(result.created, true);
+  assert.deepEqual(stages, [{
+    email: "person@example.com",
+    firstName: undefined,
+    workspaceId: "workspace-1",
+    subjectId: "workspace-1",
+    stage: "signed_up",
+  }]);
+});
+
+test("a resumed verified workspace does not repeat the signed-up Mautic stage", async () => {
+  let stageCalls = 0;
+  const result = await bootstrapVerifiedTrialWorkspace({
+    user: {
+      id: "user-1",
+      email: "person@example.com",
+      email_confirmed_at: "2026-07-27T00:00:00.000Z",
+    },
+    serviceSupabase: {
+      rpc: async () => ({
+        data: [{ workspace_id: "workspace-1", created: false, resumed: true, eligible: true }],
+        error: null,
+      }),
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            maybeSingle: async () => ({
+              data: { mautic_signed_up_queued_at: "2026-07-27T00:00:01.000Z" },
+              error: null,
+            }),
+          }),
+        }),
+      }),
+    } as never,
+    stageSetter: async () => {
+      stageCalls += 1;
+      return { id: "unexpected" };
+    },
+  });
+
+  assert.equal(result.resumed, true);
+  assert.equal(stageCalls, 0);
+});
+
+test("a failed signed-up enqueue remains pending when bootstrap resumes", async () => {
+  let rpcCalls = 0;
+  let marker: string | null = null;
+  const service = {
+    rpc: async () => ({
+      data: [{
+        workspace_id: "workspace-1",
+        created: rpcCalls++ === 0,
+        resumed: rpcCalls > 1,
+        eligible: true,
+      }],
+      error: null,
+    }),
+    from: () => ({
+      select: () => ({
+        eq: () => ({ maybeSingle: async () => ({ data: { mautic_signed_up_queued_at: marker }, error: null }) }),
+      }),
+      update: (patch: { mautic_signed_up_queued_at: string }) => ({
+        eq: () => ({
+          is: async () => {
+            marker = patch.mautic_signed_up_queued_at;
+            return { error: null };
+          },
+        }),
+      }),
+    }),
+  };
+  let attempts = 0;
+  const stageSetter = async () => {
+    attempts += 1;
+    if (attempts === 1) throw new Error("queue unavailable");
+    return { id: "mautic-job-1" };
+  };
+  const user = {
+    id: "user-1",
+    email: "person@example.com",
+    email_confirmed_at: "2026-07-27T00:00:00.000Z",
+  };
+
+  await assert.rejects(
+    bootstrapVerifiedTrialWorkspace({ user, serviceSupabase: service as never, stageSetter }),
+    /queue unavailable/,
+  );
+  assert.equal(marker, null);
+  const retried = await bootstrapVerifiedTrialWorkspace({ user, serviceSupabase: service as never, stageSetter });
+
+  assert.equal(retried.resumed, true);
+  assert.equal(attempts, 2);
+  assert.ok(marker);
 });

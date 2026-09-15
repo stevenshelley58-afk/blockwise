@@ -1,12 +1,14 @@
 import { createSupabaseServiceClient } from "../supabase/service.ts";
+import { setStage } from "../mautic/flows.ts";
 
-type BootstrapRpcClient = Pick<ReturnType<typeof createSupabaseServiceClient>, "rpc">;
+type BootstrapRpcClient = Pick<ReturnType<typeof createSupabaseServiceClient>, "rpc" | "from">;
 
 type VerifiedAuthUser = {
   id: string;
   email?: string | null;
   confirmed_at?: string | null;
   email_confirmed_at?: string | null;
+  user_metadata?: Record<string, unknown> | null;
 };
 
 type BootstrapRpcRow = {
@@ -28,6 +30,7 @@ export type VerifiedWorkspaceBootstrapResult = {
 export async function bootstrapVerifiedTrialWorkspace(input: {
   user: VerifiedAuthUser;
   serviceSupabase?: BootstrapRpcClient;
+  stageSetter?: typeof setStage;
 }): Promise<VerifiedWorkspaceBootstrapResult> {
   if (!input.user.id || !input.user.email || !(input.user.email_confirmed_at || input.user.confirmed_at)) {
     throw new Error("Email verification is required before workspace bootstrap.");
@@ -46,11 +49,46 @@ export async function bootstrapVerifiedTrialWorkspace(input: {
     throw new Error("Verified workspace bootstrap returned no result.");
   }
 
+  const workspaceId = typeof row.workspace_id === "string" ? row.workspace_id : null;
+  if (workspaceId && (row.created === true || row.resumed === true)) {
+    const { data: workspace, error: markerError } = await service
+      .from("workspaces")
+      .select("mautic_signed_up_queued_at")
+      .eq("id", workspaceId)
+      .maybeSingle();
+    if (markerError) throw new Error(`Signed-up stage marker lookup failed: ${markerError.message}`);
+
+    if (
+      workspace
+      && (workspace as { mautic_signed_up_queued_at?: string | null }).mautic_signed_up_queued_at == null
+    ) {
+      await (input.stageSetter ?? setStage)({
+        email: input.user.email,
+        firstName: firstName(input.user.user_metadata?.full_name),
+        workspaceId,
+        subjectId: workspaceId,
+        stage: "signed_up",
+      });
+
+      const { error: updateError } = await service
+        .from("workspaces")
+        .update({ mautic_signed_up_queued_at: new Date().toISOString() })
+        .eq("id", workspaceId)
+        .is("mautic_signed_up_queued_at", null);
+      if (updateError) throw new Error(`Signed-up stage marker update failed: ${updateError.message}`);
+    }
+  }
+
   return {
-    workspaceId: typeof row.workspace_id === "string" ? row.workspace_id : null,
+    workspaceId,
     created: row.created === true,
     resumed: row.resumed === true,
     eligible: row.eligible === true,
     trialEndsAt: typeof row.trial_ends_at === "string" ? row.trial_ends_at : null,
   };
+}
+
+function firstName(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  return value.trim().split(/\s+/, 1)[0] || undefined;
 }

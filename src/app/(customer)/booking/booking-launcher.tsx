@@ -45,7 +45,7 @@ export function BookingLauncher({ configured }: { configured: boolean }) {
       </Button>
       {error ? (
         <p id="booking-launch-error" className="text-sm font-semibold text-error" role="alert">
-          {error} Try again, or ask support to resend your booking link.
+          {error} Try again, or ask support to send your booking link again.
         </p>
       ) : null}
       {!configured ? (

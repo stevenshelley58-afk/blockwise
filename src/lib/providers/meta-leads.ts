@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { buildLeadDedupeKey, findDuplicateLeadIds } from "../leads/dedupe.ts";
 import type { MetaLeadDestination } from "./meta-execution.ts";
 import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
@@ -43,6 +45,7 @@ export type MetaLeadRepository = {
     workspaceId: string;
     lead: NormalizedMetaLead;
     duplicateOfLeadId: string | null;
+    batchKey: string;
   }): Promise<{ leadId: string; inserted: boolean }>;
   recordDeliveryAttempt(input: {
     workspaceId: string;
@@ -131,6 +134,7 @@ export async function syncMetaLeads(input: {
   since?: string | null;
   graphVersion?: string;
   fetchImpl?: typeof fetch;
+  onBatchFinalized?: (batch: { leads: NormalizedMetaLead[] }) => Promise<void>;
 }) {
   const [existingLeads, incomingLeads] = await Promise.all([
     input.repository.listExistingLeads(input.workspaceId),
@@ -138,6 +142,10 @@ export async function syncMetaLeads(input: {
   ]);
   let inserted = 0;
   let duplicate = 0;
+  const insertedLeads: NormalizedMetaLead[] = [];
+  const batchKey = createHash("sha256")
+    .update(incomingLeads.map((lead) => lead.externalId).sort().join("\n"))
+    .digest("hex");
 
   for (const lead of incomingLeads) {
     const duplicateIds = findDuplicateLeadIds(existingLeads, {
@@ -149,10 +157,12 @@ export async function syncMetaLeads(input: {
       workspaceId: input.workspaceId,
       lead,
       duplicateOfLeadId,
+      batchKey,
     });
 
     if (result.inserted) {
       inserted += 1;
+      insertedLeads.push(lead);
       existingLeads.push({ id: result.leadId, email: lead.email, phone: lead.phone });
     }
 
@@ -182,6 +192,10 @@ export async function syncMetaLeads(input: {
         sourceSubmissionId: lead.externalId,
       });
     }
+  }
+
+  if (insertedLeads.length > 0) {
+    await input.onBatchFinalized?.({ leads: insertedLeads });
   }
 
   return {

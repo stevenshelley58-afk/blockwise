@@ -87,7 +87,7 @@ original byte for byte at the time of writing.
    (mode 600). Copy it over an encrypted channel; never through git.
 4. **Recreate the systemd units**: `blockwise-autodeploy` (watcher, oneshot,
    `Environment=HOME=/root`), `blockwise-product-backup`,
-   `blockwise-email-outbox-drain`, `blockwise-cleanup-checkouts`. The autodeploy
+   `blockwise-cleanup-checkouts`. The autodeploy
    unit reads `/usr/local/sbin/blockwise-autodeploy`; copy that too.
 5. **Restore state**: database from `database.dump` plus `globals.sql`, then the
    storage archive into a fresh `blockwise-product-storage-data` volume. Compare

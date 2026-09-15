@@ -5,9 +5,9 @@
 Model, kept deliberately small:
 
   Blockwise writes contact fields  ->  a segment filter matches  ->  a one-step
-  campaign sends the email. Event flows (campaign live, budget alert, new
-  leads) end by clearing blockwise_event so the contact leaves the segment and
-  can come back next time (allowRestart). Stage flows follow blockwise_stage.
+  campaign sends the email. Every flow ends by clearing its trigger field so
+  the contact leaves the segment before Blockwise writes the next transition.
+  Campaigns allow restart; the app's durable subject receipts prevent replay.
 
 Everything is matched by name, so re-running updates in place. Nothing sends.
 """
@@ -29,6 +29,8 @@ AUTH = base64.b64encode(f"{os.environ['MAUTIC_USER']}:{os.environ['MAUTIC_PASSWO
 FROM_NAME, FROM_EMAIL, REPLY_TO = "Blockwise", "hello@blockwise.sale", "support@blockwise.sale"
 
 FIELDS = [
+    ("blockwise_workspace_id", "Blockwise workspace ID", "text"),
+    ("blockwise_profile_id", "Blockwise profile ID", "text"),
     ("blockwise_stage", "Blockwise stage", "text"),
     ("blockwise_stage_at", "Blockwise stage changed at", "datetime"),
     ("blockwise_event", "Blockwise event", "text"),
@@ -45,7 +47,7 @@ FIELDS = [
     ("blockwise_leads_summary", "Blockwise new leads summary", "textarea"),
 ]
 
-# key -> (kind, field, value). kind decides email_type and whether the campaign clears the field after sending.
+# key -> (kind, value). Kind decides the trigger field and email type.
 FLOWS = {
     "welcome": ("stage", "signed_up"),
     "trial_ending": ("stage", "trial_ending"),
@@ -147,12 +149,12 @@ def ensure_campaigns(email_ids: dict[str, int], segment_ids: dict[str, int]) -> 
         events = [send]
         connections = [{"sourceId": "lists", "targetId": "new_send", "anchors": {"source": "leadsource", "target": "top"}}]
         nodes = [{"id": "lists", "positionX": "400", "positionY": "65"}, {"id": "new_send", "positionX": "400", "positionY": "200"}]
-        if kind == "event":
-            events.append({"id": "new_clear", "name": "Clear event so it can fire again", "type": "lead.updatelead", "eventType": "action",
-                           "order": 2, "triggerMode": "immediate", "parent": {"id": "new_send"}, "decisionPath": None,
-                           "properties": {"blockwise_event": "done"}})
-            connections.append({"sourceId": "new_send", "targetId": "new_clear", "anchors": {"source": "bottom", "target": "top"}})
-            nodes.append({"id": "new_clear", "positionX": "400", "positionY": "335"})
+        field = "blockwise_stage" if kind == "stage" else "blockwise_event"
+        events.append({"id": "new_clear", "name": "Clear trigger for the next flow", "type": "lead.updatelead", "eventType": "action",
+                       "order": 2, "triggerMode": "immediate", "parent": {"id": "new_send"}, "decisionPath": None,
+                       "properties": {field: "done"}})
+        connections.append({"sourceId": "new_send", "targetId": "new_clear", "anchors": {"source": "bottom", "target": "top"}})
+        nodes.append({"id": "new_clear", "positionX": "400", "positionY": "335"})
         body = {"name": name, "isPublished": True, "allowRestart": True,
                 "description": f"Sends '{name}' once blockwise_{kind} = {value}. Defined in mautic/provision.py.",
                 "lists": [{"id": segment_ids[key]}], "events": events,

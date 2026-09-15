@@ -35,6 +35,9 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   assert.match(compose, /search_path%3Dauth%2Cpublic/);
   assert.match(compose, /search_path%3Dstorage%2Cpublic/);
   assert.match(compose, /BLOCKWISE_WORKER_EXPECTED_REVISION/);
+  assert.match(compose, /frank_owner_marketing_ingress:\n\s+external: true/);
+  assert.match(compose, /product-app:[\s\S]*?networks: \[blockwise-product, frank_owner_marketing_ingress\]/);
+  assert.match(compose, /product-worker:[\s\S]*?networks: \[blockwise-product, frank_owner_marketing_ingress\]/);
   assert.match(compose, /NEXT_PUBLIC_APP_URL/);
   assert.match(compose, /BLOCKWISE_READINESS_SUPABASE_URL: http:\/\/product-rest:3000/);
   assert.match(compose, /test: \[CMD, "node", "-e", "fetch\('http:\/\/127\.0\.0\.1:3000\/api\/health'/);
@@ -88,6 +91,11 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
   const envExample = await read("infra/product/.env.example");
   assert.match(envExample, /^OPENAI_API_KEY=$/m);
   assert.match(envExample, /^META_APP_ID=$/m);
+  for (const key of ["MAUTIC_API_URL", "MAUTIC_API_USER", "MAUTIC_API_PASSWORD"]) {
+    assert.match(compose, new RegExp(`^\\s+${key}: \\$\\{${key}:-\\}$`, "m"));
+    assert.match(envExample, new RegExp(`^${key}=$`, "m"));
+  }
+  assert.doesNotMatch(compose, /(?:RESEND_|EMAIL_OUTBOX_|DEMO_NOTIFY_|ALERT_EMAIL_)/);
   assert.match(compose, /TRUSTED_PROXY_RANGES/);
   assert.ok(compose.includes("ip_range: ${BLOCKWISE_PRODUCT_NETWORK_IP_RANGE:-172.30.0.128/25}"));
   assert.ok(compose.includes("BLOCKWISE_PRODUCT_NETWORK_IP_RANGE"));
@@ -236,6 +244,10 @@ test("product env contract contains compatibility endpoints but no managed URL",
   assert.match(env, /OPENAI_API_KEY=/);
   assert.match(env, /CRON_SECRET=/);
   assert.match(env, /BLOCKWISE_WORKER_EXPECTED_REVISION=/);
+  for (const key of ["MAUTIC_API_URL", "MAUTIC_API_USER", "MAUTIC_API_PASSWORD"]) {
+    assert.match(env, new RegExp(`^${key}=`, "m"));
+  }
+  assert.doesNotMatch(env, /^(?:RESEND_|EMAIL_OUTBOX_|DEMO_NOTIFY_|ALERT_EMAIL_)/m);
   for (const key of [
     "GOOGLE_AI_API_KEY",
     "AZURE_OPENAI_API_KEY",

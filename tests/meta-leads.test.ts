@@ -106,6 +106,7 @@ test("buildLeadDeliveryActions creates auditable CRM, webhook, or manual actions
 test("syncMetaLeads records delivery attempts only for newly inserted leads", async () => {
   const storedLeads = new Map<string, { leadId: string; email: string | null; phone: string | null }>();
   const deliveryAttempts: unknown[] = [];
+  const finalizedBatches: string[][] = [];
   const fetchImpl = async () =>
     new Response(
       JSON.stringify({
@@ -150,6 +151,9 @@ test("syncMetaLeads records delivery attempts only for newly inserted leads", as
     leadDestination: { type: "manual" as const, label: "Manual review" },
     repository,
     fetchImpl,
+    onBatchFinalized: async ({ leads }: { leads: Array<{ externalId: string }> }) => {
+      finalizedBatches.push(leads.map((lead) => lead.externalId));
+    },
   };
 
   const first = await syncMetaLeads(syncInput);
@@ -158,4 +162,5 @@ test("syncMetaLeads records delivery attempts only for newly inserted leads", as
   assert.equal(first.inserted, 1);
   assert.equal(second.inserted, 0);
   assert.equal(deliveryAttempts.length, 1);
+  assert.deepEqual(finalizedBatches, [["lead_123"]]);
 });

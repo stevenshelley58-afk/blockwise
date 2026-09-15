@@ -1,6 +1,7 @@
 import { enqueueQueuedJob } from "./job-queue-enqueue.ts";
 import { queueMetaLeadSync } from "./meta-leads-queue.ts";
 import { recoverStuckMetaPublishPlans } from "./meta-publish-queue.ts";
+import { recoverMissingTrialReminders } from "../billing/trial-reminder.ts";
 import { WARMED_REPORTING_RANGES } from "../monitor/dashboard-data.ts";
 import { createSupabaseServiceClient } from "../supabase/service.ts";
 
@@ -83,6 +84,10 @@ export async function queueScheduledMetaLeadSyncs(service: ServiceSupabase) {
 }
 
 export async function queueScheduledProviderMaintenance(service: ServiceSupabase) {
+  // This route survives the retired app-email drain and remains the periodic
+  // catch-up producer for the trial_end - 24h Mautic stage.
+  await recoverMissingTrialReminders(service, 50);
+
   const bucket = Math.floor(Date.now() / (6 * 60 * 60_000));
   let queued = 0;
   let failed = 0;

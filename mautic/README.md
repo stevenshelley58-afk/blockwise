@@ -26,10 +26,10 @@ The nine flows and the field that fires each:
 | Budget alert | blockwise_event | budget_alert | campaign_name, campaign_url, spend, budget, threshold |
 | New leads | blockwise_event | new_leads | campaign_name, leads_count, leads_summary |
 
-Stage flows are marketing-type sends (once per contact). Event flows are
-transactional sends whose campaign clears `blockwise_event` to `done`
-afterwards, and every campaign allows restart, so the same contact gets the
-next budget alert or lead batch.
+Stage flows are marketing-type sends (once per contact), and event flows are
+transactional sends. Every campaign clears its trigger field to `done` after
+sending. The bridge waits for that acknowledgement before writing the next
+stage or event, while durable subject receipts make producer retries safe.
 
 Text fields carry pre-formatted values ("30 September 2026", "A$149 per
 month") because Mautic prints tokens verbatim. All `blockwise_*` field aliases

@@ -29,7 +29,7 @@ test("public audit copy avoids unsupported market and offer claims", () => {
   assert.doesNotMatch(page, /Almost no agencies are advertising|opening to be first|Three ads before Checkout|Six free renders|Create three ads free/);
   assert.match(page, /\["Free Appraisal", "Market Update", "Property Management"\]/);
   assert.doesNotMatch(form, /follow up about a trial|setup call|Promote a listing/i);
-  assert.match(form, /only use these details to send your requested campaign plan/i);
+  assert.match(form, /use these details to respond to your campaign plan request/i);
   assert.match(form, /source: "audit-plan"/);
   assert.match(form, /property_management/);
   assert.match(page, /getAuditFooterCopy/);
@@ -38,7 +38,7 @@ test("public audit copy avoids unsupported market and offer claims", () => {
 });
 
 
-test("unavailable audit requests omit synthetic observations from the email payload", () => {
+test("unavailable audit requests omit synthetic observations from the saved request", () => {
   const page = readFileSync("src/app/audit/page.tsx", "utf8");
   const form = readFileSync("src/components/research/audit-lead-form.tsx", "utf8");
   const availability = readFileSync("src/lib/research/audit-availability.ts", "utf8");

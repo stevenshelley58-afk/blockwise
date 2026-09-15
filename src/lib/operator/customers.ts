@@ -1,7 +1,6 @@
 import { recordCustomerActivationMilestone } from "../activation/customer-activation.ts";
 import { createBookingInvitation, getLatestOnboardingBooking } from "../booking/service.ts";
 import { normalizeBookingMarket } from "../booking/provider.ts";
-import { sendOperatorEmail } from "./email-service.ts";
 import { recordAuditLog } from "../supabase/audit.ts";
 import { createSupabaseServiceClient } from "../supabase/service.ts";
 import { MANUAL_REQUEST_ACTION, MANUAL_REQUEST_TARGET, MANUAL_STATUS_ACTION } from "../adbuilder/manual-publish.ts";
@@ -156,7 +155,7 @@ export async function loadOperatorCustomerDetail(input: {
 export async function runOperatorCustomerAction(input: {
   workspaceId: string;
   operatorProfileId: string;
-  action: "adjust_credits" | "resend_booking" | "complete_onboarding" | "approve_managed_scope";
+  action: "adjust_credits" | "prepare_booking" | "complete_onboarding" | "approve_managed_scope";
   mutationId: string;
   reason: string;
   creditDelta?: number;
@@ -183,7 +182,7 @@ export async function runOperatorCustomerAction(input: {
     });
     if (rpc.error) throw new Error(`Credits could not be adjusted: ${rpc.error.message}`);
     result = { action: input.action, adjustment: Array.isArray(rpc.data) ? rpc.data[0] : rpc.data };
-  } else if (input.action === "resend_booking") {
+  } else if (input.action === "prepare_booking") {
     const customer = await loadBookingRecipient(service, input.workspaceId);
     const booking = await createBookingInvitation({
       workspaceId: input.workspaceId,
@@ -193,16 +192,7 @@ export async function runOperatorCustomerAction(input: {
       mutationKey,
       serviceSupabase: service,
     });
-    let delivery: "queued" | "manual" = "manual";
-    if (customer.email) {
-      await sendOperatorEmail({
-        to: [customer.email],
-        subject: "Book your Blockwise onboarding call",
-        text: `Choose a convenient onboarding time with the Blockwise team:\n\n${booking.hostedBookingUrl}\n\nYour product access is not affected if you book later.`,
-      });
-      delivery = "queued";
-    }
-    result = { action: input.action, bookingUrl: booking.hostedBookingUrl, delivery };
+    result = { action: input.action, bookingUrl: booking.hostedBookingUrl, delivery: "manual" };
   } else if (input.action === "approve_managed_scope") {
     // Written-scope approval is recorded server-side by operators only. The
     // workspace column is protected from customer writes by the billing
