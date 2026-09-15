@@ -130,3 +130,4 @@
 20260915000400_repair_trial_signup_flow_guard.sql
 20260915000500_complete_ad_studio_vocabulary_rename.sql
 20260915000600_repair_workspace_access_function_reference.sql
+20260915000700_one_free_ad_pack.sql

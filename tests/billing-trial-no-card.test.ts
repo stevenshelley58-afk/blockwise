@@ -350,13 +350,13 @@ test("trial status passes through the pending-delivery state", async () => {
     plan_key: "trial",
     trial_state: "pending_delivery",
     trial_ends_at: new Date(Date.now() + 30 * 86400_000).toISOString(),
-    credits_granted: 6,
+    credits_granted: 2,
     credits_consumed: 0,
     credits_reserved: 0,
     credits_expired: 0,
     ad_packs_used: 0,
-    ad_packs_limit: 3,
-    ad_packs_remaining: 3,
+    ad_packs_limit: 1,
+    ad_packs_remaining: 1,
   };
   const status = await loadTrialStatus(
     (() => Promise.resolve({ data: row, error: null })) as unknown as Parameters<typeof loadTrialStatus>[0],

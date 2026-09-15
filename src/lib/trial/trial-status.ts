@@ -1,4 +1,4 @@
-export const FREE_TRIAL_RENDER_LIMIT = 6;
+export const FREE_TRIAL_RENDER_LIMIT = 2;
 export const RENDERS_PER_AD_PACK = 2;
 export const TRIAL_UPGRADE_HREF = "/settings#billing";
 
@@ -68,7 +68,7 @@ function normalizeTrialStatus(value: unknown): TrialStatus | null {
   );
 
   // A status without the wallet-derived grant is not trustworthy. The current
-  // trial entitlement is six renders (three Feed + Story ad packs).
+  // trial entitlement is two renders (one Feed + Story ad pack).
   if (
     includedRenders === null ||
     usedRenders === null ||
