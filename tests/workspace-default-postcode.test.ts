@@ -120,7 +120,7 @@ test("only a recently refreshed projection may seed a workspace", async () => {
 });
 
 test("workspace postcode persistence keeps the existing workspace RLS and server authorization boundary", () => {
-  const migration = readFileSync("supabase/migrations/20260914010000_workspace_default_postcode.sql", "utf8");
+  const migration = readFileSync("supabase/migrations/20260914010001_workspace_default_postcode.sql", "utf8");
   const route = readFileSync("src/app/api/workspace/default-postcode/route.ts", "utf8");
   assert.match(migration, /default_postcode text/i);
   assert.match(migration, /default_postcode is null or default_postcode ~ '\^\[0-9\]\{4\}\$'/i);
