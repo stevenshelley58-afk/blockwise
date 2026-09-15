@@ -190,7 +190,7 @@ describe("explicit Meta publish setup", () => {
     const source = readFileSync("src/app/(customer)/ad-builder/templates/[templateId]/publish/publish-flow.tsx", "utf8");
     for (const text of ["Town or suburb", "Automatic placements (recommended)", "Choose an end time",
       "Approve & publish", "Validation is not approval", "Customise setup", "Why use this campaign setup?",
-      "Daily spend can vary. No total spending cap is set.", "View in Performance", "Create another ad"]) {
+      "Meta bills the spend to your own payment method. Daily delivery can vary.", "View in Performance", "Create another ad"]) {
       assert.ok(source.includes(text), text);
     }
     assert.match(source, /approveAndPublish: true/);

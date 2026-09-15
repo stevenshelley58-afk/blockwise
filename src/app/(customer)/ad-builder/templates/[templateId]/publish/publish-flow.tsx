@@ -108,7 +108,21 @@ const placementOptions: Array<[PlacementChoice, string]> = [
   ["facebook_story", "Facebook Stories"], ["instagram_story", "Instagram Stories"],
 ];
 const steps = ["Lead capture", "Audience & budget", "Review"] as const;
-function inFourteenDays() { const date = new Date(Date.now() + 14 * 86400000); date.setMinutes(date.getMinutes() - date.getTimezoneOffset()); return date.toISOString().slice(0, 16); }
+const DEFAULT_RUN_DAYS = 7;
+const DAY_MS = 86400000;
+function inSevenDays() { const date = new Date(Date.now() + DEFAULT_RUN_DAYS * DAY_MS); date.setMinutes(date.getMinutes() - date.getTimezoneOffset()); return date.toISOString().slice(0, 16); }
+/** Whole days between the chosen start (or now) and the chosen end, or null with no end date. */
+function scheduledRunDays(startIntent: ScheduleStartIntent, startAt: string, endIntent: ScheduleEndIntent, endAt: string): number | null {
+  if (endIntent !== "scheduled" || !endAt) return null;
+  const end = new Date(endAt).getTime();
+  const start = startIntent === "scheduled" && startAt ? new Date(startAt).getTime() : Date.now();
+  if (!Number.isFinite(end) || !Number.isFinite(start)) return null;
+  return Math.max(1, Math.round((end - start) / DAY_MS));
+}
+function endDateLabel(endAt: string): string {
+  const end = new Date(endAt);
+  return Number.isFinite(end.getTime()) ? new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", year: "numeric" }).format(end) : "the chosen end date";
+}
 
 export function PublishFlow({
   adId, workspaceId, templateId, templateName, adName, publishRequirements, notSaved, initialState,
@@ -139,7 +153,7 @@ export function PublishFlow({
   const [startIntent, setStartIntent] = useState<ScheduleStartIntent>("as_soon_as_activated");
   const [startAt, setStartAt] = useState("");
   const [endIntent, setEndIntent] = useState<ScheduleEndIntent>("scheduled");
-  const [endAt, setEndAt] = useState(inFourteenDays);
+  const [endAt, setEndAt] = useState(inSevenDays);
   const [offerEnabled, setOfferEnabled] = useState(publishRequirements.fulfilmentRequired);
   const [fulfilment, setFulfilment] = useState(emptyFulfilment);
   const [advanced, setAdvanced] = useState(false);
@@ -182,8 +196,18 @@ export function PublishFlow({
   const currency = publishingDefaults?.currency || "";
   const ready = Boolean(currency) && (targetMode === "new_campaign_new_adset" || Boolean(effectiveParent?.campaign) && (targetMode !== "existing_adset" || Boolean(effectiveParent?.adSets?.some(item => item.id === adSetId)))) && !notSaved && initialIssues.length === 0 && captureReady && Boolean(build.controls);
   const existingBudget = targetMode === "existing_adset" || (targetMode === "existing_campaign_new_adset" && selectedCampaign?.budgetMode === "campaign");
-  const dailyAmount = currency ? new Intl.NumberFormat("en-AU", { style: "currency", currency }).format(Number(dailyBudgetDollars) || 0) : "Currency not configured";
+  const money = currency ? new Intl.NumberFormat("en-AU", { style: "currency", currency }) : null;
+  const dailyAmount = money ? money.format(Number(dailyBudgetDollars) || 0) : "Currency not configured";
   const spendLabel = existingBudget ? "Uses existing budget. No budget increase." : dailyAmount + " average daily budget";
+  // The total the customer commits to before confirming: daily budget times the
+  // days between the chosen start and end. Meta bills it to their own payment method.
+  const runDays = existingBudget ? null : scheduledRunDays(startIntent, startAt, endIntent, endAt);
+  const totalLabel = existingBudget ? null : runDays === null
+    ? "No end date. Spend continues at the daily budget until you pause the campaign."
+    : (money ? money.format((Number(dailyBudgetDollars) || 0) * runDays) : "Total not available") + ` over ${runDays} ${runDays === 1 ? "day" : "days"}`;
+  const spendNote = existingBudget ? "Shared with existing ads, not a per-ad allowance." : runDays === null
+    ? "No end date is set, so Meta keeps billing the daily budget to your own payment method until you pause the campaign. Daily delivery can vary."
+    : `The campaign ends on ${endDateLabel(endAt)}. Meta bills the spend to your own payment method. Daily delivery can vary.`;
   const persistedSummary = receipt?.setupSummary;
   const creationLocked = receipt?.mode === "publish" && Boolean(receipt.planId);
   const pending = submitting || (receipt?.mode === "publish" && ["publishing", "activating"].includes(receipt.status ?? ""));
@@ -342,7 +366,7 @@ export function PublishFlow({
               </div>
               {targetMode === "existing_adset" ? <div className="space-y-2"><h2 className="font-semibold">Uses your existing setup</h2><p className="text-sm">{selectedCampaign?.name} · {selectedAdSet?.name}</p><p className="text-sm text-muted-foreground">Budget, audience, placements and schedule stay unchanged. Your new creative shares the existing budget with other ads.</p></div> : <>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div><Label htmlFor="publish-daily-budget">{existingBudget ? "Budget" : `Average daily budget (${currency})`}</Label>{existingBudget ? <p className="mt-2 text-sm">Uses existing campaign budget. No increase.</p> : <><Input id="publish-daily-budget" type="number" min="0.01" step="0.01" inputMode="decimal" value={dailyBudgetDollars} onChange={event => setDailyBudgetDollars(event.target.value)} className="mt-2 min-h-11" /><div className="mt-2 flex gap-1">{["10", "20", "30", "50"].map(value => <Button key={value} variant={dailyBudgetDollars === value ? "secondary" : "ghost"} size="sm" aria-pressed={dailyBudgetDollars === value} onClick={() => setDailyBudgetDollars(value)}>{value}</Button>)}</div></>}</div>
+                  <div><Label htmlFor="publish-daily-budget">{existingBudget ? "Budget" : `Average daily budget (${currency})`}</Label>{existingBudget ? <p className="mt-2 text-sm">Uses existing campaign budget. No increase.</p> : <><Input id="publish-daily-budget" type="number" min="0.01" step="0.01" inputMode="decimal" value={dailyBudgetDollars} onChange={event => setDailyBudgetDollars(event.target.value)} className="mt-2 min-h-11" /><div className="mt-2 flex gap-1">{["10", "20", "30", "50"].map(value => <Button key={value} variant={dailyBudgetDollars === value ? "secondary" : "ghost"} size="sm" aria-pressed={dailyBudgetDollars === value} onClick={() => setDailyBudgetDollars(value)}>{value}</Button>)}</div>{totalLabel ? <p className="mt-2 text-sm text-muted-foreground tabular-nums">{totalLabel}</p> : null}</>}</div>
                   <Choice label="Ad country" id="publish-country" value={country} onChange={value => { setCountry(value); setSelectedLocationKeys([]); setLocations([]); }} options={[["AU", "Australia"]]} placeholder="Choose country" />
                 </div>
                 <div className="border-t border-border pt-5"><h2 className="mb-3 text-sm font-semibold">Who should see your ad?</h2><Label htmlFor="publish-area-search">Town or suburb</Label><div className="mt-2 flex gap-2"><Input id="publish-area-search" value={locationQuery} onChange={event => setLocationQuery(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); void searchLocations(); } }} placeholder="Search an area" className="min-h-11 min-w-0" /><Button variant="outline" disabled={!country || locationBusy || locationQuery.trim().length < 2 || !metaConnectionConnected} onClick={searchLocations}>{locationBusy ? "Searching…" : "Search"}</Button></div>
@@ -375,7 +399,7 @@ export function PublishFlow({
             <section hidden={stage !== 2} aria-label="Final review" className="space-y-1">
               <ReviewRow title="Goal" value="Generate leads" />
               <ReviewRow title="Audience" value={targetMode === "existing_adset" ? "Uses existing audience" : build.summary?.audience || "Choose your area"} onChange={() => setStage(1)} />
-              <ReviewRow title="Budget & schedule" value={<>{spendLabel}<br /><span className="text-muted-foreground">{targetMode === "existing_adset" ? "Existing schedule unchanged" : build.summary?.schedule || "Choose your schedule"}</span></>} onChange={() => setStage(1)} />
+              <ReviewRow title="Budget & schedule" value={<>{spendLabel}{totalLabel ? <><br />{totalLabel}</> : null}<br /><span className="text-muted-foreground">{targetMode === "existing_adset" ? "Existing schedule unchanged" : build.summary?.schedule || "Choose your schedule"}</span></>} onChange={() => setStage(1)} />
               <ReviewRow title="Lead capture" value={requiresForm ? <>{form?.contactFields.map(field => field.type.replaceAll("_", " ")).join(" · ") || "Save a lead form"}<br /><span className="text-muted-foreground">{publishingDefaults?.leadDestination || "Lead destination not configured"}</span></> : destinationUrl || "Add your website"} onChange={() => setStage(0)} />
               <ReviewRow title="After submitting" value={destinationUrl || "Add a thank-you page"} onChange={() => setStage(0)} />
               {offerEnabled ? <ReviewRow title="Offer" value={fulfilment.exactOffer || "Complete your offer"} onChange={() => setStage(0)} /> : null}
@@ -398,7 +422,7 @@ export function PublishFlow({
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
         <Button variant="ghost" onClick={() => stage > 0 ? setStage(stage - 1) : window.location.assign("/ad-builder/ads/" + encodeURIComponent(adId))}>Back</Button>
         <div className="flex min-w-0 flex-1 flex-col items-end gap-2">
-          {stage === 2 ? <div className="text-right"><p className="text-sm font-semibold tabular-nums">{spendLabel}</p><p className="max-w-sm text-xs text-muted-foreground">{existingBudget ? "Shared with existing ads, not a per-ad allowance." : "Daily spend can vary. No total spending cap is set."}</p></div> : null}
+          {stage === 2 ? <div className="text-right"><p className="text-sm font-semibold tabular-nums">{spendLabel}</p>{totalLabel ? <p className="text-sm tabular-nums">{totalLabel}</p> : null}<p className="max-w-sm text-xs text-muted-foreground">{spendNote}</p></div> : null}
           {stage < 2 ? <Button disabled={stage === 0 ? !captureReady : !ready} onClick={() => setStage(stage + 1)} className="min-h-11">{stage === 0 ? "Continue" : "Review ad"}</Button> : <Button onClick={publish} disabled={!ready || receiptLoading || Boolean(refreshError) || submitting || Boolean(creationLocked) || (!metaConnectionConnected && (!canRequestManualPublish || ["requested", "in_progress", "completed"].includes(manualStatus)))} className="min-h-11">{submitting ? "Publishing…" : metaConnectionConnected ? providerWritesEnabled ? "Approve & publish" : "Preview publish setup" : "Request manual publishing"}</Button>}
         </div>
       </div>

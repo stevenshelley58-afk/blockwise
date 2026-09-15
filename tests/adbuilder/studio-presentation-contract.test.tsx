@@ -19,7 +19,12 @@ test("ordinary publish setup uses plain-language choices and one spend approval"
     assert.ok(publishFlow.includes(label), label);
   }
   assert.match(publishFlow, /Approve & publish/);
-  assert.match(publishFlow, /No total spending cap is set/);
+  // The spend disclosure states the total, the end date and who bills it,
+  // rather than disclaiming a cap that the end date actually provides.
+  assert.match(publishFlow, /The campaign ends on \$\{endDateLabel\(endAt\)\}\. Meta bills the spend to your own payment method\. Daily delivery can vary\./);
+  assert.match(publishFlow, /over \$\{runDays\} \$\{runDays === 1 \? "day" : "days"\}/);
+  assert.match(publishFlow, /const DEFAULT_RUN_DAYS = 7;/);
+  assert.doesNotMatch(publishFlow, /No total spending cap is set|inFourteenDays/);
   assert.match(publishFlow, /Shared with existing ads, not a per-ad allowance/);
   assert.doesNotMatch(publishFlow, /I confirm the daily spend/);
 });

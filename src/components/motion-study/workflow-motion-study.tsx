@@ -27,7 +27,7 @@ const TEMPLATE_HEADLINE = "Thinking of selling?";
 const AD_TEXT = "Thinking of selling? Find out what your home could be worth.";
 
 const EDIT_TEXTS = [SELECTED_AD.adTitle, AD_TEXT] as const;
-const REVIEW_TEXTS = ["Homeowners and potential sellers", "$20 per day", "14 days"] as const;
+const REVIEW_TEXTS = ["Homeowners and potential sellers", "A$20 per day", "7 days, A$140 total"] as const;
 const EDIT_WRITING = studyTypingSchedule(EDIT_TEXTS, TIMING.characterMs, TIMING.fieldGapMs);
 const REVIEW_WRITING = studyTypingSchedule(REVIEW_TEXTS, TIMING.characterMs, TIMING.fieldGapMs);
 
@@ -238,7 +238,7 @@ export function WorkflowMotionStudy() {
             </motion.section>
             <motion.section className={styles.bwStudyEditPanel} style={{ opacity: reviewOpacity }} aria-label="Review your ad setup" aria-hidden={step !== 2} inert={step !== 2}>
               <div className={styles.bwStudyPanelHeading}><h2>Ready to review</h2></div>
-              <dl className={styles.bwStudyReviewList}><div><dt>Who sees it</dt><StudyReviewValue clock={reviewFill} text={REVIEW_TEXTS[0]} {...REVIEW_WRITING.ranges[0]} /></div><div><dt>Daily budget</dt><StudyReviewValue clock={reviewFill} text={REVIEW_TEXTS[1]} {...REVIEW_WRITING.ranges[1]} /></div><div><dt>Duration</dt><StudyReviewValue clock={reviewFill} text={REVIEW_TEXTS[2]} {...REVIEW_WRITING.ranges[2]} /></div></dl>
+              <dl className={styles.bwStudyReviewList}><div><dt>Who sees it</dt><StudyReviewValue clock={reviewFill} text={REVIEW_TEXTS[0]} {...REVIEW_WRITING.ranges[0]} /></div><div><dt>Daily budget</dt><StudyReviewValue clock={reviewFill} text={REVIEW_TEXTS[1]} {...REVIEW_WRITING.ranges[1]} /></div><div><dt>Runs for</dt><StudyReviewValue clock={reviewFill} text={REVIEW_TEXTS[2]} {...REVIEW_WRITING.ranges[2]} /></div></dl>
               <motion.div className={styles.bwStudyApprovalStack} style={{ opacity: approvalReady }}>
                 <motion.div className={styles.bwStudyApprovalStatus} style={{ opacity: pendingOpacity }} aria-hidden="true">Approving ad</motion.div>
                 <motion.div className={styles.bwStudyApprovalStatus} data-approved="true" style={{ opacity: approvedOpacity }} aria-hidden="true"><Check aria-hidden="true" size={18} /> Ad approved</motion.div>

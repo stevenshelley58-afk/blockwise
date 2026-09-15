@@ -160,7 +160,7 @@ test("typing reserves enough ad copy height for the original three lines", () =>
 
 
 test("both screens type at one character speed with short consistent field gaps", () => {
-  const words=["Homeowners and potential sellers","$20 per day","14 days"];
+  const words=["Homeowners and potential sellers","A$20 per day","7 days, A$140 total"];
   const schedule=studyTypingSchedule(words,38,120);
   schedule.ranges.forEach((range,i) => {
     assert.ok(Math.abs((range.end-range.start)*schedule.durationMs-words[i].length*38)<1e-8);
