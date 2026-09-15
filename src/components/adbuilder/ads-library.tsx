@@ -1,9 +1,10 @@
 "use client";
 
-import { Clock3, Download, FilePenLine, Plus } from "lucide-react";
+import { Clock3, FilePenLine, Plus } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { DownloadAdPack } from "@/components/adbuilder/download-ad-pack";
 import { SafeImage } from "@/components/ui/safe-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,11 +23,13 @@ type SortMode = "recent" | "name" | "status";
 
 type AdsLibraryProps = {
   ads: LibraryAdModel[];
+  /** Scopes the download pack links to the workspace that owns these ads. */
+  workspaceId: string;
   /** Render inside the unified Library surface without repeating its page head. */
   embedded?: boolean;
 };
 
-export function AdsLibrary({ ads, embedded = false }: AdsLibraryProps) {
+export function AdsLibrary({ ads, workspaceId, embedded = false }: AdsLibraryProps) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<AdLibraryStatus | "all">("all");
   const [sort, setSort] = useState<SortMode>("recent");
@@ -97,14 +100,14 @@ export function AdsLibrary({ ads, embedded = false }: AdsLibraryProps) {
         </div>
       ) : (
         <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {visibleAds.map((ad) => <AdCard key={ad.adId} ad={ad} />)}
+          {visibleAds.map((ad) => <AdCard key={ad.adId} ad={ad} workspaceId={workspaceId} />)}
         </ul>
       )}
     </div>
   );
 }
 
-function AdCard({ ad }: { ad: LibraryAdModel }) {
+function AdCard({ ad, workspaceId }: { ad: LibraryAdModel; workspaceId: string }) {
   const href = `/ad-builder/ads/${encodeURIComponent(ad.adId)}`;
   return (
     <li className="min-w-0">
@@ -122,26 +125,14 @@ function AdCard({ ad }: { ad: LibraryAdModel }) {
               <p className="mt-1 truncate text-[11px] text-muted-foreground">{ad.status === "draft" ? "Draft in progress" : "Saved creative"}</p>
             </div>
             {ad.feedDownloadPath || ad.storyDownloadPath ? (
-              <div className="flex items-center gap-1">
-                {ad.feedDownloadPath ? (
-                  <a
-                    href={`/api/adbuilder/media?path=${encodeURIComponent(ad.feedDownloadPath)}&download=1&filename=${encodeURIComponent(`${ad.name}-feed.png`)}`}
-                    className="inline-flex min-h-11 items-center justify-center rounded-full px-2 text-xs font-semibold text-muted-foreground hover:bg-(--surface-subtle) hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    aria-label={`Download ${ad.name} Feed PNG`}
-                  >
-                    <Download className="mr-1 size-4" aria-hidden />Feed
-                  </a>
-                ) : null}
-                {ad.storyDownloadPath ? (
-                  <a
-                    href={`/api/adbuilder/media?path=${encodeURIComponent(ad.storyDownloadPath)}&download=1&filename=${encodeURIComponent(`${ad.name}-story.png`)}`}
-                    className="inline-flex min-h-11 items-center justify-center rounded-full px-2 text-xs font-semibold text-muted-foreground hover:bg-(--surface-subtle) hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    aria-label={`Download ${ad.name} Story PNG`}
-                  >
-                    <Download className="mr-1 size-4" aria-hidden />Story
-                  </a>
-                ) : null}
-              </div>
+              <DownloadAdPack
+                variant="inline"
+                adId={ad.adId}
+                workspaceId={workspaceId}
+                adName={ad.name}
+                feedPath={ad.feedDownloadPath}
+                storyPath={ad.storyDownloadPath}
+              />
             ) : null}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">

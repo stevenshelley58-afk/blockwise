@@ -65,7 +65,7 @@ export function StudioLibrary({
         </TabsList>
 
         <TabsContent value="ads" forceMount className="mt-6 data-[state=inactive]:hidden">
-          {adsError ? <LibraryReadError label="saved ads" /> : <AdsLibrary ads={ads} embedded />}
+          {adsError ? <LibraryReadError label="saved ads" /> : <AdsLibrary ads={ads} workspaceId={workspaceId} embedded />}
         </TabsContent>
         <TabsContent value="assets" forceMount className="mt-6 data-[state=inactive]:hidden">
           {assetsError ? <LibraryReadError label="workspace media" /> : <MediaLibrary workspaceId={workspaceId} brandKitId={brandKitId} assets={assets} nextAssetCursor={nextAssetCursor} embedded />}

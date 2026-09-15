@@ -8,5 +8,5 @@ export default async function AdsCollectionPage() {
   const { supabase, access } = await requirePageSurfaceAccess("adbuilder");
   const page = await loadAdBuilderLibraryPage({ supabase, workspaceId: access.workspaceId, kind: "ads", limit: 50 });
   const ads = page.items.filter((item): item is LibraryAdModel => "adId" in item);
-  return <AdsLibrary ads={ads} />;
+  return <AdsLibrary ads={ads} workspaceId={access.workspaceId} />;
 }

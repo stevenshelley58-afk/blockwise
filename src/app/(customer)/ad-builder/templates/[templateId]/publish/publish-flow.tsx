@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import Link from "next/link";
 import { Check, Loader2, CircleAlert } from "lucide-react";
 import { InstantFormEditor } from "@/components/adbuilder/instant-form-editor";
+import { DownloadAdPack } from "@/components/adbuilder/download-ad-pack";
 import type { InstantForm } from "@/lib/adbuilder/instant-form-types";
 import type { PublishRequirements } from "@/lib/adbuilder/publish-adapter";
 import type { MetaParentState } from "@/lib/providers/meta-execution";
@@ -18,6 +19,11 @@ export interface PublishFlowProps {
   workspaceId: string;
   templateId: string;
   templateName: string;
+  /**
+   * The customer's name for this ad, used for download file names. Falls back
+   * to the template name so the download pack always has a usable file name.
+   */
+  adName?: string;
   publishRequirements: PublishRequirements;
   /** True when the ad has no saved revision yet. */
   notSaved: boolean;
@@ -105,7 +111,7 @@ const steps = ["Lead capture", "Audience & budget", "Review"] as const;
 function inFourteenDays() { const date = new Date(Date.now() + 14 * 86400000); date.setMinutes(date.getMinutes() - date.getTimezoneOffset()); return date.toISOString().slice(0, 16); }
 
 export function PublishFlow({
-  adId, workspaceId, templateId, templateName, publishRequirements, notSaved, initialState,
+  adId, workspaceId, templateId, templateName, adName, publishRequirements, notSaved, initialState,
   initialIssues, providerWritesEnabled, audienceLocations, parentState,
   canRequestManualPublish, automatedPublishAvailable, metaConnectionConnected, publishingDefaults,
 }: PublishFlowProps) {
@@ -374,6 +380,9 @@ export function PublishFlow({
               <ReviewRow title="After submitting" value={destinationUrl || "Add a thank-you page"} onChange={() => setStage(0)} />
               {offerEnabled ? <ReviewRow title="Offer" value={fulfilment.exactOffer || "Complete your offer"} onChange={() => setStage(0)} /> : null}
               <ReviewRow title="Setup" value={targetMode === "new_campaign_new_adset" ? "New lead-generation campaign" : <>{selectedCampaign?.name || "Choose a campaign"}{selectedAdSet ? " · " + selectedAdSet.name : ""}</>} onChange={() => { setStage(1); setAdvanced(true); }} />
+              {/* The customer can always leave with what they made. This is the
+                  no-card alternative to publishing through Blockwise. */}
+              {initialState ? <div className="pt-4"><DownloadAdPack variant="panel" adId={adId} workspaceId={workspaceId} adName={adName?.trim() || templateName} feedPath={initialState.revision.feedPngPath || null} storyPath={initialState.revision.storyPngPath || null} /></div> : null}
               {!ready ? <div className="pt-4"><Issues issues={[...build.issues, ...(!currency ? ["Set your publishing currency in Settings before publishing."] : []), ...(!formReady ? ["Save your lead form before publishing."] : [])]} /></div> : null}
               {!metaConnectionConnected ? <div className="pt-4"><h2 className="text-sm font-semibold">Manual publishing request</h2><p className="mt-2 text-sm text-muted-foreground">A Blockwise operator will review this request. It does not send your ad directly to Meta.</p><Input aria-label="Note for publishing team" placeholder="Optional note for the publishing team" value={manualNotes} onChange={event => setManualNotes(event.target.value)} maxLength={500} className="mt-3" /></div> : !providerWritesEnabled ? <p className="pt-4 text-sm text-muted-foreground">Preview only. Nothing will be created or turned on in Meta.</p> : <p className="pt-4 text-sm text-muted-foreground">Approving sends this ad to Meta and turns on its new setup. Meta may review it before delivery starts.</p>}
             </section>
