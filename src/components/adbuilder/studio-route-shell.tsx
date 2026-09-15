@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { StudioShell } from "@/components/adbuilder/studio-shell";
-import { SelfServeShell } from "@/components/self-serve-shell";
+import { AdStudioShell } from "@/components/ad-studio-shell";
 
 type Account = { email: string; name: string; role: string };
 
@@ -22,7 +22,7 @@ type StudioRouteShellProps = {
 /**
  * Unified route boundary (replaces RouteAwareLegacyShell).
  * Dark Studio chrome for /ad-builder* for every workspace,
- * light SelfServe chrome everywhere else. No monitor/operator split.
+ * light adStudio chrome everywhere else. No monitor/operator split.
  */
 export function StudioRouteShell({
   children,
@@ -33,7 +33,7 @@ export function StudioRouteShell({
   account,
   trialStatus,
   metaConnectionStatus,
-  homeHref = "/self-serve",
+  homeHref = "/ad-studio",
 }: StudioRouteShellProps) {
   const pathname = usePathname() ?? "";
   if (pathname === "/ad-builder" || pathname.startsWith("/ad-builder/")) {
@@ -49,7 +49,7 @@ export function StudioRouteShell({
     );
   }
   return (
-    <SelfServeShell
+    <AdStudioShell
       userId={userId}
       workspaceId={workspaceId}
       workspaceName={workspaceName}
@@ -58,6 +58,6 @@ export function StudioRouteShell({
       trialStatus={trialStatus}
     >
       {children}
-    </SelfServeShell>
+    </AdStudioShell>
   );
 }

@@ -13,7 +13,7 @@ test("marketing analytics rejects missing consent and private routes", () => {
     trackMarketingEvent("generate_lead", { form_type: "demo" });
     assert.equal(calls.length, 0);
     consent = "granted";
-    for (const path of ["/operator/customers", "/self-serve", "/leads", "/login", "/reset-password", "/auth/callback", "/unknown-private-page"]) {
+    for (const path of ["/operator/customers", "/ad-studio", "/leads", "/login", "/reset-password", "/auth/callback", "/unknown-private-page"]) {
       stub.location.pathname = path;
       trackMarketingEvent("generate_lead");
     }

@@ -57,7 +57,7 @@ begin
   from auth.users
   where id = new.id;
 
-  if coalesce(v_metadata->>'signup_flow', '') <> 'trial_self_serve' then
+  if coalesce(v_metadata->>'signup_flow', '') <> 'trial_ad_studio' then
     return new;
   end if;
 
@@ -109,7 +109,7 @@ select
   true
 from public.profiles p
 join auth.users u on u.id = p.id
-where coalesce(u.raw_user_meta_data->>'signup_flow', '') = 'trial_self_serve'
+where coalesce(u.raw_user_meta_data->>'signup_flow', '') = 'trial_ad_studio'
   and u.raw_user_meta_data ? 'ad_radar_postcode'
 on conflict (profile_id) do update
 set postcode = coalesce(excluded.postcode, public.ad_radar_customer_interest_sources.postcode),

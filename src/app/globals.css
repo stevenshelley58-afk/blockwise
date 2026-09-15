@@ -8192,18 +8192,18 @@ a.operator-file-row {
 /* Home mobile pilot: keep the app shell quiet and native without changing
    desktop or the other customer routes. */
 @media (max-width: 767px) {
-  .tw .self-serve-home-topbar {
+  .tw .ad-studio-home-topbar {
     min-height: 56px;
     gap: 8px;
     padding-right: 12px;
     padding-left: 16px;
   }
 
-  .tw .self-serve-home-topbar > div {
+  .tw .ad-studio-home-topbar > div {
     gap: 8px;
   }
 
-  .tw .self-serve-home-topbar > div > button:first-child {
+  .tw .ad-studio-home-topbar > div > button:first-child {
     display: inline-grid;
     width: 36px;
     height: 36px;
@@ -8212,16 +8212,16 @@ a.operator-file-row {
     font-size: 0;
   }
 
-  .tw .self-serve-home-topbar > div > button:first-child kbd {
+  .tw .ad-studio-home-topbar > div > button:first-child kbd {
     display: none;
   }
 
-  .tw .self-serve-home-topbar > div > button:first-child svg {
+  .tw .ad-studio-home-topbar > div > button:first-child svg {
     flex: none;
   }
 
 
-  .tw .self-serve-home-actions > button:nth-child(2) {
+  .tw .ad-studio-home-actions > button:nth-child(2) {
     width: 44px;
     height: 44px;
   }

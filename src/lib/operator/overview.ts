@@ -397,7 +397,7 @@ export function buildOperatorOverview(input: {
     return {
       id: workspace.id,
       name: workspace.name,
-      mode: workspace.mode === "self_serve" ? "Self serve" : "Monitor",
+      mode: workspace.mode === "ad_studio" ? "Ad studio" : "Monitor",
       plan: plan?.name ?? plan?.key ?? "Unassigned",
       region: workspace.region ?? "AU",
       managedService: workspace.managed_service_enabled ? "Managed" : "Customer-led",

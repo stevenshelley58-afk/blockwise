@@ -86,7 +86,7 @@ async function bookingContext(): Promise<
   | { ok: false; response: NextResponse }
 > {
   const supabase = await createSupabaseServerClient();
-  const access = await requireWorkspaceAccess(supabase, { surface: "self_serve" });
+  const access = await requireWorkspaceAccess(supabase, { surface: "ad_studio" });
   if (!access.ok) {
     return {
       ok: false,

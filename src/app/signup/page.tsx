@@ -38,7 +38,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
   const auditId = typeof query.auditId === "string" && AUDIT_ID.test(query.auditId.trim()) ? query.auditId.trim() : null;
 
   if (user && auditId) {
-    redirect(`/self-serve?auditId=${encodeURIComponent(auditId)}`);
+    redirect(`/ad-studio?auditId=${encodeURIComponent(auditId)}`);
   }
 
   if (user) {

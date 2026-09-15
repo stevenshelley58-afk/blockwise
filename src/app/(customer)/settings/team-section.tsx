@@ -232,7 +232,7 @@ export function TeamSection({
 
       {billingAccessState !== "paid" ? (
         <p className="text-[12.5px] font-semibold text-muted-foreground">
-          Team invitations unlock when the paid self-serve plan is active. Trial workspaces remain owner-only.
+          Team invitations unlock when the paid ad-studio plan is active. Trial workspaces remain owner-only.
         </p>
       ) : currentRole !== "owner" ? (
         <p className="text-[12.5px] font-semibold text-muted-foreground">

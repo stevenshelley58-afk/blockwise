@@ -1,9 +1,9 @@
 -- Trial workspaces begin only after Supabase confirms the email. This replaces
 -- the legacy auth.users INSERT trigger without deleting any existing workspace.
 
-drop trigger if exists on_trial_self_serve_signup on auth.users;
+drop trigger if exists on_trial_ad_studio_signup on auth.users;
 
-create or replace function public.handle_trial_self_serve_signup()
+create or replace function public.handle_trial_ad_studio_signup()
 returns trigger
 language plpgsql
 security definer
@@ -17,7 +17,7 @@ begin
 end;
 $$;
 
-revoke all on function public.handle_trial_self_serve_signup()
+revoke all on function public.handle_trial_ad_studio_signup()
   from public, anon, authenticated;
 
 drop trigger if exists provision_workspace_activation_foundation on public.workspaces;
@@ -77,7 +77,7 @@ begin
   join public.workspaces w on w.id = wm.workspace_id
   left join public.workspace_plans wp on wp.id = w.plan_id
   where wm.profile_id = p_verified_user_id
-    and w.mode = 'self_serve'
+    and w.mode = 'ad_studio'
   order by
     case wm.role when 'owner' then 0 else 1 end,
     w.created_at
@@ -136,7 +136,7 @@ begin
   end if;
 
   v_signup_flow := coalesce(v_user.raw_user_meta_data->>'signup_flow', '');
-  if v_signup_flow <> 'trial_self_serve' then
+  if v_signup_flow <> 'trial_ad_studio' then
     workspace_id := null;
     created := false;
     resumed := false;
@@ -181,7 +181,7 @@ begin
   )
   values (
     v_workspace_name,
-    'self_serve',
+    'ad_studio',
     v_trial_plan_id,
     'AU',
     v_trial_started_at,
@@ -234,4 +234,4 @@ grant execute on function public.bootstrap_verified_trial_workspace(uuid)
   to service_role;
 
 comment on function public.bootstrap_verified_trial_workspace(uuid) is
-  'Idempotently creates or resumes one self-serve trial workspace after authoritative email verification.';
+  'Idempotently creates or resumes one ad-studio trial workspace after authoritative email verification.';

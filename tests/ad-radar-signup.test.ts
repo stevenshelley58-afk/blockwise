@@ -108,5 +108,5 @@ test("live CTA producers emit the source and attribution parameter names this pa
 test("signup auth calls persist the bounded parser output as user metadata", () => {
   const source = readFileSync("src/components/signup-form.tsx", "utf8");
   assert.equal((source.match(/adRadarSignupMetadata\(location\.search\)/g) ?? []).length, 2);
-  assert.match(source, /signup_flow:\s*"trial_self_serve"/);
+  assert.match(source, /signup_flow:\s*"trial_ad_studio"/);
 });

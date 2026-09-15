@@ -116,10 +116,10 @@ async function applyCheckoutCompleted(
   if (subscriptionId) patch.stripe_subscription_id = subscriptionId;
   if (metadataString(session, "offer_key")) patch.billing_offer_key = metadataString(session, "offer_key");
   if (metadataString(session, "offer_version")) patch.billing_offer_version = metadataString(session, "offer_version");
-  // Only legacy self-serve offers carried a card-on-file billing trial. Current
+  // Only legacy ad-studio offers carried a card-on-file billing trial. Current
   // offers have no trial period, so the subscription event decides the state.
   if (
-    (metadataString(session, "offer_key") ?? "").startsWith("self_serve_") &&
+    (metadataString(session, "offer_key") ?? "").startsWith("ad_studio_") &&
     metadataString(session, "offer_version") !== BILLING_OFFER_VERSION
   ) {
     patch.billing_access_state = "trialing";

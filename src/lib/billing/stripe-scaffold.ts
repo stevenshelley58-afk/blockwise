@@ -275,7 +275,7 @@ export function buildCheckoutSessionRequest(
           "customer_update[name]": "auto",
         }
       : {}),
-    ...(offer.product === "self_serve" && offer.trialDays > 0
+    ...(offer.product === "ad_studio" && offer.trialDays > 0
       ? {
           "subscription_data[trial_period_days]": offer.trialDays,
           "subscription_data[trial_settings][end_behavior][missing_payment_method]": "cancel",

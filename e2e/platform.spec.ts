@@ -30,10 +30,10 @@ test("results shows zero-safe provider reporting", async ({ page }) => {
   await expect(page.getByText("Google")).toHaveCount(0);
 });
 
-test("self-serve includes campaign drafting workflow", async ({ page }) => {
-  await page.goto("/self-serve");
+test("ad-studio includes campaign drafting workflow", async ({ page }) => {
+  await page.goto("/ad-studio");
 
-  await expect(page.getByRole("heading", { name: "Self-Serve" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ad studio" })).toBeVisible();
   await expect(page.getByText("Campaign Builder")).toBeVisible();
   await expect(page.getByText("Compliance Check")).toBeVisible();
 });

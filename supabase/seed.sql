@@ -25,7 +25,7 @@ begin
   select id into growth_plan_id from public.workspace_plans where key = 'growth';
 
   insert into public.workspaces (id, name, mode, plan_id, region, managed_service_enabled, created_by)
-  values (demo_workspace_id, 'Northstar Realty', 'self_serve', growth_plan_id, 'AU', true, operator_user_id)
+  values (demo_workspace_id, 'Northstar Realty', 'ad_studio', growth_plan_id, 'AU', true, operator_user_id)
   on conflict (id) do nothing;
 
   insert into public.workspace_members (workspace_id, profile_id, role)

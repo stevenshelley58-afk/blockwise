@@ -5,7 +5,7 @@ export const BILLING_OFFER_VERSION = "2026-09-06";
 // isBillingMarket/currencyForMarket together with the signup and onboarding UI.
 export type BillingMarket = "AU";
 export type BillingCurrency = "AUD";
-export type BillingProduct = "self_serve" | "managed";
+export type BillingProduct = "ad_studio" | "managed";
 export type StripeTaxBehavior = "exclusive" | "inclusive";
 
 export type BillingOffer = {
@@ -23,22 +23,22 @@ export type BillingOffer = {
   checkoutDisclosure: string;
 };
 
-const SELF_SERVE_TRIGGER =
+const AD_STUDIO_TRIGGER =
   "The free trial — three complete ads and one trial campaign — happens before Checkout and never requires a card. The paid subscription starts when Checkout completes and the first invoice is paid.";
 
 export const BILLING_OFFERS: Readonly<Record<`${BillingProduct}_${BillingMarket}`, BillingOffer>> = {
-  self_serve_AU: {
-    key: "self_serve_AU",
+  ad_studio_AU: {
+    key: "ad_studio_AU",
     version: BILLING_OFFER_VERSION,
     market: "AU",
     currency: "AUD",
-    product: "self_serve",
+    product: "ad_studio",
     recurringAmount: 24_900,
     firstInvoiceAmount: 24_900,
     trialDays: 0,
     taxBehavior: "inclusive",
-    priceEnvKey: "STRIPE_SELF_SERVE_AUD_PRICE_ID",
-    triggeringRule: SELF_SERVE_TRIGGER,
+    priceEnvKey: "STRIPE_AD_STUDIO_AUD_PRICE_ID",
+    triggeringRule: AD_STUDIO_TRIGGER,
     checkoutDisclosure:
       "One trial campaign is included before you subscribe. Meta ad spend is separate. Your Blockwise subscription starts at A$249 monthly until cancelled. Prices include GST where Blockwise is required to collect it.",
   },
@@ -68,7 +68,7 @@ export function isBillingCurrency(value: unknown): value is BillingCurrency {
 }
 
 export function isBillingProduct(value: unknown): value is BillingProduct {
-  return value === "self_serve" || value === "managed";
+  return value === "ad_studio" || value === "managed";
 }
 
 export function currencyForMarket(_market: BillingMarket): BillingCurrency {

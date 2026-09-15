@@ -71,7 +71,7 @@ begin
 
   perform pg_advisory_xact_lock(hashtextextended(p_workspace_id::text, 0));
 
-  -- Only self-serve trial-plan workspaces participate in the no-card trial.
+  -- Only ad-studio trial-plan workspaces participate in the no-card trial.
   update public.workspaces w
   set trial_started_at = p_delivery_at,
       trial_ends_at = p_delivery_at + interval '14 days',
@@ -81,7 +81,7 @@ begin
   where w.id = p_workspace_id
     and wp.id = w.plan_id
     and wp.key = 'trial'
-    and w.mode = 'self_serve'
+    and w.mode = 'ad_studio'
     and w.trial_state = 'pending_delivery'
   returning w.trial_ends_at into v_trial_ends;
 
@@ -191,7 +191,7 @@ begin
   join public.workspaces w on w.id = wm.workspace_id
   left join public.workspace_plans wp on wp.id = w.plan_id
   where wm.profile_id = p_verified_user_id
-    and w.mode = 'self_serve'
+    and w.mode = 'ad_studio'
   order by
     case wm.role when 'owner' then 0 else 1 end,
     w.created_at
@@ -253,7 +253,7 @@ begin
   end if;
 
   v_signup_flow := coalesce(v_user.raw_user_meta_data->>'signup_flow', '');
-  if v_signup_flow <> 'trial_self_serve' then
+  if v_signup_flow <> 'trial_ad_studio' then
     workspace_id := null;
     created := false;
     resumed := false;
@@ -297,7 +297,7 @@ begin
   )
   values (
     v_workspace_name,
-    'self_serve',
+    'ad_studio',
     v_trial_plan_id,
     'AU',
     'pending_delivery',
@@ -352,7 +352,7 @@ grant execute on function public.bootstrap_verified_trial_workspace(uuid)
   to service_role;
 
 comment on function public.bootstrap_verified_trial_workspace(uuid) is
-  'Idempotently creates or resumes one self-serve trial workspace after authoritative email verification. The 14-day trial starts later, on first Meta-reported delivery.';
+  'Idempotently creates or resumes one ad-studio trial workspace after authoritative email verification. The 14-day trial starts later, on first Meta-reported delivery.';
 
 -- Expose the trial state machine to the existing trial status reader.
 drop function if exists public.get_trial_status(uuid);

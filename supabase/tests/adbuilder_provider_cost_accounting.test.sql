@@ -4,7 +4,7 @@ create extension if not exists dblink with schema extensions;
 select plan(38);
 
 insert into public.workspaces (id, name, mode, region)
-values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Provider cost accounting test', 'self_serve', 'AU')
+values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Provider cost accounting test', 'ad_studio', 'AU')
 on conflict (id) do nothing;
 
 create or replace function public._cost_test_reservation()

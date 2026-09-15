@@ -15,7 +15,7 @@ type AppShellProps = {
 type WorkspaceSummary = {
   id: string;
   name: string;
-  mode: "monitor" | "self_serve";
+  mode: "monitor" | "ad_studio";
   region: string;
 };
 
@@ -31,9 +31,9 @@ function normalizeWorkspace(workspace: MembershipRow["workspaces"]) {
 async function loadInitialTrialStatus(
   supabase: Awaited<ReturnType<typeof getRequestAuthContext>>["supabase"],
   workspaceId: string | undefined,
-  workspaceMode: "monitor" | "self_serve",
+  workspaceMode: "monitor" | "ad_studio",
 ): Promise<TrialStatus | null> {
-  if (!workspaceId || workspaceMode !== "self_serve") return null;
+  if (!workspaceId || workspaceMode !== "ad_studio") return null;
 
   return loadTrialStatus(
     (functionName, parameters) => supabase.rpc(functionName, parameters),
@@ -48,7 +48,7 @@ async function DeferredTrialStatus({
 }: {
   supabase: Awaited<ReturnType<typeof getRequestAuthContext>>["supabase"];
   workspaceId: string | undefined;
-  workspaceMode: "monitor" | "self_serve";
+  workspaceMode: "monitor" | "ad_studio";
 }) {
   const status = await loadInitialTrialStatus(
     supabase,
@@ -74,9 +74,9 @@ export async function AppShell({
   const primaryMembership = membershipRows[0];
   const workspace = normalizeWorkspace(primaryMembership?.workspaces ?? null);
   const workspaceMode =
-    workspace?.mode === "self_serve" ? "self_serve" : "monitor";
+    workspace?.mode === "ad_studio" ? "ad_studio" : "monitor";
 
-  const homeHref = "/self-serve";
+  const homeHref = "/ad-studio";
   const workspaceName = workspace?.name ?? "Workspace";
   const accountEmail = profile?.email ?? claims.email ?? "";
   const accountName = profile?.full_name ?? accountEmail ?? "Signed in";

@@ -9,7 +9,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { seedMissingWorkspacePostcode } from "@/lib/workspace/default-postcode";
 
-const DEFAULT_NEXT_PATH = "/self-serve";
+const DEFAULT_NEXT_PATH = "/ad-studio";
 const SAFE_REDIRECT_ORIGIN = "https://blockwise.local";
 
 /**

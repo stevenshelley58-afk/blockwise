@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function SelfServeLoading() {
+export default function AdStudioLoading() {
   return (
     <div role="status" aria-busy="true" aria-label="Home" data-home-creative
       className="mx-auto w-full max-w-[1120px] px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-5 md:px-6 md:pb-12 md:pt-7">

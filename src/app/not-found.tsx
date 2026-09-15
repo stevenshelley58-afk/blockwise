@@ -21,7 +21,7 @@ export default function NotFoundPage() {
             <Link href="/">Back to home</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/self-serve">Go to dashboard</Link>
+            <Link href="/ad-studio">Go to dashboard</Link>
           </Button>
         </div>
       </section>

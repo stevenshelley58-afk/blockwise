@@ -23,14 +23,14 @@ const PLAN_SUMMARY = [
     terms: "Ad spend is paid separately to Meta.",
     cta: {
       label: "Start free",
-      href: "/signup?offer=self-serve",
+      href: "/signup?offer=ad-studio",
       location: "pricing-summary-free",
     },
     featured: false,
   },
   {
-    id: "self-serve",
-    name: "Self-serve",
+    id: "ad-studio",
+    name: "Ad studio",
     price: "A$249",
     billing: "per month · until cancelled",
     bestFor: "Running your own ads",
@@ -44,8 +44,8 @@ const PLAN_SUMMARY = [
     terms: "Ad spend is separate. GST included where required.",
     cta: {
       label: "Create three ads free",
-      href: "/signup?offer=self-serve",
-      location: "pricing-summary-self-serve",
+      href: "/signup?offer=ad-studio",
+      location: "pricing-summary-ad-studio",
     },
     featured: true,
   },
@@ -57,7 +57,7 @@ const PLAN_SUMMARY = [
     bestFor: "Getting it done for you",
     outcome: "We set up and manage your ads.",
     features: [
-      "Everything in self-serve",
+      "Everything in ad-studio",
       "Up to four live campaigns",
       "Weekly improvements",
       "Monthly report",
@@ -88,8 +88,8 @@ const DETAIL_SECTIONS = [
     ],
   },
   {
-    id: "self-serve-details",
-    kicker: "Self-serve",
+    id: "ad-studio-details",
+    kicker: "Ad studio",
     title: "Run your own ads.",
     intro: "Create ads, manage campaigns and see your results in one place.",
     rows: [
@@ -107,7 +107,7 @@ const DETAIL_SECTIONS = [
     intro:
       "We set up your campaigns, improve them weekly and send you a monthly report.",
     rows: [
-      ["Included", "Self-serve tools and up to four live campaigns."],
+      ["Included", "Ad studio tools and up to four live campaigns."],
       [
         "Getting started",
         "We agree the work and price on a call before you pay.",
@@ -239,7 +239,7 @@ export function MarketPricing() {
                     href={
                       section.id === "managed-details"
                         ? "/#managed-setup"
-                        : "/signup?offer=self-serve"
+                        : "/signup?offer=ad-studio"
                     }
                   >
                     {section.id === "managed-details"

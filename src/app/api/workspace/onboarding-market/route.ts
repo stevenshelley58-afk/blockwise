@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: website.error }, { status: 400 });
   }
 
-  const guard = await requireApiWorkspace(request, "self_serve", body.workspaceId ?? null);
+  const guard = await requireApiWorkspace(request, "ad_studio", body.workspaceId ?? null);
   if (!guard.ok) return guard.response;
   if (!guard.access.isOperator && guard.access.role !== "owner" && guard.access.role !== "admin") {
     return NextResponse.json({ error: "Only an owner or admin can confirm the workspace market." }, { status: 403 });

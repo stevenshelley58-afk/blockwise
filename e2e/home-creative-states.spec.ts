@@ -14,7 +14,7 @@ for (const audience of ['first_ad', 'returning'] as const) {
     await page.addInitScript(() => localStorage.setItem('bw-consent', 'essential'));
     await page.route('**/*', route => ['GET', 'HEAD', 'OPTIONS'].includes(route.request().method()) ? route.continue() : route.fulfill({ status: 409, body: 'Read-only acceptance' }));
     await page.setViewportSize({ width: audience === "first_ad" ? 320 : 390, height: audience === "first_ad" ? 667 : 844 });
-    await page.goto(`/self-serve?workspaceId=${workspaceId}`);
+    await page.goto(`/ad-studio?workspaceId=${workspaceId}`);
     expect(existsSync(previewFixture), 'Canonical renderer preview fixture must exist').toBe(true);
     await page.route('**/api/home-preview-fixture/*', route => route.fulfill({ contentType: 'image/png', path: previewFixture }));
     const safe = { creativeSuggestions: { status: 'ready', audience, items: [
@@ -49,7 +49,7 @@ for (const status of ['empty', 'exhausted', 'unavailable'] as const) {
     await page.route('**/*', route => ['GET', 'HEAD', 'OPTIONS'].includes(route.request().method()) ? route.continue() : route.fulfill({ status: 409, body: 'Read-only acceptance' }));
     await page.route('**/api/home-dashboard', route => route.fulfill({ status: 200, json: { creativeSuggestions: { audience: status === 'exhausted' ? 'returning' : 'unknown', status, items: [] } } }));
     await page.setViewportSize({ width: 320, height: 667 });
-    await page.goto(`/self-serve?workspaceId=${workspaceId}`);
+    await page.goto(`/ad-studio?workspaceId=${workspaceId}`);
     await expect(page.locator('img[data-template-preview]')).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Browse templates', exact: true }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: 'Use template', exact: true })).toHaveCount(0);
@@ -63,7 +63,7 @@ test('a failed preview does not leave a broken image or duplicate actions', asyn
   await page.route('**/api/home-preview-fixture/broken', route => route.fulfill({ status: 404, body: 'Fixture preview unavailable' }));
   await page.route('**/api/home-dashboard', route => route.fulfill({ status: 200, json: { creativeSuggestions: { audience: 'returning', status: 'ready', items: [{ templateId: 'broken', name: 'Preview fixture', previewUrl: '/api/home-preview-fixture/broken', href: '/ad-builder/templates/broken' }] } } }));
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`/self-serve?workspaceId=${workspaceId}`);
+  await page.goto(`/ad-studio?workspaceId=${workspaceId}`);
   await expect(page.getByText('Preview unavailable', { exact: true })).toBeVisible();
   await expect(page.locator('img[data-template-preview]')).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Browse templates', exact: true })).toHaveCount(1);

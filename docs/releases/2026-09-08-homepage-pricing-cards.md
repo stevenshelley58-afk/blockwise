@@ -12,7 +12,7 @@ Hallmark component guidance preserves the Manrope/Inter typography and existing 
 | --- | --- | --- |
 | Pricing available only on a separate page | Three plans directly before FAQ | Compare plans without leaving the homepage |
 | Separate-page styling | Existing homepage tokens, aligned prices and actions | Keep the page visually coherent |
-| Equal visual emphasis | Dark self-serve card | Distinguish the existing featured plan without adding a popularity claim |
+| Equal visual emphasis | Dark ad-studio card | Distinguish the existing featured plan without adding a popularity claim |
 
 NUL check, typecheck, full tests and production build passed from an isolated committed checkout. Tests: 945 passed, one existing root-permissions skip, zero failed. Public HTML matched the candidate, including its compiled revision. Caddy configuration comparison confirmed only the preview route changed; product health passed.
 

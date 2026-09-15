@@ -31,9 +31,9 @@ const SHEET_DANGER_CLASS =
   "inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-destructive px-5 text-sm font-semibold whitespace-nowrap text-white transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 hover:bg-destructive/90";
 
 function customerItems(): { primaryItems: MobileNavItem[]; overflowItems: MobileNavItem[] } {
-  const allItems = navByVariant.self_serve;
+  const allItems = navByVariant.ad_studio;
   const byHref = (href: string) => allItems.find((item) => item.href === href);
-  const primaryItems = [byHref("/self-serve"), byHref("/ad-builder"), byHref("/performance"), byHref("/leads")]
+  const primaryItems = [byHref("/ad-studio"), byHref("/ad-builder"), byHref("/performance"), byHref("/leads")]
     .filter((item): item is NavItem => Boolean(item));
   const primaryHrefs = new Set(primaryItems.map((item) => item.href));
   return { primaryItems, overflowItems: allItems.filter((item) => !primaryHrefs.has(item.href)) };
@@ -45,10 +45,10 @@ function itemIsActive(pathname: string, item: MobileNavItem, homeHref: string) {
   if (item.href === homeHref) {
     return pathname === homeHref || pathname.startsWith(`${homeHref}/`);
   }
-  return isItemActive(pathname, item.href, navByVariant.self_serve);
+  return isItemActive(pathname, item.href, navByVariant.ad_studio);
 }
 
-export function MobileBottomNav({ homeHref = "/self-serve", account, homePilot = false }: MobileBottomNavProps) {
+export function MobileBottomNav({ homeHref = "/ad-studio", account, homePilot = false }: MobileBottomNavProps) {
   const pathname = usePathname() ?? "";
   const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -56,7 +56,7 @@ export function MobileBottomNav({ homeHref = "/self-serve", account, homePilot =
   const [isSigningOut, setIsSigningOut] = useState(false);
   const { primaryItems, overflowItems } = useMemo(() => customerItems(), []);
   const copy = niche.copy.shell;
-  const activeItems = navByVariant.self_serve;
+  const activeItems = navByVariant.ad_studio;
   const moreCurrent = !pathname.startsWith("/ad-builder/") && overflowItems.some((item) => itemIsActive(pathname, item, homeHref));
   const moreActive = moreOpen || moreCurrent;
 

@@ -37,7 +37,7 @@ function isHttpUrl(value: string): boolean {
 
 export async function PATCH(request: NextRequest) {
   const body = (await request.json().catch(() => ({}))) as PublishDefaultsBody & { workspaceId?: string };
-  const guard = await requireApiWorkspace(request, "self_serve", body.workspaceId ?? null);
+  const guard = await requireApiWorkspace(request, "ad_studio", body.workspaceId ?? null);
 
   if (!guard.ok) return guard.response;
   if (!guard.access.isOperator && !["owner", "admin", "operator"].includes(guard.access.role)) {

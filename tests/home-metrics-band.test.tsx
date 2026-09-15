@@ -3,7 +3,7 @@ import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { HomeDashboard, type HomeData } from "../src/components/self-serve/home-dashboard.tsx";
+import { HomeDashboard, type HomeData } from "../src/components/ad-studio/home-dashboard.tsx";
 import {
   homePerformanceFromReporting,
   previousWeekTotals,

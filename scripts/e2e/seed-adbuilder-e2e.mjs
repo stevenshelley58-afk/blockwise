@@ -4,7 +4,7 @@
 // e2e/adbuilder-real-loop.spec.ts. Creates/updates:
 //   - an auth user (ADBUILDER_E2E_EMAIL / ADBUILDER_E2E_PASSWORD)
 //   - its profile row
-//   - a dedicated self-serve workspace (deterministic id below)
+//   - a dedicated ad-studio workspace (deterministic id below)
 //   - owner membership
 //   - a six-credit operator entitlement for the current UTC month
 //   - a reviewed Brand Pack so the spec can exercise appearance persistence
@@ -90,7 +90,7 @@ requireNoError(
     {
       id: ADBUILDER_E2E_WORKSPACE_ID,
       name: "AdBuilder E2E Realty",
-      mode: "self_serve",
+      mode: "ad_studio",
       plan_id: plan.id,
       region: "AU",
       managed_service_enabled: true,

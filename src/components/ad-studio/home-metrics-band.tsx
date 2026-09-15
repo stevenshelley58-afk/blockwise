@@ -18,7 +18,7 @@ import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 import { niche } from "@/config/niche";
-import type { HomeData } from "@/components/self-serve/home-dashboard";
+import type { HomeData } from "@/components/ad-studio/home-dashboard";
 import {
   changeBetween,
   formatCount,

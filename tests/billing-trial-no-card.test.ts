@@ -30,9 +30,9 @@ test("trial migration adds a server-controlled trial state machine anchored to d
   assert.match(sql, /create or replace function public\.start_trial_on_first_delivery/i);
   assert.match(sql, /p_delivery_at \+ interval '14 days'/i);
   assert.match(sql, /and w\.trial_state = 'pending_delivery'/i);
-  // The transition is guarded to self-serve trial-plan workspaces only.
+  // The transition is guarded to ad-studio trial-plan workspaces only.
   assert.match(sql, /wp\.key = 'trial'/i);
-  assert.match(sql, /w\.mode = 'self_serve'/i);
+  assert.match(sql, /w\.mode = 'ad_studio'/i);
 });
 
 test("trial migration never starts the 14-day window at email verification", () => {
@@ -72,14 +72,14 @@ test("checkout requires an owner or admin", () => {
   for (const role of ["member", "viewer", "operator"]) {
     const decision = evaluateCheckoutRequest({
       facts: okFacts,
-      context: { role, product: "self_serve" },
+      context: { role, product: "ad_studio" },
     });
     assert.equal(decision.ok, false);
     if (!decision.ok) assert.equal(decision.status, 403);
   }
   const owner = evaluateCheckoutRequest({
     facts: okFacts,
-    context: { role: "owner", product: "self_serve" },
+    context: { role: "owner", product: "ad_studio" },
   });
   assert.equal(owner.ok, true);
 });
@@ -87,20 +87,20 @@ test("checkout requires an owner or admin", () => {
 test("checkout rejects unconfirmed or unsupported billing markets", () => {
   const unconfirmed = evaluateCheckoutRequest({
     facts: { ...okFacts, countryConfirmedAt: null },
-    context: { role: "owner", product: "self_serve" },
+    context: { role: "owner", product: "ad_studio" },
   });
   assert.equal(unconfirmed.ok, false);
   if (!unconfirmed.ok) assert.equal(unconfirmed.status, 409);
 
   const usMarket = evaluateCheckoutRequest({
     facts: { ...okFacts, countryCode: "US", billingCurrency: "USD" },
-    context: { role: "owner", product: "self_serve" },
+    context: { role: "owner", product: "ad_studio" },
   });
   assert.equal(usMarket.ok, false);
 
   const currencyMismatch = evaluateCheckoutRequest({
     facts: { ...okFacts, billingCurrency: "USD" },
-    context: { role: "owner", product: "self_serve" },
+    context: { role: "owner", product: "ad_studio" },
   });
   assert.equal(currencyMismatch.ok, false);
 });
@@ -124,7 +124,7 @@ test("checkout prevents duplicate subscriptions for paid, trialing, or recoverin
   for (const state of ["paid", "trialing", "payment_recovery"]) {
     const decision = evaluateCheckoutRequest({
       facts: { ...okFacts, billingAccessState: state },
-      context: { role: "owner", product: "self_serve" },
+      context: { role: "owner", product: "ad_studio" },
     });
     assert.equal(decision.ok, false);
     if (!decision.ok) assert.equal(decision.status, 409);
@@ -132,14 +132,14 @@ test("checkout prevents duplicate subscriptions for paid, trialing, or recoverin
 
   const liveSubscription = evaluateCheckoutRequest({
     facts: { ...okFacts, stripeSubscriptionId: "sub_123", billingAccessState: null },
-    context: { role: "owner", product: "self_serve" },
+    context: { role: "owner", product: "ad_studio" },
   });
   assert.equal(liveSubscription.ok, false);
 
   // A fully canceled subscription may resubscribe.
   const resubscribe = evaluateCheckoutRequest({
     facts: { ...okFacts, stripeSubscriptionId: "sub_123", billingAccessState: "canceled" },
-    context: { role: "owner", product: "self_serve" },
+    context: { role: "owner", product: "ad_studio" },
   });
   assert.equal(resubscribe.ok, true);
 });
@@ -150,7 +150,7 @@ test("checkout prevents duplicate subscriptions for paid, trialing, or recoverin
 
 const billingEnv = {
   ...process.env,
-  STRIPE_SELF_SERVE_AUD_PRICE_ID: "price_self_au",
+  STRIPE_AD_STUDIO_AUD_PRICE_ID: "price_self_au",
   STRIPE_SECRET_KEY: "sk_test_placeholder",
 } as NodeJS.ProcessEnv;
 
@@ -186,16 +186,16 @@ test("the configured Stripe price is validated for amount, currency, interval, a
     await assert.doesNotReject(() =>
       validateStripePriceForOffer(
         {
-          key: "self_serve_AU",
+          key: "ad_studio_AU",
           version: "2026-09-06",
           market: "AU",
           currency: "AUD",
-          product: "self_serve",
+          product: "ad_studio",
           recurringAmount: 24_900,
           firstInvoiceAmount: 24_900,
           trialDays: 0,
           taxBehavior: "inclusive",
-          priceEnvKey: "STRIPE_SELF_SERVE_AUD_PRICE_ID",
+          priceEnvKey: "STRIPE_AD_STUDIO_AUD_PRICE_ID",
           triggeringRule: "trigger",
           checkoutDisclosure: "disclosure",
         },
@@ -215,16 +215,16 @@ test("the configured Stripe price is validated for amount, currency, interval, a
       await assert.rejects(() =>
         validateStripePriceForOffer(
           {
-            key: "self_serve_AU",
+            key: "ad_studio_AU",
             version: "2026-09-06",
             market: "AU",
             currency: "AUD",
-            product: "self_serve",
+            product: "ad_studio",
             recurringAmount: 24_900,
             firstInvoiceAmount: 24_900,
             trialDays: 0,
             taxBehavior: "inclusive",
-            priceEnvKey: "STRIPE_SELF_SERVE_AUD_PRICE_ID",
+            priceEnvKey: "STRIPE_AD_STUDIO_AUD_PRICE_ID",
             triggeringRule: "trigger",
             checkoutDisclosure: "disclosure",
           },
@@ -266,11 +266,11 @@ test("only an open, unexpired checkout session is reused", async () => {
   const reusable = await findReusableCheckoutSession(
     fakeService([{ stripe_checkout_session_id: "cs_open", url: "https://checkout.stripe.com/open", expires_at: future }]),
     "workspace-1",
-    "self_serve_AU",
+    "ad_studio_AU",
   );
   assert.equal(reusable?.sessionId, "cs_open");
 
-  const none = await findReusableCheckoutSession(fakeService([]), "workspace-1", "self_serve_AU");
+  const none = await findReusableCheckoutSession(fakeService([]), "workspace-1", "ad_studio_AU");
   assert.equal(none, null);
 });
 

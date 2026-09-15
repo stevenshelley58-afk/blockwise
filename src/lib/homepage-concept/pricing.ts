@@ -4,7 +4,7 @@
  */
 
 export type HomepagePlan = {
-  readonly id: "free" | "self-serve" | "managed";
+  readonly id: "free" | "ad-studio" | "managed";
   readonly name: string;
   readonly price: string;
   readonly billing: string;
@@ -20,7 +20,7 @@ export type HomepagePlan = {
   readonly featured: boolean;
 };
 
-export const TRIAL_SIGNUP_URL = "https://blockwise.sale/signup?offer=self-serve";
+export const TRIAL_SIGNUP_URL = "https://blockwise.sale/signup?offer=ad-studio";
 export const TRIAL_CTA_LABEL = "Start your free trial";
 
 export const HOMEPAGE_PLANS: readonly HomepagePlan[] = [
@@ -37,15 +37,15 @@ export const HOMEPAGE_PLANS: readonly HomepagePlan[] = [
     featured: false,
   },
   {
-    id: "self-serve",
-    name: "Self-serve",
+    id: "ad-studio",
+    name: "Ad studio",
     price: "A$249",
     billing: "per month, plus Meta ad spend",
     outcome: "Create and manage your own ads.",
     included: ["100 render credits each month", "Up to 50 Feed + Story ad packs"],
     note: "Choosing this plan is the paid step. Starting free does not auto-charge you.",
     details: ["Five team members, one brand and one Meta ad account", "Help when you need it. Meta ad spend is separate."],
-    cta: { label: TRIAL_CTA_LABEL, href: TRIAL_SIGNUP_URL, location: "pricing-self-serve" },
+    cta: { label: TRIAL_CTA_LABEL, href: TRIAL_SIGNUP_URL, location: "pricing-ad-studio" },
     featured: true,
   },
   {
@@ -54,7 +54,7 @@ export const HOMEPAGE_PLANS: readonly HomepagePlan[] = [
     price: "from A$1,500",
     billing: "per month, plus Meta ad spend",
     outcome: "Get help setting up and managing your ads.",
-    included: ["Everything in self-serve", "Up to four live campaigns"],
+    included: ["Everything in ad-studio", "Up to four live campaigns"],
     note: "Cancel anytime. Monthly billing, no lock-in.",
     details: ["Weekly campaign improvements and a monthly report", "Scope and price are agreed in writing before payment"],
     cta: { label: "Ask about managed setup", href: "https://blockwise.sale/#managed-setup", location: "pricing-managed" },

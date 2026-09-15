@@ -29,15 +29,15 @@ export const FAQ_DATA = [
   },
   {
     q: "What is included after I subscribe?",
-    a: "Self-serve includes 100 render credits each month, enough for up to 50 complete Feed + Story packs when each pack uses two renders, plus five verified team members.",
+    a: "Ad studio includes 100 render credits each month, enough for up to 50 complete Feed + Story packs when each pack uses two renders, plus five verified team members.",
   },
   {
-    q: "When does the self-serve subscription start?",
+    q: "When does the Ad studio subscription start?",
     a: "Only when you choose to subscribe. Checkout collects a card and starts A$249 monthly until cancelled. There is no introductory price and no automatic charge at the end of the trial.",
   },
   {
     q: "Do unused render credits roll over?",
-    a: "No. Paid self-serve includes 100 render credits per billing period. Credits expire at the end of that period and do not roll over or transfer. Cancellation stops future credit grants; credits you have already paid for remain available until the current period ends.",
+    a: "No. Paid Ad studio includes 100 render credits per billing period. Credits expire at the end of that period and do not roll over or transfer. Cancellation stops future credit grants; credits you have already paid for remain available until the current period ends.",
   },
   {
     q: "Does deleting my account cancel the subscription?",
@@ -45,7 +45,7 @@ export const FAQ_DATA = [
   },
   {
     q: "What does managed service include?",
-    a: "Managed service starts at A$1,500/month, plus Meta ad spend. It includes the complete self-serve product, 100 monthly render credits, one brand, one Meta ad account, operator launch and weekly optimization of up to four live campaigns, and a monthly report. You pay Meta directly; additional scope is confirmed and repriced during onboarding.",
+    a: "Managed service starts at A$1,500/month, plus Meta ad spend. It includes the complete Ad studio product, 100 monthly render credits, one brand, one Meta ad account, operator launch and weekly optimization of up to four live campaigns, and a monthly report. You pay Meta directly; additional scope is confirmed and repriced during onboarding.",
   },
 ] as const;
 

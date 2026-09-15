@@ -5,7 +5,7 @@ import { motion } from "motion/react";
 import Link from "next/link";
 
 import { MetaAdTile } from "@/components/research/meta-ad-tile";
-import { HomeMetricsBand } from "@/components/self-serve/home-metrics-band";
+import { HomeMetricsBand } from "@/components/ad-studio/home-metrics-band";
 import { CtaLink } from "@/components/shadcn-dashboard/button/button-01";
 import { NoticeBar } from "@/components/ui/notice-bar";
 import { SafeImage } from "@/components/ui/safe-image";

@@ -83,7 +83,7 @@ export function StudioShell({
   children,
   workspaceName,
   account,
-  homeHref = "/self-serve",
+  homeHref = "/ad-studio",
   metaConnectionStatus,
 }: StudioShellProps) {
   const pathname = usePathname() ?? "/ad-builder";
@@ -108,7 +108,7 @@ export function StudioShell({
       >
         <div className="flex items-center gap-3 px-5 py-7">
           <Link
-            href="/self-serve"
+            href="/ad-studio"
             aria-label="Back to Blockwise"
             className="grid size-9 shrink-0 place-items-center rounded-xl bg-transparent text-(--ink) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
@@ -159,7 +159,7 @@ export function StudioShell({
             {connectionLabel}
           </div>
           <Link
-            href="/self-serve"
+            href="/ad-studio"
             className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-[12px] font-semibold text-(--muted) hover:bg-(--ink)/10 hover:text-(--ink) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <ArrowLeft size={17} aria-hidden />
@@ -177,7 +177,7 @@ export function StudioShell({
         {!contextual ? (
           <header className="flex min-h-14 items-center border-b border-(--line) bg-(--surface) px-4 text-(--muted) md:hidden">
             <Link
-              href="/self-serve"
+              href="/ad-studio"
               className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-1 text-[12px] font-semibold text-(--ink) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <ArrowLeft size={16} aria-hidden />

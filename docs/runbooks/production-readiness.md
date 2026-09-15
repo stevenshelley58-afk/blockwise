@@ -224,7 +224,7 @@ data migration.
 - Repository gates: `npm run check:nul`, `npm run typecheck` exit 0; full
   `npm test` 908 tests, 908 pass, 0 fail (833 root + 54 + 11 + 10 package
   suites), 0 skips. Logs under `/srv/blockwise/e2e-runs/cleanup-20260905/`.
-- Mobile layout fix: `/self-serve` clipped cards/text at 320–390px because a
+- Mobile layout fix: `/ad-studio` clipped cards/text at 320–390px because a
   truncated quick-action subtitle inflated template-less auto grid tracks to
   418px inside `<main>` (`overflow-x: clip` hid it from
   `documentElement.scrollWidth`). Fixed with explicit `minmax(0, 1fr)` tracks

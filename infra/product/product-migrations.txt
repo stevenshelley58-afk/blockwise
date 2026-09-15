@@ -124,3 +124,4 @@
 20260914130000_video_deadline_rpc.sql
 20260914140000_video_single_brief_draft.sql
 20260915000100_adbuilder_object_rename.sql
+20260915000200_ad_studio_trial_signup_rename.sql

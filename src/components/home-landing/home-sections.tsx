@@ -392,7 +392,7 @@ export function ManagedSetup() {
               <span className="hw-check" aria-hidden>
                 ✓
               </span>
-              The complete self-serve product
+              The complete Ad studio product
             </li>
             <li>
               <span className="hw-check" aria-hidden>

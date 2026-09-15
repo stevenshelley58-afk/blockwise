@@ -21,7 +21,7 @@ import { usePathname } from "next/navigation";
 import { niche } from "@/config/niche";
 import { activeRouteHref } from "@/lib/navigation/active-nav-item";
 
-export type SidebarVariant = "self_serve";
+export type SidebarVariant = "ad_studio";
 
 type NavIcon = ComponentType<{ size?: number; "aria-hidden"?: boolean | "true" | "false" }>;
 
@@ -34,7 +34,7 @@ export type NavItem = {
   section?: string;
 };
 
-// Clean radar mark matching the self-serve mockup (circle + single sweep hand).
+// Clean radar mark matching the ad-studio mockup (circle + single sweep hand).
 function RadarIcon({ size = 18, ...props }: { size?: number } & SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -67,7 +67,7 @@ const customerToolIcons = {
   help: CircleHelp,
 } satisfies Record<(typeof niche.nav.items)[number]["icon"], NavIcon>;
 
-const selfServeNavItems: NavItem[] = niche.nav.items
+const AdStudioNavItems: NavItem[] = niche.nav.items
   .filter((item) => !item.feature || niche.features[item.feature])
   .map((item) => ({
     href: item.href,
@@ -78,7 +78,7 @@ const selfServeNavItems: NavItem[] = niche.nav.items
   }));
 
 export const navByVariant: Record<SidebarVariant, NavItem[]> = {
-  self_serve: selfServeNavItems,
+  ad_studio: AdStudioNavItems,
 };
 
 export function isItemActive(pathname: string, href: string, items: readonly NavItem[]) {

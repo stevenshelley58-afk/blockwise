@@ -75,7 +75,7 @@ export function SSOButtons({ mode = "signin" }: { mode?: "signin" | "signup" }) 
   const finishSignIn = useCallback(() => {
     // A full document load, not a router push: the session cookie has just been
     // written and every server component needs to read it.
-    window.location.assign("/self-serve");
+    window.location.assign("/ad-studio");
   }, []);
 
   const handleGoogleCredential = useCallback(
@@ -176,7 +176,7 @@ export function SSOButtons({ mode = "signin" }: { mode?: "signin" | "signup" }) 
         provider: "azure",
         options: {
           scopes: "email",
-          redirectTo: `${window.location.origin}/auth/confirm?next=/self-serve&flow=${mode}`,
+          redirectTo: `${window.location.origin}/auth/confirm?next=/ad-studio&flow=${mode}`,
         },
       });
       if (!oauthError) return;

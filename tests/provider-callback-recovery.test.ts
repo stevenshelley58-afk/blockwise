@@ -7,18 +7,18 @@ import { providerCallbackRecovery } from "../src/lib/auth/provider-callback-reco
 test("a provider code stranded on the marketing page is sent to the confirm route", () => {
   // The exact shape measured in production: Google returns, GoTrue's success
   // path puts the browser on the site root with the auth code.
-  const target = providerCallbackRecovery("code=abc123&next=/self-serve");
+  const target = providerCallbackRecovery("code=abc123&next=/ad-studio");
   assert.ok(target, "expected a recovery target");
   const url = new URL(target, "https://blockwise.sale");
   assert.equal(url.pathname, "/auth/confirm");
   assert.equal(url.searchParams.get("code"), "abc123");
   // next survives, so the confirm route still knows where to send the customer.
-  assert.equal(url.searchParams.get("next"), "/self-serve");
+  assert.equal(url.searchParams.get("next"), "/ad-studio");
 });
 
 test("a provider error stranded on the marketing page keeps its detail", () => {
   const target = providerCallbackRecovery(
-    "error=server_error&error_code=unexpected_failure&error_description=Unable+to+exchange&flow=signin&next=/self-serve",
+    "error=server_error&error_code=unexpected_failure&error_description=Unable+to+exchange&flow=signin&next=/ad-studio",
   );
   assert.ok(target);
   const url = new URL(target, "https://blockwise.sale");

@@ -1,16 +1,16 @@
-import type { HomeData } from "@/components/self-serve/home-dashboard";
+import type { HomeData } from "@/components/ad-studio/home-dashboard";
 import type { MetaDailyPoint, MetaMonitorPayload } from "@/lib/meta-monitor/types";
 
 /**
  * Client-safe half of the home dashboard read model.
  *
  * These helpers are the contract between the server payload and the browser
- * cache in `components/self-serve/home-dashboard-read-model.tsx`. They live in
+ * cache in `components/ad-studio/home-dashboard-read-model.tsx`. They live in
  * their own module because the loader beside them
  * (`lib/home/home-dashboard-data.ts`) reaches `node:crypto` through the
  * reporting snapshot layer. A client component that value-imported from that
  * file dragged Buffer/stream/crypto polyfills into the browser bundle: the
- * /self-serve route shipped ~450 KB of Node shims for two pure functions.
+ * /ad-studio route shipped ~450 KB of Node shims for two pure functions.
  *
  * Everything here is a pure transform over already-fetched data. It must never
  * gain a value import of a server-only module, or the polyfill graph returns.

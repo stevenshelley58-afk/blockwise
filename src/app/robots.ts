@@ -26,7 +26,7 @@ export default function robots(): MetadataRoute.Robots {
           "/ad-radar",
           "/suburb",
           "/audit",
-          "/self-serve",
+          "/ad-studio",
           "/operator",
           "/workforce",
           "/model-control",

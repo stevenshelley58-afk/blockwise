@@ -76,7 +76,7 @@ Checkout sessions that request ToS consent in BOTH test and live mode.
 ## Payment verification status
 
 Live Stripe credentials are configured (live mode) with the approved Australian
-prices active (self-serve A$249/month, managed A$1,500/month), a webhook
+prices active (ad-studio A$249/month, managed A$1,500/month), a webhook
 endpoint with all ten handled events enabled, and a billing portal
 configuration. No test-mode credentials exist in the deployment environment, so
 no live-mode charge, Checkout run, or webhook event was generated as a smoke

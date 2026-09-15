@@ -3,7 +3,7 @@ import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { HomePerformanceChart } from "../src/components/self-serve/home-chart.tsx";
+import { HomePerformanceChart } from "../src/components/ad-studio/home-chart.tsx";
 import { DemoModeNotice } from "../src/components/monitor/DemoModeNotice.tsx";
 import { MetaMonitorHeader } from "../src/components/monitor/MetaMonitorHeader.tsx";
 import { niche } from "../src/config/niche/index.ts";

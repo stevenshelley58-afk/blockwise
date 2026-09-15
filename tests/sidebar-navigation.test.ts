@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-// Self-serve nav labels and order live in the white-label niche config; the
+// Ad studio nav labels and order live in the white-label niche config; the
 // sidebar component only supplies icons. Assert against the config source.
-test("self-serve setup navigation exposes Brand Pack and one combined Settings entry", () => {
+test("ad-studio setup navigation exposes Brand Pack and one combined Settings entry", () => {
   const config = readFileSync("src/config/niche/blockwise.ts", "utf8");
   const navBlock = config.match(/items: \[[\s\S]*?\]/)?.[0] ?? "";
 
@@ -16,7 +16,7 @@ test("self-serve setup navigation exposes Brand Pack and one combined Settings e
   assert.equal((navBlock.match(/href: "\/settings(?:[#?][^"]*)?"/g) ?? []).length, 1);
 });
 
-test("sidebar renders self-serve nav from the niche config", () => {
+test("sidebar renders ad-studio nav from the niche config", () => {
   const sidebar = readFileSync("src/components/sidebar-nav.tsx", "utf8");
 
   assert.match(sidebar, /from "@\/config\/niche"/);

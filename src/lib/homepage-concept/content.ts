@@ -160,18 +160,18 @@ export const FAQ_GROUPS = [
     { question: "What happens after the free allowance?", answer: "Saved designs and leads stay available. You only pay Blockwise if you choose a paid plan." },
   ] },
   { heading: "Costs", faqs: [
-    { question: "What does self-serve cost?", answer: "A$249 per month until cancelled. Meta ad spend is separate." },
+    { question: "What does Ad studio cost?", answer: "A$249 per month until cancelled. Meta ad spend is separate." },
     { question: "Is Meta ad spend included?", answer: "No. You pay Meta directly through your own ad account." },
     { question: "How are taxes and extras handled?", answer: "GST is included where required. Extra brands, accounts or campaigns are quoted separately." },
   ] },
   { heading: "Billing", faqs: [
     { question: "Will the free option charge my card?", answer: "No. You only pay Blockwise if you choose a paid plan." },
-    { question: "How do I cancel self-serve?", answer: "Cancel in billing settings or the Stripe portal to stop renewals. Paid access and remaining credits last until the billing period ends." },
+    { question: "How do I cancel Ad studio?", answer: "Cancel in billing settings or the Stripe portal to stop renewals. Paid access and remaining credits last until the billing period ends." },
   ] },
   { heading: "Ownership and support", faqs: [
     { question: "Who owns my ad account and ad data?", answer: "You do. Your saved designs and leads stay available." },
     { question: "Does Blockwise guarantee leads or sales?", answer: "No. Results depend on your market, offer, budget and follow-up." },
-    { question: "What support is included?", answer: "Self-serve includes help when you are stuck. Managed adds setup and weekly campaign reviews." },
+    { question: "What support is included?", answer: "Ad studio includes help when you are stuck. Managed adds setup and weekly campaign reviews." },
   ] },
   { heading: "Let’s talk", faqs: [
     { question: "Can I talk to someone before choosing?", answer: "Yes. Email us and we will arrange a time.", links: [{ label: `Email ${CONTACT_EMAIL}`, href: CONTACT_HREF }] },

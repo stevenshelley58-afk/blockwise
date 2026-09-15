@@ -39,7 +39,7 @@ const users = [
 ];
 
 const workspaceIds = {
-  selfServe: "00000000-0000-4000-8000-000000000001",
+  adStudio: "00000000-0000-4000-8000-000000000001",
   monitor: "00000000-0000-4000-8000-000000000002",
 };
 
@@ -127,9 +127,9 @@ await requireNoError(
   await supabase.from("workspaces").upsert(
     [
       {
-        id: workspaceIds.selfServe,
+        id: workspaceIds.adStudio,
         name: "Northstar Realty",
-        mode: "self_serve",
+        mode: "ad_studio",
         plan_id: plan.id,
         region: "AU",
         managed_service_enabled: true,
@@ -156,7 +156,7 @@ await requireNoError(
   await supabase.from("workspace_members").upsert(
     [
       {
-        workspace_id: workspaceIds.selfServe,
+        workspace_id: workspaceIds.adStudio,
         profile_id: authUsers.get("operator").id,
         role: "operator",
       },

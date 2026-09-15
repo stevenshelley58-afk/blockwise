@@ -16,10 +16,10 @@ import { adRadarSignupMetadata } from "@/lib/research/ad-radar-signup";
 
 export function SignupForm({ auditId }: { auditId?: string | null }) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-  const nextPath = auditId ? `/self-serve?auditId=${encodeURIComponent(auditId)}` : "/self-serve";
+  const nextPath = auditId ? `/ad-studio?auditId=${encodeURIComponent(auditId)}` : "/ad-studio";
   const confirmNext = encodeURIComponent(nextPath);
   // Keep the default confirm path byte-identical so plain signups behave exactly as before.
-  const defaultConfirmPath = "/auth/confirm?next=/self-serve&flow=signup";
+  const defaultConfirmPath = "/auth/confirm?next=/ad-studio&flow=signup";
   const [mode, setMode] = useState<"magic" | "password">("magic");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
@@ -43,7 +43,7 @@ export function SignupForm({ auditId }: { auditId?: string | null }) {
         emailRedirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}${auditId ? `/auth/confirm?next=${confirmNext}&flow=signup` : defaultConfirmPath}`,
         shouldCreateUser: true,
         data: {
-          signup_flow: "trial_self_serve",
+          signup_flow: "trial_ad_studio",
           ...adRadarSignupMetadata(location.search),
         },
       },
@@ -71,7 +71,7 @@ export function SignupForm({ auditId }: { auditId?: string | null }) {
         captchaToken: turnstileToken,
         emailRedirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}${auditId ? `/auth/confirm?next=${confirmNext}&flow=signup` : defaultConfirmPath}`,
         data: {
-          signup_flow: "trial_self_serve",
+          signup_flow: "trial_ad_studio",
           ...adRadarSignupMetadata(location.search),
         },
       },

@@ -13,7 +13,7 @@ test("a free live campaign setup requires an isolated new Meta campaign", () => 
   assert.match(metaExistingCampaignReuseIssue({ billingAccessState: "unbilled" }) ?? "", /must use a new Meta campaign/);
   assert.match(metaExistingCampaignReuseIssue({
     billingAccessState: "trialing",
-    billingOfferKey: "self_serve_au_monthly",
+    billingOfferKey: "ad_studio_au_monthly",
     billingOfferVersion: "legacy-offer",
     stripeSubscriptionStatus: "trialing",
   }) ?? "", /must use a new Meta campaign/);

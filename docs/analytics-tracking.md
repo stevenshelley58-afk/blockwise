@@ -31,7 +31,7 @@ configuration, not secrets, but must not be committed into environment files.
 | cta_clicked | Marketing CTA selected | cta_location, page_type |
 | demo_requested | Managed-setup CTA selected | cta_location, page_type |
 | generate_lead | Confirmed managed-setup lead save | form_type, page_type |
-| sign_up | Pending: confirmation currently lands on excluded private self-serve route | Not launch-verified |
+| sign_up | Pending: confirmation currently lands on excluded private ad-studio route | Not launch-verified |
 
 After deployment, verify a consented session in GA4 DebugView and Clarity,
 then mark generate_lead as a GA4 key event after a verified save. Do not mark sign_up ready until its private-route handoff is implemented and tested. Provider account

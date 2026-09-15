@@ -123,7 +123,7 @@ test.describe("customer navigation canary", () => {
   test("keeps one active destination, hides disabled tools, and supports the command shortcut", async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await useEssentialOnlyConsent(page);
-    await page.goto(`/self-serve?workspaceId=${encodeURIComponent(workspaceId!)}`);
+    await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId!)}`);
     await expect(page).not.toHaveURL(/\/login/);
     await expect(page.getByRole("link", { name: "Ad Radar", exact: true })).toBeVisible();
     await page.keyboard.press("Control+K");
@@ -177,7 +177,7 @@ test.describe("customer navigation canary", () => {
     test(`fits Home and Settings without clipping at ${width}px`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 844 });
       await useEssentialOnlyConsent(page);
-      await page.goto(`/self-serve?workspaceId=${encodeURIComponent(workspaceId!)}`);
+      await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId!)}`);
       await expect(page.getByText(/recent sync/i)).toHaveCount(0);
       await expect(page).not.toHaveURL(/\/login/);
       await settle(page);
@@ -187,14 +187,14 @@ test.describe("customer navigation canary", () => {
       await page.goto("/ad-builder?workspaceId=" + encodeURIComponent(workspaceId!));
       const backToBlockwise = page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("link", { name: "Home", exact: true });
       await expect(backToBlockwise).toBeVisible();
-      await expect(backToBlockwise).toHaveAttribute("href", /\/self-serve/);
+      await expect(backToBlockwise).toHaveAttribute("href", /\/ad-studio/);
       await expect(page).toHaveURL(/\/ad-builder/);
       await expect(page.getByRole("heading", { name: "Ads", exact: true })).toBeVisible();
       await settle(page);
       await assertNothingClipped(page);
       await page.screenshot({ path: testInfo.outputPath("customer-studio-" + width + ".png"), fullPage: true });
       await backToBlockwise.click();
-      await expect(page).toHaveURL(/\/self-serve/);
+      await expect(page).toHaveURL(/\/ad-studio/);
       await page.goto("/performance?workspaceId=" + encodeURIComponent(workspaceId!));
       await expect(page.getByText(/recent sync/i)).toHaveCount(0);
       await expect(page).toHaveURL(/\/performance/);

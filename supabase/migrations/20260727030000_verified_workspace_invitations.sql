@@ -186,7 +186,7 @@ begin
     return;
   end if;
 
-  if v_workspace_mode <> 'self_serve' or v_billing_state <> 'paid' then
+  if v_workspace_mode <> 'ad_studio' or v_billing_state <> 'paid' then
     return query select 'paid_plan_required'::text, null::uuid, 0, 0, 0;
     return;
   end if;
@@ -558,7 +558,7 @@ begin
       continue;
     end if;
 
-    if v_workspace_mode <> 'self_serve' or v_billing_state <> 'paid' then
+    if v_workspace_mode <> 'ad_studio' or v_billing_state <> 'paid' then
       update public.workspace_invitations
       set status = 'cancelled',
           cancelled_at = now(),

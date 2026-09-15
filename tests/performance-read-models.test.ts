@@ -31,7 +31,7 @@ test("customer reporting routes never call Meta and manual refresh only queues w
 
 test("browser read models are identity-scoped, age-bounded, and purged on sign-out", () => {
   const store = read("src/lib/read-models/browser-store.ts");
-  const shell = read("src/components/self-serve-shell.tsx");
+  const shell = read("src/components/ad-studio-shell.tsx");
   assert.match(store, /bw-read-models-v1/);
   assert.match(store, /24 \* 60 \* 60 \* 1000/);
   assert.match(store, /userId.*workspaceId.*surface/s);

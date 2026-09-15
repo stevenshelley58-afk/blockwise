@@ -57,7 +57,7 @@ test("public homepage does not redirect anonymous visitors to the login screen",
 
   assert.doesNotMatch(page, /redirect\(/);
   // Signup flow stays reachable; wording of buttons/sections is free to change.
-  assert.match(combined, /\/signup\?offer=self-serve/);
+  assert.match(combined, /\/signup\?offer=ad-studio/);
   // Sign-in stays reachable from the header without gating the page, and the
   // mobile menu carries it too. Label text itself is not pinned.
   assert.match(combined, /LOGIN_HREF = "https:\/\/blockwise\.sale\/login"/);
@@ -412,7 +412,7 @@ test("robots and 404 keep protected routes out of search and anonymous visitors 
   // `.button secondary` class (globals.css is unlayered and would override the
   // token styling), so assert the links, not the class name.
   assert.match(notFound, /href="\/"[\s\S]*Back to home/);
-  assert.match(notFound, /href="\/self-serve"[\s\S]*Go to dashboard/);
+  assert.match(notFound, /href="\/ad-studio"[\s\S]*Go to dashboard/);
 });
 
 test("production login page does not expose development test profiles or passwords", () => {

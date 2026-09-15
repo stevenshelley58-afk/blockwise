@@ -66,7 +66,7 @@ test("Microsoft keeps its redirect hand-off and its own mark", () => {
   // Azure has no id_token variant in this flow, so it keeps the redirect, which
   // returns to the route that exchanges the code.
   assert.match(source, /provider: "azure"/);
-  assert.match(source, /\/auth\/confirm\?next=\/self-serve&flow=\$\{mode\}/);
+  assert.match(source, /\/auth\/confirm\?next=\/ad-studio&flow=\$\{mode\}/);
   assert.match(source, /function MicrosoftMark\(\)/);
   assert.match(source, /className="sso-icon" viewBox="0 0 23 23"/);
   assert.doesNotMatch(source, /icon: "[A-Z]"/);

@@ -124,7 +124,7 @@ test("workspace postcode persistence keeps the existing workspace RLS and server
   const route = readFileSync("src/app/api/workspace/default-postcode/route.ts", "utf8");
   assert.match(migration, /default_postcode text/i);
   assert.match(migration, /default_postcode is null or default_postcode ~ '\^\[0-9\]\{4\}\$'/i);
-  assert.match(route, /requireApiWorkspace\(request, "self_serve"/u);
+  assert.match(route, /requireApiWorkspace\(request, "ad_studio"/u);
   assert.match(route, /guard\.access\.role !== "owner"[\s\S]*guard\.access\.role !== "admin"/u);
   assert.match(route, /z\.object\([\s\S]*workspaceId: z\.string\(\)\.uuid\(\)\.optional\(\)/u);
 });

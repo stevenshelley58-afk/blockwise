@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 const PREVIEW_PATH = process.env.HOMEPAGE_PREVIEW_PATH ?? "/homepage-preview/concept";
 const QA_DIR = process.env.HOMEPAGE_QA_DIR ?? "/srv/blockwise/e2e-runs/homepage-rework-20260908/canary-qa";
-const SIGNUP_URL = "https://blockwise.sale/signup?offer=self-serve";
+const SIGNUP_URL = "https://blockwise.sale/signup?offer=ad-studio";
 const forbiddenRequests: string[] = [];
 const browserErrors: string[] = [];
 

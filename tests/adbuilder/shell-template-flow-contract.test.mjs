@@ -11,9 +11,9 @@ const mediaLibrary = readFileSync("src/components/adbuilder/media-library.tsx", 
 const homeCommand = readFileSync("src/components/adbuilder/home-command.tsx", "utf8");
 
 test("Ad Builder preserves the desktop symbol and gives mobile an explicit home link", () => {
-  assert.match(shell, /href="\/self-serve"[\s\S]*?aria-label="Back to Blockwise"[\s\S]*?<BlockwiseLogo tokens showWordmark=\{false\}/);
+  assert.match(shell, /href="\/ad-studio"[\s\S]*?aria-label="Back to Blockwise"[\s\S]*?<BlockwiseLogo tokens showWordmark=\{false\}/);
   const mobileHeader = shell.slice(shell.indexOf("<header"), shell.indexOf("</header>"));
-  assert.match(mobileHeader, /href="\/self-serve"/);
+  assert.match(mobileHeader, /href="\/ad-studio"/);
   assert.match(mobileHeader, /<ArrowLeft size=\{16\} aria-hidden/);
   assert.match(mobileHeader, /<span>Blockwise<\/span>/);
   assert.match(mobileHeader, /min-h-11/);

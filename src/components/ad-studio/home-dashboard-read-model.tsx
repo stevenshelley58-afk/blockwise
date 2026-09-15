@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { HomeDashboard, type HomeData } from "@/components/self-serve/home-dashboard";
+import { HomeDashboard, type HomeData } from "@/components/ad-studio/home-dashboard";
 import {
   homeSafeReadModelFromData,
   mergeHomeSafeReadModel,

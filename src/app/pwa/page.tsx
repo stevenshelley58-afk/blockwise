@@ -9,7 +9,7 @@ export const revalidate = 86400;
 const redirectWhenOnline = `
 (() => {
   const openHome = () => window.setTimeout(() => {
-    window.location.replace("/self-serve?source=pwa");
+    window.location.replace("/ad-studio?source=pwa");
   }, 350);
   if (navigator.onLine) {
     openHome();

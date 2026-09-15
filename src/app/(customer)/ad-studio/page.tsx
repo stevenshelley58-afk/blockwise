@@ -6,7 +6,7 @@ import { after } from "next/server";
 
 import { AuditClaimHandler } from "@/components/audit-claim-handler";
 import { ConfirmRegistrationTracker } from "@/components/confirm-registration-tracker";
-import { HomeDashboardReadModel } from "@/components/self-serve/home-dashboard-read-model";
+import { HomeDashboardReadModel } from "@/components/ad-studio/home-dashboard-read-model";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { loadHomeDashboardData } from "@/lib/home/home-dashboard-data";
 import { queueReportingRefresh } from "@/lib/meta-monitor/reporting-refresh-queue";
@@ -15,8 +15,8 @@ import { seedMissingWorkspacePostcode } from "@/lib/workspace/default-postcode";
 
 export const dynamic = "force-dynamic";
 
-export default async function SelfServeHome() {
-  const { supabase, access } = await requirePageSurfaceAccess("self_serve");
+export default async function AdStudioHome() {
+  const { supabase, access } = await requirePageSurfaceAccess("ad_studio");
   const serviceSupabase = createSupabaseServiceClient();
   const { data: authUser } = await supabase.auth.getUser();
   if (authUser.user) {

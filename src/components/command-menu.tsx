@@ -39,7 +39,7 @@ export function CommandMenu() {
   }, []);
 
   const copy = niche.copy.shell.commandMenu;
-  const navItems = navByVariant.self_serve;
+  const navItems = navByVariant.ad_studio;
 
   function run(action: () => void) {
     setOpen(false);

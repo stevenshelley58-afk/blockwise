@@ -78,7 +78,7 @@ export function BillingSection({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           workspaceId: workspace.id,
-          product: "self_serve",
+          product: "ad_studio",
           clientMutationId: crypto.randomUUID(),
         }),
       });
@@ -122,7 +122,7 @@ export function BillingSection({
       <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         <PlanTile
           label="Current plan"
-          value={workspace.billingAccessState === "paid" ? "Self-serve paid" : plan?.name ?? "Free trial"}
+          value={workspace.billingAccessState === "paid" ? "Ad studio paid" : plan?.name ?? "Free trial"}
           foot={
             <span className="flex flex-col items-start gap-1.5">
               <StatusPill tone={workspace.billingAccessState === "paid" ? "green" : workspace.billingAccessState === "payment_recovery" ? "rose" : "blue"}>

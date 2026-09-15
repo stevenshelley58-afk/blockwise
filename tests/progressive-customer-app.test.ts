@@ -7,10 +7,10 @@ function read(path: string): string {
 }
 
 test("authenticated home is driven by the activation resolver and shared credit wallet", () => {
-  const page = read("src/app/(customer)/self-serve/page.tsx");
+  const page = read("src/app/(customer)/ad-studio/page.tsx");
   const loader = read("src/lib/home/home-dashboard-data.ts");
-  const dashboard = read("src/components/self-serve/home-dashboard.tsx");
-  const card = read("src/components/self-serve/activation-card.tsx");
+  const dashboard = read("src/components/ad-studio/home-dashboard.tsx");
+  const card = read("src/components/ad-studio/activation-card.tsx");
 
   assert.match(page, /loadHomeDashboardData/);
   assert.match(loader, /resolveCustomerActivation/);

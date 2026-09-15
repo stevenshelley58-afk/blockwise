@@ -16,7 +16,7 @@ export async function unsubscribeEmail(formData: FormData): Promise<void> {
   const requestHeaders = await headers();
   const subjectKey = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
   const rateLimit = await checkRateLimit(null, subjectKey, {
-    bucket: "unsubscribe-self-serve",
+    bucket: "unsubscribe-ad-studio",
     maxRequests: 10,
     windowSeconds: 3600,
   });
@@ -27,7 +27,7 @@ export async function unsubscribeEmail(formData: FormData): Promise<void> {
     await recordEmailSuppression(supabase, {
       email,
       reason: "unsubscribe",
-      source: "self_serve_preferences",
+      source: "ad_studio_preferences",
     });
   } catch (error) {
     console.error("unsubscribe failed", error);

@@ -18,7 +18,7 @@ const SUPPORT_HREF =
   "mailto:hello@blockwise.sale?subject=Blockwise%20support";
 
 export default async function HelpPage() {
-  await requirePageSurfaceAccess("self_serve");
+  await requirePageSurfaceAccess("ad_studio");
   const businessId = getMetaPartnerBusinessId();
 
   return (

@@ -8,7 +8,7 @@ function read(path: string): string {
 
 test("every primary customer navigation destination has a live page", () => {
   const routePages: Record<string, string> = {
-    "/self-serve": "src/app/(customer)/self-serve/page.tsx",
+    "/ad-studio": "src/app/(customer)/ad-studio/page.tsx",
     "/performance": "src/app/(customer)/performance/page.tsx",
     "/ad-radar": "src/app/(customer)/ad-radar/page.tsx",
     "/ad-builder": "src/app/(customer)/ad-builder/page.tsx",

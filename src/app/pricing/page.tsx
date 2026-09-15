@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   title: "Pricing",
   alternates: { canonical: "/pricing" },
   description:
-    "Blockwise pricing: start free, continue managing ads yourself, choose self-serve at A$249/month, or ask about managed service from A$1,500/month.",
+    "Blockwise pricing: start free, continue managing ads yourself, choose ad-studio at A$249/month, or ask about managed service from A$1,500/month.",
 };
 
 const PERTH_MEETING_HREF =
@@ -58,7 +58,7 @@ export default function PricingPage() {
                 <div>
                   <h3>One brand per workspace.</h3>
                   <p>
-                    Self-serve covers one brand, one workspace, and one primary Meta ad account.
+                    Ad studio covers one brand, one workspace, and one primary Meta ad account.
                     Additional brands or client accounts need another workspace or a managed
                     agreement.
                   </p>
@@ -84,7 +84,7 @@ export default function PricingPage() {
             </div>
             <div className="pricing-final-actions">
               <Button asChild size="lg" variant="outline" className="max-[760px]:w-full">
-                <CtaLink href="/signup?offer=self-serve" location="pricing-final-start-free">
+                <CtaLink href="/signup?offer=ad-studio" location="pricing-final-start-free">
                   Start free
                 </CtaLink>
               </Button>

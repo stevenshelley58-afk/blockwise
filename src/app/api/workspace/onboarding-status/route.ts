@@ -31,7 +31,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const requestedWorkspaceId = typeof body?.workspaceId === "string" ? body.workspaceId : request.nextUrl.searchParams.get("workspaceId");
-  const guard = await requireApiWorkspace(request, "self_serve", requestedWorkspaceId);
+  const guard = await requireApiWorkspace(request, "ad_studio", requestedWorkspaceId);
 
   if (!guard.ok) return guard.response;
   const { supabase, access } = guard;

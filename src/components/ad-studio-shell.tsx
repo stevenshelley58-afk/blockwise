@@ -24,7 +24,7 @@ import { niche } from "@/config/niche";
 import { purgeLocalReadModels, syncReadModelIdentity } from "@/lib/read-models/browser-store";
 import { cn } from "@/lib/utils";
 
-type SelfServeShellProps = {
+type AdStudioShellProps = {
   children: React.ReactNode;
   userId: string;
   workspaceId: string;
@@ -43,7 +43,7 @@ type NavGroup = {
   items: NavItem[];
 };
 
-// The self-serve menu is a single guided path plus a "Set up" group; split the
+// The ad-studio menu is a single guided path plus a "Set up" group; split the
 // flat nav list on the `section` field so each group renders under a label.
 function groupNavItems(items: NavItem[]): NavGroup[] {
   const groups: NavGroup[] = [];
@@ -155,7 +155,7 @@ function AccountDropdown({ account, homeCompact = false }: { account: Account; h
   );
 }
 
-export function SelfServeShell({
+export function AdStudioShell({
   children,
   userId,
   workspaceId,
@@ -163,11 +163,11 @@ export function SelfServeShell({
   workspaceRegion,
   account,
   trialStatus,
-}: SelfServeShellProps) {
+}: AdStudioShellProps) {
   const pathname = usePathname() ?? "";
-  const groups = useMemo(() => groupNavItems(navByVariant.self_serve), []);
+  const groups = useMemo(() => groupNavItems(navByVariant.ad_studio), []);
   const pageTitle = pageTitleForPath(pathname);
-  const isSelfServeHome = pathname === "/self-serve";
+  const isAdStudioHome = pathname === "/ad-studio";
 
   useEffect(() => {
     void syncReadModelIdentity({ userId, workspaceId });
@@ -187,7 +187,7 @@ export function SelfServeShell({
       <Sidebar collapsible="icon">
         <SidebarHeader className="p-3">
           <Link
-            href="/self-serve"
+            href="/ad-studio"
             aria-label={niche.product.name}
             className="inline-flex items-center text-[var(--brand-ink)] transition-opacity hover:opacity-80 group-data-[collapsible=icon]:justify-center"
           >
@@ -205,7 +205,7 @@ export function SelfServeShell({
               <SidebarMenu>
                 {group.items.map((item) => {
                   const Icon = item.icon;
-                  const active = isItemActive(pathname, item.href, navByVariant.self_serve);
+                  const active = isItemActive(pathname, item.href, navByVariant.ad_studio);
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
@@ -238,12 +238,12 @@ export function SelfServeShell({
         <SidebarRail />
       </Sidebar>
 
-      <SidebarInset className={cn("pb-[calc(4.75rem+env(safe-area-inset-bottom)+var(--consent-banner-height,0px))] md:pb-0", isSelfServeHome && "self-serve-home-inset bg-(--surface)")}>
-        <header className={cn("sticky top-0 z-20 flex items-center gap-2.5 border-b border-border px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:min-h-[60px] md:gap-3.5 md:px-7", isSelfServeHome ? "self-serve-home-topbar min-h-[56px] bg-(--surface)" : "min-h-[54px] bg-background/85")}>
+      <SidebarInset className={cn("pb-[calc(4.75rem+env(safe-area-inset-bottom)+var(--consent-banner-height,0px))] md:pb-0", isAdStudioHome && "ad-studio-home-inset bg-(--surface)")}>
+        <header className={cn("sticky top-0 z-20 flex items-center gap-2.5 border-b border-border px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:min-h-[60px] md:gap-3.5 md:px-7", isAdStudioHome ? "ad-studio-home-topbar min-h-[56px] bg-(--surface)" : "min-h-[54px] bg-background/85")}>
           <SidebarTrigger className="-ml-1 hidden md:inline-flex" />
 
           {/* Desktop: keep the workspace breadcrumb on routes that need it. */}
-          {!isSelfServeHome ? (
+          {!isAdStudioHome ? (
             <span className="hidden truncate font-display text-[15.5px] font-extrabold tracking-[-0.01em] md:inline">
               {workspaceName} <span className="font-normal text-(--faint)">/</span> {pageTitle}
             </span>
@@ -251,13 +251,13 @@ export function SelfServeShell({
 
           {/* Home keeps one title across breakpoints; other routes retain the
               condensed product brand on mobile. */}
-          {isSelfServeHome ? (
-            <h1 className="self-serve-home-title font-sans text-[20px] font-semibold tracking-[-0.02em]">
+          {isAdStudioHome ? (
+            <h1 className="ad-studio-home-title font-sans text-[20px] font-semibold tracking-[-0.02em]">
               Home
             </h1>
           ) : (
             <Link
-              href="/self-serve"
+              href="/ad-studio"
               aria-label={niche.product.name}
               className="inline-flex items-center gap-2 text-foreground md:hidden"
             >
@@ -269,7 +269,7 @@ export function SelfServeShell({
           )}
 
           {/* Industry chip — config-driven, no legacy class */}
-          {!isSelfServeHome ? (
+          {!isAdStudioHome ? (
             <span
               aria-label={`Workspace: ${workspaceName}`}
               className="hidden shrink-0 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground lg:inline"
@@ -278,16 +278,16 @@ export function SelfServeShell({
             </span>
           ) : null}
 
-          <div className={cn("ml-auto inline-flex items-center gap-2.5 md:gap-3", isSelfServeHome && "self-serve-home-actions max-md:[&>button]:min-h-11 max-md:[&>button]:min-w-11 max-md:[&>button]:rounded-(--r-ctl)")}>
+          <div className={cn("ml-auto inline-flex items-center gap-2.5 md:gap-3", isAdStudioHome && "ad-studio-home-actions max-md:[&>button]:min-h-11 max-md:[&>button]:min-w-11 max-md:[&>button]:rounded-(--r-ctl)")}>
             <CommandMenu />
-            {!isSelfServeHome ? <SidebarThemeToggle tokens /> : null}
-            <AccountDropdown account={account} homeCompact={isSelfServeHome} />
+            {!isAdStudioHome ? <SidebarThemeToggle tokens /> : null}
+            <AccountDropdown account={account} homeCompact={isAdStudioHome} />
           </div>
         </header>
         {children}
       </SidebarInset>
 
-      <MobileBottomNav homeHref="/self-serve" account={account} homePilot={isSelfServeHome} />
+      <MobileBottomNav homeHref="/ad-studio" account={account} homePilot={isAdStudioHome} />
     </SidebarProvider>
   );
 }

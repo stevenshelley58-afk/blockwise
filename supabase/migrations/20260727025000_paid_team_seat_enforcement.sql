@@ -115,7 +115,7 @@ end;
 $$;
 
 comment on function public.allocate_paid_workspace_member_seat(uuid, uuid, text, uuid) is
-  'Atomically allocates one of five named paid self-serve seats under a workspace-scoped transaction lock.';
+  'Atomically allocates one of five named paid ad-studio seats under a workspace-scoped transaction lock.';
 
 revoke all on function public.allocate_paid_workspace_member_seat(uuid, uuid, text, uuid)
   from public, anon, authenticated;

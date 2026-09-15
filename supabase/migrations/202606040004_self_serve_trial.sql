@@ -33,7 +33,7 @@ begin
   end if;
 end $$;
 
-create or replace function public.handle_trial_self_serve_signup()
+create or replace function public.handle_trial_ad_studio_signup()
 returns trigger
 language plpgsql
 security definer
@@ -46,7 +46,7 @@ declare
   v_trial_started_at timestamptz := now();
   v_trial_ends_at timestamptz := v_trial_started_at + interval '7 days';
 begin
-  if coalesce(new.raw_user_meta_data->>'signup_flow', '') <> 'trial_self_serve' then
+  if coalesce(new.raw_user_meta_data->>'signup_flow', '') <> 'trial_ad_studio' then
     return new;
   end if;
 
@@ -85,7 +85,7 @@ begin
   )
   values (
     v_agency_name,
-    'self_serve',
+    'ad_studio',
     v_trial_plan_id,
     'AU',
     v_trial_started_at,
@@ -121,12 +121,12 @@ begin
 end;
 $$;
 
-drop trigger if exists on_trial_self_serve_signup on auth.users;
-create trigger on_trial_self_serve_signup
+drop trigger if exists on_trial_ad_studio_signup on auth.users;
+create trigger on_trial_ad_studio_signup
   after insert on auth.users
-  for each row execute function public.handle_trial_self_serve_signup();
+  for each row execute function public.handle_trial_ad_studio_signup();
 
-revoke all on function public.handle_trial_self_serve_signup() from public, anon, authenticated;
+revoke all on function public.handle_trial_ad_studio_signup() from public, anon, authenticated;
 
 drop policy if exists workspace_insert on public.rate_limits;
 drop policy if exists workspace_update on public.rate_limits;

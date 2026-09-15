@@ -21,28 +21,28 @@ import {
 
 const billingEnv: NodeJS.ProcessEnv = {
   ...process.env,
-  STRIPE_SELF_SERVE_AUD_PRICE_ID: "price_self_au",
+  STRIPE_AD_STUDIO_AUD_PRICE_ID: "price_self_au",
   STRIPE_MANAGED_AUD_PRICE_ID: "price_managed_au",
 } as NodeJS.ProcessEnv;
 
 test("offer catalog encodes the approved A$ amounts and tax behavior (Australia only)", () => {
-  assert.equal(BILLING_OFFERS.self_serve_AU.firstInvoiceAmount, 24_900);
-  assert.equal(BILLING_OFFERS.self_serve_AU.recurringAmount, 24_900);
-  assert.equal(BILLING_OFFERS.self_serve_AU.trialDays, 0);
-  assert.equal(BILLING_OFFERS.self_serve_AU.taxBehavior, "inclusive");
+  assert.equal(BILLING_OFFERS.ad_studio_AU.firstInvoiceAmount, 24_900);
+  assert.equal(BILLING_OFFERS.ad_studio_AU.recurringAmount, 24_900);
+  assert.equal(BILLING_OFFERS.ad_studio_AU.trialDays, 0);
+  assert.equal(BILLING_OFFERS.ad_studio_AU.taxBehavior, "inclusive");
   assert.equal(BILLING_OFFERS.managed_AU.recurringAmount, 150_000);
   assert.equal(BILLING_OFFERS.managed_AU.firstInvoiceAmount, 150_000);
   assert.equal(BILLING_OFFERS.managed_AU.trialDays, 0);
   assert.equal(currencyForMarket("AU"), "AUD");
 });
 
-test("self-serve Checkout charges the full monthly price with no trial, discount, or coupon", () => {
+test("ad-studio Checkout charges the full monthly price with no trial, discount, or coupon", () => {
   const result = buildCheckoutSessionRequest(
     {
       workspaceId: "workspace-1",
       market: "AU",
       currency: "AUD",
-      product: "self_serve",
+      product: "ad_studio",
       stripeCustomerId: "cus_123",
       customerEmail: "owner@example.com",
       userId: "user-1",
@@ -99,7 +99,7 @@ test("Checkout refuses a currency that does not match the confirmed workspace ma
           workspaceId: "workspace-3",
           market: "AU",
           currency: "USD" as never,
-          product: "self_serve",
+          product: "ad_studio",
           customerEmail: null,
           successUrl: "https://blockwise.sale/settings",
           cancelUrl: "https://blockwise.sale/settings",
@@ -144,7 +144,7 @@ test("billing domain applies a Checkout event once and records its accepted offe
   assert.equal(mock.eventStatuses.get("evt_checkout"), "applied");
 });
 
-test("legacy self-serve Checkout events still mark the workspace as trialing", async () => {
+test("legacy ad-studio Checkout events still mark the workspace as trialing", async () => {
   const mock = createBillingMock();
   const event = checkoutEvent("evt_checkout_legacy", "2026-07-27");
 
@@ -469,7 +469,7 @@ function checkoutEvent(id: string, offerVersion: string = BILLING_OFFER_VERSION)
         client_reference_id: "workspace-1",
         metadata: {
           workspace_id: "workspace-1",
-          offer_key: "self_serve_US",
+          offer_key: "ad_studio_US",
           offer_version: offerVersion,
           accepted_at: "2026-09-06T00:00:00.000Z",
           market: "US",

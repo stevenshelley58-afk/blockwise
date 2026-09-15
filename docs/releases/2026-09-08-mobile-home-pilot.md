@@ -4,7 +4,7 @@ Application candidate: `5d23e7368bdd1b5ddcabbdba6194aa9a1565e476`, immutable ima
 Documentation/test-only successor: `229e4d422`. This does not change the compiled app.
 
 ## Scope
-Signed-in `/self-serve` Home pilot only: flat mobile sections, single title, House tab icon, 48px primary action with 10px radius, inline real metrics, feature-filtered library rows, completed milestones and workspace administration disclosures. Existing read-model and activation contracts retained. Other routes and public marketing design unchanged.
+Signed-in `/ad-studio` Home pilot only: flat mobile sections, single title, House tab icon, 48px primary action with 10px radius, inline real metrics, feature-filtered library rows, completed milestones and workspace administration disclosures. Existing read-model and activation contracts retained. Other routes and public marketing design unchanged.
 
 ## Verification before deployment
 - NUL scan, full canonical tests and typecheck passed (`CHECK_EXIT:0`). Full tests: 1,084 total, 1,082 passed, two environment-dependent skips.

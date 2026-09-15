@@ -1,7 +1,7 @@
 # Customer Home: creative-first direction
 
 This document supersedes the earlier September 2026 mobile Home pilot guidance.
-It applies only to `/self-serve` and refines the existing Blockwise design
+It applies only to `/ad-studio` and refines the existing Blockwise design
 system. It does not change Ads, Performance, Leads, operator pages, or the shared
 navigation contract.
 

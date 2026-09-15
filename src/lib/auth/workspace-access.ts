@@ -214,7 +214,7 @@ function normalizeMembershipRow(row: MembershipRow): WorkspaceAccessMembership[]
     {
       workspaceId: workspace.id,
       workspaceName: workspace.name,
-      workspaceMode: workspace.mode === "self_serve" ? "self_serve" : "monitor",
+      workspaceMode: workspace.mode === "ad_studio" ? "ad_studio" : "monitor",
       region: workspace.region ?? "AU",
       role: row.role,
     },
@@ -236,7 +236,7 @@ async function loadOperatorFallbackWorkspace(supabase: SupabaseServerClient): Pr
   return {
     workspaceId: data.id,
     workspaceName: data.name,
-    workspaceMode: data.mode === "self_serve" ? "self_serve" : "monitor",
+    workspaceMode: data.mode === "ad_studio" ? "ad_studio" : "monitor",
     region: data.region ?? "AU",
     role: "operator",
   };

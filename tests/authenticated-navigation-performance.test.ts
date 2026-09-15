@@ -32,13 +32,13 @@ test("customer shell and pages share one claims-based request auth context", () 
 
 test("nonessential trial state streams without blocking the authenticated shell", () => {
   const shell = read("src/components/app-shell.tsx");
-  const selfServeShell = read("src/components/self-serve-shell.tsx");
+  const AdStudioShell = read("src/components/ad-studio-shell.tsx");
 
   assert.match(shell, /<Suspense fallback=\{<TrialStatusSkeleton \/>\}>/);
   assert.match(shell, /<DeferredTrialStatus/);
   assert.doesNotMatch(shell, /const initialTrialStatus = await loadInitialTrialStatus/);
-  assert.match(selfServeShell, /trialStatus: React\.ReactNode/);
-  assert.match(selfServeShell, /\{trialStatus\}/);
+  assert.match(AdStudioShell, /trialStatus: React\.ReactNode/);
+  assert.match(AdStudioShell, /\{trialStatus\}/);
 });
 
 test("dynamic customer navigation has reusable loading boundaries and router cache", () => {
@@ -55,7 +55,7 @@ test("dynamic customer navigation has reusable loading boundaries and router cac
 });
 
 test("Home and Performance read database snapshots without blocking on Meta", () => {
-  const home = read("src/app/(customer)/self-serve/page.tsx");
+  const home = read("src/app/(customer)/ad-studio/page.tsx");
   const homeLoader = read("src/lib/home/home-dashboard-data.ts");
   const performance = read("src/app/(customer)/performance/page.tsx");
 

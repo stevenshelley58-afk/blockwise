@@ -23,7 +23,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: postcode.error.issues[0]?.message ?? "Enter a valid postcode." }, { status: 400 });
   }
 
-  const guard = await requireApiWorkspace(request, "self_serve", requestBody.data.workspaceId ?? null);
+  const guard = await requireApiWorkspace(request, "ad_studio", requestBody.data.workspaceId ?? null);
   if (!guard.ok) return guard.response;
   if (!guard.access.isOperator && guard.access.role !== "owner" && guard.access.role !== "admin") {
     return NextResponse.json({ error: "Only a workspace owner or admin can change the default postcode." }, { status: 403 });

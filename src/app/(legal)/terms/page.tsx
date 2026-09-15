@@ -40,7 +40,7 @@ export default function TermsOfServicePage() {
       <p>
         New accounts start with an email address and a magic link or one-time code. Continuing from
         the email entry and signing in means you accept these terms and our{" "}
-        <a href="/privacy">Privacy Policy</a>. A self-serve trial has one owner. After payment, the
+        <a href="/privacy">Privacy Policy</a>. A ad-studio trial has one owner. After payment, the
         workspace may have up to five named members, each using an individually verified email.
       </p>
 
@@ -72,10 +72,10 @@ export default function TermsOfServicePage() {
       </p>
 
       <h2 style={{ fontSize: 22, marginTop: 32, fontWeight: 600 }}>
-        5. Self-serve trial, credits, and billing
+        5. Ad studio trial, credits, and billing
       </h2>
       <p>
-        The self-serve trial includes three complete Feed and Story ad packs and one live trial
+        The ad-studio trial includes three complete Feed and Story ad packs and one live trial
         campaign. A complete pack uses two render credits. You do not need a card to create,
         review, or edit those ads, and no payment method or Stripe subscription is required to
         start. The trial never charges you automatically and never converts to a paid subscription
@@ -96,7 +96,7 @@ export default function TermsOfServicePage() {
         introductory price. Prices include GST where Blockwise is required to collect it.
       </p>
       <p>
-        A paid self-serve subscription grants 100 render credits per billing period &mdash; 50
+        A paid ad-studio subscription grants 100 render credits per billing period &mdash; 50
         complete Feed and Story ad packs. Ordinary text edits, fixes, and repeat downloads use no
         credits. A Feed render,
         Story render, AI image regeneration, or AI image edit uses one credit. Deterministic copy
@@ -105,7 +105,7 @@ export default function TermsOfServicePage() {
         credits.
       </p>
       <p>
-        One self-serve subscription is for one workspace, one Brand Pack and primary website, one
+        One ad-studio subscription is for one workspace, one Brand Pack and primary website, one
         country and billing currency, one Meta Business Portfolio, and one primary Meta ad account.
         Additional unrelated brands, Meta businesses, or client accounts require another paid
         workspace or a managed or agency agreement.
@@ -119,13 +119,13 @@ export default function TermsOfServicePage() {
         6. Managed service
       </h2>
       <p>
-        Managed service is separate from self-serve and starts at A$1,500 per month, plus Meta ad
+        Managed service is separate from ad-studio and starts at A$1,500 per month, plus Meta ad
         spend, which Meta bills directly to your ad account. Before you can purchase it, Blockwise
         must confirm a written scope with you and record that approval; Checkout for managed
         service is unavailable until then. Any scope change requires a further written approval.
       </p>
       <p>
-        The base managed engagement includes the complete self-serve product, 100 monthly render
+        The base managed engagement includes the complete ad-studio product, 100 monthly render
         credits, one brand, one Meta ad account, operator launch and weekly optimization of up to
         four live campaigns, and a monthly report. Additional brands, ad accounts, campaign volume,
         or other work require a written scope change and may be repriced during onboarding.

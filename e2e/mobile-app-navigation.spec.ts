@@ -65,7 +65,7 @@ async function expectNoOverlap(page: Page) {
 test.describe("customer mobile navigation regression", () => {
   test("first-load consent does not cover the destination nav", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 }); await blockWrites(page);
-    await page.goto(`/self-serve`);
+    await page.goto(`/ad-studio`);
     const banner = page.getByRole("region", { name: "Cookie consent" }); await expect(banner).toBeVisible();
     const nav = page.getByRole("navigation", { name: "Primary mobile navigation" }); await expect(nav).toBeVisible();
     const overlap = await banner.evaluate((element) => { const a=element.getBoundingClientRect(); const b=document.querySelector('[aria-label="Primary mobile navigation"]')!.getBoundingClientRect(); return a.bottom>b.top && a.top<b.bottom; });
@@ -75,7 +75,7 @@ test.describe("customer mobile navigation regression", () => {
   for (const viewport of [{ width: 360, height: 800 }, { width: 390, height: 844 }]) {
     test(`keeps the destination bar usable and stable at ${viewport.width}px`, async ({ page }, testInfo) => {
       await page.setViewportSize(viewport); await consent(page); await blockWrites(page);
-      await page.goto(`/self-serve`); await expectNav(page, "Home"); await expectNoOverlap(page); await page.screenshot({ path: testInfo.outputPath(`home-${viewport.width}-top.png`) });
+      await page.goto(`/ad-studio`); await expectNav(page, "Home"); await expectNoOverlap(page); await page.screenshot({ path: testInfo.outputPath(`home-${viewport.width}-top.png`) });
       await page.evaluate(() => scrollTo(0, document.body.scrollHeight)); await expectNav(page, "Home"); await expectNoOverlap(page); await page.screenshot({ path: testInfo.outputPath(`home-${viewport.width}-scrolled.png`) });
       await page.goto(`/ad-builder`); await expectNav(page, "Ads"); await expectNoOverlap(page);
       await page.goto(`/performance`); await expectNav(page, "Performance");
@@ -93,7 +93,7 @@ test.describe("customer mobile navigation regression", () => {
 
   test("opens More as a focusable sheet and closes with Escape", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 }); await consent(page); await blockWrites(page);
-    await page.goto(`/self-serve`); const more = page.getByRole("button", { name: "More" }); await more.click();
+    await page.goto(`/ad-studio`); const more = page.getByRole("button", { name: "More" }); await more.click();
     const sheet = page.getByRole("dialog"); await expect(sheet).toBeVisible(); await expect(more).toHaveClass(/active/); await expect(page.getByRole("navigation", { name: "Primary mobile navigation" }).locator('[aria-current="page"]')).toHaveCount(1); await expect(sheet.getByText("Settings", { exact: true })).toBeVisible();
     await expect(sheet).toContainText("Contact support"); await page.keyboard.press("Escape");
     await expect(sheet).toBeHidden(); await expect(more).toBeFocused();

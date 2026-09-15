@@ -25,7 +25,7 @@ const FAQ_GROUPS = [
       },
       {
         q: "What happens after the free trial?",
-        a: "Keep running your ads yourself for free, or choose self-serve or managed. No automatic upgrade.",
+        a: "Keep running your ads yourself for free, or choose Ad studio or managed. No automatic upgrade.",
       },
     ],
   },
@@ -33,7 +33,7 @@ const FAQ_GROUPS = [
     title: "Costs",
     questions: [
       {
-        q: "What does self-serve cost?",
+        q: "What does Ad studio cost?",
         a: "A$249/month until cancelled. Your ad spend is separate.",
       },
       {
@@ -54,7 +54,7 @@ const FAQ_GROUPS = [
         a: "No card needed. You only pay Blockwise if you choose a paid plan.",
       },
       {
-        q: "How do I cancel self-serve?",
+        q: "How do I cancel Ad studio?",
         a: "Cancel in billing settings or the Stripe portal to stop renewals. Paid access and remaining credits last until the billing period ends.",
       },
     ],
@@ -72,7 +72,7 @@ const FAQ_GROUPS = [
       },
       {
         q: "What support is included?",
-        a: "Self-serve includes help when you’re stuck. Managed adds setup and weekly campaign reviews.",
+        a: "Ad studio includes help when you’re stuck. Managed adds setup and weekly campaign reviews.",
       },
     ],
   },

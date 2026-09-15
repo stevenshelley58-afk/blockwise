@@ -1,4 +1,4 @@
-import type { HomeData } from "@/components/self-serve/home-dashboard";
+import type { HomeData } from "@/components/ad-studio/home-dashboard";
 import { resolveCustomerActivation } from "@/lib/activation/customer-activation";
 import { loadReportingSnapshot } from "@/lib/meta-monitor/reporting-snapshots";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";

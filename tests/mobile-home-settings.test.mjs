@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const home = readFileSync("src/components/self-serve/home-dashboard.tsx", "utf8");
-const activation = readFileSync("src/components/self-serve/activation-card.tsx", "utf8");
+const home = readFileSync("src/components/ad-studio/home-dashboard.tsx", "utf8");
+const activation = readFileSync("src/components/ad-studio/activation-card.tsx", "utf8");
 const settings = readFileSync("src/app/(customer)/settings/settings-view.tsx", "utf8");
 
 test("Home shows metrics, leads, and local ads without duplicating account UI", () => {

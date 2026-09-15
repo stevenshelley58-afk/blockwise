@@ -1080,7 +1080,7 @@ select
   ),
   case when w.stripe_subscription_id is not null then w.updated_at end
 from public.workspaces w
-where w.mode = 'self_serve'
+where w.mode = 'ad_studio'
 on conflict (workspace_id) do nothing;
 
 -- Convert the old pack counter once. A historical pack consumed two renders;
@@ -1255,7 +1255,7 @@ declare
   v_period_end timestamptz;
   v_wallet_id uuid;
 begin
-  if new.mode <> 'self_serve' then
+  if new.mode <> 'ad_studio' then
     return new;
   end if;
 

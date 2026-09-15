@@ -6,7 +6,7 @@ import { canAccessSurface } from "../src/lib/auth/access-control.ts";
 
 const mobileNav = readFileSync("src/components/app/mobile-bottom-nav.tsx", "utf8");
 const studioShell = readFileSync("src/components/adbuilder/studio-shell.tsx", "utf8");
-const selfServeShell = readFileSync("src/components/self-serve-shell.tsx", "utf8");
+const AdStudioShell = readFileSync("src/components/ad-studio-shell.tsx", "utf8");
 const routeShell = readFileSync("src/components/adbuilder/studio-route-shell.tsx", "utf8");
 const globalCss = readFileSync("src/app/globals.css", "utf8");
 const consent = readFileSync("src/components/consent-banner.tsx", "utf8");
@@ -14,12 +14,12 @@ const consent = readFileSync("src/components/consent-banner.tsx", "utf8");
 test("customer mobile navigation keeps the five permanent destinations", () => {
   const tabs = blockwise.nav.items.filter((item) => item.mobileLabel);
   assert.deepEqual(tabs.map((item) => [item.href, item.mobileLabel]), [
-    ["/self-serve", "Home"],
+    ["/ad-studio", "Home"],
     ["/ad-builder", "Ads"],
     ["/performance", "Performance"],
     ["/leads", "Leads"],
   ]);
-  assert.match(mobileNav, /const primaryItems = \[byHref\("\/self-serve"\), byHref\("\/ad-builder"\), byHref\("\/performance"\), byHref\("\/leads"\)\]/);
+  assert.match(mobileNav, /const primaryItems = \[byHref\("\/ad-studio"\), byHref\("\/ad-builder"\), byHref\("\/performance"\), byHref\("\/leads"\)\]/);
   assert.match(mobileNav, /<span>\{copy\.more\}<\/span>/);
 });
 
@@ -29,8 +29,8 @@ test("mobile navigation is one customer bar in every workspace", () => {
   // treatment, and no `variant` value can select a destination.
   assert.doesNotMatch(mobileNav, /variant\s*=\s*["']/);
   assert.doesNotMatch(mobileNav, /monitorItems|itemsForVariant/);
-  assert.match(mobileNav, /const allItems = navByVariant\.self_serve/);
-  assert.equal(canAccessSurface({ role: "owner", workspaceMode: "monitor" }, "self_serve"), true);
+  assert.match(mobileNav, /const allItems = navByVariant\.ad_studio/);
+  assert.equal(canAccessSurface({ role: "owner", workspaceMode: "monitor" }, "ad_studio"), true);
   assert.equal(canAccessSurface({ role: "owner", workspaceMode: "monitor" }, "adbuilder"), true);
 });
 
@@ -48,7 +48,7 @@ test("More owns overflow state and signs out directly to login", () => {
   assert.match(mobileNav, /void signOut\(\)/);
   assert.match(mobileNav, /router\.replace\("\/login"\)/);
   assert.match(mobileNav, /<Sheet open=\{moreOpen\}/);
-  assert.match(selfServeShell, /<MobileBottomNav homeHref="\/self-serve"/);
+  assert.match(AdStudioShell, /<MobileBottomNav homeHref="\/ad-studio"/);
   assert.match(routeShell, /pathname === "\/ad-builder" \|\| pathname\.startsWith\("\/ad-builder\/"/);
   assert.match(routeShell, /<StudioShell[\s\S]*workspaceName=\{workspaceName\}/);
 });

@@ -30,8 +30,8 @@ test("signup offers magic-link, password and SSO account paths", () => {
   assert.match(source, /signInWithOtp\(\{/i);
   assert.match(source, /shouldCreateUser:\s*true/i);
   assert.match(source, /emailRedirectTo:/i);
-  assert.match(source, /\/auth\/confirm\?next=\/self-serve&flow=signup/i);
-  assert.match(source, /signup_flow:\s*"trial_self_serve"/i);
+  assert.match(source, /\/auth\/confirm\?next=\/ad-studio&flow=signup/i);
+  assert.match(source, /signup_flow:\s*"trial_ad_studio"/i);
   assert.match(source, /name="company_website"/i);
   assert.match(source, /signup-honeypot/i);
   assert.match(source, /By continuing, you accept the/i);
@@ -58,7 +58,7 @@ test("signup page redirects authenticated users and renders the signup form", ()
   assert.match(source, /import \{ HOME_PATH \} from "@\/lib\/auth\/home"/);
   assert.match(source, /<SignupForm/i);
   assert.match(source, /auditId/);
-  assert.match(source, /\/self-serve\?auditId=/);
+  assert.match(source, /\/ad-studio\?auditId=/);
 });
 
 test("confirm route verifies token hash and only redirects to safe relative next paths", () => {
@@ -71,7 +71,7 @@ test("confirm route verifies token hash and only redirects to safe relative next
   assert.match(source, /exchangeCodeForSession\(code\)/);
   assert.match(source, /type === "recovery"/);
   assert.match(source, /function sanitizeNextPath/i);
-  assert.match(source, /const DEFAULT_NEXT_PATH = "\/self-serve"/);
+  assert.match(source, /const DEFAULT_NEXT_PATH = "\/ad-studio"/);
   assert.match(source, /new URL\(redirectPath,\s*publicOrigin\(requestUrl\)\)/);
   assert.match(source, /startsWith\("\/\/"\)/);
   assert.match(source, /includes\("\\\\"\)/);

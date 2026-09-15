@@ -8,7 +8,7 @@ function readMigration() {
   return readFileSync(migrationPath, "utf8");
 }
 
-test("self-serve trial migration adds trial plan and workspace lifecycle fields", () => {
+test("ad-studio trial migration adds trial plan and workspace lifecycle fields", () => {
   const sql = readMigration();
 
   assert.match(sql, /insert into public\.workspace_plans/i);
@@ -24,14 +24,14 @@ test("self-serve trial migration adds trial plan and workspace lifecycle fields"
   assert.match(sql, /check \(onboarding_status in/i);
 });
 
-test("trial signup trigger provisions only self-serve trial signups", () => {
+test("trial signup trigger provisions only ad-studio trial signups", () => {
   const sql = readMigration();
 
-  assert.match(sql, /new\.raw_user_meta_data->>'signup_flow'[\s\S]*<> 'trial_self_serve'/i);
-  assert.match(sql, /create trigger on_trial_self_serve_signup[\s\S]*on auth\.users/i);
+  assert.match(sql, /new\.raw_user_meta_data->>'signup_flow'[\s\S]*<> 'trial_ad_studio'/i);
+  assert.match(sql, /create trigger on_trial_ad_studio_signup[\s\S]*on auth\.users/i);
   assert.match(sql, /insert into public\.profiles/i);
   assert.match(sql, /insert into public\.workspaces/i);
-  assert.match(sql, /'self_serve'/i);
+  assert.match(sql, /'ad_studio'/i);
   assert.match(sql, /'not_started'/i);
   assert.match(sql, /insert into public\.workspace_members[\s\S]*'owner'/i);
   assert.match(sql, /insert into public\.rate_limits/i);

@@ -5,8 +5,8 @@ select plan(52);
 
 insert into public.workspaces (id, name, mode, region)
 values
-  ('71111111-1111-4111-8111-111111111111', 'Queue lease test A', 'self_serve', 'AU'),
-  ('72222222-2222-4222-8222-222222222222', 'Queue lease test B', 'self_serve', 'AU')
+  ('71111111-1111-4111-8111-111111111111', 'Queue lease test A', 'ad_studio', 'AU'),
+  ('72222222-2222-4222-8222-222222222222', 'Queue lease test B', 'ad_studio', 'AU')
 on conflict (id) do nothing;
 
 insert into public.adbuilder_brand_kits (

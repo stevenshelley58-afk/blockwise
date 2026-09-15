@@ -9,7 +9,7 @@ test("homepage pricing presents three honest choices with direct signup", async 
     readFile(new URL("../src/components/homepage-concept/homepage-pricing.css", import.meta.url), "utf8"),
   ]);
   for (const value of [
-    'TRIAL_SIGNUP_URL = "https://blockwise.sale/signup?offer=self-serve"',
+    'TRIAL_SIGNUP_URL = "https://blockwise.sale/signup?offer=ad-studio"',
     'TRIAL_CTA_LABEL = "Start your free trial"', "A$0", "A$249", "from A$1,500",
     "No Blockwise subscription fee", "per month, plus Meta ad spend",
     "Cancel anytime. Monthly billing, no lock-in.",

@@ -7,7 +7,7 @@ const AUDIT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
 
 /**
  * Picks up an audit claim after signup: a visitor who generated audit ads and
- * then signed up lands on /self-serve?auditId=... — this saves those three
+ * then signed up lands on /ad-studio?auditId=... — this saves those three
  * previews into their new workspace and sends them to Ad Builder.
  */
 export function AuditClaimHandler({ workspaceId }: { workspaceId: string }) {

@@ -13,7 +13,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  const guard = await requireApiWorkspace(request, "self_serve");
+  const guard = await requireApiWorkspace(request, "ad_studio");
   if (!guard.ok) return guard.response;
 
   const model = await loadHomeDashboardData({

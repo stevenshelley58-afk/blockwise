@@ -369,7 +369,7 @@ function stageConfiguration(
     complete_checkout: { nextAction: "Add a payment method", allowedActions: ["start_checkout"], resumePath: "/settings#billing" },
     launch_first_campaign: { nextAction: "Run your first ad", allowedActions: ["publish"], resumePath: "/ad-builder" },
     confirm_first_invoice: { nextAction: "Confirming your subscription", allowedActions: ["reconcile_billing"], resumePath: "/settings#billing" },
-    complete: { nextAction: "Open your workspace", allowedActions: ["generate", "publish", "invite_team", "book_onboarding"], resumePath: "/self-serve" },
+    complete: { nextAction: "Open your workspace", allowedActions: ["generate", "publish", "invite_team", "book_onboarding"], resumePath: "/ad-studio" },
   };
   return map[stage];
 }
@@ -406,7 +406,7 @@ function unavailableActivation(workspaceId: string, blocker: string): ResolvedCu
     currentStage: "complete",
     nextAction: "Open your workspace",
     allowedActions: [],
-    resumePath: "/self-serve",
+    resumePath: "/ad-studio",
     progress: {
       completed: 0,
       total: ACTIVATION_MILESTONES.length,

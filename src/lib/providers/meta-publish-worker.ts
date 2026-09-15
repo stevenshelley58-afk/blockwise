@@ -682,7 +682,7 @@ async function freeLiveMode(
     return "free_campaign";
   }
   if (
-    row.billing_offer_key?.startsWith("self_serve_") &&
+    row.billing_offer_key?.startsWith("ad_studio_") &&
     row.stripe_subscription_status === "trialing" &&
     row.billing_offer_version !== BILLING_OFFER_VERSION
   ) {

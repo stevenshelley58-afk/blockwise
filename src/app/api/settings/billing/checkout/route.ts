@@ -34,8 +34,8 @@ export async function POST(request: NextRequest) {
   if (!guard.ok) return guard.response;
   const { supabase, access } = guard;
 
-  const product = body.product ?? "self_serve";
-  if (product !== "self_serve" && product !== "managed") {
+  const product = body.product ?? "ad_studio";
+  if (product !== "ad_studio" && product !== "managed") {
     return NextResponse.json({ error: "Unknown billing product." }, { status: 400 });
   }
 

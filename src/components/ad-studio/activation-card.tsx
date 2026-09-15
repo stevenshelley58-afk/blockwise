@@ -139,7 +139,7 @@ function DetailRow({ label, value, foot }: { label: string; value: string; foot:
 }
 
 function planLabel(state: string): string {
-  if (state === "paid") return "Self-serve paid";
+  if (state === "paid") return "Ad studio paid";
   if (state === "trialing") return "Billing trial (legacy)";
   if (state === "payment_recovery") return "Payment needs attention";
   if (state === "canceled") return "Canceled";

@@ -1,6 +1,6 @@
 create extension if not exists pgcrypto;
 
-create type public.workspace_mode as enum ('monitor', 'self_serve');
+create type public.workspace_mode as enum ('monitor', 'ad_studio');
 create type public.provider_key as enum ('meta', 'google');
 create type public.provider_status as enum ('not_connected', 'connected', 'needs_attention', 'revoked');
 create type public.approval_status as enum ('draft', 'requested', 'approved', 'rejected', 'cancelled');

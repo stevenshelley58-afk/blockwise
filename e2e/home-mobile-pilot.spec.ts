@@ -18,7 +18,7 @@ test.describe("Creative Home", () => {
   });
   async function open(page: Page, width: number, height: number) {
     await page.setViewportSize({ width, height });
-    await page.goto(`/self-serve?workspaceId=${encodeURIComponent(workspaceId!)}`);
+    await page.goto(`/ad-studio?workspaceId=${encodeURIComponent(workspaceId!)}`);
     await expect(page).not.toHaveURL(/\/login/);
     await expect(page.getByRole("heading", { name: "Home", exact: true })).toHaveCount(1);
     await expect(page.locator('[data-home-creative]')).toBeVisible();

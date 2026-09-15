@@ -10,8 +10,8 @@ import {
 test("provider connection management is limited to operators, owners, and admins", () => {
   assert.equal(canManageProviderConnections({ role: "operator", workspaceMode: "monitor" }), true);
   assert.equal(canManageProviderConnections({ role: "owner", workspaceMode: "monitor" }), true);
-  assert.equal(canManageProviderConnections({ role: "admin", workspaceMode: "self_serve" }), true);
-  assert.equal(canManageProviderConnections({ role: "member", workspaceMode: "self_serve" }), false);
+  assert.equal(canManageProviderConnections({ role: "admin", workspaceMode: "ad_studio" }), true);
+  assert.equal(canManageProviderConnections({ role: "member", workspaceMode: "ad_studio" }), false);
   assert.equal(canManageProviderConnections({ role: "viewer", workspaceMode: "monitor" }), false);
 });
 
@@ -49,14 +49,14 @@ test("non-operators cannot request arbitrary workspace IDs", () => {
   });
 });
 
-test("workspace mode does not restrict monitor, self-serve or property-check surfaces", () => {
+test("workspace mode does not restrict monitor, ad-studio or property-check surfaces", () => {
   assert.equal(
     resolveRequestedWorkspaceAccess({
       isOperator: false,
       memberships: [
         {
-          workspaceId: "workspace_selfserve",
-          workspaceMode: "self_serve",
+          workspaceId: "workspace_adstudio",
+          workspaceMode: "ad_studio",
           role: "member",
         },
       ],
@@ -75,7 +75,7 @@ test("workspace mode does not restrict monitor, self-serve or property-check sur
           role: "owner",
         },
       ],
-      surface: "self_serve",
+      surface: "ad_studio",
     }).ok,
     true,
   );

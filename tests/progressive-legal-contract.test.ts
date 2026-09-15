@@ -13,7 +13,7 @@ function includesCopy(source: string, copy: string) {
   );
 }
 
-test("Terms state the exact self-serve trigger, credit, seat, and Meta-spend rules", () => {
+test("Terms state the exact ad-studio trigger, credit, seat, and Meta-spend rules", () => {
   for (const required of [
     "three complete Feed and Story ad packs",
     "one live trial campaign",

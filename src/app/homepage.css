@@ -989,7 +989,7 @@ html, body { overflow-x: clip; }
   .hw-trial-facts { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* ---------- #pricing — self-serve price panel ---------- */
+/* ---------- #pricing — ad-studio price panel ---------- */
 
 .hw-pricing {
   background: var(--hw-surface);

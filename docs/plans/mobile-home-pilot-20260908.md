@@ -1,6 +1,6 @@
 # Mobile Home pilot
 
-Status: approved direction, implementation pilot limited to /self-serve.
+Status: approved direction, implementation pilot limited to /ad-studio.
 Mode: Operate.
 
 ## Direction contract

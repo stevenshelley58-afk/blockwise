@@ -106,8 +106,8 @@ const nextConfig: NextConfig = {
       { source: "/monitor", destination: "/performance", permanent: false },
       { source: "/blog", destination: "/guides", permanent: true },
       { source: "/blog/:path*", destination: "/guides/:path*", permanent: true },
-      { source: "/research", destination: "/self-serve", permanent: false },
-      { source: "/research/:path*", destination: "/self-serve", permanent: false },
+      { source: "/research", destination: "/ad-studio", permanent: false },
+      { source: "/research/:path*", destination: "/ad-studio", permanent: false },
       { source: "/campaigns", destination: "/performance", permanent: false },
     ];
   },

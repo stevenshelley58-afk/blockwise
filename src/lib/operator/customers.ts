@@ -359,7 +359,7 @@ function buildCustomerRow(workspace: WorkspaceRow, related: CustomerRelations): 
     nextAction: stage.nextAction,
     plan: workspace.managed_service_enabled
       ? "Managed"
-      : string(oneRecord(workspace.workspace_plans)?.name) ?? "Self serve",
+      : string(oneRecord(workspace.workspace_plans)?.name) ?? "Ad studio",
     billingState: workspace.billing_access_state ?? workspace.stripe_subscription_status ?? "Unbilled",
     creditsRemaining,
     brandPackState: string(brand?.review_status) ?? "Not started",

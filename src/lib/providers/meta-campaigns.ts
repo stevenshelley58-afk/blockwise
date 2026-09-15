@@ -57,7 +57,7 @@ export function metaExistingCampaignReuseIssue(input: {
   stripeSubscriptionStatus?: string | null;
 }): string | null {
   const automaticallyActivates = input.billingAccessState === "unbilled" || (
-    input.billingOfferKey?.startsWith("self_serve_") === true
+    input.billingOfferKey?.startsWith("ad_studio_") === true
     && input.stripeSubscriptionStatus === "trialing"
     && input.billingOfferVersion !== BILLING_OFFER_VERSION
   );

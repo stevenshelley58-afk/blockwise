@@ -11,7 +11,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 export const dynamic = "force-dynamic";
 
 export default async function BookingPage() {
-  const { supabase, access, auth } = await requirePageSurfaceAccess("self_serve");
+  const { supabase, access, auth } = await requirePageSurfaceAccess("ad_studio");
   const service = createSupabaseServiceClient();
   const [{ data: workspace }, booking] = await Promise.all([
     supabase

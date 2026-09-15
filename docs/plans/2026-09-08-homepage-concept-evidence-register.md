@@ -44,14 +44,14 @@ release actually occurs.
 | Free campaign allowance | Current task direction. | One campaign. |
 | Card required to start | The billing trigger describes the allowance before Checkout, with no card required. | No card needed to start. |
 | Saved work after the allowance | Current task direction. | Saved designs and leads stay available. A paid plan is a customer choice, not an automatic charge. |
-| Self-serve price | Billing offer source: `24_900` AUD recurring amount and inclusive tax behaviour. | A$249 per month, until cancelled. |
+| Ad studio price | Billing offer source: `24_900` AUD recurring amount and inclusive tax behaviour. | A$249 per month, until cancelled. |
 | Managed price | Billing offer source: `150_000` AUD recurring amount. | From A$1,500 per month, plus Meta ad spend. Scope is agreed in writing before payment. |
 | Meta ad spend | Checkout disclosures for paid plans. | Paid separately to Meta. |
-| Self-serve allowance | The maintained public pricing page publishes 100 render credits, up to 50 Feed + Story packs each month. | Preserve the published wording without presenting it as a verified technical entitlement. |
+| Ad studio allowance | The maintained public pricing page publishes 100 render credits, up to 50 Feed + Story packs each month. | Preserve the published wording without presenting it as a verified technical entitlement. |
 | Team and account limits | Maintained pricing page and verified-workspace migration. | Five team members, one brand and one Meta ad account. |
 
 All free-start acquisition CTAs use
-`https://blockwise.sale/signup?offer=self-serve` with the shared label
+`https://blockwise.sale/signup?offer=ad-studio` with the shared label
 `Start your free trial`. No homepage CTA uses a local mock form or `#trial`.
 
 ## Trial timing and public wording

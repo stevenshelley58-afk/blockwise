@@ -6,7 +6,7 @@
 > `docs/runbooks/oss-product-migration.md` for the self-hosted VPS target.
 
 This runbook controls the progressive email-only activation, regional
-self-serve offer, assisted Meta launch, managed service, and public-copy
+ad-studio offer, assisted Meta launch, managed service, and public-copy
 release. Runtime acceptance is performed on Vercel Preview or Production URLs,
 never on localhost.
 
@@ -72,7 +72,7 @@ properties.
 
 Configure test-mode resources before setting the billing flag:
 
-- recurring self-serve Prices: USD 149 tax-exclusive and AUD 249
+- recurring ad-studio Prices: USD 149 tax-exclusive and AUD 249
   tax-inclusive;
 - recurring managed Prices: USD 1,500 and AUD 2,500 base monthly prices;
 - Stripe Tax, billing-address collection, applicable business tax-ID
@@ -86,8 +86,8 @@ Configure test-mode resources before setting the billing flag:
 
 Set the IDs in:
 
-- `STRIPE_SELF_SERVE_USD_PRICE_ID`
-- `STRIPE_SELF_SERVE_AUD_PRICE_ID`
+- `STRIPE_AD_STUDIO_USD_PRICE_ID`
+- `STRIPE_AD_STUDIO_AUD_PRICE_ID`
 - `STRIPE_MANAGED_USD_PRICE_ID`
 - `STRIPE_MANAGED_AUD_PRICE_ID`
 - `STRIPE_SECRET_KEY`

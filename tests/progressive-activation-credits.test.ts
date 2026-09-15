@@ -287,8 +287,8 @@ test("activation always derives the real next onboarding step", async () => {
 test("verified bootstrap disables auth insert provisioning and resumes idempotently", () => {
   const sql = readFileSync(verifiedBootstrapMigrationPath, "utf8");
 
-  assert.match(sql, /drop trigger if exists on_trial_self_serve_signup on auth\.users/i);
-  assert.match(sql, /handle_trial_self_serve_signup[\s\S]*return new/i);
+  assert.match(sql, /drop trigger if exists on_trial_ad_studio_signup on auth\.users/i);
+  assert.match(sql, /handle_trial_ad_studio_signup[\s\S]*return new/i);
   assert.match(sql, /drop trigger if exists provision_workspace_activation_foundation on public\.workspaces/i);
   assert.match(sql, /create or replace function public\.bootstrap_verified_trial_workspace/i);
   assert.match(sql, /on conflict on constraint workspace_members_pkey do nothing/i);
@@ -298,7 +298,7 @@ test("verified bootstrap disables auth insert provisioning and resumes idempoten
   const workspaceInsertIndex = sql.indexOf("insert into public.workspaces");
   assert.ok(verifiedIndex > -1 && workspaceInsertIndex > verifiedIndex);
   assert.match(sql, /pg_advisory_xact_lock\(hashtextextended\(p_verified_user_id::text, 0\)\)/i);
-  assert.match(sql, /workspace_members wm[\s\S]*wm\.profile_id = p_verified_user_id[\s\S]*w\.mode = 'self_serve'/i);
+  assert.match(sql, /workspace_members wm[\s\S]*wm\.profile_id = p_verified_user_id[\s\S]*w\.mode = 'ad_studio'/i);
   assert.match(sql, /not exists \([\s\S]*workspace_credit_wallets[\s\S]*entitlement_type = 'trial'/i);
   assert.match(sql, /grant_workspace_credits\([\s\S]*'trial'[\s\S]*6[\s\S]*'verified_workspace_bootstrap'/i);
   assert.match(sql, /record_customer_activation_milestone\([\s\S]*'email_verified'/i);
