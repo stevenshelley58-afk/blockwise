@@ -381,6 +381,8 @@ Each of these is deliberate. Do not "fix" one without changing this list.
 | Marketing display typography | homepage, landing, concept, pricing, guides sheets | Purpose-built marketing composition with its own scoped stylesheet. |
 | The 12 September publish-history archive | `/ad-studio/publish-history` | Recovered layout kept as owner comparison evidence. Archived terminology and duplicated controls are historical evidence, not patterns. |
 | `text-[Npx]` fine print in `creative-viewer.tsx` and `notice-bar.tsx` | app-level compositions | Pre-existing, outside the shared primitive set. Migrate when touched. |
+| Parallel chart palette in `research/audit-charts.tsx` | quantitative display | The research team's own data colour scale (`#006bff`, `#31c46f`, `#0b1b33`, `#e2e8f0`, `#64748b`). It is deliberately distinct from the customer-app data hue so internal research views do not look like product charts. Migrate only if the team changes direction. |
+| `#6366f1` indigo series colour | `src/components/operator/site-analytics-dashboard.tsx` | The `SmoothAreaChart` SVG `stroke`/`stopColor` attributes need a resolved colour string, not `var(--ui-data)`. The indigo is also an intentional differentiation from the customer-app data hue on the operator surface. Migrate when the chart component accepts a CSS variable, or when the operator surface adopts the shared data hue. |
 
 ## Known remaining gaps
 
@@ -403,12 +405,16 @@ Honest status as of the consolidation commit. These are not fixed.
   they do not receive the scoped preflight or the base colour rule. Shared components
   still render correctly there because utilities are global and `[data-slot]` carries
   the preflight, but a page-level migration is outstanding.
-- The `(legal)` layout still holds two inline hex colours (`#131b2e`, `#475569`) that
-  should be tokens.
-- Non-shared components still carry a small number of hardcoded colours. The named
-  ones are `src/components/audit-claim-handler.tsx`, `src/components/trial-status-pill.tsx`,
-  `src/components/research/audit-charts.tsx` (a parallel chart palette) and
-  `src/components/operator/site-analytics-dashboard.tsx` (a one-off indigo).
+- The `(legal)` layout now uses `var(--ink)` and `var(--muted)` instead of the legacy
+  inline hex values. Wrapping the page in the `.tw` scope to pull in the scoped preflight
+  and base colour rule is still outstanding - the inline styles are tokenised, the cascade
+  layer is not.
+- Two non-shared components still carry hardcoded colours: `src/components/research/audit-charts.tsx`
+  (a parallel chart palette, documented exception) and `src/components/operator/site-analytics-dashboard.tsx`
+  (a one-off indigo series colour, documented exception - SVG `stroke`/`stopColor` attributes
+  need a resolved colour string). The error surface in `audit-claim-handler.tsx` and the pill
+  background in `trial-status-pill.tsx` were tokenised to `var(--ui-error-soft)` /
+  `var(--ui-error)` and `var(--surface)`.
 - `--ui-sidebar*` is not bridged inside the dark block. Ad Studio does not use the
   shadcn Sidebar component, so it uses `--surface`/`--muted` for its own sidebar
   instead. Anything that starts using `--side-*` inside Ad Studio will be wrong.

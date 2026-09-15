@@ -138,6 +138,18 @@ The native editor starts on the actual edited ad preview. Template headings wrap
 
 ## Changelog
 
+- 2026-09-15: **primary CTAs render legible labels.** The shared Button regression
+  is fixed. `src/lib/utils.ts` now uses `extendTailwindMerge` and registers the
+  nine named type roles against the `font-size` class group. tailwind-merge could
+  not see `@theme` tokens, so every named role was filed under `text-color`;
+  `text-cta-foreground` from the variant and `text-body` from `size="lg"` ended
+  up in the same conflict group and tailwind-merge kept only the last one, so the
+  label inherited the button's own fill. Primary CTAs on `/`, `/pricing`,
+  `/concept` and `/ad-reports/demo` are now 10.65 : 1 (light) and ~16.9 : 1
+  (studio-dark) on their fills. `tests/twmerge-roles.test.ts` pins the
+  registration list against the `--text-*` tokens in `src/app/tailwind.css`, so
+  adding a new role without registering it fails the contract.
+
 - 2026-09-14: **one design system, applied to the whole website.** Owner decisions
   recorded, and the conflicting active rules removed.
 

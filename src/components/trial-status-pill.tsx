@@ -147,7 +147,7 @@ export function TrialStatusPill({ initialStatus }: { initialStatus: TrialStatus 
         overflow: "hidden",
         border: "1px solid var(--line)",
         borderRadius: 999,
-        background: "#fff",
+        background: "var(--surface)",
         padding: "0 8px 0 12px",
         boxShadow: "0 1px 2px rgba(15,23,42,.05)",
         color: "var(--ink)",
