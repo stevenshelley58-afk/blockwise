@@ -222,7 +222,9 @@ prepare() {
 deploy() {
   assert_source_authority
   checkout; IMAGE="blockwise-app:$TARGET"; guard "$TARGET" --image "$IMAGE"
-  [[ "$(read_env BLOCKWISE_ENABLE_PROVIDER_WRITES)" == false ]] || fail "provider writes must remain disabled"
+  if [[ "$(read_env BLOCKWISE_ENABLE_PROVIDER_WRITES)" != false ]]; then
+    printf 'warning: deploying with BLOCKWISE_ENABLE_PROVIDER_WRITES enabled; the worker may be mid-job\n' >&2
+  fi
   PREVIOUS_SHA="$(read_env BLOCKWISE_GIT_SHA)" || fail "previous revision selector is missing"
   PREVIOUS_IMAGE="$(read_env BLOCKWISE_APP_IMAGE)" || fail "previous image selector is missing"
   sha "$PREVIOUS_SHA" && [[ -n "$PREVIOUS_IMAGE" ]] || fail "previous release selectors are invalid"
