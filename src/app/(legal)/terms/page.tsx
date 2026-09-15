@@ -30,6 +30,12 @@ export default function TermsOfServicePage() {
         Blockwise does not publish a campaign, change its budget, or export leads without the
         in-application approval required for that action.
       </p>
+      <p>
+        By approving an action in the application, you authorise Blockwise to carry out that
+        action on your behalf through Meta&rsquo;s Marketing API. Your Meta ad account, Pages, and
+        other Meta assets remain yours. Blockwise acts only on the approvals you give, and does
+        not take ownership of those assets.
+      </p>
 
       <h2 style={{ fontSize: 22, marginTop: 32, fontWeight: 600 }}>2. Your account</h2>
       <p>
@@ -84,7 +90,9 @@ export default function TermsOfServicePage() {
       <p>
         <strong>Publishing through Blockwise needs a card and starts a seven-day Blockwise
         trial.</strong> Your card is saved when you complete Checkout and is not charged until the
-        trial ends. The first charge is A$0.00. The trial covers the Blockwise subscription only.
+        trial ends. The first charge is A$0.00, because nothing is taken when Checkout completes.
+        The first paid charge is A$249, taken on day 7, which is the day the trial ends, unless you
+        cancel before then. The trial covers the Blockwise subscription only.
         The seven days run from the moment Checkout completes, not from signup, publishing, or
         approval. One trial is allowed per workspace.
       </p>
@@ -114,12 +122,12 @@ export default function TermsOfServicePage() {
         workspace or a managed or agency agreement.
       </p>
       <p>
-        You can cancel at any time from Settings under billing, which opens the Stripe billing
-        portal. Cancelling stops future renewals. If you cancel during the trial you are not
-        charged, and access continues until the trial ends. If you cancel after the trial, access
-        continues until the end of the period you have already paid for. Prices include GST where
-        Blockwise is required to collect it. Your Blockwise subscription appears on your card
-        statement as BLOCKWISE.
+        You can cancel at any time from Settings, on the Billing tab, using the Manage billing
+        button, which opens the Stripe billing portal. Cancelling stops future renewals. If you
+        cancel during the trial you are not charged, and access continues until the trial ends.
+        If you cancel after the trial, access continues until the end of the period you have
+        already paid for. Prices include GST where Blockwise is required to collect it. Your
+        Blockwise subscription appears on your card statement as BLOCKWISE.
       </p>
       <p>
         Meta bills advertising spend directly to your connected ad account. Meta spend is not
@@ -147,8 +155,9 @@ export default function TermsOfServicePage() {
         7. Cancellation, termination, and deletion
       </h2>
       <p>
-        You may cancel through the Stripe-hosted billing portal. Cancellation stops future
-        subscription renewals and future credit grants. Credits already paid for remain available
+        You may cancel from Settings, on the Billing tab, which opens the Stripe-hosted billing
+        portal. Cancellation stops future subscription renewals and future credit grants. Credits
+        already paid for remain available
         until the current billing period ends, when they expire. Cancelling a subscription does not
         itself delete the workspace.
       </p>

@@ -62,9 +62,16 @@ export function decideTrialReminderSend(input: {
     return { action: "suppress", reason: "subscription_not_trialing" };
   }
   // The trial end moved: a newer reminder keyed to the new end supersedes this
-  // one, so it must not describe a deadline that no longer applies.
-  if (current.periodEndIso && current.periodEndIso !== facts.trialEndIso) {
-    return { action: "suppress", reason: "trial_end_changed" };
+  // one, so it must not describe a deadline that no longer applies. Compare
+  // instants, not strings: the payload carries `Date#toISOString()`, while the
+  // column is read back as a timestamptz rendering ("2026-09-16 05:26:34+00").
+  if (current.periodEndIso) {
+    const periodEnd = new Date(current.periodEndIso);
+    // An unreadable period end is not evidence that the trial moved, so fall
+    // through rather than suppress a reminder that may still be accurate.
+    if (!Number.isNaN(periodEnd.getTime()) && periodEnd.getTime() !== trialEnd.getTime()) {
+      return { action: "suppress", reason: "trial_end_changed" };
+    }
   }
   if (now.getTime() >= trialEnd.getTime()) {
     return { action: "suppress", reason: "trial_already_ended" };

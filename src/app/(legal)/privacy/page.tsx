@@ -225,6 +225,14 @@ export default function PrivacyPolicyPage() {
         in our custom Analytics events. Optional advertising tags also depend on this choice.
       </p>
       <p>
+        <strong>Meta Pixel.</strong> Our public website also deploys the Meta Pixel (ID
+        1699948581050851), a Meta advertising and measurement tag. When it is active it loads
+        Meta&rsquo;s pixel script, records the pages you view and the actions you take on them, and
+        sends that activity to Meta so we can measure the performance of our advertising. The Meta
+        Pixel is an optional advertising tag and depends on the same choice described above: it
+        loads only if you choose Accept all, and choosing Essential only stops it.
+      </p>
+      <p>
         Essential only keeps optional tracking off. Our separate cookie-free page counter remains
         active. You can change your choice at any time below; choosing Essential only stops further
         optional tracking. It does not delete information already collected.
