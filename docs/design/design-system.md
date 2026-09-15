@@ -351,7 +351,15 @@ They cover:
   divider, with no translucent focus tint,
 - the dark theme defining every status role and the data hue,
 - a targeted check for new hardcoded colours, arbitrary type sizes and duplicate
-  implementations in the changed UI files.
+  implementations in the changed UI files,
+- `tests/twmerge-roles.test.ts` reads every `--text-*` token from `src/app/tailwind.css`
+  and asserts each one is registered against the `font-size` class group in
+  `src/lib/utils.ts`. `cn()` is built on `extendTailwindMerge`; without the registration
+  the named type roles fall into the default `text-color` group and tailwind-merge
+  silently keeps only the last `text-*` class, which is how the previous build dropped
+  `text-cta-foreground` from the shared Button and rendered primary CTAs with the
+  label inheriting the button's fill colour. Adding a new role without registering it
+  fails this contract.
 
 **These checks are a floor, not a proof of visual quality.** They cannot see rendered
 output, contrast in a real screenshot, or whether a layout clips at a specific width.
@@ -404,6 +412,12 @@ Honest status as of the consolidation commit. These are not fixed.
 - `--ui-sidebar*` is not bridged inside the dark block. Ad Studio does not use the
   shadcn Sidebar component, so it uses `--surface`/`--muted` for its own sidebar
   instead. Anything that starts using `--side-*` inside Ad Studio will be wrong.
+
+- `cn()` (`src/lib/utils.ts`) is built on `extendTailwindMerge` and registers every
+  named type role against `font-size`. The contract test pins that. If a future change
+  ever replaces `cn()` with a raw `twMerge`, the Button regression returns: variant and
+  size classes that share the `text-*` prefix collapse into one. Treat the registration
+  list as part of the type-role scale, not an implementation detail.
 
 ## How to change this system
 
