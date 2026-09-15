@@ -30,7 +30,14 @@ BEGIN
         'video_assets',
         'video_brief_versions',
         'video_payment_attempts',
-        'video_order_events'
+        'video_order_events',
+        -- video_orders as well. An order carries its own price, tax treatment,
+        -- offer snapshot and due dates, and every one of those is derived on the
+        -- server. Granting the browser role INSERT here let a customer create an
+        -- order directly and choose the amount they owed; RLS alone did not stop
+        -- it, because the row they insert is legitimately in their own
+        -- workspace. Customers read their orders, and server code writes them.
+        'video_orders'
       )
   LOOP
     EXECUTE format(
@@ -40,3 +47,37 @@ BEGIN
     );
   END LOOP;
 END $$;
+
+-- The exclusion above only declines to grant; it cannot undo a grant that a
+-- migration already issued. A migration that grants a browser role write access
+-- and a later script that merely skips the table leaves that access in place,
+-- which is how customers ended up holding INSERT on video_orders and could
+-- create an order directly, choosing the amount they owed. Revoke explicitly.
+DO $$
+DECLARE
+  server_only record;
+BEGIN
+  FOR server_only IN
+    SELECT namespace.nspname AS schema_name, class.relname AS table_name
+    FROM pg_class AS class
+    JOIN pg_namespace AS namespace ON namespace.oid = class.relnamespace
+    WHERE namespace.nspname = 'public'
+      AND class.relkind IN ('r', 'p')
+      AND class.relname IN (
+        'video_assets',
+        'video_brief_versions',
+        'video_payment_attempts',
+        'video_order_events',
+        'video_orders'
+      )
+  LOOP
+    EXECUTE format(
+      'REVOKE INSERT, UPDATE, DELETE ON TABLE %I.%I FROM authenticated',
+      server_only.schema_name,
+      server_only.table_name
+    );
+  END LOOP;
+END $$;
+
+-- video_orders stays readable: a customer reads their own order through RLS.
+-- Everything that writes it is server code holding the service role.
