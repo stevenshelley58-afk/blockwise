@@ -54,6 +54,23 @@ export function trialActivationEnabled(env: NodeJS.ProcessEnv = process.env): bo
   return env.BLOCKWISE_SELF_SERVE_TRIAL_ENABLED?.trim().toLowerCase() === "true";
 }
 
+/**
+ * Whether Checkout asks Stripe to collect terms-of-service consent.
+ *
+ * Stripe refuses to create a session at all when the account has no Terms of
+ * Service URL configured in the Dashboard, so an environment that cannot set
+ * one would otherwise be unable to take any subscription. Production keeps the
+ * default: the Stripe checkbox is the strongest form of affirmative acceptance,
+ * and Mastercard requires the terms to be accepted on the payment page.
+ *
+ * Turning this off is only safe when the same terms are disclosed and accepted
+ * on Blockwise's own review screen before Checkout opens, and that acceptance
+ * is recorded. Set BLOCKWISE_STRIPE_TOS_CONSENT=off to disable it.
+ */
+export function stripeTermsOfServiceConsentEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.BLOCKWISE_STRIPE_TOS_CONSENT?.trim().toLowerCase() !== "off";
+}
+
 export type TrialIneligibilityReason =
   | "trial_activation_paused"
   | "missing_workspace_facts"

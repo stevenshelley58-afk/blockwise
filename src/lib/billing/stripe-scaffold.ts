@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+import { stripeTermsOfServiceConsentEnabled } from "./checkout-policy.ts";
 import {
   currencyForMarket,
   getBillingOffer,
@@ -280,7 +281,9 @@ export function buildCheckoutSessionRequest(
     "automatic_tax[enabled]": true,
     billing_address_collection: "required",
     "tax_id_collection[enabled]": true,
-    "consent_collection[terms_of_service]": "required",
+    ...(stripeTermsOfServiceConsentEnabled(env)
+      ? { "consent_collection[terms_of_service]": "required" }
+      : {}),
     "managed_payments[enabled]": false,
     "custom_text[submit][message]": disclosure,
     payment_method_collection: "always",

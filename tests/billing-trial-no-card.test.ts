@@ -448,6 +448,26 @@ test("Checkout requests a full 7-day trial with a zero trial-start invoice", () 
   assert.equal(params["custom_text[submit][message]"], BILLING_OFFERS.ad_studio_AU.checkoutDisclosure);
 });
 
+test("Checkout requires Stripe terms-of-service consent by default", () => {
+  const { params } = buildCheckoutSessionRequest(checkoutInput(), billingEnv);
+
+  // Mastercard requires the terms to be accepted on the payment page, so the
+  // Stripe checkbox is on unless an environment explicitly opts out.
+  assert.equal(params["consent_collection[terms_of_service]"], "required");
+});
+
+test("Checkout can drop the Stripe terms checkbox only when told to", () => {
+  const { params } = buildCheckoutSessionRequest(checkoutInput(), {
+    ...billingEnv,
+    BLOCKWISE_STRIPE_TOS_CONSENT: "off",
+  });
+
+  // Stripe rejects session creation outright when the account has no terms URL,
+  // so the isolated test stack has to be able to turn the checkbox off. The
+  // review screen records its own acceptance in that case.
+  assert.equal(params["consent_collection[terms_of_service]"], undefined);
+});
+
 test("a non-trial Checkout charges at Checkout and discloses no trial", () => {
   const { params } = buildCheckoutSessionRequest(checkoutInput({ trialDays: 0 }), billingEnv);
 
