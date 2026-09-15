@@ -42,7 +42,7 @@ The application uses `@supabase/supabase-js` as a protocol client only.
 `NEXT_PUBLIC_SUPABASE_URL` must point to the self-hosted Caddy origin, never a
 managed Supabase project. This preserves the existing Auth UUID,
 PostgREST/RPC, RLS, Storage, and WebSocket contracts without making the client
-library a managed-service dependency.
+library a Managed dependency.
 
 Frank and Hermes remain separate execution systems. Frank's generation runs
 and template-v2 packs/provenance are self-hosted application artifacts and are
@@ -225,7 +225,7 @@ compose exec -T product-db psql -U "$BLOCKWISE_DB_USER" -d "$BLOCKWISE_DB_NAME" 
    and callbacks, enable worker/provider writes, monitor, and retain the old
    project and volumes for rollback.
 5. **Decommission (later, separately approved):** only after the retention
-   window and restore rehearsal are complete may managed services be cancelled.
+   window and restore rehearsal are complete may Managed be cancelled.
 
 ## Historical blockers and hazards (2026-08-29)
 

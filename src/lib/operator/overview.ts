@@ -129,7 +129,7 @@ type WorkspaceOverviewRow = {
   name: string;
   mode?: string | null;
   region?: string | null;
-  managed_service_enabled?: boolean | null;
+  managed_enabled?: boolean | null;
   updated_at?: string | null;
   created_at?: string | null;
   workspace_plans?: { name?: string | null; key?: string | null } | Array<{ name?: string | null; key?: string | null }> | null;
@@ -400,7 +400,7 @@ export function buildOperatorOverview(input: {
       mode: workspace.mode === "ad_studio" ? "Ad studio" : "Monitor",
       plan: plan?.name ?? plan?.key ?? "Unassigned",
       region: workspace.region ?? "AU",
-      managedService: workspace.managed_service_enabled ? "Managed" : "Customer-led",
+      managedService: workspace.managed_enabled ? "Managed" : "Customer-led",
       providerHealth: providers.length === 0 ? "No providers" : issueCount > 0 ? `${issueCount} issue${issueCount === 1 ? "" : "s"}` : "Healthy",
       providerTone: providers.length === 0 || issueCount > 0 ? "amber" : "green",
       lastSync: lastSyncAt ? formatRelativeDate(lastSyncAt) : "No sync yet",
@@ -636,7 +636,7 @@ export async function loadOperatorOverview(supabase: SupabaseServerClient) {
     supabase.from("provider_connections").select("id", { count: "exact", head: true }).in("status", ["needs_attention", "not_connected"]),
     supabase
       .from("workspaces")
-      .select("id,name,mode,region,managed_service_enabled,updated_at,created_at,workspace_plans(name,key)")
+      .select("id,name,mode,region,managed_enabled,updated_at,created_at,workspace_plans(name,key)")
       .order("updated_at", { ascending: false })
       .limit(25),
     supabase

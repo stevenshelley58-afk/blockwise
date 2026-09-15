@@ -384,7 +384,7 @@ export function ManagedSetup() {
         <div className="hw-ms-copy">
           <h2>Want Blockwise to run it with you?</h2>
           <p className="hw-sub">
-            Managed service starts at A$1,500/month, plus ad spend. Book a call
+            Managed starts at A$1,500/month, plus ad spend. Book a call
             so we can confirm the scope and onboarding plan before you pay.
           </p>
           <ul className="hw-control-points hw-control-points--ink">

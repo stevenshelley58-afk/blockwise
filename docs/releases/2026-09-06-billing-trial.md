@@ -21,7 +21,7 @@ Deployed 6 September 2026 (Australia/Perth), app plus one database migration.
   per created customer ad through the existing reserve/settle ledger.
   Ordinary text edits, fixes, repeat saves, and repeat downloads never consume
   another pack.
-- Checkout hardening: owner/admin-only policy gate, server-side managed-service
+- Checkout hardening: owner/admin-only policy gate, server-side Managed
   written-scope gate (`workspaces.managed_scope_approved_at`, recorded only via
   the operator action `approve_managed_scope`), duplicate-subscription
   rejection, open Checkout session reuse with safe expiry handling

@@ -28,7 +28,7 @@ const DUPLICATE_ACCESS_STATES = new Set(["paid", "trialing", "payment_recovery"]
 /**
  * Single server-side authority for who may start Checkout and when. Runs
  * before any Stripe call so unauthorized users, unconfirmed/unsupported
- * markets, duplicate subscriptions, and ungated managed-service purchases are
+ * markets, duplicate subscriptions, and ungated managed purchases are
  * rejected without creating sessions.
  */
 export function evaluateCheckoutRequest(
@@ -59,7 +59,7 @@ export function evaluateCheckoutRequest(
       ok: false,
       status: 403,
       error:
-        "Managed service needs a written scope approved with Blockwise before Checkout. Contact us to confirm scope.",
+        "Managed needs a written scope approved with Blockwise before Checkout. Contact us to confirm scope.",
     };
   }
   if (DUPLICATE_ACCESS_STATES.has(facts.billingAccessState ?? "")) {

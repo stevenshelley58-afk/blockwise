@@ -153,7 +153,7 @@ export const FAQ_GROUPS = [
   { heading: "Getting started", faqs: [
     { question: "What if I don’t have a Meta ad account?", answer: "We can help you set up a Meta ad account and connect it to Blockwise." },
     { question: "What do I need to provide?", answer: "Your email to start, then your branding, photos and ad details. You review everything before launch." },
-    { question: "How does managed service start?", answer: "We agree the scope and price before anything starts.", links: [{ label: "Managed setup", href: MANAGED_SETUP_HREF }, { label: `Email ${CONTACT_EMAIL}`, href: CONTACT_HREF }] },
+    { question: "How does managed start?", answer: "We agree the scope and price before anything starts.", links: [{ label: "Managed setup", href: MANAGED_SETUP_HREF }, { label: `Email ${CONTACT_EMAIL}`, href: CONTACT_HREF }] },
   ] },
   { heading: "Plans", faqs: [
     { question: "What does the free option include?", answer: "Three Feed and Story packs. No card is needed." },

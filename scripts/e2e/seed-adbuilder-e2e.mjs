@@ -93,7 +93,7 @@ requireNoError(
       mode: "ad_studio",
       plan_id: plan.id,
       region: "AU",
-      managed_service_enabled: true,
+      managed_enabled: true,
       approval_required_by_default: true,
       created_by: authUser.id,
     },

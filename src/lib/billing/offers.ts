@@ -53,9 +53,9 @@ export const BILLING_OFFERS: Readonly<Record<`${BillingProduct}_${BillingMarket}
     trialDays: 0,
     taxBehavior: "inclusive",
     priceEnvKey: "STRIPE_MANAGED_AUD_PRICE_ID",
-    triggeringRule: "The managed service starts when its first invoice is paid.",
+    triggeringRule: "The managed starts when its first invoice is paid.",
     checkoutDisclosure:
-      "Managed service starts at A$1,500 monthly. Meta ad spend is separate. Additional brands, ad accounts, or campaign volume require a written scope change.",
+      "Managed starts at A$1,500 monthly. Meta ad spend is separate. Additional brands, ad accounts, or campaign volume require a written scope change.",
   },
 };
 

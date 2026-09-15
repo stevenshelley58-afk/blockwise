@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   title: "Pricing",
   alternates: { canonical: "/pricing" },
   description:
-    "Blockwise pricing: start free, continue managing ads yourself, choose ad-studio at A$249/month, or ask about managed service from A$1,500/month.",
+    "Blockwise pricing: start free, continue managing ads yourself, choose Ad studio at A$249/month, or ask about Managed from A$1,500/month.",
 };
 
 const PERTH_MEETING_HREF =
@@ -78,7 +78,7 @@ export default function PricingPage() {
               <p className="pricing-kicker">Ready when you are</p>
               <h2 id="pricing-final-cta-title">Not sure which to choose?</h2>
               <p>
-                You can start free, book a managed-service call, or request a
+                You can start free, book a managed call, or request a
                 Perth meeting.
               </p>
             </div>

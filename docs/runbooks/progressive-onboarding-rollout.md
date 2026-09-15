@@ -6,7 +6,7 @@
 > `docs/runbooks/oss-product-migration.md` for the self-hosted VPS target.
 
 This runbook controls the progressive email-only activation, regional
-ad-studio offer, assisted Meta launch, managed service, and public-copy
+Ad studio offer, assisted Meta launch, Managed, and public-copy
 release. Runtime acceptance is performed on Vercel Preview or Production URLs,
 never on localhost.
 
@@ -20,7 +20,7 @@ The offer contract is fixed:
 - Meta ad spend paid separately by the customer;
 - 100 monthly render credits, one workspace, one Brand Pack, one Meta Business
   Portfolio, one primary ad account, and five named verified members;
-- managed service from US$1,500 or A$2,500 monthly plus ad spend, with the scope
+- Managed from US$1,500 or A$2,500 monthly plus ad spend, with the scope
   in the Terms of Service.
 
 Do not publish the offer while entitlements, test billing, legal copy, and the
@@ -72,7 +72,7 @@ properties.
 
 Configure test-mode resources before setting the billing flag:
 
-- recurring ad-studio Prices: USD 149 tax-exclusive and AUD 249
+- recurring Ad studio Prices: USD 149 tax-exclusive and AUD 249
   tax-inclusive;
 - recurring managed Prices: USD 1,500 and AUD 2,500 base monthly prices;
 - Stripe Tax, billing-address collection, applicable business tax-ID

@@ -11,7 +11,7 @@ const FAQ_GROUPS = [
         a: "Your email to start, then your branding, photos and ad details. You review everything before launch.",
       },
       {
-        q: "How does managed service start?",
+        q: "How does managed start?",
         a: "Book a call. We agree the scope and price before getting started.",
       },
     ],
@@ -25,7 +25,7 @@ const FAQ_GROUPS = [
       },
       {
         q: "What happens after the free trial?",
-        a: "Keep running your ads yourself for free, or choose Ad studio or managed. No automatic upgrade.",
+        a: "Keep running your ads yourself for free, or choose Ad studio or Managed. No automatic upgrade.",
       },
     ],
   },

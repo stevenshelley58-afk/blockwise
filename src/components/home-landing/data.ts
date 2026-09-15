@@ -44,8 +44,8 @@ export const FAQ_DATA = [
     a: "No. Cancel through Blockwise billing settings or the Stripe billing portal to stop future renewals. Deleting a profile, workspace, or creative is not a substitute for cancelling. After cancellation, paid access and remaining credits continue until the end of the current billing period.",
   },
   {
-    q: "What does managed service include?",
-    a: "Managed service starts at A$1,500/month, plus Meta ad spend. It includes the complete Ad studio product, 100 monthly render credits, one brand, one Meta ad account, operator launch and weekly optimization of up to four live campaigns, and a monthly report. You pay Meta directly; additional scope is confirmed and repriced during onboarding.",
+    q: "What does managed include?",
+    a: "Managed starts at A$1,500/month, plus Meta ad spend. It includes the complete Ad studio product, 100 monthly render credits, one brand, one Meta ad account, operator launch and weekly optimization of up to four live campaigns, and a monthly report. You pay Meta directly; additional scope is confirmed and repriced during onboarding.",
   },
 ] as const;
 

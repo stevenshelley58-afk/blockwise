@@ -80,7 +80,7 @@ type WorkspaceRow = Record<string, unknown> & {
   mode?: string | null;
   region?: string | null;
   country_code?: string | null;
-  managed_service_enabled?: boolean | null;
+  managed_enabled?: boolean | null;
   stripe_subscription_status?: string | null;
   stripe_latest_invoice_status?: string | null;
   billing_access_state?: string | null;
@@ -347,7 +347,7 @@ function buildCustomerRow(workspace: WorkspaceRow, related: CustomerRelations): 
     ? Math.max(0, number(wallet.credits_granted) - number(wallet.credits_reserved) - number(wallet.credits_consumed) - number(wallet.credits_expired))
     : null;
   if (creditsRemaining !== null && creditsRemaining <= 10 && number(wallet.credits_consumed) > 0) queues.push("low_credits");
-  if (workspace.managed_service_enabled) queues.push("managed_work");
+  if (workspace.managed_enabled) queues.push("managed_work");
 
   return {
     workspaceId,
@@ -357,7 +357,7 @@ function buildCustomerRow(workspace: WorkspaceRow, related: CustomerRelations): 
     country: normalizeBookingMarket(workspace.country_code ?? workspace.region),
     lifecycleStage: stage.label,
     nextAction: stage.nextAction,
-    plan: workspace.managed_service_enabled
+    plan: workspace.managed_enabled
       ? "Managed"
       : string(oneRecord(workspace.workspace_plans)?.name) ?? "Ad studio",
     billingState: workspace.billing_access_state ?? workspace.stripe_subscription_status ?? "Unbilled",

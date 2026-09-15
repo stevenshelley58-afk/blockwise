@@ -32,7 +32,7 @@ create table public.workspaces (
   mode public.workspace_mode not null default 'monitor',
   plan_id uuid references public.workspace_plans (id),
   region text not null default 'AU',
-  managed_service_enabled boolean not null default false,
+  managed_enabled boolean not null default false,
   approval_required_by_default boolean not null default true,
   created_by uuid references public.profiles (id),
   created_at timestamptz not null default now(),
