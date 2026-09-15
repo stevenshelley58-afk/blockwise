@@ -52,7 +52,7 @@ export function CommandMenu() {
         type="button"
         variant="ghost-pill"
         size="pill"
-        arrow={null}
+       
         onClick={() => setOpen(true)}
         aria-label={copy.placeholder}
         className="hidden w-[190px] md:inline-flex"

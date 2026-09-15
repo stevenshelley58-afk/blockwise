@@ -35,10 +35,10 @@
   --ui-cta: #16181d;
   --ui-cta-soft: #f1f2f4;
 
-  /* Softer, rounder shapes */
-  --r-card: 16px;
-  --r-panel: 20px;
-  --r-ctl: 10px;
+  /* Shape. The role scale (10px controls / 16px cards / 20px panels / pill) is
+     defined ONCE, in globals.css. This file deliberately no longer restates it:
+     two live definitions of the same token is how the 12px-card-versus-16px-card
+     drift started in the first place. See docs/design/design-system.md. */
 
   /* Gentle elevation so cards lift off the canvas */
   --shadow: 0 1px 2px rgba(16, 18, 23, 0.04), 0 5px 18px rgba(16, 18, 23, 0.05);
@@ -46,6 +46,128 @@
 
   /* Focus ring tuned to the new accent */
   --ring: 0 0 0 3px rgba(22, 24, 29, 0.14);
+}
+
+/* ---------------------------------------------------------------------------
+   Ad Builder dark theme.
+
+   Ad Builder is the DARK THEME OF THIS SAME SYSTEM, not a second design system.
+   It uses the same type roles, spacing scale, shape roles, controls, state
+   behaviour and action hierarchy as the light app; only these colour roles
+   change. Anything that differs beyond colour is a bug, not a theme.
+
+   The attribute is set on <html> (see StudioShell), not on the Studio shell's
+   own <div>, because Radix portals Sheet / Dialog / Select / Popover /
+   DropdownMenu to document.body. A scope that only wrapped the shell would
+   leave every overlay rendering in the light palette.
+
+   Contrast is verified per pairing in docs/design/design-system.md. If you
+   retune a value here, re-check it there rather than eyeballing it. */
+[data-theme="studio-dark"] {
+  color-scheme: dark;
+
+  /* Surfaces and text */
+  --bg: #111318;
+  --surface: #1b1e25;
+  --surface-subtle: #252932;
+  --ink: #f6f7f9;
+  --muted: #b5bbc7;
+  /* --faint stays #9aa0ad. It is a decorative mark colour in both themes and is
+     never body text, so it does not track --muted. */
+  --line: #343a46;
+  --line-soft: #272b34;
+  --line-heavy: #49515f;
+
+  /* The accent inverts: in the light app it is near-black ink on white; here it
+     is near-white ink on a near-black surface. This is what makes `bg-(--ink)`
+     accent fills flip correctly rather than needing a second class at 16 call
+     sites. The two exceptions that are NOT accents are listed in the guide. */
+  --accent: #f6f7f9;
+  --accent-strong: #ffffff;
+  --accent-press: #ffffff;
+  --accent-tint: #252932;
+  --blue: #f6f7f9;
+
+  --ui-cta: #f6f7f9;
+  --ui-cta-foreground: #16181d;
+  --ui-cta-soft: #252932;
+  --ui-primary-foreground: #16181d;
+  --ui-destructive-foreground: #16181d;
+
+  /* The interactive boundary keeps the same value as the light theme: it clears
+     3:1 against the dark surface (4.9:1) exactly as it does against white. */
+  --ui-control-border: #858c99;
+  --ui-focus: #f6f7f9;
+  /* A scrim stays dark in both themes; on an already-dark canvas it goes
+     deeper so the layer above still separates. */
+  --ui-scrim: rgba(0, 0, 0, 0.72);
+
+  /* Quantitative data hue. The niche override in src/config/niche still wins on
+     the customer surface; this is the default for a dark workspace. */
+  --ui-data: #69abff;
+  --ui-data-soft: rgba(105, 171, 255, 0.14);
+  --ui-data-track: rgba(105, 171, 255, 0.22);
+
+  /* Status roles, inverted onto dark surfaces. Colour is never the only carrier
+     of state: each pairing keeps its text or icon. */
+  --green: #86e5ae;
+  --green-soft: #153626;
+  --amber: #f1cd7a;
+  --rose: #ffb4ab;
+  --rose-soft: #421f23;
+  --ui-success: #86e5ae;
+  --ui-success-soft: #153626;
+  --ui-warning: #f1cd7a;
+  --ui-warning-soft: #382e18;
+  --ui-error: #ffb4ab;
+  --ui-error-soft: #421f23;
+
+  /* Elevation is deeper on a dark canvas, where a soft shadow disappears. */
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 5px 18px rgba(0, 0, 0, 0.4);
+  --shadow-float: 0 10px 30px rgba(0, 0, 0, 0.55);
+  --ring: 0 0 0 3px rgba(246, 247, 249, 0.32);
+
+  /* Sidebar: a dark chrome panel that is one step up from the canvas. */
+  --side-bg: #1b1e25;
+  --side-ink: #b5bbc7;
+  --side-ink-active: #16181d;
+  --side-line: #343a46;
+  --side-cap: #9aa0ad;
+  --side-active-bg: #f6f7f9;
+  --side-hover-bg: #252932;
+  --brand-ink: #f6f7f9;
+
+  /* -------------------------------------------------------------------------
+     The shadcn bridge, restated.
+
+     tailwind.css declares these on `:root` as `var(--<token>)`, and a custom
+     property's `var()` is substituted at computed-value time on the element
+     that declares it. They therefore inherit down as already-resolved light
+     values, and a `data-theme` scope on a NESTED element cannot change them:
+     with only `[data-theme="studio-dark"] { --bg: #111318 }`, an element using
+     `bg-background` still paints #f6f7f9. Verified in Chromium.
+
+     Restating them here makes the block work at both scopes the Studio shell
+     uses it in — on the shell's own <div> (server-rendered first paint, no
+     flash of light) and on <html> (where Radix portals land). Values are not
+     new: every one is the same alias tailwind.css already defines. */
+  --ui-background: var(--bg);
+  --ui-foreground: var(--ink);
+  --ui-card: var(--surface);
+  --ui-card-foreground: var(--ink);
+  --ui-popover: var(--surface);
+  --ui-popover-foreground: var(--ink);
+  --ui-primary: var(--accent);
+  --ui-secondary: var(--surface-subtle);
+  --ui-secondary-foreground: var(--ink);
+  --ui-muted: var(--surface-subtle);
+  --ui-muted-foreground: var(--muted);
+  --ui-accent: var(--accent-tint);
+  --ui-accent-foreground: var(--accent);
+  --ui-destructive: var(--rose);
+  --ui-border: var(--line);
+  --ui-input: var(--ui-control-border);
+  --ui-ring: var(--ui-focus);
 }
 
 /* Light sidebar: white surface, solid near-black active pill */

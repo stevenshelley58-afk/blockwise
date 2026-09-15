@@ -7,12 +7,12 @@ import { useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 
 type Metrics = {
-  detected: number;
-  active: number;
-  advertisers: number;
-  topPlatform: string;
-  topFormat: string;
-  topAngles: string;
+  detected?: number;
+  active?: number;
+  advertisers?: number;
+  topPlatform?: string;
+  topFormat?: string;
+  topAngles?: string;
 };
 
 type AuditLeadFormProps = {
@@ -78,8 +78,8 @@ export function AuditLeadForm({ area, label, signupHref, metrics, analytics }: A
   if (done) {
     return (
       <div className="audit-lead-done">
-        <h3>Your {area} campaign plan is on the way.</h3>
-        <p>Check your inbox shortly. Want to start building it now?</p>
+        <h3>Your {area} campaign plan request was received.</h3>
+        <p>We will email the requested plan when it is ready.</p>
         <Button asChild size="lg">
           <a href={signupHref} onClick={() => fireSafe("signup_clicked", analytics)}>Start your free trial</a>
         </Button>
@@ -110,7 +110,7 @@ export function AuditLeadForm({ area, label, signupHref, metrics, analytics }: A
             <option value="" disabled>Choose one</option>
             <option value="vendor_leads">Vendor leads</option>
             <option value="buyer_leads">Buyer leads</option>
-            <option value="listing_promotion">Promote a listing</option>
+            <option value="property_management">Property management leads</option>
             <option value="market_update">Market update</option>
           </select>
         </label>
@@ -131,7 +131,7 @@ export function AuditLeadForm({ area, label, signupHref, metrics, analytics }: A
       <Button className="w-full" type="submit" disabled={submitting}>
         {submitting ? "Sending..." : `Send my ${area} campaign plan`}
       </Button>
-      <p className="fine-print">No spam. We email the plan and follow up about a trial or a 15-minute setup call.</p>
+      <p className="fine-print">We only use these details to send your requested campaign plan.</p>
     </form>
   );
 }

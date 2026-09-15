@@ -59,6 +59,7 @@ export type SettingsViewProps = {
     timezone: string;
     emailVerified: boolean;
     notificationPreferences: Record<string, boolean>;
+    marketingConsent: boolean;
   };
   workspace: {
     id: string;
@@ -68,6 +69,7 @@ export type SettingsViewProps = {
     currency: string;
     website: string;
     brandPackStatus: string | null;
+    defaultPostcode: string | null;
     marketBound: boolean;
     approvalRequiredByDefault: boolean;
     /** Lead-form privacy policy set once on the Workspace card; null until set. */

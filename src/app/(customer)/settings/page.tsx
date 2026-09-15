@@ -3,6 +3,7 @@ import { resolveCustomerActivation } from "@/lib/activation/customer-activation"
 import { niche } from "@/config/niche";
 import { listProviderConnections } from "@/lib/providers/provider-connections";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { seedMissingWorkspacePostcode } from "@/lib/workspace/default-postcode";
 
 import { SettingsView } from "./settings-view";
 
@@ -17,6 +18,7 @@ type ProfileRow = {
 type WorkspaceRow = {
   name: string | null;
   region: string | null;
+  default_postcode?: string | null;
   approval_required_by_default: boolean | null;
   plan_id: string | null;
   billing_email?: string | null;
@@ -55,8 +57,16 @@ type InvitationRow = { id: string; email: string; role: string; expires_at: stri
 
 export default async function SettingsPage() {
   const { supabase, access, auth } = await requirePageSurfaceAccess("monitor");
+  const { data: authenticatedUser } = await supabase.auth.getUser();
   const canManage = access.isOperator || access.role === "owner" || access.role === "admin";
   const service = createSupabaseServiceClient();
+  if (canManage && !access.isOperator && authenticatedUser?.user) {
+    await seedMissingWorkspacePostcode({
+      serviceSupabase: service,
+      user: authenticatedUser.user,
+      workspaceId: access.workspaceId,
+    }).catch(() => undefined);
+  }
 
   const [
     { data: profile },
@@ -65,6 +75,7 @@ export default async function SettingsPage() {
     { data: brandKit },
     { data: wallet },
     activation,
+    { data: marketingConsentRows },
   ] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", access.userId).maybeSingle(),
     supabase.from("workspaces").select("*").eq("id", access.workspaceId).maybeSingle(),
@@ -85,6 +96,7 @@ export default async function SettingsPage() {
       .limit(1)
       .maybeSingle(),
     resolveCustomerActivation({ workspaceId: access.workspaceId, serviceSupabase: service }),
+    supabase.from("workspace_marketing_consent_events").select("granted").eq("workspace_id", access.workspaceId).eq("profile_id", access.userId).order("occurred_at", { ascending: false }).limit(1),
   ]);
 
   const w = (workspace as WorkspaceRow | null) ?? null;
@@ -187,7 +199,8 @@ export default async function SettingsPage() {
             typeof userMetadata.timezone === "string"
               ? userMetadata.timezone
               : Intl.DateTimeFormat().resolvedOptions().timeZone,
-          emailVerified: Boolean(auth.claims?.email),
+          emailVerified: Boolean(authenticatedUser?.user?.email_confirmed_at),
+          marketingConsent: Boolean((marketingConsentRows as Array<{ granted?: boolean }> | null)?.[0]?.granted),
           notificationPreferences: p?.notification_preferences ?? {},
         }}
         workspace={{
@@ -198,6 +211,10 @@ export default async function SettingsPage() {
           currency: w?.billing_currency ?? (w?.country_code === "US" ? "USD" : "AUD"),
           website: brand?.source_url ?? "",
           brandPackStatus: brand?.review_status ?? null,
+          defaultPostcode:
+            typeof w?.default_postcode === "string" && /^\d{4}$/u.test(w.default_postcode)
+              ? w.default_postcode
+              : null,
           privacyPolicyUrl: w?.privacy_policy_url ?? null,
           publishingCurrency: w?.publishing_currency ?? null,
           publishingTimezone: w?.publishing_timezone ?? null,

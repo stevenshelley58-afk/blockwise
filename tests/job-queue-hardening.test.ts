@@ -12,7 +12,7 @@ const cutoverMigration = readFileSync(cutoverMigrationPath, "utf8");
 
 test("production-only migration history is represented in source", () => {
   const templateOverrides = readFileSync(
-    "supabase/migrations/20260731080000_adbuilder_template_review_overrides.sql",
+    "supabase/migrations/20260731080000_adstudio_template_review_overrides.sql",
     "utf8",
   );
   const finalProfile = readFileSync(
@@ -20,7 +20,7 @@ test("production-only migration history is represented in source", () => {
     "utf8",
   );
   const imageFallback = readFileSync(
-    "supabase/migrations/20260802114954_adbuilder_gemini_primary_openai_fallback.sql",
+    "supabase/migrations/20260802114954_adstudio_gemini_primary_openai_fallback.sql",
     "utf8",
   );
 

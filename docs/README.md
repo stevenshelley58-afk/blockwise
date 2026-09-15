@@ -12,6 +12,7 @@ alternate production versions.
 
 ## Current authorities
 
+- [Design system](design/design-system.md) — the maintained token tables, component usage, verified contrast, documented exceptions and known gaps. Read with [`DESIGN.md`](../DESIGN.md) before changing any Blockwise visual surface.
 - [Architecture overview](architecture/overview.md)
 - [Product map](architecture/product-map.md)
 - [Extension guide](architecture/extension-guide.md)
@@ -44,6 +45,8 @@ release authority. Keep published resource files aligned with their source
 guides. Third-party licence text is retained unchanged.
 
 ## Plans and historical evidence
+
+- [13 September product edge reboot recovery](releases/2026-09-13-product-edge-reboot-recovery.md)
 
 - [12 September native editor default](releases/2026-09-12-native-editor-default.md)
 

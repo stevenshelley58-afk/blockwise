@@ -1,58 +1,39 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, existsSync, rmSync, utimesSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdtempSync, mkdirSync, existsSync, rmSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-
-const helper = new URL("../scripts/vps/product-backup-retention.sh", import.meta.url).pathname;
-
-function oldDir(root, name) {
-  const path = join(root, name);
-  mkdirSync(path);
-  const old = new Date(Date.now() - 100 * 86400 * 1000);
-  utimesSync(path, old, old);
-  return path;
+const source = readFileSync(new URL("../scripts/vps/product-backup-retention.sh", import.meta.url), "utf8");
+function fixture(fn) {
+  const root = mkdtempSync(join(tmpdir(), "backup-count-test-"));
+  const backup = join(root, "backups"); mkdirSync(backup);
+  const old = join(backup, "20260101T000000Z"); mkdirSync(old);
+  const native = join(root, "native"), wrapper = join(root, "wrapper"), log = join(root, "calls");
+  writeFileSync(wrapper, source.replaceAll("/srv/blockwise/product/backups/encrypted", backup).replaceAll("/usr/local/libexec/vps-backup-retention", native));
+  try { fn({root, backup, old, native, wrapper, log}); } finally { rmSync(root, {recursive:true, force:true}); }
 }
-
-test("backup retention prunes only timestamped direct children", () => {
-  const root = mkdtempSync(join(tmpdir(), "blockwise-backup-"));
-  try {
-    const old = oldDir(root, "20260101T000000Z");
-    const unrelated = oldDir(root, "not-a-backup");
-    const nestedRoot = join(root, "20260102T000000Z");
-    mkdirSync(nestedRoot);
-    mkdirSync(join(nestedRoot, "20260103T000000Z"));
-    const deleted = execFileSync("bash", [helper, root, "90"], { encoding: "utf8" });
-    assert.equal(deleted, "1");
-    assert.equal(existsSync(old), false);
-    assert.equal(existsSync(unrelated), true);
-    assert.equal(existsSync(join(nestedRoot, "20260103T000000Z")), true);
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
-});
-
-test("a failed preceding backup command propagates and does not prune", () => {
-  const root = mkdtempSync(join(tmpdir(), "blockwise-backup-"));
-  try {
-    const old = oldDir(root, "20260101T000000Z");
-    const result = (() => {
-      try {
-        execFileSync("bash", ["-Eeuo", "pipefail", "-c", `false; "${helper}" "${root}" 90`], { encoding: "utf8" });
-        return 0;
-      } catch (error) {
-        return error.status;
-      }
-    })();
-    assert.notEqual(result, 0);
-    assert.equal(existsSync(old), true);
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
-});
-
-test("retention rejects an invalid target or day count", () => {
-  assert.throws(() => execFileSync("bash", [helper, "/tmp", "0"]));
-  assert.throws(() => execFileSync("bash", [helper, "/tmp/missing-blockwise-root", "90"]));
+test("delegates fixed product series without deleting locally", () => fixture(({backup,old,native,wrapper,log}) => {
+  writeFileSync(native, `#!/bin/bash\nprintf '%s\\n' "$@" > "${log}"\n`); chmodSync(native,0o700);
+  execFileSync("bash",[wrapper,backup,"2"]);
+  assert.equal(readFileSync(log,"utf8"),"--apply\n--series\nproduct\n"); assert.ok(existsSync(old));
+}));
+test("missing helper fails closed and preserves backups", () => fixture(({backup,old,wrapper}) => {
+  assert.notEqual(spawnSync("bash",[wrapper,backup,"2"]).status,0); assert.ok(existsSync(old));
+}));
+test("helper verification failure propagates without a fallback", () => fixture(({backup,old,native,wrapper}) => {
+  writeFileSync(native,"#!/bin/bash\nexit 41\n"); chmodSync(native,0o700);
+  assert.equal(spawnSync("bash",[wrapper,backup,"2"]).status,41); assert.ok(existsSync(old));
+}));
+test("rejects old age interface and wrong root", () => fixture(({backup,wrapper}) => {
+  assert.notEqual(spawnSync("bash",[wrapper,backup,"90"]).status,0);
+  assert.notEqual(spawnSync("bash",[wrapper,"/tmp","2"]).status,0);
+}));
+test("backup verification precedes retention and metadata is count-based", () => {
+  const s=readFileSync(new URL("../scripts/vps/product-encrypted-backup.sh",import.meta.url),"utf8");
+  assert.ok(s.indexOf('"$SCRIPT_DIR/product-backup-verify.sh" "$final"') < s.indexOf('"$SCRIPT_DIR/product-backup-retention.sh" "$BACKUP_ROOT"'));
+  assert.match(s,/retention_count=%s/); assert.doesNotMatch(s,/RETENTION_DAYS|retention_days/);
+  assert.doesNotMatch(source,/-mtime|rm -rf|find /);
+  const install=readFileSync(new URL("../scripts/vps/install-product-backup-timer.sh",import.meta.url),"utf8");
+  assert.ok(install.indexOf('[[ -x /usr/local/libexec/vps-backup-retention ]]') < install.indexOf('systemctl enable'));
 });

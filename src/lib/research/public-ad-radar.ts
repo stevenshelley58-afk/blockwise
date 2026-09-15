@@ -67,6 +67,12 @@ type LoadPublicAdRadarInput = {
   sort?: PublicAdRadarSort;
 };
 
+type LoadPublicAdRadarForPostcodesInput = {
+  postcodes: readonly string[];
+  limit?: number;
+  sort?: PublicAdRadarSort;
+};
+
 type CandidateBatch = {
   rows: CustomerMetaAdLibraryCardRow[];
   maybeMore: boolean;
@@ -141,6 +147,47 @@ export async function loadPublicAdRadarCards(
     .map((card) => toPublicAdRadarCard(card, now, locationGuess));
 
   return publicResponse(searchTerm, locationGuess.label, publicCards.length > 0, publicCards, maybeMore ? String(offset) : null);
+}
+
+/**
+ * Load Home's local ads from structured postcode evidence only.
+ *
+ * Unlike the public search surface this never falls back to suburb names,
+ * ad copy, advertiser service areas, or broad state coverage. A card belongs
+ * here only when its direct area postcode or ad-area postcode intersects one
+ * of the exact postcode keys supplied by the caller.
+ */
+export async function loadPublicAdRadarCardsForPostcodes(
+  supabase: SupabaseClient,
+  input: LoadPublicAdRadarForPostcodesInput,
+): Promise<PublicAdRadarCard[]> {
+  const postcodes = uniquePostcodes([...input.postcodes]);
+  if (postcodes.length === 0) return [];
+
+  const limit = clampNumber(input.limit ?? DEFAULT_LIMIT, 1, MAX_LIMIT);
+  const sort = input.sort === "longest" ? "longest" : "recent";
+  const rows = dedupeRows((await Promise.all([
+    fetchRows(supabase, 0, CANDIDATE_WINDOW, (query) => query.in("postcode", postcodes)),
+    fetchRows(supabase, 0, CANDIDATE_WINDOW, (query) => query.overlaps("ad_area_postcodes", postcodes)),
+  ])).flat());
+  const keys = new Set(postcodes);
+  const cards = rows
+    .map(normaliseCustomerMetaAdLibraryCard)
+    .filter((card) =>
+      (card.areaMatchPostcode ? keys.has(card.areaMatchPostcode) : false)
+      || card.adAreaPostcodes.some((postcode) => keys.has(postcode)),
+    );
+  const exactPostcode = postcodes[0];
+  const exactCards = cards.filter((card) =>
+    card.areaMatchPostcode === exactPostcode || card.adAreaPostcodes.includes(exactPostcode),
+  );
+  const exactIds = new Set(exactCards.map((card) => card.id));
+  const nearbyCards = cards.filter((card) => !exactIds.has(card.id));
+  const now = Date.now();
+
+  return [...sortCards(exactCards, sort), ...sortCards(nearbyCards, sort)]
+    .slice(0, limit)
+    .map((card) => toPublicAdRadarCard(card, now));
 }
 
 export type LoadAllPublicAdRadarInput = Omit<LoadPublicAdRadarInput, "cursor"> & {

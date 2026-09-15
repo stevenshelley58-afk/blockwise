@@ -91,11 +91,11 @@ export function InstallAppPrompt({ className }: InstallAppPromptProps) {
           phone, which is the only place this prompt appears. */}
       <div className="pwa-install-actions">
         {hasNativePrompt ? (
-          <Button type="button" arrow={null} onClick={install}>
+          <Button type="button" onClick={install}>
             Install
           </Button>
         ) : null}
-        <Button variant="outline" type="button" arrow={null} onClick={() => setHidden(true)} aria-label="Dismiss install app prompt">
+        <Button variant="outline" type="button" onClick={() => setHidden(true)} aria-label="Dismiss install app prompt">
           Dismiss
         </Button>
       </div>

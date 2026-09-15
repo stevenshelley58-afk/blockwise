@@ -51,8 +51,8 @@ docker compose -f "$compose_file" exec -T research-db \
 docker compose -f "$compose_file" exec -T research-db \
   psql -U postgres -d blockwise_research -v ON_ERROR_STOP=1 <<'SQL'
 drop table if exists research.owned_ad_performance;
-drop table if exists public.adstudio_creatives;
-drop table if exists public.adstudio_campaigns;
+drop table if exists public.adbuilder_creatives;
+drop table if exists public.adbuilder_campaigns;
 drop table if exists public.workspaces;
 
 revoke all on schema research from anon, authenticated;

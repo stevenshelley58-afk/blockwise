@@ -39,8 +39,11 @@ const OPENAI_IMAGE_URL = "https://api.openai.com/v1/images/generations";
 const OPENAI_IMAGE_EDITS_URL = "https://api.openai.com/v1/images/edits";
 const DEEPSEEK_CHAT_URL = "https://api.deepseek.com/chat/completions";
 const AZURE_OPENAI_DEFAULT_API_VERSION = "2024-10-21";
-// best now, cost-tune later — gpt-image-2 processes inputs at max fidelity regardless.
+// GPT Image 2 and 2.5 accept low|medium|high plus xhigh|max on 2.5 only; both
+// default to auto. High is the current cost/quality balance.
 const DEFAULT_OPENAI_IMAGE_QUALITY = "high";
+/** Newest GPT Image generation model. Override with BLOCKWISE_OPENAI_IMAGE_MODEL. */
+const DEFAULT_OPENAI_IMAGE_MODEL = "gpt-image-2.5-flare";
 
 function createOpenAiTextProvider(options: ProviderOptions = {}): TextProviderAdapter {
   const env = options.env ?? process.env;
@@ -137,7 +140,7 @@ export function resolveAzureOpenAiChatUrl(env: ProviderEnvironment, deployment: 
 
 function createOpenAiImageProvider(options: ProviderOptions = {}): ImageProviderAdapter {
   const env = options.env ?? process.env;
-  const model = options.model ?? env.BLOCKWISE_OPENAI_IMAGE_MODEL ?? "gpt-image-2";
+  const model = options.model ?? env.BLOCKWISE_OPENAI_IMAGE_MODEL ?? DEFAULT_OPENAI_IMAGE_MODEL;
   const quality = options.quality ?? env.BLOCKWISE_OPENAI_IMAGE_QUALITY ?? DEFAULT_OPENAI_IMAGE_QUALITY;
   const fetchImpl = options.fetchImpl ?? withRequestDeadline(fetch, options.maxLatencyMs);
 
@@ -822,12 +825,24 @@ function extractImageUrl(content: unknown): string | undefined {
   return undefined;
 }
 
+/**
+ * True for the whole GPT Image 2 family, including point releases such as
+ * `gpt-image-2.5-flare` and their dated snapshots. Matching by prefix matters:
+ * an exact-string check sent 2.5 down the legacy branch below, where "4:5"
+ * resolves to 1024x1536 (2:3) and the renderer then crops the generated scene
+ * destructively, with no error raised anywhere.
+ */
+export function supportsFlexibleImageSizes(model: string): boolean {
+  return /^gpt-image-2(?:\.|$)/u.test(model);
+}
+
 function imageSizeForAspect(aspectRatio: string, model: string): string {
-  // GPT Image 2 accepts flexible dimensions when both edges are multiples of
-  // 16 and the documented pixel/ratio limits are respected. Generate on the
-  // final canvas so clone geometry reaches visual QA without a destructive
-  // centre crop. Older GPT Image models retain their native supported sizes.
-  if (model === "gpt-image-2") {
+  // The GPT Image 2 family accepts flexible dimensions when both edges are
+  // multiples of 16, the ratio stays between 1:3 and 3:1, and the pixel count
+  // stays inside 655,360..8,294,400. Generate on the final canvas so clone
+  // geometry reaches visual QA without a destructive centre crop. Older GPT
+  // Image models retain their native supported sizes.
+  if (supportsFlexibleImageSizes(model)) {
     if (aspectRatio === "4:5") return "1024x1280";
     if (aspectRatio === "9:16") return "864x1536";
     if (aspectRatio === "1.91:1") return "1952x1024";

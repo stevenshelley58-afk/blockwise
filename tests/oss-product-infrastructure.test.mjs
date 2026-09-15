@@ -123,11 +123,12 @@ test("OSS product compose is isolated and has no managed deployment endpoint", a
 });
 
 test("product readiness is fatal while liveness remains process-only", async () => {
-  const [health, live, migration, script] = await Promise.all([
+  const [health, live, migration, script, compose] = await Promise.all([
     read("src/app/api/health/route.ts"),
     read("src/app/api/health/live/route.ts"),
     read("scripts/vps/product-migrate.sh"),
     read("scripts/vps/product-health.sh"),
+    read("infra/coolify/docker-compose.product.yml"),
   ]);
   assert.match(health, /const status = ready \? 200 : 503/);
   assert.match(health, /\{ status \}/);
@@ -139,6 +140,27 @@ test("product readiness is fatal while liveness remains process-only", async () 
   assert.match(migration, /compose restart product-rest/);
   assert.match(script, /\/api\/health/);
   assert.match(script, /status.*ready/);
+  assert.match(compose, /127\.0\.0\.1\/api\/health/);
+  assert.doesNotMatch(compose, /127\.0\.0\.1\/healthz/);
+});
+
+test("release cleanup always uses the deployed immutable implementation", async () => {
+  const [autodeploy, wrapper, install, service] = await Promise.all([
+    read("scripts/vps/blockwise-autodeploy.sh"),
+    read("scripts/vps/prune-current-release.sh"),
+    read("scripts/vps/install-product-release-automation.sh"),
+    read("infra/product/systemd/blockwise-prune-releases.service"),
+  ]);
+  assert.match(autodeploy, /release_script="\$RELEASES\/\$sha\/scripts\/vps\/product-release\.sh"/);
+  assert.match(autodeploy, /prune_script="\$RELEASES\/\$sha\/scripts\/vps\/prune-releases\.sh"/);
+  assert.doesNotMatch(autodeploy, /\$SOURCE\/scripts\/vps\/prune-releases\.sh/);
+  assert.match(wrapper, /STATE=\/srv\/blockwise\/releases\/\.autodeploy\.sha/);
+  assert.match(wrapper, /RELEASES=\/srv\/blockwise\/releases\/product/);
+  assert.match(wrapper, /exec "\$script" "\$@"/);
+  assert.match(install, /scripts\/vps\/blockwise-autodeploy\.sh/);
+  assert.match(install, /scripts\/vps\/prune-current-release\.sh/);
+  assert.match(service, /ExecStart=\/usr\/local\/sbin\/blockwise-prune-current-release --keep 10 --apply/);
+  assert.doesNotMatch(service, /projects\/blockwise\/scripts\/vps\/prune-releases\.sh/);
 });
 
 test("migration apply paths are explicitly gated", async () => {
@@ -295,13 +317,17 @@ test("OSS product build and reconciliation contracts avoid local secrets and est
     [],
     "new production migrations must be added to the product allowlist",
   );
-  assert.ok(allowlistedMigrations.every((line) => !/research|hermes/i.test(line)));
+  const productOwnedResearchProjections = new Set([
+    "20260914020000_research_email_location_projection.sql",
+    "20260914020100_atomic_research_email_location_projection_snapshot.sql",
+  ]);
+  assert.ok(allowlistedMigrations.every((line) => productOwnedResearchProjections.has(line) || !/research|hermes/i.test(line)));
   assert.deepEqual([...allowlistedMigrations].sort(), allowlistedMigrations);
 });
 
 test("direct Hermes artifacts and customer saves use the self-hosted transaction boundary", async () => {
   const [migration, migrations, ingest, saver] = await Promise.all([
-    read("supabase/migrations/20260829010000_adbuilder_transactional_writes.sql"),
+    read("supabase/migrations/20260829010000_adstudio_transactional_writes.sql"),
     read("infra/product/product-migrations.txt"),
     read("src/lib/adbuilder/ingest-artifact.ts"),
     read("src/lib/adbuilder/save-ad.ts"),
@@ -319,6 +345,9 @@ test("direct Hermes artifacts and customer saves use the self-hosted transaction
 test("new VPS shell entrypoints are staged with executable Git modes", async () => {
   const files = [
     "infra/product/db-init/002-roles.sh",
+    "scripts/vps/blockwise-autodeploy.sh",
+    "scripts/vps/install-product-release-automation.sh",
+    "scripts/vps/prune-current-release.sh",
     "scripts/vps/product-auth-import.sh",
     "scripts/vps/product-backup.sh",
     "scripts/vps/product-checksums.sh",

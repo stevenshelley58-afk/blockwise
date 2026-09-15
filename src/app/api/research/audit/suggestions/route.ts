@@ -4,7 +4,6 @@ import { featureDisabledResponse } from "@/lib/auth/api-guards";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { buildAdAudit } from "@/lib/research/ad-audit";
 import { generateAuditSuggestions } from "@/lib/research/audit-suggestions";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { getClientIp } from "@/lib/client-ip";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +18,6 @@ export async function GET(request: NextRequest) {
     request.nextUrl.searchParams.get("location") ?? request.nextUrl.searchParams.get("q") ?? "";
 
   try {
-    const supabase = createSupabaseServiceClient();
     const ip = getClientIp(request.headers);
     const rateLimit = await checkRateLimit(null, ip, {
       bucket: "public-audit-suggestions",
@@ -35,7 +33,7 @@ export async function GET(request: NextRequest) {
         },
       );
     }
-    const audit = await buildAdAudit(supabase, { location });
+    const audit = await buildAdAudit({ location });
     const { suggestions, source } = await generateAuditSuggestions(audit, { signal: request.signal });
 
     return NextResponse.json(

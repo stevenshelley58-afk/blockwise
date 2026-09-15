@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { META_COPY_CTA_VALUES } from "@/lib/adbuilder/meta-copy-contract";
 import { uploadCustomerImage } from "../editor/customer-image-upload";
 import { NativeMetaPreview, type NativeMetaCopy } from "./native-meta-preview";
+import { createAutosaveController } from "./autosave-controller";
 import { applyTextValuesToScenes, convertTemplateToFabricScenes, hydrateFabricSceneImages, isFabricScene, nativeImageSlots, nativeTemplateFonts, readVueNativeEditor, replaceNativeImageInScenes, templateTextValues, textValuesFromScenes, type FabricScene, type VueNativeEditorDocument } from "./fabric-scene";
 
 const CHANNEL = "blockwise.vue-editor";
@@ -33,7 +34,9 @@ export function VueEditorShell({ pack, adId, workspaceId, initialDocument, initi
   const scenesRef = useRef({ feed: native.feed, story: native.story });
   const [editSerial, setEditSerial] = useState(0);
   const changeVersion = useRef(0);
-  const saveAction = useRef<() => void>(() => undefined);
+  const savingRef = useRef(false);
+  const saveAction = useRef<() => Promise<boolean>>(async () => false);
+  const autosaveController = useRef<ReturnType<typeof createAutosaveController> | null>(null);
   const snapshotPending = useRef(new Map<string, { resolve: (value: { feed: ExportResult; story: ExportResult }) => void; reject: (error: Error) => void; timeout: ReturnType<typeof setTimeout> }>());
   const [copyOpen, setCopyOpen] = useState(false);
   const [photosOpen, setPhotosOpen] = useState(false);
@@ -43,6 +46,7 @@ export function VueEditorShell({ pack, adId, workspaceId, initialDocument, initi
   const [ready, setReady] = useState(false);
   const [dirty, setDirty] = useState(!initialDocument.nativeEditor);
   const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const [savedRevision, setSavedRevision] = useState(initialRevision);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<Record<Placement, string | null>>({ feed: null, story: null });
@@ -62,7 +66,13 @@ export function VueEditorShell({ pack, adId, workspaceId, initialDocument, initi
 
   const replaceScenes = useCallback((next: { feed: FabricScene; story: FabricScene }, markDirty = true) => {
     scenesRef.current = next;
-    if (markDirty) { changeVersion.current += 1; setEditSerial(value => value + 1); setDirty(true); }
+    if (markDirty) {
+      changeVersion.current += 1;
+      setEditSerial(value => value + 1);
+      setDirty(true);
+      autosaveController.current?.edit();
+      setSaveFailed(false);
+    }
   }, []);
 
   const exportPlacement = useCallback((placement: Placement) => new Promise<ExportResult>((resolve, reject) => {
@@ -140,7 +150,7 @@ export function VueEditorShell({ pack, adId, workspaceId, initialDocument, initi
           request.resolve({ feed: payload.feed, story: payload.story });
         }
       } else if (message.type === "saved") {
-        saveAction.current();
+        void saveAction.current();
       } else if (message.type === "ai-request") {
         setCopyOpen(true);
         setBrief(typeof payload.selection?.text === "string" ? payload.selection.text : "");
@@ -188,9 +198,10 @@ export function VueEditorShell({ pack, adId, workspaceId, initialDocument, initi
   };
 
   const save = useCallback(async () => {
-    if (!ready || saving || transitioning || photoBusy) return false;
+    if (!ready || savingRef.current || transitioning || photoBusy) return false;
     const savingVersion = changeVersion.current;
-    setSaving(true); setError(null);
+    savingRef.current = true;
+    setSaving(true); setSaveFailed(false); setError(null);
     try {
       // Fresh exports freeze both scenes and both rendered placements together.
       const { feed, story } = await snapshotAll();
@@ -201,11 +212,28 @@ export function VueEditorShell({ pack, adId, workspaceId, initialDocument, initi
       if (!response.ok || typeof body.ad?.revisionNumber !== "number") throw new Error(body.error ?? "The ad could not be saved.");
       setSavedRevision(body.ad.revisionNumber); setDirty(changeVersion.current !== savingVersion); setPreview({ feed: feed.pngDataUrl, story: story.pngDataUrl });
       return true;
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "The ad could not be saved."); return false; }
-    finally { setSaving(false); }
-  }, [adId, copy, snapshotAll, initialDocument, native.sourceAdId, ready, saving, transitioning, photoBusy, savedRevision, sourceAdId, workspaceId]);
+    } catch (cause) { setSaveFailed(true); setError(cause instanceof Error ? cause.message : "The ad could not be saved."); return false; }
+    finally { savingRef.current = false; setSaving(false); }
+  }, [adId, copy, snapshotAll, initialDocument, native.sourceAdId, ready, transitioning, photoBusy, savedRevision, sourceAdId, workspaceId]);
 
-  saveAction.current = () => { void save(); };
+  saveAction.current = save;
+
+  useEffect(() => {
+    const controller = createAutosaveController(() => saveAction.current());
+    autosaveController.current = controller;
+    return () => {
+      controller.dispose();
+      autosaveController.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    autosaveController.current?.setEnabled(ready && dirty && !saving && !transitioning && !photoBusy);
+  }, [dirty, photoBusy, ready, saving, transitioning]);
+
+  useEffect(() => {
+    if (ready && dirty && autosaveController.current?.getState().version === 0) autosaveController.current.edit();
+  }, [dirty, ready]);
 
   const review = async () => {
     if (dirty || designOpen || savedRevision === 0) { const ok = await save(); if (!ok) return; }
@@ -217,7 +245,12 @@ export function VueEditorShell({ pack, adId, workspaceId, initialDocument, initi
   const syncArtwork = async (detectChanges = false) => {
     const before = JSON.stringify(scenesRef.current);
     const snapshot = await snapshotAll();
-    if (detectChanges && before !== JSON.stringify({ feed: snapshot.feed.scene, story: snapshot.story.scene })) { changeVersion.current += 1; setDirty(true); }
+    if (detectChanges && before !== JSON.stringify({ feed: snapshot.feed.scene, story: snapshot.story.scene })) {
+      changeVersion.current += 1;
+      setSaveFailed(false);
+      setDirty(true);
+      autosaveController.current?.edit();
+    }
     return { feed: snapshot.feed.scene, story: snapshot.story.scene };
   };
   const toggleDesign = async () => {
@@ -281,12 +314,16 @@ export function VueEditorShell({ pack, adId, workspaceId, initialDocument, initi
     setPhotosOpen(open);
   };
   const updateCopy = (key: keyof NativeMetaCopy, value: string) => {
-    setCopy(current => ({ ...current, [key]: value })); changeVersion.current += 1; setDirty(true);
+    setCopy(current => ({ ...current, [key]: value }));
+    changeVersion.current += 1;
+    setSaveFailed(false);
+    setDirty(true);
+    autosaveController.current?.edit();
   };
 
   const templateValues = Object.fromEntries(pack.textInputs.map(input => [input.key, input.placeholder]));
   const templateCopy = templateMetaCopy(pack);
-  const status = saving ? "Saving…" : dirty ? "Unsaved changes" : savedRevision > 0 ? "Saved" : "Ready to save";
+  const status = saving ? "Saving…" : saveFailed ? "Couldn’t save" : dirty ? "Unsaved changes" : savedRevision > 0 ? "Saved" : "Ready to save";
 
   const busy = !ready || saving || transitioning || photoBusy;
   const slots = nativeImageSlots(scenesRef.current);
@@ -316,9 +353,9 @@ export function VueEditorShell({ pack, adId, workspaceId, initialDocument, initi
       </div>
       {!designOpen ? <div className="relative grid h-full min-h-0 grid-cols-1 grid-rows-[auto_minmax(0,1fr)_auto] md:grid-cols-[112px_minmax(0,1fr)] md:grid-rows-[auto_minmax(0,1fr)]">
         <div role="group" aria-label="Ad editing tools" className="col-start-1 row-start-3 grid grid-cols-3 gap-1 border-t border-border bg-card p-2 md:row-start-1 md:row-span-2 md:flex md:flex-col md:justify-start md:gap-2 md:border-t-0 md:border-r md:pt-4">
-          <Button type="button" variant="ghost" arrow={null} className="h-14 min-w-0 rounded-(--r-ctl) px-1 text-xs md:h-18" disabled={busy} onClick={() => { setError(null); setPhotoSlot(null); setPhotosOpen(true); }}><span className="flex flex-col items-center gap-1"><ImagePlus className="size-5" /><span>Photos</span></span></Button>
-          <Button type="button" variant="ghost" arrow={null} className="h-14 min-w-0 rounded-(--r-ctl) px-1 text-xs md:h-18" disabled={busy} onClick={() => { setError(null); setCopyOpen(true); }}><span className="flex flex-col items-center gap-1"><Type className="size-5" /><span>Words</span></span></Button>
-          <Button type="button" variant="ghost" arrow={null} className="h-14 min-w-0 rounded-(--r-ctl) px-1 text-xs md:h-18" disabled={busy} onClick={() => void toggleDesign()}><span className="flex flex-col items-center gap-1"><SlidersHorizontal className="size-5" /><span>{transitioning ? "Updating…" : "Adjust design"}</span></span></Button>
+          <Button type="button" variant="ghost" className="h-14 min-w-0 rounded-(--r-ctl) px-1 text-xs md:h-18" disabled={busy} onClick={() => { setError(null); setPhotoSlot(null); setPhotosOpen(true); }}><span className="flex flex-col items-center gap-1"><ImagePlus className="size-5" /><span>Photos</span></span></Button>
+          <Button type="button" variant="ghost" className="h-14 min-w-0 rounded-(--r-ctl) px-1 text-xs md:h-18" disabled={busy} onClick={() => { setError(null); setCopyOpen(true); }}><span className="flex flex-col items-center gap-1"><Type className="size-5" /><span>Words</span></span></Button>
+          <Button type="button" variant="ghost" className="h-14 min-w-0 rounded-(--r-ctl) px-1 text-xs md:h-18" disabled={busy} onClick={() => void toggleDesign()}><span className="flex flex-col items-center gap-1"><SlidersHorizontal className="size-5" /><span>{transitioning ? "Updating…" : "Adjust design"}</span></span></Button>
         </div>
         <div className="col-start-1 row-start-1 flex items-center justify-center border-b border-border bg-card px-3 py-2 md:col-start-2">{formats}</div>
         <div className="col-start-1 row-start-2 min-h-0 min-w-0 overflow-y-auto bg-muted/40 p-4 sm:p-6 md:col-start-2" role="region" aria-label="Ad preview" tabIndex={0} aria-busy={!ready || transitioning}>

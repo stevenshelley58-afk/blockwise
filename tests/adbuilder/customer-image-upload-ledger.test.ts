@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const migration = readFileSync("supabase/migrations/202608250001_adbuilder_customer_image_uploads.sql", "utf8");
+const migration = readFileSync("supabase/migrations/202608250001_adstudio_customer_image_uploads.sql", "utf8");
 const hardeningMigration = readFileSync("supabase/migrations/202608250002_harden_customer_image_upload_status.sql", "utf8");
 const mediaRoute = readFileSync("src/app/api/adbuilder/ads/[id]/media/route.ts", "utf8");
 const proxyRoute = readFileSync("src/app/api/adbuilder/customer-media/route.ts", "utf8");

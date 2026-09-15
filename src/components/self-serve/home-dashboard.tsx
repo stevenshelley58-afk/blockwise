@@ -6,9 +6,10 @@ import Link from "next/link";
 
 import { MetaAdTile } from "@/components/research/meta-ad-tile";
 import { HomeMetricsBand } from "@/components/self-serve/home-metrics-band";
-import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
+import { CtaLink } from "@/components/shadcn-dashboard/button/button-01";
 import { NoticeBar } from "@/components/ui/notice-bar";
 import { SafeImage } from "@/components/ui/safe-image";
+import { DefaultPostcodeForm } from "@/components/workspace/default-postcode-form";
 import { niche } from "@/config/niche";
 import type { HomeCreativeSuggestions } from "@/lib/home/creative-suggestions";
 import type { HomeLead } from "@/lib/home/home-lead-row";
@@ -38,11 +39,12 @@ export type HomeData = ActivationCardData & {
   leads: HomeLead[];
   /** True when those rows are examples for a demo workspace, not this workspace's leads. */
   leadsAreExamples: boolean;
+  defaultPostcode: string | null;
+  canManageLocation: boolean;
+  localAdsStatus: "missing" | "ready" | "empty" | "error";
   localAds: HomeLocalAd[];
   /**
-   * The area those ads were read for: the workspace's own suburb or postcode
-   * when the brand address supplied one, otherwise the niche's default area.
-   * Null only when the list is empty.
+   * The explicit workspace postcode used for the strict local-ad read.
    */
   localAdsArea: { place: string; searchTerm: string } | null;
 };
@@ -96,9 +98,9 @@ function LeadsSection({
             {copy.emptyTitle}
           </p>
           <p className="mt-1 text-[13px] text-muted-foreground">{copy.emptyBody}</p>
-          <ButtonArrow href="/ad-builder" className="mt-5">
+          <CtaLink href="/ad-builder" className="mt-5">
             {copy.ctaLabel}
-          </ButtonArrow>
+          </CtaLink>
         </div>
       </section>
     );
@@ -187,12 +189,67 @@ function LeadsSection({
 function LocalAdsSection({
   ads,
   area,
+  canManage,
+  status,
+  workspaceId,
 }: {
   ads: HomeData["localAds"];
   area: HomeData["localAdsArea"];
+  canManage: boolean;
+  status: HomeData["localAdsStatus"];
+  workspaceId: string;
 }) {
   const copy = niche.copy.home.localAds;
-  if (ads.length === 0 || area === null) return null;
+
+  if (status === "missing") {
+    return (
+      <section className="mt-10 border-y border-(--line) py-5 md:mt-12">
+        <h2 className={SECTION_TITLE}>{copy.title}</h2>
+        <p className="mt-1 max-w-[65ch] text-[13px] text-muted-foreground">
+          Set your workspace postcode to see ads observed in your area and nearby postcode areas.
+        </p>
+        {canManage ? (
+          <div className="mt-4">
+            <DefaultPostcodeForm initialPostcode={null} workspaceId={workspaceId} buttonLabel="Show local ads" />
+          </div>
+        ) : (
+          <p className="mt-3 text-[13px] font-semibold text-foreground">
+            Ask a workspace owner or admin to set the postcode in Settings.
+          </p>
+        )}
+      </section>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <section className="mt-10 border-y border-(--line) py-5 md:mt-12">
+        <h2 className={SECTION_TITLE}>{copy.title}</h2>
+        <p className="mt-1 text-[13px] text-muted-foreground">
+          {area ? `Local ads for ${area.place}` : "Local ads"} could not be loaded. Refresh the page to try again.
+        </p>
+      </section>
+    );
+  }
+
+  if (area === null) return null;
+
+  if (status === "empty" || ads.length === 0) {
+    return (
+      <section className="mt-10 border-y border-(--line) py-5 md:mt-12">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className={SECTION_TITLE}>{copy.title}</h2>
+          <Link href={`/ad-radar?q=${encodeURIComponent(area.searchTerm)}`} className={cn(SECTION_LINK, "shrink-0")}>
+            {copy.viewAll}
+            <ArrowRight size={14} aria-hidden />
+          </Link>
+        </div>
+        <p className="mt-2 max-w-[65ch] text-[13px] text-muted-foreground">
+          No local ad previews are available for {area.place} or nearby postcode areas yet.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="mt-10 md:mt-12">
@@ -250,7 +307,7 @@ function LocalAdsSection({
   );
 }
 
-export function HomeDashboard({ data }: { data: HomeData }) {
+export function HomeDashboard({ data, workspaceId = "" }: { data: HomeData; workspaceId?: string }) {
   const reduced = useReducedMotion();
   const { container, item: itemVariants } = entrance(reduced);
 
@@ -271,7 +328,13 @@ export function HomeDashboard({ data }: { data: HomeData }) {
       </motion.section>
 
       <motion.section variants={itemVariants}>
-        <LocalAdsSection ads={data.localAds} area={data.localAdsArea} />
+        <LocalAdsSection
+          ads={data.localAds}
+          area={data.localAdsArea}
+          canManage={data.canManageLocation}
+          status={data.localAdsStatus}
+          workspaceId={workspaceId}
+        />
       </motion.section>
     </motion.div>
   );

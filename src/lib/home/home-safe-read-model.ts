@@ -36,6 +36,9 @@ export type HomeSafeReadModel = Pick<
   | "creativeSuggestions"
   | "leads"
   | "leadsAreExamples"
+  | "defaultPostcode"
+  | "canManageLocation"
+  | "localAdsStatus"
   | "localAds"
   | "localAdsArea"
 >;
@@ -60,6 +63,9 @@ export function homeSafeReadModelFromData(data: HomeData): HomeSafeReadModel {
     creativeSuggestions: data.creativeSuggestions,
     leads: data.leads,
     leadsAreExamples: data.leadsAreExamples,
+    defaultPostcode: data.defaultPostcode,
+    canManageLocation: data.canManageLocation,
+    localAdsStatus: data.localAdsStatus,
     localAds: data.localAds,
     localAdsArea: data.localAdsArea,
   };

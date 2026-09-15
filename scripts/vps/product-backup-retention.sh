@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+# The host helper owns complete-set verification and the fixed two-backup policy.
+# Never fall back to age-based deletion if it is absent or verification fails.
 root="${1:-}"
-days="${2:-}"
-[[ "$root" == /* && -d "$root" ]] || { echo "invalid retention root" >&2; exit 2; }
-[[ "$days" =~ ^[1-9][0-9]*$ ]] || { echo "invalid retention days" >&2; exit 2; }
-deleted=0
-while IFS= read -r -d "" old; do
-  rm -rf -- "$old"
-  deleted=$((deleted + 1))
-done < <(find "$root" -mindepth 1 -maxdepth 1 -type d -name "20?????????????Z" -mtime +"$days" -print0)
-printf "%s" "$deleted"
+count="${2:-2}"
+[[ "$root" == /srv/blockwise/product/backups/encrypted && -d "$root" ]] || { echo "invalid retention root" >&2; exit 2; }
+[[ "$count" == 2 ]] || { echo "retention count must be 2" >&2; exit 2; }
+[[ -x /usr/local/libexec/vps-backup-retention ]] || { echo "verified backup retention helper missing" >&2; exit 2; }
+exec /usr/local/libexec/vps-backup-retention --apply --series product

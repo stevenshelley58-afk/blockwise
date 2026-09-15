@@ -6,8 +6,8 @@
  * running CRM, so it runs on the VPS as a verification step, not in CI.
  *
  * It exercises the REAL adapter (src/lib/crm/*) against the REAL Frappe, with
- * the workspace -> site mapping read through the REAL Supabase client from the
- * REAL product database. Nothing is stubbed.
+ * the workspace -> site mapping and the per-site credential read through the
+ * REAL Supabase client from the REAL product database. Nothing is stubbed.
  *
  * Run it from a container on the product's compose network, which is where the
  * product's own server-side code runs:
@@ -15,27 +15,30 @@
  *   docker run --rm --network blockwise-product \
  *     -e PRODUCT_SUPABASE_URL=http://product-rest:3000 \
  *     -e PRODUCT_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY" \
- *     -e CRM_API_KEY=... -e CRM_API_SECRET=... \
+ *     -e TOKEN_ENCRYPTION_KEY="$TOKEN_ENCRYPTION_KEY" \
  *     -v "$PWD":/app -w /app node:22-bookworm \
  *     node --import tsx scripts/verify/crm-adapter-live.mjs <workspace-uuid>
  *
- * Or on the host, with CRM_LIVE_ENV_FILE pointing at the CRM deployment .env.
+ * TOKEN_ENCRYPTION_KEY is required because the credential is decrypted from the
+ * vault; it is the same key the product app already uses.
  *
  * Environment:
  *   PRODUCT_SUPABASE_URL      e.g. http://product-rest:3000   (required)
  *   PRODUCT_SERVICE_ROLE_KEY  service role key                (required)
- *   CRM_LIVE_ENV_FILE         CRM deployment .env, for the API key/secret
  *   CRM_BASE_URL              default http://blockwise-crm-backend:8000
  *   CRM_LIVE_STRICT           set to 0 to warn instead of failing on the
  *                             cross-tenant check
  *
+ * The credential is read from the encrypted vault for this workspace, exactly
+ * as the product does. There is deliberately no deployment-wide key/secret to
+ * pass, because there is no deployment-wide credential any more.
+ *
  * Every check asserts something observed. There are no unconditional passes.
  */
 
-import { readFileSync } from "node:fs";
-
 import { createClient } from "@supabase/supabase-js";
 
+import { loadCrmSiteCredential } from "../../src/lib/crm/credentials.ts";
 import { createWorkspaceCrm } from "../../src/lib/crm/index.ts";
 
 const WORKSPACE_ID = process.argv[2];
@@ -44,39 +47,13 @@ if (!WORKSPACE_ID) {
   process.exit(2);
 }
 
-function readEnvFile(path) {
-  const out = {};
-  for (const line of readFileSync(path, "utf8").split("\n")) {
-    const match = /^\s*([A-Z0-9_]+)\s*=(.*)$/.exec(line);
-    if (match) out[match[1]] = match[2].trim().replace(/^"|"$/g, "");
-  }
-  return out;
-}
-
-const ENV_FILE = process.env.CRM_LIVE_ENV_FILE ?? "/srv/blockwise/crm/deploy/.env";
-let crmEnv = {};
-try {
-  crmEnv = readEnvFile(ENV_FILE);
-} catch {
-  // Running inside a container: the key and secret come from the environment.
-}
-
 const BASE_URL = process.env.CRM_BASE_URL ?? "http://blockwise-crm-backend:8000";
-const env = {
-  ...process.env,
-  CRM_BASE_URL: BASE_URL,
-  CRM_API_KEY: process.env.CRM_API_KEY ?? crmEnv.CRM_API_KEY,
-  CRM_API_SECRET: process.env.CRM_API_SECRET ?? crmEnv.CRM_API_SECRET,
-};
+const env = { ...process.env, CRM_BASE_URL: BASE_URL };
 
 const SUPABASE_URL = process.env.PRODUCT_SUPABASE_URL;
 const SERVICE_KEY = process.env.PRODUCT_SERVICE_ROLE_KEY;
 if (!SUPABASE_URL || !SERVICE_KEY) {
   console.error("PRODUCT_SUPABASE_URL and PRODUCT_SERVICE_ROLE_KEY are required");
-  process.exit(2);
-}
-if (!env.CRM_API_KEY || !env.CRM_API_SECRET) {
-  console.error(`CRM credentials not found in the environment or ${ENV_FILE}`);
   process.exit(2);
 }
 
@@ -105,6 +82,23 @@ check(
   Boolean(mappingRow?.crm_site) && !mappingError,
   mappingError ? mappingError.message : `site=${mappingRow?.crm_site} status=${mappingRow?.status}`,
 );
+
+// --- the credential is per workspace, held in the vault ----------------------
+const credential = await loadCrmSiteCredential(supabase, WORKSPACE_ID);
+check(
+  "the workspace has its own stored credential",
+  Boolean(credential?.apiKey && credential?.apiSecret),
+);
+check(
+  "no deployment-wide credential is present in the environment",
+  !process.env.CRM_API_KEY && !process.env.CRM_API_SECRET,
+  process.env.CRM_API_KEY ? "CRM_API_KEY is still set in the environment" : "",
+);
+
+if (!credential) {
+  console.error("This workspace has no stored CRM credential; provision it before running the live proof.");
+  process.exit(1);
+}
 
 // --- resolve the site through the real adapter ------------------------------
 const { mapping, commands } = await createWorkspaceCrm({
@@ -227,7 +221,7 @@ if (otherId) {
     headers: {
       "Content-Type": "application/json",
       "X-Frappe-Site-Name": mapping.crmSite,
-      Authorization: `token ${env.CRM_API_KEY}:${env.CRM_API_SECRET}`,
+      Authorization: `token ${credential.apiKey}:${credential.apiSecret}`,
     },
     body: JSON.stringify({ workspace_id: otherId, lead: first.lead }),
   });
@@ -245,7 +239,7 @@ if (otherId) {
     headers: {
       "Content-Type": "application/json",
       "X-Frappe-Site-Name": mapping.crmSite,
-      Authorization: `token ${env.CRM_API_KEY}:${env.CRM_API_SECRET}`,
+      Authorization: `token ${credential.apiKey}:${credential.apiSecret}`,
     },
     body: JSON.stringify({ workspace_id: WORKSPACE_ID, lead: first.lead }),
   });

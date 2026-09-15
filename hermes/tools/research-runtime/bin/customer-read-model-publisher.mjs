@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import {
   hermesSupabaseHeaders,
@@ -9,6 +9,56 @@ const CARD_VIEW = "v_customer_meta_ad_library_cards";
 const HISTORY_VIEW = "v_customer_agent_ad_history";
 const PAGE_SIZE = 500;
 const WRITE_BATCH_SIZE = 100;
+
+export const EMAIL_LOCATION_SOURCE = "ad_radar_agent_contact_projection";
+
+export function normalizeProjectionEmail(value) {
+  const email = String(value ?? "").trim().toLowerCase();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email) ? email : null;
+}
+function isDemoOrTestEmail(email) {
+  const [local, domain] = email.split("@");
+  return !local || !domain || /(^|[.+_-])(test|demo)([.+_-]|$)/iu.test(local) || /(^|\.)(example|test|invalid|localhost)(\.|$)/iu.test(domain);
+}
+function validPostcode(value, knownPostcodes) {
+  const postcode = String(value ?? "").trim();
+  return /^\d{4}$/u.test(postcode) && knownPostcodes?.has(postcode) ? postcode : null;
+}
+function cleanSuburb(value) {
+  const suburb = String(value ?? "").trim();
+  return suburb.length > 0 && suburb.length <= 120 ? suburb : null;
+}
+function sourceObservationTimestamp(value) {
+  const timestamp = String(value ?? "");
+  return Number.isFinite(Date.parse(timestamp)) ? new Date(timestamp).toISOString() : null;
+}
+export function emailLocationHash(normalizedEmail) {
+  return createHash("sha256").update(normalizedEmail).digest("hex");
+}
+export function buildEmailLocationProjections(agentRows, revision, projectedAt, knownPostcodes) {
+  const candidates = new Map();
+  for (const agent of agentRows) {
+    const postcode = validPostcode(agent.primary_postcode, knownPostcodes);
+    if (!postcode) continue;
+    const enrichment = asObject(asObject(agent.metadata).cold_email_enrichment).v1;
+    for (const candidate of [{ email: agent.email, observedAt: agent.updated_at, kind: "direct" }, { email: asObject(enrichment).email, observedAt: asObject(enrichment).enriched_at, kind: "enrichment" }]) {
+      const email = normalizeProjectionEmail(candidate.email);
+      if (!email || isDemoOrTestEmail(email)) continue;
+      const observedAt = sourceObservationTimestamp(candidate.observedAt);
+      if (!observedAt) continue;
+      const entry = candidates.get(email) ?? { postcodes: new Set(), values: [] };
+      entry.postcodes.add(postcode);
+      entry.values.push({ postcode, suburb: cleanSuburb(agent.primary_suburb) ?? cleanSuburb(asObject(enrichment).office_suburb), observedAt, kind: candidate.kind });
+      candidates.set(email, entry);
+    }
+  }
+  return [...candidates].flatMap(([email, entry]) => {
+    if (entry.postcodes.size !== 1) return [];
+    entry.values.sort((left, right) => right.observedAt.localeCompare(left.observedAt) || Number(right.kind === "direct") - Number(left.kind === "direct"));
+    const selected = entry.values[0];
+    return [{ email_sha256: emailLocationHash(email), postcode: selected.postcode, suburb: selected.suburb, source: EMAIL_LOCATION_SOURCE, source_observed_at: selected.observedAt, projected_at: projectedAt, source_revision: revision }];
+  });
+}
 
 function cleanUrl(value) {
   return String(value ?? "").replace(/\/+$/u, "");
@@ -22,7 +72,7 @@ function asObject(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
-function buildCustomerRest(env, fetchImpl) {
+export function buildCustomerRest(env, fetchImpl) {
   const url = cleanUrl(env.HERMES_CUSTOMER_SUPABASE_URL);
   const credential = resolveHermesCustomerSupabaseCredential(env);
   if (!url || !credential) return null;
@@ -43,15 +93,26 @@ function buildCustomerRest(env, fetchImpl) {
   };
 }
 
-async function readAll(researchRest, relation, select = "*") {
+export async function readAll(researchRest, relation, select = "*", query = "", cursorColumn = null) {
   const rows = [];
+  let cursor = null;
   for (let offset = 0; ; offset += PAGE_SIZE) {
+    const cursorQuery = cursorColumn && cursor !== null
+      ? `&${cursorColumn}=gt.${encodeURIComponent(cursor)}`
+      : "";
     const page = await researchRest(
       "research",
-      `${relation}?select=${encodeURIComponent(select)}&limit=${PAGE_SIZE}&offset=${offset}`,
+      `${relation}?select=${encodeURIComponent(select)}${query ? `&${query}` : ""}${cursorQuery}&limit=${PAGE_SIZE}${cursorColumn ? "" : `&offset=${offset}`}`,
     );
     rows.push(...(page || []));
     if (!page || page.length < PAGE_SIZE) return rows;
+    if (cursorColumn) {
+      const nextCursor = page.at(-1)?.[cursorColumn];
+      if (nextCursor === null || nextCursor === undefined || nextCursor === cursor) {
+        throw new Error(`cursor pagination failed for ${relation}.${cursorColumn}`);
+      }
+      cursor = nextCursor;
+    }
   }
 }
 

@@ -36,7 +36,7 @@ export function AuditClaimHandler({ workspaceId }: { workspaceId: string }) {
 
   if (!failed) return null;
   return (
-    <div role="alert" style={{ margin: "12px 0", padding: "12px 16px", borderRadius: 12, background: "#fdf0ef", color: "#7c241f", fontSize: 14 }}>
+    <div role="alert" style={{ margin: "12px 0", padding: "12px 16px", borderRadius: 12, background: "var(--ui-error-soft)", color: "var(--ui-error)", fontSize: 14 }}>
       We could not move your 3 audit ads into Ad Builder. Your trial is ready — open Ad Builder and try the audit
       link again, or <a href="/ad-builder">continue to Ad Builder</a>.
     </div>

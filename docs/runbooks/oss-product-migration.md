@@ -192,6 +192,24 @@ worker services and fails on the first restore error. `product-cutover.sh` and
 SMTP, OAuth callback URLs, webhook destinations, cron scheduling, and
 provider-write enablement are separate reviewed changes.
 
+### Migration filenames are frozen ledger keys
+
+`public.blockwise_product_migration_ledger` records each applied migration by
+filename. Renaming a file that is already in the ledger makes the runner treat
+it as a new migration and execute it a second time, so an applied migration's
+filename must never change, whatever the file contains. A rename whose old
+filename is already applied stays at that filename and ships as a new forward
+migration instead. The 2026 Ad Builder rename follows that rule:
+`20260915000100_adbuilder_object_rename.sql` renames the old object names in
+place and aborts if any survive, while the applied files keep their original
+filenames as ledger keys. Check the live ledger before adding a rename to the
+allowlist:
+
+```bash
+compose exec -T product-db psql -U "$BLOCKWISE_DB_USER" -d "$BLOCKWISE_DB_NAME" \
+  -tAc "select version from public.blockwise_product_migration_ledger order by version"
+```
+
 ## Phased implementation batches
 
 1. **Foundation (this change):** isolated compose, pinned image tags, health

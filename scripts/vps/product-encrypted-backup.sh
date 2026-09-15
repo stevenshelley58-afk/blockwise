@@ -6,10 +6,10 @@ PRODUCT_ENV_FILE="${BLOCKWISE_PRODUCT_ENV_FILE:-/srv/blockwise/product/.env}"
 BACKUP_ROOT="${BLOCKWISE_ENCRYPTED_BACKUP_DIR:-/srv/blockwise/product/backups/encrypted}"
 KEY_FILE="${BLOCKWISE_BACKUP_KEY_FILE:-/etc/blockwise/product-backup.agekey}"
 STORAGE_VOLUME="${BLOCKWISE_STORAGE_VOLUME:-blockwise-product-storage-data}"
-RETENTION_DAYS="${BLOCKWISE_BACKUP_RETENTION_DAYS:-90}"
+RETENTION_COUNT=2
 [[ -f "$PRODUCT_ENV_FILE" && -f "$KEY_FILE" ]] || { echo "backup prerequisites missing" >&2; exit 2; }
 [[ "$BACKUP_ROOT" == /srv/blockwise/product/backups/encrypted ]] || { echo "refusing backup root" >&2; exit 2; }
-[[ "$RETENTION_DAYS" =~ ^[1-9][0-9]*$ ]] || { echo "invalid retention days" >&2; exit 2; }
+[[ -x /usr/local/libexec/vps-backup-retention ]] || { echo "verified backup retention helper missing" >&2; exit 2; }
 command -v age >/dev/null || { echo "age is required" >&2; exit 2; }
 read_env_value() {
   local key="$1" line value
@@ -39,9 +39,9 @@ recipient="$(age-keygen -y "$KEY_FILE")"
 for name in database.dump globals.sql row-counts.json storage.tar.gz storage.sha256; do
   age -r "$recipient" -o "$work/$name.age" "$work/$name"; shred -u "$work/$name"
 done
-printf 'created_at=%s\nasset_consistency=filesystem-read-no-snapshot\nretention_days=%s\n' "$stamp" "$RETENTION_DAYS" > "$work/METADATA"
+printf 'created_at=%s\nasset_consistency=filesystem-read-no-snapshot\nretention_count=%s\n' "$stamp" "$RETENTION_COUNT" > "$work/METADATA"
 ( cd "$work" && sha256sum *.age METADATA > SHA256SUMS )
 mv "$work" "$final"; work=""
 "$SCRIPT_DIR/product-backup-verify.sh" "$final"
-deleted="$("$SCRIPT_DIR/product-backup-retention.sh" "$BACKUP_ROOT" "$RETENTION_DAYS")"
-printf 'backup=%s encrypted=true verified=true retention_deleted=%s\n' "$final" "$deleted"
+"$SCRIPT_DIR/product-backup-retention.sh" "$BACKUP_ROOT" "$RETENTION_COUNT"
+printf 'backup=%s encrypted=true verified=true retention_count=2\n' "$final"

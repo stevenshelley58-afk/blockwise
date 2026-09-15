@@ -1,14 +1,24 @@
 -- Ad Builder rename: move every remaining ad-studio-era database object name
 -- onto the Ad Builder naming convention.
 --
--- Why this migration exists: the product surface, routes and code were renamed
--- from AdStudio to Ad Builder in one cutover and the app is not live, so no
--- second name is kept. Historical migration *filenames* are frozen because
--- scripts/vps/product-migrate.sh keys the ledger on the filename: renaming an
--- applied migration would make it run again. Object names inside those files
--- already use the new spelling, so a fresh install creates the final names and
--- this migration finds nothing to do. An upgraded database still carries the
--- old object names, and this migration renames them in place.
+-- Why this migration exists: the product surface, routes, code and schema were
+-- renamed onto the Ad Builder naming convention in one cutover. The app is not
+-- live, so no second name is kept at the product level.
+--
+-- Migration *filenames* are the one deliberate exception. That is not a second
+-- product name: it protects the live database.
+-- scripts/vps/product-migrate.sh records progress in
+-- public.blockwise_product_migration_ledger keyed on the filename, so renaming
+-- a file that is already applied makes the runner treat it as new and execute
+-- it again. Every already-applied migration therefore keeps its original
+-- filename as a frozen ledger key, and no filename needs to change for the
+-- product to read and write the new names.
+--
+-- This migration is what actually moves the schema. Object names *inside* the
+-- historical files already use the new spelling, so a fresh install creates the
+-- final names directly and this migration finds nothing to do. A database that
+-- predates the rename still carries the old object names, and this migration
+-- renames them in place, which is the path the live product database takes.
 --
 -- ALTER ... RENAME keeps OIDs, so data, primary keys, foreign keys, indexes,
 -- row level security policies, grants and trigger bindings all survive. It is

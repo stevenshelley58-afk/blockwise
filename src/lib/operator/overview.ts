@@ -1,6 +1,11 @@
 import { evaluatePublishReadiness, type ApprovalStatus, type ProviderConnectionStatus } from "../publishing/readiness.ts";
 import type { ComplianceStatus } from "../compliance/real-estate-policy.ts";
 import { buildLeadDedupeKey, findDuplicateLeadIds } from "../leads/dedupe.ts";
+import {
+  LEAD_CRM_DELIVERY_TABLE,
+  formatLeadCrmDelivery,
+  type LeadCrmDeliverySummary,
+} from "../crm/delivery.ts";
 import { createResearchServiceClient } from "../research/service.ts";
 import type { createSupabaseServerClient } from "../supabase/server.ts";
 
@@ -76,6 +81,18 @@ type LeadDeliveryAttemptRow = {
   status?: string | null;
   destination_label?: string | null;
   created_at?: string | null;
+};
+
+/**
+ * The columns the customer-facing surface reads from `lead_crm_delivery_jobs`.
+ * `last_error` and `command_id` are deliberately absent: the first is an
+ * operator detail, the second an internal identity, and neither belongs on a
+ * page any workspace member can open.
+ */
+type LeadCrmDeliveryRow = {
+  lead_id?: string | null;
+  state?: string | null;
+  crm_lead?: string | null;
 };
 
 type DemoRequestRow = {
@@ -210,6 +227,7 @@ export function buildLeadRowsWithDedupe(input: {
   attributions?: LeadAttributionRow[];
   dedupeRecords?: LeadDedupeRow[];
   deliveryAttempts?: LeadDeliveryAttemptRow[];
+  crmDeliveries?: LeadCrmDeliveryRow[];
   incoming?: { email?: string; phone?: string };
 }) {
   const labelByLead = new Map<string, { label: LeadQualityLabel; createdAt: number }>();
@@ -242,6 +260,21 @@ export function buildLeadRowsWithDedupe(input: {
     latestDeliveryByLead.set(attempt.lead_id, attempt);
   }
 
+  // At most one delivery job exists per lead, so unlike the attempts above this
+  // needs no "latest wins" reduction. An unrecognised state reads as pending
+  // rather than being trusted, matching the producer-side normalisation.
+  const crmDeliveryByLead = new Map<string, LeadCrmDeliverySummary>();
+
+  for (const delivery of input.crmDeliveries ?? []) {
+    if (!delivery.lead_id) continue;
+
+    crmDeliveryByLead.set(delivery.lead_id, {
+      lead_id: delivery.lead_id,
+      state: delivery.state === "delivered" || delivery.state === "error" ? delivery.state : "pending",
+      crm_lead: delivery.crm_lead ?? null,
+    });
+  }
+
   const duplicateLeadIds = new Set(
     (input.dedupeRecords ?? [])
       .filter((record) => record.duplicate_of_lead_id)
@@ -265,6 +298,7 @@ export function buildLeadRowsWithDedupe(input: {
       dedupeKey: buildLeadDedupeKey({ email: lead.email ?? "", phone: lead.phone ?? "" }),
       duplicateCandidate: duplicateLeadIds.has(lead.id),
       delivery: formatLeadDelivery(delivery),
+      crmDelivery: formatLeadCrmDelivery(crmDeliveryByLead.get(lead.id)),
       attribution: extractAttributionLabel(attribution),
     };
   });
@@ -473,7 +507,7 @@ export async function listLeadRowsWithDedupe(supabase: SupabaseServerClient, wor
     return buildLeadRowsWithDedupe({ leads: [] });
   }
 
-  const [labels, attributions, dedupeRecords, deliveryAttempts] = await Promise.all([
+  const [labels, attributions, dedupeRecords, deliveryAttempts, crmDeliveries] = await Promise.all([
     loadAllPages<LeadLabelRow>(async (from, to) => {
       const { data, error } = await supabase.from("lead_quality_labels").select("lead_id,label,created_at").eq("workspace_id", workspaceId).order("created_at", { ascending: false }).range(from, to);
       return { data: (data ?? []) as LeadLabelRow[], error };
@@ -490,6 +524,10 @@ export async function listLeadRowsWithDedupe(supabase: SupabaseServerClient, wor
       const { data, error } = await supabase.from("lead_delivery_attempts").select("lead_id,status,destination_label,created_at").eq("workspace_id", workspaceId).order("created_at", { ascending: false }).range(from, to);
       return { data: (data ?? []) as LeadDeliveryAttemptRow[], error };
     }),
+    loadAllPages<LeadCrmDeliveryRow>(async (from, to) => {
+      const { data, error } = await supabase.from(LEAD_CRM_DELIVERY_TABLE).select("lead_id,state,crm_lead").eq("workspace_id", workspaceId).range(from, to);
+      return { data: (data ?? []) as LeadCrmDeliveryRow[], error };
+    }),
   ]);
 
   return buildLeadRowsWithDedupe({
@@ -498,6 +536,7 @@ export async function listLeadRowsWithDedupe(supabase: SupabaseServerClient, wor
     attributions,
     dedupeRecords,
     deliveryAttempts,
+    crmDeliveries,
   });
 }
 

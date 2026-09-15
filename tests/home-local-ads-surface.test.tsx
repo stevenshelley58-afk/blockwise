@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 
 import { HomeDashboard, type HomeData } from "../src/components/self-serve/home-dashboard.tsx";
 import type { HomeLocalAd } from "../src/lib/home/home-local-ads.ts";
@@ -31,6 +32,9 @@ function homeData(overrides: Partial<HomeData> = {}): HomeData {
     performance: null,
     leads: [],
     leadsAreExamples: false,
+    defaultPostcode: null,
+    canManageLocation: true,
+    localAdsStatus: "missing",
     localAds: [],
     localAdsArea: null,
     activation: {
@@ -64,6 +68,24 @@ function homeData(overrides: Partial<HomeData> = {}): HomeData {
   } as HomeData;
 }
 
+function renderHome(data: HomeData) {
+  const router = {
+    back() {},
+    forward() {},
+    refresh() {},
+    push() {},
+    replace() {},
+    prefetch() { return Promise.resolve(); },
+  };
+  return renderToStaticMarkup(
+    createElement(
+      AppRouterContext.Provider,
+      { value: router as never },
+      createElement(HomeDashboard, { data, workspaceId: "workspace-1" }),
+    ),
+  );
+}
+
 test("local ads read as rows on a phone and as Ad Radar cards on desktop", () => {
   const ads = [
     localAd({
@@ -82,12 +104,7 @@ test("local ads read as rows on a phone and as Ad Radar cards on desktop", () =>
       media: [{ kind: "video", url: "https://cdn.example/two.mp4", posterUrl: "https://cdn.example/two.jpg" }],
     }),
   ];
-  const html = renderToStaticMarkup(
-    createElement(
-      HomeDashboard,
-      { data: homeData({ localAds: ads, localAdsArea: { place: "Scarborough", searchTerm: "6019" } }) },
-    ),
-  );
+  const html = renderHome(homeData({ defaultPostcode: "6019", localAdsStatus: "ready", localAds: ads, localAdsArea: { place: "Scarborough", searchTerm: "6019" } }));
 
   // The heading is Home's own, and View all carries the area the ads were read for.
   assert.match(html, /Ads near you/);
@@ -112,9 +129,36 @@ test("local ads read as rows on a phone and as Ad Radar cards on desktop", () =>
   assert.doesNotMatch(html, />Ad</);
 });
 
-test("an empty local-ads list leaves no heading behind", () => {
-  const html = renderToStaticMarkup(createElement(HomeDashboard, { data: homeData() }));
+test("a manager with no postcode gets the inline capture instead of fabricated ads", () => {
+  const html = renderHome(homeData());
 
-  assert.doesNotMatch(html, /Ads near/);
+  assert.match(html, /Ads near you/);
+  assert.match(html, /Default postcode/);
+  assert.match(html, /Show local ads/);
   assert.doesNotMatch(html, /lg:grid-cols-4/);
+});
+
+test("a non-manager with no postcode is told who can set the workspace default", () => {
+  const html = renderHome(homeData({ canManageLocation: false }));
+
+  assert.match(html, /Ask a workspace owner or admin/);
+  assert.doesNotMatch(html, /Show local ads/);
+});
+
+test("an empty structured read stays visible and truthful", () => {
+  const html = renderHome(homeData({
+      defaultPostcode: "6019",
+      localAdsStatus: "empty",
+      localAdsArea: { place: "Scarborough", searchTerm: "6019" },
+    }));
+
+  assert.match(html, /No local ad previews are available/);
+  assert.match(html, /\/ad-radar\?q=6019/);
+});
+
+test("a failed postcode read shows recovery instead of looking like missing data", () => {
+  const html = renderHome(homeData({ localAdsStatus: "error" }));
+
+  assert.match(html, /could not be loaded/);
+  assert.match(html, /Refresh the page/);
 });

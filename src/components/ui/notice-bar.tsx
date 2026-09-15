@@ -1,6 +1,6 @@
 "use client";
 
-import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
+import { CtaLink } from "@/components/shadcn-dashboard/button/button-01";
 import { cn } from "@/lib/utils";
 
 /*
@@ -51,9 +51,9 @@ export function NoticeBar({
         ) : null}
         <span>{text}</span>
       </p>
-      <ButtonArrow href={action.href} className="shrink-0">
+      <CtaLink href={action.href} className="shrink-0">
         {action.label}
-      </ButtonArrow>
+      </CtaLink>
     </div>
   );
 }

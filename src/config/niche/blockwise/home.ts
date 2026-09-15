@@ -103,7 +103,5 @@ export const home: HomeCopy = {
   localAds: {
     title: "Ads near you",
     viewAll: "View all",
-    // The Perth default stands until a brand address gives us a postcode.
-    fallbackArea: { searchTerm: "Perth, WA", place: "Perth" },
   },
 };

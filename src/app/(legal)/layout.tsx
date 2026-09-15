@@ -28,7 +28,7 @@ export default function LegalLayout({ children }: Readonly<{ children: React.Rea
           padding: "64px 24px 96px",
           fontSize: 16,
           lineHeight: 1.7,
-          color: "#131b2e",
+          color: "var(--ink)",
         }}
       >
         {children}
@@ -42,7 +42,7 @@ export default function LegalLayout({ children }: Readonly<{ children: React.Rea
         <BlockwiseLogo />
         <nav
           aria-label="Legal"
-          style={{ display: "flex", gap: 18, fontSize: 13, color: "#475569", flexWrap: "wrap" }}
+          style={{ display: "flex", gap: 18, fontSize: 13, color: "var(--muted)", flexWrap: "wrap" }}
         >
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>

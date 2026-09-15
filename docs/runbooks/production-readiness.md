@@ -73,6 +73,10 @@ This runs on its own, so nobody has to remember it:
   after every successful release, so releases are bounded as they happen.
 - `blockwise-prune-releases.timer` keeps the live revision, the rollback revision
   and the newest five releases on a weekly sweep, as a backstop.
+- The installed autodeploy runner invokes deploy and prune scripts from the
+  immutable target release. The weekly timer resolves its pruner through the
+  deployed revision selector. Install both from committed source with
+  `scripts/vps/install-product-release-automation.sh`.
 
 To read the history of what was removed, check those logs rather than a session
 transcript. Unmerged checkouts are deliberately never deleted: they are reported
@@ -83,7 +87,10 @@ in `cleanup.log` and are the owner's call.
 - `scripts/vps/prune-releases.sh` is the only thing that retires release storage.
   It keeps the revision serving traffic, the revision the environment selector
   names for rollback, and the newest N (autodeploy passes `--keep 10`, the weekly
-  timer uses 5). Retiring a revision removes its worktree and its
+  timer uses 5). It also keeps any release supplying a bind mount to a running
+  or stopped Docker container. Removing such a source can stay invisible until
+  the next host restart, when Docker cannot mount the file and the public route
+  fails. Retiring a revision removes its worktree and its
   `blockwise-app:<sha>` image together.
 - Never delete a release directory or a release image by hand, and never reach for
   `docker image prune -a` to reclaim space. The tag is the only thing protecting a
@@ -313,6 +320,26 @@ short-lived candidate between verified preparation and activation is expected;
 unreleased work remains on a feature branch, not on a competing canonical
 checkout. A failed release is an incident with an explicit retained baseline,
 not a reason to resume ad-hoc worktree deployments.
+
+### Microsoft sign-in Auth activation
+
+The app-only release deliberately does not recreate GoTrue. After the Microsoft
+OAuth wiring is released normally, set the restricted product environment's
+`BLOCKWISE_AUTH_AZURE_ENABLED=true`, client ID, client secret, redirect URI and
+Azure URL. Never put the secret into source or terminal output. The public
+redirect is `https://blockwise.sale/auth/v1/callback`; the Azure URL for work,
+school and personal accounts is `https://login.microsoftonline.com/common`.
+
+Run `scripts/vps/product-auth-release.sh --apply <live-full-sha>` from that
+immutable release. It shares the app release lock, verifies live provenance,
+refuses image or non-Microsoft Auth configuration drift, and recreates only
+`product-auth`. Failed activation restores the prior committed Auth definition.
+This is an explicit separate Auth gate, not part of automatic app deployment.
+Check public Auth settings and the Microsoft authorization redirect afterward.
+A successful interactive customer login is a separate check, not established
+by a healthy container or a successful authorization redirect. Google must
+remain unchanged. Rotate Microsoft secrets in the restricted configuration
+before expiry and repeat the Auth-only activation.
 
 ## Health gate
 

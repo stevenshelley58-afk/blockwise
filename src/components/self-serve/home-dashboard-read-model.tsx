@@ -112,5 +112,5 @@ export function HomeDashboardReadModel(input: {
 
   useReportingInvalidation({ workspaceId: input.workspaceId, onInvalidate: refresh });
 
-  return <HomeDashboard data={data} />;
+  return <HomeDashboard data={data} workspaceId={input.workspaceId} />;
 }

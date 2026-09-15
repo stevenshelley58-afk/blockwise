@@ -31,11 +31,26 @@
   --shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   --shadow-float: 0 4px 20px rgba(15, 23, 42, 0.08);
 
-  /* Shape - soft precision: 8px controls, 12px cards, 16px panels, full pills */
-  --r-card: 12px;
-  --r-ctl: 8px;
-  --r-panel: 16px;
+  /* Shape - ONE role-based scale. This is the only place these four are
+     defined; see docs/design/design-system.md "Shape roles". theme-monochrome.css
+     deliberately no longer restates them, because two live definitions of the
+     same token is how the 12px/16px card drift started.
+
+       controls (buttons, inputs, selects, cells)   10px  --r-ctl
+       cards and grouped surfaces                   16px  --r-card
+       large panels, dialogs, sheets                20px  --r-panel
+       status pills, chips, circular controls     9999px  --r-chip  */
+  --r-ctl: 10px;
+  --r-card: 16px;
+  --r-panel: 20px;
   --r-chip: 9999px;
+
+  /* Alias for the control radius. Thirteen call sites in the Ad Builder brand
+     studio and the page skeletons already asked for `rounded-(--r-control)`,
+     but nothing ever defined it, so those elements rendered with NO radius at
+     all. Defined here rather than renamed at each call site so both spellings
+     resolve to the one role. */
+  --r-control: var(--r-ctl);
   --ring: 0 0 0 3px rgba(18, 62, 117, 0.12);
 
   /* Type - Manrope for display, Inter for body/UI */

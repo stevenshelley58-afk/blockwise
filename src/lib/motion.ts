@@ -90,15 +90,17 @@ export function entrance(reduced: boolean | null): {
  */
 export const homepageMotion = {
   workflowStudy: {
-    autoHoldMs: 2600,
-    adMoveMs: 680,
-    panelRevealMs: 360,
-    sideFadeMs: 150,
-    typeStartMs: 760,
-    typeMs: 28,
-    reviewHoldMs: 1500,
-    approvalHoldMs: 1500,
-    ease: [0.2, 0.82, 0.28, 1] as const,
+    browseMs: 620,
+    browseHoldMs: 400,
+    panelSwapMs: 640,
+    characterMs: 38,
+    fieldGapMs: 120,
+    autoHoldMs: 800,
+    travelMs: 640,
+    crossfadeMs: 350,
+    reviewHoldMs: 600,
+    approvalHoldMs: 400,
+    ease: [0.32, 0, 0.2, 1] as const,
   },
 } as const;
 

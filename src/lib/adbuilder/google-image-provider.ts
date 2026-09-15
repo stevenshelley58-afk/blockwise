@@ -41,7 +41,14 @@ export function createGoogleImageProvider(
           fallbackEligible: true,
         });
       }
-      if (!input.referenceAssets.length) {
+      // Text-to-image is a first-class path: the declared capabilities above
+      // include textToImage, and the API accepts a text-only `input` array.
+      // Only the truth-preserving repair path must actually consume reference
+      // images as image input, so the requirement follows that flag rather
+      // than the length of the array. Previously every text-only call was
+      // refused here, which made the cheapest image profile unusable for
+      // generating a scene from a brief.
+      if (input.requiresReferenceAssets === true && !input.referenceAssets.length) {
         throw new ProviderRequestError("Google image editing requires at least one reference image.", {
           requestSubmitted: false,
           retryable: false,

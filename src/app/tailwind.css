@@ -159,6 +159,46 @@
   --shadow-card: 0 1px 2px rgba(16, 18, 23, 0.04), 0 8px 24px rgba(16, 18, 23, 0.06);
   --shadow-float: 0 2px 4px rgba(16, 18, 23, 0.05), 0 16px 40px rgba(16, 18, 23, 0.1);
   --ease-spring: cubic-bezier(0.22, 1.1, 0.36, 1);
+
+  /* ---------------------------------------------------------------------------
+     Type roles. Each role is one size / line-height / weight triple, generated
+     as a `text-<role>` utility by Tailwind. Use the role that names the job the
+     text is doing, not the stock size nearest to it: a page title is
+     `text-page-title-sm md:text-page-title`, never `text-3xl`.
+
+     Manrope carries headings (font-display), Inter carries interface and body
+     (font-sans, the default), JetBrains Mono is for technical values only
+     (font-mono). Comparable metrics add `tabular-nums` so digits line up.
+
+     See docs/design/design-system.md "Type roles" for the table and the
+     migration rule. */
+  --text-page-title: 32px;
+  --text-page-title--line-height: 40px;
+  --text-page-title--font-weight: 700;
+  --text-page-title-sm: 28px;
+  --text-page-title-sm--line-height: 36px;
+  --text-page-title-sm--font-weight: 700;
+  --text-section-title: 22px;
+  --text-section-title--line-height: 30px;
+  --text-section-title--font-weight: 600;
+  --text-component-title: 18px;
+  --text-component-title--line-height: 26px;
+  --text-component-title--font-weight: 600;
+  --text-body: 16px;
+  --text-body--line-height: 24px;
+  --text-body--font-weight: 400;
+  --text-control: 14px;
+  --text-control--line-height: 20px;
+  --text-control--font-weight: 500;
+  --text-support: 14px;
+  --text-support--line-height: 20px;
+  --text-support--font-weight: 400;
+  --text-meta: 12px;
+  --text-meta--line-height: 18px;
+  --text-meta--font-weight: 400;
+  --text-metric: 32px;
+  --text-metric--line-height: 40px;
+  --text-metric--font-weight: 700;
 }
 
 /* shadcn theme variables, namespaced and bridged onto Blockwise tokens. */
@@ -180,8 +220,24 @@
   --ui-destructive: var(--rose);
   --ui-destructive-foreground: #ffffff;
   --ui-border: var(--line);
-  --ui-input: var(--line);
-  --ui-ring: rgba(18, 62, 117, 0.35);
+  /* The interactive boundary: the edge of a control a person can act on (input,
+     select, checkbox, switch, outline button). Deliberately separate from
+     --ui-border, which stays a decorative divider. Making one token do both jobs
+     is what forced a choice between hairlines that look heavy and inputs nobody
+     can see; these are two different requirements. #858c99 clears the 3:1
+     non-text contrast bar in both themes (3.4:1 on white, 4.9:1 on the dark
+     surface), so it is the same value in each. */
+  --ui-control-border: #858c99;
+  --ui-input: var(--ui-control-border);
+  /* The focus indicator, as its own role. Solid rather than a translucent tint,
+     so it stays visible against both the control it surrounds and the surface
+     behind it. See docs/design/design-system.md "Focus". */
+  --ui-focus: #16181d;
+  --ui-ring: var(--ui-focus);
+  /* The scrim behind a dialog, sheet or media lightbox. Its own role because a
+     scrim must stay dark in BOTH themes: an overlay built from `--ink` would
+     turn white the moment Ad Builder switched the palette. */
+  --ui-scrim: rgba(16, 18, 23, 0.55);
   --ui-radius: 12px;
 
   /* shadcn Sidebar, bridged onto Blockwise's existing `--side-*` tokens so the
@@ -249,7 +305,10 @@
   --color-destructive-foreground: var(--ui-destructive-foreground);
   --color-border: var(--ui-border);
   --color-input: var(--ui-input);
+  --color-control-border: var(--ui-control-border);
   --color-ring: var(--ui-ring);
+  --color-focus: var(--ui-focus);
+  --color-scrim: var(--ui-scrim);
 
   --radius-sm: calc(var(--ui-radius) - 4px);
   --radius-md: calc(var(--ui-radius) - 2px);

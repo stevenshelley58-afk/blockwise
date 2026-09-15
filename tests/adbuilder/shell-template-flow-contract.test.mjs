@@ -17,15 +17,17 @@ test("Ad Builder preserves the desktop symbol and gives mobile an explicit home 
   assert.match(mobileHeader, /<ArrowLeft size=\{16\} aria-hidden/);
   assert.match(mobileHeader, /<span>Blockwise<\/span>/);
   assert.match(mobileHeader, /min-h-11/);
-  assert.match(mobileHeader, /focus-visible:ring-white/);
+  assert.match(mobileHeader, /focus-visible:ring-ring/);
   assert.match(mobileHeader, /Ad Builder/);
 });
 
-test("Ad Builder keeps its white desktop mark and legible mobile exit", () => {
-  assert.match(shell, /size-9[^\n]*bg-transparent text-white/);
+test("Ad Builder keeps its legible desktop mark and mobile exit", () => {
+  // The chrome is themed, not hardcoded: the mark and the mobile exit read on
+  // the sidebar's surface through the ink role, and the shell stays dark.
+  assert.match(shell, /size-9[^\n]*bg-transparent text-\(--ink\)/);
   const mobileHeader = shell.slice(shell.indexOf("<header"), shell.indexOf("</header>"));
-  assert.match(mobileHeader, /font-semibold text-white/);
-  assert.doesNotMatch(shell, /bg-\(--surface\) text-\(--ink\)/);
+  assert.match(mobileHeader, /font-semibold text-\(--ink\)/);
+  assert.match(shell, /data-theme="studio-dark"/);
 });
 
 test("Ad Builder navigation exposes the simplified Home, Templates, Library, and Brand path", () => {

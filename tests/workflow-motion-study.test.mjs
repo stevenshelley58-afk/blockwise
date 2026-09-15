@@ -1,112 +1,208 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-
-import * as geometry from "../src/components/motion-study/workflow-motion-study-geometry.ts";
-
-const { STUDY_AD_SCALE, STUDY_PANEL_GAP, studyAdMotion, studyEditLayout } = geometry;
-
+import { studyTypingSchedule, studyText, studyFrame, studyTransition, studyAdMotion, studyEditLayout } from "../src/components/motion-study/workflow-motion-study-geometry.ts";
 const source = await readFile(new URL("../src/components/motion-study/workflow-motion-study.tsx", import.meta.url), "utf8");
 const styles = await readFile(new URL("../src/components/motion-study/workflow-motion-study.module.css", import.meta.url), "utf8");
-const motion = await readFile(new URL("../src/lib/motion.ts", import.meta.url), "utf8");
 
-test("study keeps one selected ad across Choose, Customise and Review", () => {
-  assert.match(source, /const STUDY_STEPS = \[/);
-  assert.match(source, /label: "Choose"/);
-  assert.match(source, /label: "Customise"/);
-  assert.match(source, /label: "Review"/);
-  assert.equal((source.match(/<StudyAd /g) ?? []).length, 1);
-  assert.match(source, /const SIDE_ADS = \[AD_LIBRARY\[0\], AD_LIBRARY\[2\]\]/);
-  assert.ok(source.includes("<Button") && source.includes("arrow={null}"));
-  assert.match(source, /aria-pressed=\{step === item\.label\}/);
-  assert.ok(source.includes('className={"tw " + styles.bwStudy}'));
+test("one clock owns all transitions; selectors interrupt without resetting progress", () => {
+  assert.match(source, /const progress = useMotionValue\(1\)/);
+  assert.match(source, /animate\(progress, 1/);
+  assert.match(source, /controls.stop\(\)/);
+  assert.ok(source.indexOf("setManual(true);", source.indexOf("const selectStep")) < source.indexOf("if (next === step) return"));
+  assert.doesNotMatch(source, /AnimatePresence|headlineChars|headlineIndexRef|requestAnimationFrame/);
 });
 
-test("same ad moves and scales within the stage before fields arrive", () => {
-  assert.match(source, /adMoveMs/);
-  assert.match(source, /panelRevealMs/);
-  assert.match(source, /typeStartMs/);
-  assert.match(source, /headlineIndexRef/);
-  assert.match(source, /SELECTED_AD\.adTitle\.slice\(0, headlineChars\)/);
-  assert.match(source, /className=\{styles\.bwStudyEditSlot\}/);
-  assert.match(source, /readOnly/);
-  assert.match(styles, /transform-origin: top left/);
-  assert.match(styles, /\.bwStudySideAd:last-child \{ grid-column: 3/);
-  assert.match(styles, /\.bwStudyEditSlot/);
-  assert.ok(styles.includes("transform: translateY(-50%)"));
-  assert.match(styles, /\.bwStudyEditPanel textarea/);
-  assert.match(styles, /font-size: 14px/);
+test("complete choreography endpoints", () => {
+  assert.deepEqual(studyFrame(0), { hop:0,browse:1,shell:1,shellAlpha:1,ad:0,gallery:1,panel:0,edit:1,review:0,original:1,updated:0,approved:0 });
+  assert.equal(studyFrame(1).panel,1);
+  assert.equal(studyFrame(1).edit,1);
+  assert.equal(studyFrame(2).review,1);
+  assert.equal(studyFrame(3).approved,1);
 });
 
-test("geometry centres the desktop group and stays inside actual stage widths", () => {
-  const cases = [
-    { width: 278, height: 830, adWidth: 204, adHeight: 400, narrow: true },
-    { width: 348, height: 820, adWidth: 224, adHeight: 440, narrow: true },
-    { width: 668, height: 820, adWidth: 300, adHeight: 550, narrow: true },
-    { width: 768, height: 560, adWidth: 300, adHeight: 550, narrow: false },
-    { width: 1040, height: 560, adWidth: 300, adHeight: 550, narrow: false },
-  ];
+test("movement and panel reveal overlap, with no empty handover", () => {
+  const moving = studyFrame(.3);
+  assert.ok(moving.ad > 0 && moving.ad < 1);
+  assert.ok(moving.panel > 0 && moving.panel < 1);
+  assert.ok(studyFrame(.6).panel === 1);
+  for(let p=1;p<=2;p+=.02) {
+    const f=studyFrame(p);
+    assert.equal(f.panel,1);
+    assert.ok(Math.abs(f.edit+f.review-1)<1e-10);
+    assert.equal(f.ad,1);
+  }
+});
 
-  for (const item of cases) {
-    const start = studyAdMotion({ ...item, stageWidth: item.width, stageHeight: item.height, customise: false });
-    const end = studyAdMotion({ ...item, stageWidth: item.width, stageHeight: item.height, customise: true });
-    assert.equal(start.scale, 1);
-    assert.equal(end.scale, STUDY_AD_SCALE);
-    assert.ok(end.x >= 0 && end.y >= 0);
-    assert.ok(end.x + item.adWidth * end.scale <= item.width + 0.01);
-    assert.ok(end.y + item.adHeight * end.scale <= item.height + 0.01);
-    const layout = studyEditLayout({ stageWidth: item.width, adWidth: item.adWidth, adHeight: item.adHeight, narrow: item.narrow });
-    if (item.narrow) {
-      assert.ok(end.y + item.adHeight * end.scale <= layout.panelTop);
-      assert.equal(layout.panelWidth, item.width - 28);
-    } else {
-      assert.ok(layout.gap >= 48);
-      assert.equal(layout.gap, STUDY_PANEL_GAP);
-      assert.ok(end.x + item.adWidth * end.scale + layout.gap <= layout.panelLeft + 0.01);
-      assert.ok(Math.abs((end.x + layout.panelLeft + layout.panelWidth) / 2 - item.width / 2) < 0.01);
+test("reverse travel keeps alternatives hidden until the selected card approaches Choose", () => {
+  assert.equal(studyFrame(.5).gallery,0);
+  assert.ok(studyFrame(.15).gallery > 0);
+  for(let p=-1;p<4;p+=.013) {
+    const f=studyFrame(p);
+    assert.ok(Object.values(f).every(n=>n>=0 && n<=1));
+    assert.ok(Math.abs(f.original+f.updated-1)<1e-10);
+  }
+});
+
+test("all intermediate ad positions remain inside desktop and phone stages", () => {
+  for(const [stageWidth,stageHeight,adWidth,adHeight,narrow] of [[278,650,224,180,true],[348,650,224,180,true],[560,560,260,502,false],[695,560,260,502,false],[1040,560,260,502,false]]) {
+    const input={stageWidth,stageHeight,adWidth,adHeight,narrow};
+    const a=studyAdMotion({...input,customise:false});
+    const b=studyAdMotion({...input,customise:true});
+    const panel=studyEditLayout(input);
+    assert.ok(panel.panelLeft+panel.panelWidth<=stageWidth);
+    for(let p=0;p<=1;p+=.025) {
+      const x=a.x+(b.x-a.x)*p,y=a.y+(b.y-a.y)*p,s=1+(b.scale-1)*p;
+      assert.ok(x>=0 && y>=0);
+      assert.ok(x+adWidth*s<=stageWidth+.01 && y+adHeight*s<=stageHeight+.01);
     }
   }
 });
 
-test("study is finite, activity-aware and reduced-motion safe", () => {
-  assert.match(source, /autoHoldMs/);
-  assert.match(source, /IntersectionObserver/);
-  assert.match(source, /document\.visibilityState/);
-  assert.match(source, /useHydratedReducedMotion/);
-  assert.match(source, /if \(reduced\)/);
-  assert.match(styles, /prefers-reduced-motion: reduce/);
-  assert.match(motion, /workflowStudy:/);
-  assert.doesNotMatch(source, /customise: customise && !reduced/);
+test("editor and review remain mounted in one fixed surface with hidden layers inert", () => {
+  assert.match(source, /className=\{styles.bwStudyPanelSurface\}/);
+  assert.equal((source.match(/<motion.section className=\{styles.bwStudyEditPanel\}/g)||[]).length,2);
+  assert.match(source, /inert=\{step !== 1\}/);
+  assert.match(source, /inert=\{step !== 2\}/);
+  assert.match(styles,/height: 392px/);
+  assert.match(styles,/height: 400px/);
+  assert.match(styles,/grid-area: 1 \/ 1/);
+});
+
+test("completion-gated writing, accessible selectors, finite autoplay and reduced motion", () => {
+  assert.equal((source.match(/<StudyField clock=/g)||[]).length,2);
+  assert.match(source,/value=\{value\}/);
+  assert.match(source,/aria-pressed=\{step === index\}/);
+  assert.match(source,/settledScene !== scene/);
+  assert.match(source,/entry.intersectionRatio >= 0.6/);
+  assert.match(source,/document.visibilityState/);
+  assert.match(source,/if \(reduced\) \{ setManual\(true\); setScene\(3\); \}/);
+  assert.match(source,/scene === 3/);
+  assert.match(source,/frame.set\(to\)/);
+  assert.match(styles,/prefers-reduced-motion/);
+  assert.match(source,/Free trial · No card required · Cancel anytime/);
+});
+
+test("workflow copy explains the job and the relief from Ads Manager", () => {
+  assert.match(source, /<span>Build lead ads\.<\/span>/);
+  assert.match(source, /<span>Skip Ads Manager\.<\/span>/);
+  assert.match(source, /Get from a proven template to an on-brand lead ad, ready to review in one clear flow\./);
+  assert.match(styles, /\.bwStudyIntro h2 span:last-child \{ color: var\(--hc-blue-bright/);
+  assert.match(styles, /\.bwStudyIntro h2 span \{ display: block; white-space: nowrap; \}/);
+  assert.match(styles, /\.bwStudyIntro > p \{ margin: 0; max-width: 48ch/);
+});
+
+test("direct Choose to Review does not reveal the editor", () => {
+  for (let t=.01;t<1;t+=.02) {
+    const f=studyTransition(studyFrame(0),studyFrame(2),t);
+    assert.equal(f.edit,0);
+    assert.equal(f.review,1);
+  }
+});
+test("interruption resumes at the captured visual frame", () => {
+  const interrupted=studyTransition(studyFrame(0),studyFrame(1),.43);
+  assert.deepEqual(studyTransition(interrupted,studyFrame(0),0),interrupted);
+  assert.equal(studyTransition(studyFrame(2),studyFrame(0),.4).gallery,0);
+  assert.equal(studyTransition(studyFrame(2),studyFrame(0),.2).edit,0);
+});
+
+ test("text layers hand over without double exposure", () => {
+  for (const [a,b] of [[0,1],[1,0],[1,2],[2,1]]) {
+    for(let t=0;t<=1;t+=.01) {
+      const f=studyTransition(studyFrame(a),studyFrame(b),t);
+      assert.ok(f.original*f.updated<1e-10);
+      if(a>=1 && b>=1) assert.ok(f.edit*f.review<1e-10);
+    }
+  }
+});
+
+test("browse advances across three distinct positions before selection", () => {
+  assert.equal(studyFrame(-2).browse,0);
+  assert.equal(studyFrame(-1).browse,.5);
+  assert.equal(studyFrame(0).browse,1);
+  assert.match(source,/ad=\{ad\}/);
+  assert.match(source,/withBasePath\(ad.image\)/);
+});
+test("right panel shrinks out then grows before text while ad remains unchanged", () => {
+ const a=studyFrame(1), b=studyFrame(2);
+ const out=studyTransition(a,b,.2), hidden=studyTransition(a,b,.38), growing=studyTransition(a,b,.6), text=studyTransition(a,b,.9);
+ assert.ok(out.shell<1 && out.shellAlpha<1);
+ assert.equal(hidden.shellAlpha,0);
+ assert.ok(growing.shell>hidden.shell && growing.shell<1);
+ assert.equal(growing.review,0);
+ assert.equal(text.shell,1); assert.ok(text.review>0);
+ for(let t=0;t<=1;t+=.01) { const f=studyTransition(a,b,t); assert.equal(f.ad,1); assert.equal(f.updated,1); assert.equal(f.browse,1); }
+});
+
+test("initial selected card waits for geometry and returning to Choose preserves it", () => {
+ assert.match(source,/visibility: "hidden"/);
+ assert.match(source,/setScene\(reduced && next === 2 \? 3 : next\)/);
+});
+
+test("fields enter empty then fill at the same character boundary as the ad", () => {
+  const text="Your home could be worth more";
+  assert.equal(studyText(0,text,.08,.32),"");
+  assert.equal(studyText(.08,text,.08,.32),"");
+  assert.equal(studyText(.2,text,.08,.32),text.slice(0,14));
+  assert.equal(studyText(.32,text,.08,.32),text);
+  assert.equal(studyText(.5,text,.08,.32),text);
+  assert.equal(studyText(0,text,.08,.32,"Before"),"Before");
+  assert.match(source,/settledScene !== scene \|\| \(scene !== 1 && scene !== 2\)/);
+  assert.match(source,/!contentDone/);
+  assert.match(source,/if \(scene === 1\) draft.set\(0\)/);
+  assert.match(source,/contentPlayback.current\?\.pause/);
+});
+
+test("typing reserves enough ad copy height for the original three lines", () => {
+  assert.match(styles, /bwStudyAdCopy \{ height: 64px; min-height: 64px/);
+  assert.match(styles, /bwStudyLink \{ height: 58px/);
 });
 
 
-test("shown values use multiline fields and match the preview", () => {
-  assert.equal((source.match(/<textarea/g) ?? []).length, 3);
-  assert.match(source, /id="study-headline"[\s\S]*rows=\{2\}/);
-  assert.match(source, /id="study-ad-text"[\s\S]*rows=\{3\}/);
-  assert.match(source, /id="study-link-title"[\s\S]*rows=\{2\}/);
-  assert.match(source, /Thinking of selling\? Find out what your home could be worth\./);
-  assert.match(styles, /overflow: hidden/);
-  assert.match(styles, /line-height: 1\.45/);
+test("both screens type at one character speed with short consistent field gaps", () => {
+  const words=["Homeowners and potential sellers","$20 per day","14 days"];
+  const schedule=studyTypingSchedule(words,38,120);
+  schedule.ranges.forEach((range,i) => {
+    assert.ok(Math.abs((range.end-range.start)*schedule.durationMs-words[i].length*38)<1e-8);
+    assert.equal(studyText(range.start,words[i],range.start,range.end),"");
+    assert.equal(studyText(range.end,words[i],range.start,range.end),words[i]);
+    assert.equal(studyText(range.start+38*1.1/schedule.durationMs,words[i],range.start,range.end),words[i][0]);
+  });
+  assert.equal((source.match(/<StudyReviewValue clock=/g)||[]).length,3);
+  assert.doesNotMatch(source,/audienceOpacity|budgetOpacity|durationOpacity/);
+  assert.match(source,/panelSwap \? "linear"/);
 });
 
-test("autoplay waits for and reacts to measured geometry", () => {
-  assert.ok(source.includes("[geometryReady, motionReady, inView, manual, pageVisible, reduced, step]"));
+
+test("two editor fields shorten writing and approval drives the ad hop and Live badge", () => {
+  assert.doesNotMatch(source,/study-link-title|EDIT_WRITING.ranges\[2\]/);
+  assert.match(source,/const EDIT_TEXTS = \[SELECTED_AD.adTitle, AD_TEXT\]/);
+  assert.match(source,/live=\{approvedOpacity\}/);
+  assert.match(source,/f.hop \* 10/);
+  assert.equal(studyFrame(3).hop,0);
+  assert.equal(studyTransition(studyFrame(2),studyFrame(3),0).hop,0);
+  const mid=studyTransition(studyFrame(2),studyFrame(3),.5);
+  assert.equal(mid.hop,1);
+  assert.equal(mid.approved,.5);
+  assert.ok(studyTransition(studyFrame(2),studyFrame(3),1).hop<1e-10);
+  assert.equal(studyTransition(studyFrame(3),studyFrame(1),.5).hop,0);
+  assert.equal(studyTransition(mid,studyFrame(1),0).hop,mid.hop);
 });
 
-test("study restores the workflow heading, trial terms, measured container state and approval", () => {
-  assert.match(source, /Lead generating ads for/);
-  assert.match(source, /Facebook &amp; Instagram/);
-  assert.match(source, /Start free trial/);
-  assert.match(source, /Free trial · No card required · Cancel anytime/);
-  assert.match(source, /approvalHoldMs/);
-  assert.match(source, /Ad approved/);
-  assert.match(source, /Check aria-hidden/);
-  assert.match(source, /STUDY_NARROW_BREAKPOINT/);
-  assert.match(source, /data-narrow=/);
-  assert.match(styles, /container-type: inline-size/);
-  assert.match(styles, /data-narrow="true"/);
-  assert.match(styles, /@container \(max-width: 360px\)/);
-  assert.doesNotMatch(styles, /@media \(max-width: (700|360)px\)/);
-  assert.doesNotMatch(styles, /bwStudyConfirm|bwStudyApprove/);
+test("editor fields stay compact and the redundant bottom bar is absent", () => {
+  assert.doesNotMatch(source, /bwStudyHint|hint:/);
+  assert.doesNotMatch(styles, /bwStudyHint|label:last-child textarea/);
+  assert.match(source, /label="Ad text"[^\n]+rows=\{3\}/);
+});
+
+test("workflow keeps the requested two-line headline and value copy", () => {
+  assert.match(source, /<span>Build lead ads\.<\/span><span>Skip Ads Manager\.<\/span>/);
+  assert.match(source, /Get from a proven template to an on-brand lead ad, ready to review in one clear flow\./);
+  assert.match(styles, /\.bwStudyIntro h2 span \{ display: block; white-space: nowrap; \}/);
+  assert.match(styles, /\.bwStudyIntro > p \{ margin: 0; max-width: 48ch/);
+});
+
+test("workflow composition reserves equal outer vertical spacing", () => {
+  assert.match(styles, /padding-block: clamp\(64px, 6vw, 96px\)/);
+  assert.match(styles, /padding-block: 48px/);
 });

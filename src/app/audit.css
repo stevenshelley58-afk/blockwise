@@ -154,3 +154,5 @@
   .audit-page .insight h2, .audit-page .proof-box h3 { color: var(--lp-ink, #0f172a) !important; }
   .audit-page .insight p, .audit-page .insight-list span, .audit-page .insight-list strong, .audit-page .proof-box li { color: var(--lp-body, #334155) !important; }
 }
+
+.audit-page .section, .audit-page .container, .audit-page .evidence-panel, .audit-page details, .audit-page .table-wrap { min-width: 0; max-width: 100%; }

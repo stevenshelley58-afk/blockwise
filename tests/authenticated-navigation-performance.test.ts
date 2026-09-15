@@ -23,7 +23,11 @@ test("customer shell and pages share one claims-based request auth context", () 
   assert.match(pageGuards, /getRequestAuthContext\(\)/);
   assert.doesNotMatch(shell, /auth\.getUser\(\)/);
   assert.doesNotMatch(pageGuards, /auth\.getUser\(\)/);
-  assert.doesNotMatch(settings, /auth\.getUser\(\)/);
+  // Consent settings require fresh email verification, not a potentially stale JWT.
+  // Keep this one bounded lookup out of the shared navigation/shell context.
+  assert.equal((settings.match(/auth\.getUser\(\)/g) ?? []).length, 1);
+  assert.match(settings, /email_confirmed_at/);
+  assert.match(settings, /requirePageSurfaceAccess/);
 });
 
 test("nonessential trial state streams without blocking the authenticated shell", () => {

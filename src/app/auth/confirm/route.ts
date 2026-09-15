@@ -7,6 +7,7 @@ import { acceptVerifiedWorkspaceInvitations } from "@/lib/auth/verified-workspac
 import { bootstrapVerifiedTrialWorkspace } from "@/lib/auth/verified-workspace-bootstrap";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { seedMissingWorkspacePostcode } from "@/lib/workspace/default-postcode";
 
 const DEFAULT_NEXT_PATH = "/self-serve";
 const SAFE_REDIRECT_ORIGIN = "https://blockwise.local";
@@ -101,16 +102,30 @@ export async function GET(request: NextRequest) {
     await acceptVerifiedWorkspaceInvitations({ user });
     const bootstrap = await bootstrapVerifiedTrialWorkspace({ user, serviceSupabase: service });
     workspaceId = bootstrap.workspaceId;
+    if (workspaceId) {
+      await seedMissingWorkspacePostcode({
+        serviceSupabase: service,
+        user,
+        workspaceId,
+      }).catch((locationError) => {
+        console.error("Verified postcode seed failed", locationError);
+      });
+    }
   } catch (bootstrapError) {
     console.error("Verified workspace bootstrap failed", bootstrapError);
     return bootstrapFailedRedirect(request);
   }
 
+  const signupSource = user.user_metadata?.ad_radar_source;
+  const acquisitionSource = signupSource === "audit" || signupSource === "local-ad-radar" || signupSource === "suburb-report"
+    ? signupSource
+    : "unattributed";
+
   await recordProgressiveFunnelEventBestEffort(service, {
     eventName: "email_verified",
     workspaceId,
     country: null,
-    acquisitionSource: "unattributed",
+    acquisitionSource,
     idempotencyKey: `auth:verified:${user.id}:${workspaceId ?? "unassigned"}`,
     properties: { auth_type: type ?? flow ?? "pkce" },
   });

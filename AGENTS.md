@@ -63,8 +63,8 @@ Verified by tooling or an explicit pre-release check, never by good intentions. 
 
 ## Design
 
-- Customer UI is shadcn on Tailwind v4: build from `src/components/ui/` and Tailwind wired to the bridge in `src/app/tailwind.css`. Never hand-roll a button, dialog, sheet, table or select (`npx shadcn add <name>`), never add global CSS classes, never mix the console CSS shell into a customer route. The `.tw` scope and no-preflight setup are load-bearing.
-- `DESIGN.md` is binding: read it before changing a customer surface and update it in the same commit when a design decision changes.
+- Blockwise UI is shadcn on Tailwind v4: build from `src/components/ui/` and Tailwind wired to the bridge in `src/app/tailwind.css`. Never hand-roll a button, dialog, sheet, table or select (`npx shadcn add <name>`), never add global CSS classes, never mix the console CSS shell into a customer route. The `.tw` scope and no-preflight setup are load-bearing.
+- Before changing any Blockwise visual surface, read `DESIGN.md` and its linked design-system guide at `docs/design/design-system.md`. Use the shared tokens and components across the customer, Ad Builder, public, auth, legal and operator surfaces. Ad Builder is the dark theme of the same system. Update the canonical guide in the same commit when an approved design decision changes. Do not introduce page-local alternatives.
 - Load the `impeccable` skill for any UI, UX, styling, layout, typography, responsive, accessibility, animation or interaction work, and name the commands used. Inspect in a browser before changing and verify at desktop and mobile widths after.
 - The primary message must be clear from headline and imagery; never add explanation to compensate for weak hierarchy. Keep functional copy: controls, instructions, validation, prices, product facts, legal disclosures, accessibility text. No em dash in user-facing copy.
 

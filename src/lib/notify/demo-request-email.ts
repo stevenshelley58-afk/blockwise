@@ -119,6 +119,7 @@ export async function sendAuditCampaignPlanEmail(
 function campaignGoalLabel(goal: string | null | undefined): string {
   if (goal === "vendor_leads") return "Vendor leads";
   if (goal === "buyer_leads") return "Buyer leads";
+  if (goal === "property_management") return "Property management leads";
   if (goal === "listing_promotion") return "Listing promotion";
   if (goal === "market_update") return "Market update";
   return "Local lead generation";

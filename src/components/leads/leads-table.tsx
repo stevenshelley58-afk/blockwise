@@ -30,7 +30,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 
-import { ButtonArrow } from "@/components/shadcn-dashboard/button/button-01";
+import { CtaLink } from "@/components/shadcn-dashboard/button/button-01";
 import { LeadQualitySelect } from "@/app/(customer)/leads/lead-quality-select";
 import { Button } from "@/components/ui/button";
 import {
@@ -55,6 +55,12 @@ export type LeadListItem = {
   createdAt: string;
   duplicateCandidate: boolean;
   delivery: string;
+  /**
+   * Whether this lead reached the workspace's own CRM, already worded for a
+   * customer. Null means no handoff was registered, so the surface stays quiet
+   * rather than claiming a state nothing is going to change.
+   */
+  crmDelivery: string | null;
 };
 
 type Facet = "all" | "high" | "dup";
@@ -96,7 +102,7 @@ const columns: ColumnDef<TableLead>[] = [
     accessorFn: (row) => `${row.name} ${row.email} ${row.phone}`,
     cell: ({ row }) => (
       <div className="min-w-0">
-        <p className="truncate text-[13px] font-bold">{row.original.name}</p>
+        <p className="truncate text-support font-bold">{row.original.name}</p>
         {/* Both contact points stay visible: email never hides the phone. */}
         <p className="truncate text-xs leading-[1.4] text-muted-foreground">
           {row.original.email || row.original.phone || "—"}
@@ -146,6 +152,15 @@ const columns: ColumnDef<TableLead>[] = [
         <span className="text-[12.5px] whitespace-nowrap text-muted-foreground">{row.original.delivery}</span>
         {deliveryHint(row.original.delivery) ? (
           <p className="mt-1 max-w-56 text-xs leading-5 text-muted-foreground">{deliveryHint(row.original.delivery)}</p>
+        ) : null}
+        {/* The CRM handoff belongs on this column: reaching the customer's CRM is
+            the delivery they care about most, and it must be visible on the
+            surface rather than only in an export. */}
+        {row.original.crmDelivery ? (
+          <p className="mt-1 max-w-56 text-xs leading-5 text-muted-foreground">{row.original.crmDelivery}</p>
+        ) : null}
+        {crmDeliveryHint(row.original.crmDelivery) ? (
+          <p className="mt-1 max-w-56 text-xs leading-5 text-muted-foreground">{crmDeliveryHint(row.original.crmDelivery)}</p>
         ) : null}
       </div>
     ),
@@ -200,6 +215,17 @@ function safeEmail(value: string) {
 function deliveryHint(delivery: string) {
   if (delivery === "Failed") return "Delivery failed. Ask a workspace owner or Blockwise support to review the saved delivery attempt.";
   if (delivery === "Manual review") return "This lead is waiting for your team to follow up.";
+  return null;
+}
+
+/**
+ * Extra wording for a CRM handoff that needs explaining. Only the failure case
+ * does: the queue retries it, so the customer should not be told to act.
+ */
+function crmDeliveryHint(crmDelivery: string | null) {
+  if (crmDelivery === "CRM delivery failed") {
+    return "This lead has not reached your CRM yet. Blockwise retries this handoff automatically.";
+  }
   return null;
 }
 
@@ -300,9 +326,9 @@ export function LeadsTable({
           <p className="text-sm font-bold">{copy.empty.title}</p>
           <p className="mt-1 text-[12.5px] text-muted-foreground">{copy.empty.body}</p>
         </div>
-        <ButtonArrow href="/ad-builder" className="h-11 text-[13px]">
+        <CtaLink href="/ad-builder" className="h-11 text-support">
           {niche.copy.home.states.needsFirstAd.ctaLabel}
-        </ButtonArrow>
+        </CtaLink>
       </div>
     );
   }
@@ -327,7 +353,7 @@ export function LeadsTable({
             value={globalFilter}
             onChange={(event) => setGlobalFilter(event.target.value)}
             placeholder={copy.searchPlaceholder}
-            className="w-full bg-transparent text-[13px] text-foreground outline-none placeholder:text-(--faint)"
+            className="w-full bg-transparent text-support text-foreground outline-none placeholder:text-(--faint)"
           />
         </label>
 
@@ -435,7 +461,7 @@ export function LeadsTable({
               <div key={row.id} className="rounded-(--r-card) border border-(--line) bg-card p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-bold">{lead.name}</p>
+                    <p className="truncate text-support font-bold">{lead.name}</p>
                     <p className="truncate text-xs text-muted-foreground">
                       {lead.suburb} · {lead.email || lead.phone || "—"}
                     </p>
@@ -453,6 +479,10 @@ export function LeadsTable({
                   <span className="min-w-0 truncate text-xs text-muted-foreground">{lead.delivery}</span>
                 </div>
                 {deliveryHint(lead.delivery) ? <p className="mt-2 text-xs leading-5 text-muted-foreground">{deliveryHint(lead.delivery)}</p> : null}
+                {lead.crmDelivery ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{lead.crmDelivery}</p> : null}
+                {crmDeliveryHint(lead.crmDelivery) ? (
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">{crmDeliveryHint(lead.crmDelivery)}</p>
+                ) : null}
                 <div className="mt-3 flex min-w-0 items-center justify-between gap-2">
                   <SourceAd label={sourceAdLabel(lead)} />
                   <LeadQualitySelect

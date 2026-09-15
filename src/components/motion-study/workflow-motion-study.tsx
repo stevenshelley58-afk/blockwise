@@ -1,301 +1,253 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import { useCallback, useEffect, useRef, useState } from "react";
-
+import { animate, motion, useMotionValue, useMotionValueEvent, useTransform, type MotionValue } from "motion/react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { AD_EXAMPLES, AD_LIBRARY, withBasePath } from "@/lib/homepage-concept/content";
+import { AD_EXAMPLES, withBasePath } from "@/lib/homepage-concept/content";
 import { creativeImageSrcSet } from "@/lib/homepage-concept/creative-image";
 import { TRIAL_SIGNUP_URL } from "@/lib/homepage-concept/pricing";
 import { homepageMotion, useHydratedReducedMotion } from "@/lib/motion";
-import { STUDY_NARROW_BREAKPOINT, studyAdMotion, studyEditLayout } from "./workflow-motion-study-geometry";
+import { STUDY_NARROW_BREAKPOINT, studyAdMotion, studyEditLayout, studyTypingSchedule, studyText, studyFrame, studyTransition } from "./workflow-motion-study-geometry";
 import styles from "./workflow-motion-study.module.css";
 
 const STUDY_STEPS = [
-  { label: "Choose", hint: "Pick a ready-made ad" },
-  { label: "Customise", hint: "Add your text and link title" },
-  { label: "Review", hint: "Check who sees it and approve the setup" },
+  { label: "Choose" },
+  { label: "Customise" },
+  { label: "Review" },
 ] as const;
-type StudyStep = (typeof STUDY_STEPS)[number]["label"];
-const SELECTED_AD = { ...AD_EXAMPLES[0], id: "motion-study-selected" } as const;
-const SIDE_ADS = [AD_LIBRARY[0], AD_LIBRARY[2]] as const;
+const SELECTED_AD = AD_EXAMPLES[0];
+const SIDE_ADS = [
+  { ...AD_EXAMPLES[1], image: "/home/open-home-living.webp", position: 0 },
+  { ...AD_EXAMPLES[3], image: "/home/home-pool.webp", position: 1 },
+  { ...AD_EXAMPLES[2], image: "/home/home-dusk.webp", position: 3 },
+] as const;
 const TIMING = homepageMotion.workflowStudy;
-const STUDY_AD_WIDTH = 300;
 const TEMPLATE_HEADLINE = "Thinking of selling?";
+const AD_TEXT = "Thinking of selling? Find out what your home could be worth.";
 
-function usePageActivity() {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const [inView, setInView] = useState(true);
-  const [pageVisible, setPageVisible] = useState(true);
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), { threshold: 0.25 });
-    if (rootRef.current) observer.observe(rootRef.current);
-    const sync = () => setPageVisible(document.visibilityState === "visible");
-    sync();
-    document.addEventListener("visibilitychange", sync);
-    return () => {
-      observer.disconnect();
-      document.removeEventListener("visibilitychange", sync);
-    };
-  }, []);
-  return { rootRef, inView, pageVisible };
+const EDIT_TEXTS = [SELECTED_AD.adTitle, AD_TEXT] as const;
+const REVIEW_TEXTS = ["Homeowners and potential sellers", "$20 per day", "14 days"] as const;
+const EDIT_WRITING = studyTypingSchedule(EDIT_TEXTS, TIMING.characterMs, TIMING.fieldGapMs);
+const REVIEW_WRITING = studyTypingSchedule(REVIEW_TEXTS, TIMING.characterMs, TIMING.fieldGapMs);
+
+function useDraftText(clock: MotionValue<number>, text: string, start: number, end: number, fallback = "") {
+  const value = useTransform(clock, n => studyText(n, text, start, end, fallback));
+  const [display, setDisplay] = useState(value.get());
+  useMotionValueEvent(value, "change", setDisplay);
+  return display;
 }
 
-function StudyAd({ headlineChars }: { headlineChars: number }) {
-  const headline = headlineChars > 0 ? SELECTED_AD.adTitle.slice(0, headlineChars) : TEMPLATE_HEADLINE;
-  return (
-    <article className={styles.bwStudySelectedAd} aria-label="Selected ad preview">
-      <header className={styles.bwStudyAdHead}>
-        <span className={styles.bwStudyAvatar} aria-hidden="true">AM</span>
-        <span><strong>Ad preview</strong><small>Sponsored</small></span>
-        <span className={styles.bwStudyMore} aria-hidden="true">•••</span>
-      </header>
-      <p className={styles.bwStudyAdCopy}>Thinking of selling? Find out what your home could be worth.</p>
-      <div className={styles.bwStudyAdImage}>
-        <img
-          src={withBasePath(SELECTED_AD.image)}
-          srcSet={creativeImageSrcSet(SELECTED_AD.image)}
-          alt=""
-          width="1080"
-          height="1350"
-          sizes="(min-width: 1000px) 750px, 560px"
-          loading="lazy"
-          decoding="async"
-        />
-        <span className={styles.bwStudyAdHeadline}>
-          <i aria-hidden="true" />
-          {headline}
-        </span>
-      </div>
-      <div className={styles.bwStudyLink}><small>BLOCKWISE.EXAMPLE</small><strong>{SELECTED_AD.linkTitle}</strong></div>
-      <div className={styles.bwStudyActions} aria-hidden="true"><span>Like</span><span>Comment</span><span>Share</span></div>
-    </article>
-  );
+function StudyField({ clock, id, label, text, start, end, rows = 2 }: { clock: MotionValue<number>; id: string; label: string; text: string; start: number; end: number; rows?: number }) {
+  const value = useDraftText(clock, text, start, end);
+  const active = useTransform(clock, n => n > start && n < end ? 1 : 0);
+  return <label htmlFor={id}><span>{label}</span><div className={styles.bwStudyField}>
+    <textarea id={id} aria-label={label} readOnly rows={rows} value={value} />
+    <motion.span className={styles.bwStudyFieldFocus} style={{ opacity: active }} aria-hidden="true" />
+  </div></label>;
 }
 
-function SideAd({ ad }: { ad: (typeof SIDE_ADS)[number] }) {
-  return (
-    <motion.div className={styles.bwStudySideAd} initial={{ opacity: 1 }} animate={{ opacity: 1 }} transition={{ duration: TIMING.sideFadeMs / 1000 }}>
-      <img src={withBasePath(ad.image)} srcSet={creativeImageSrcSet(ad.image)} alt="" width="1080" height="1350" sizes="(min-width: 1000px) 250px, 30vw" loading="lazy" decoding="async" />
-    </motion.div>
-  );
+function StudyReviewValue({ clock, text, start, end }: { clock: MotionValue<number>; text: string; start: number; end: number }) {
+  const value = useDraftText(clock, text, start, end);
+  return <dd>{value}</dd>;
 }
 
-function EditPanel({ headlineChars, reduced }: { headlineChars: number; reduced: boolean }) {
-  const headline = SELECTED_AD.adTitle.slice(0, headlineChars);
-  return (
-    <motion.section
-      className={styles.bwStudyEditPanel}
-      initial={reduced ? { opacity: 1 } : { opacity: 0, y: 16 }}
-      animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
-      transition={{ duration: reduced ? 0 : TIMING.panelRevealMs / 1000, delay: reduced ? 0 : (TIMING.adMoveMs / 1000) * 0.62, ease: TIMING.ease }}
-      exit={reduced ? { opacity: 0 } : { opacity: 0, y: -10 }}
-      aria-label="Customise your ad"
-    >
-      <div className={styles.bwStudyPanelHeading}><h2>Make it yours</h2></div>
-      <motion.label
-        className={headlineChars > 0 ? styles.isActive : undefined}
-        initial={reduced ? { opacity: 1 } : { opacity: 0, y: 8 }}
-        animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
-        transition={{ duration: reduced ? 0 : TIMING.panelRevealMs / 1000, delay: reduced ? 0 : 0.02 }}
-        htmlFor="study-headline"
-      >
-        <span>Headline</span>
-        <textarea id="study-headline" readOnly value={headline} aria-label="Headline" rows={2} />
-      </motion.label>
-      <motion.label
-        initial={reduced ? { opacity: 1 } : { opacity: 0, y: 8 }}
-        animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
-        transition={{ duration: reduced ? 0 : TIMING.panelRevealMs / 1000, delay: reduced ? 0 : 0.08 }}
-        htmlFor="study-ad-text"
-      >
-        <span>Ad text</span>
-        <textarea id="study-ad-text" readOnly value="Thinking of selling? Find out what your home could be worth." aria-label="Ad text" rows={3} />
-      </motion.label>
-      <motion.label
-        initial={reduced ? { opacity: 1 } : { opacity: 0, y: 8 }}
-        animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
-        transition={{ duration: reduced ? 0 : TIMING.panelRevealMs / 1000, delay: reduced ? 0 : 0.14 }}
-        htmlFor="study-link-title"
-      >
-        <span>Link title</span>
-        <textarea id="study-link-title" readOnly value={SELECTED_AD.linkTitle} aria-label="Link title" rows={2} />
-      </motion.label>
-    </motion.section>
-  );
+function StudyAd({ draft, headline, live, isLive = false, ad = SELECTED_AD }: { live?: MotionValue<number>; isLive?: boolean; ad?: {image: string; postCopy: string; linkTitle: string}; draft?: MotionValue<number>; headline?: string }) {
+  const staticClock = useMotionValue(0);
+  const clock = draft ?? staticClock;
+  const title = useDraftText(clock, SELECTED_AD.adTitle, EDIT_WRITING.ranges[0].start, EDIT_WRITING.ranges[0].end, TEMPLATE_HEADLINE);
+  const copy = useDraftText(clock, AD_TEXT, EDIT_WRITING.ranges[1].start, EDIT_WRITING.ranges[1].end, SELECTED_AD.postCopy);
+  return <article className={styles.bwStudySelectedAd} aria-label={headline ? "Ready-made ad" : "Selected ad preview"}>
+    <header className={styles.bwStudyAdHead}>
+      <span className={styles.bwStudyAvatar} aria-hidden="true">AM</span>
+      <span><strong>Ad preview</strong><small>Sponsored</small></span>
+      <span className={styles.bwStudyMore} aria-hidden="true">•••</span>
+    </header>
+    <p className={styles.bwStudyAdCopy}>{headline ? ad.postCopy : copy}</p>
+    <div className={styles.bwStudyAdImage}>
+      <img src={withBasePath(ad.image)} srcSet={creativeImageSrcSet(ad.image)} alt="" width="1080" height="1350" sizes="300px" loading="lazy" decoding="async" />
+      {live && <motion.span className={styles.bwStudyLiveBadge} style={{ opacity: live }} aria-hidden={!isLive}><i aria-hidden="true" />Live</motion.span>}
+      <span className={styles.bwStudyAdHeadline}>
+        <i aria-hidden="true" />
+        <span className={styles.bwStudyHeadlineStack}><span>{headline ?? title}</span></span>
+      </span>
+    </div>
+    <div className={styles.bwStudyLink}><small>BLOCKWISE.EXAMPLE</small><strong>{ad.linkTitle}</strong></div>
+    <div className={styles.bwStudyActions} aria-hidden="true"><span>Like</span><span>Comment</span><span>Share</span></div>
+  </article>;
 }
 
-function ReviewPanel({ approved, reduced }: { approved: boolean; reduced: boolean }) {
-  return (
-    <motion.section className={styles.bwStudyEditPanel} initial={reduced ? { opacity: 1 } : { opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={reduced ? { opacity: 0 } : { opacity: 0, y: -10 }} transition={{ duration: reduced ? 0 : TIMING.panelRevealMs / 1000, ease: TIMING.ease }} aria-label="Review your ad setup">
-      <div className={styles.bwStudyPanelHeading}><h2>Ready to review</h2></div>
-      <dl className={styles.bwStudyReviewList}><div><dt>Who sees it</dt><dd>Homeowners and potential sellers</dd></div><div><dt>Daily budget</dt><dd>$20 per day</dd></div><div><dt>Duration</dt><dd>14 days</dd></div></dl>
-      <p className={styles.bwStudyApprovalStatus}><Check aria-hidden="true" size={15} /> {approved ? "Ad approved" : "Approving ad"}</p>
-    </motion.section>
-  );
+function BrowseAd({ ad, browse, start, stride }: { ad: typeof SIDE_ADS[number]; browse: MotionValue<number>; start: {x: number; y: number}; stride: number }) {
+  const x = useTransform(browse, value => start.x + (ad.position - value * 2) * stride);
+  return <motion.div className={styles.bwStudyBrowseAd} style={{ x, y: start.y }}><StudyAd ad={ad} headline={ad.adTitle} /></motion.div>;
 }
 
 export function WorkflowMotionStudy() {
   const reduced = useHydratedReducedMotion();
-  const { rootRef, inView, pageVisible } = usePageActivity();
-  const [step, setStep] = useState<StudyStep>("Choose");
+  // 0 Choose, 1 Customise, 2 Review, 3 approved. Every animated layer shares this clock.
+  const [scene, setScene] = useState(-2);
+  const [settledScene, setSettledScene] = useState<number | null>(-2);
   const [manual, setManual] = useState(false);
-  const [headlineChars, setHeadlineChars] = useState(0);
-  const [reviewConfirmed, setReviewConfirmed] = useState(false);
-  const [stageSize, setStageSize] = useState({ width: 1040, height: 560 });
-  const [adSize, setAdSize] = useState({ width: STUDY_AD_WIDTH, height: 550 });
+  const [inView, setInView] = useState(false);
+  const [pageVisible, setPageVisible] = useState(true);
+  const [geometry, setGeometry] = useState({ stageWidth: 695, stageHeight: 560, adWidth: 260, adHeight: 502 });
   const [geometryReady, setGeometryReady] = useState(false);
-  const [motionReady, setMotionReady] = useState(false);
-  const narrow = stageSize.width < STUDY_NARROW_BREAKPOINT;
   const stageRef = useRef<HTMLDivElement>(null);
   const adRef = useRef<HTMLDivElement>(null);
-  const headlineIndexRef = useRef(0);
-
-  const selectStep = useCallback((next: StudyStep) => {
-    setManual(true);
-    if (next === step) return;
-    setStep(next);
-    setReviewConfirmed(next === "Review" && reduced);
-    if (next === "Choose") {
-      headlineIndexRef.current = 0;
-      setHeadlineChars(0);
-    } else if (next === "Review") {
-      headlineIndexRef.current = SELECTED_AD.adTitle.length;
-      setHeadlineChars(SELECTED_AD.adTitle.length);
-    }
-  }, [reduced, step]);
-
-  useEffect(() => {
-    if (reduced) {
-      setManual(true);
-      setStep("Review");
-      setReviewConfirmed(true);
-      headlineIndexRef.current = SELECTED_AD.adTitle.length;
-      setHeadlineChars(SELECTED_AD.adTitle.length);
-    }
-  }, [reduced]);
-
-  useEffect(() => {
-    if (!geometryReady || !motionReady || manual || reduced || step !== "Choose" || !inView || !pageVisible) return;
-    const timer = window.setTimeout(() => setStep("Customise"), TIMING.autoHoldMs);
-    return () => window.clearTimeout(timer);
-  }, [geometryReady, motionReady, inView, manual, pageVisible, reduced, step]);
-
-  useEffect(() => {
-    if (step === "Choose") {
-      headlineIndexRef.current = 0;
-      setHeadlineChars(0);
-      return;
-    }
-    if (reduced) {
-      headlineIndexRef.current = SELECTED_AD.adTitle.length;
-      setHeadlineChars(SELECTED_AD.adTitle.length);
-      return;
-    }
-    if (!inView || !pageVisible) return;
-    let timer: number | null = null;
-    const start = window.setTimeout(() => {
-      const tick = () => {
-        const next = Math.min(headlineIndexRef.current + 1, SELECTED_AD.adTitle.length);
-        headlineIndexRef.current = next;
-        setHeadlineChars(next);
-        if (next < SELECTED_AD.adTitle.length) timer = window.setTimeout(tick, TIMING.typeMs);
-      };
-      if (headlineIndexRef.current < SELECTED_AD.adTitle.length) tick();
-    }, TIMING.typeStartMs);
-    return () => {
-      window.clearTimeout(start);
-      if (timer !== null) window.clearTimeout(timer);
-    };
-  }, [inView, pageVisible, reduced, step]);
-
-  useEffect(() => {
-    if (step !== "Customise" || reduced || headlineChars < SELECTED_AD.adTitle.length || manual || !inView || !pageVisible) return;
-    const timer = window.setTimeout(() => setStep("Review"), TIMING.reviewHoldMs);
-    return () => window.clearTimeout(timer);
-  }, [headlineChars, inView, manual, pageVisible, reduced, step]);
-
-  useEffect(() => {
-    if (step !== "Review" || reduced || !inView || !pageVisible) {
-      if (step !== "Review") setReviewConfirmed(false);
-      return;
-    }
-    setReviewConfirmed(false);
-    const timer = window.setTimeout(() => setReviewConfirmed(true), TIMING.approvalHoldMs);
-    return () => window.clearTimeout(timer);
-  }, [inView, pageVisible, reduced, step]);
+  const playback = useRef<{ stop(): void; pause(): void; play(): void } | null>(null);
+  const progress = useMotionValue(1);
+  const draft = useMotionValue(0);
+  const reviewFill = useMotionValue(0);
+  const contentPlayback = useRef<{ stop(): void; pause(): void; play(): void } | null>(null);
+  const [contentDone, setContentDone] = useState(false);
+  const frame = useMotionValue(studyFrame(-2));
+  const narrow = geometry.stageWidth < STUDY_NARROW_BREAKPOINT;
+  const step = Math.max(0, Math.min(scene, 2));
+  const active = pageVisible && (inView || manual);
+  const start = studyAdMotion({ ...geometry, narrow, customise: false });
+  const end = studyAdMotion({ ...geometry, narrow, customise: true });
+  const stride = geometry.adWidth + 24;
+  const browse = useTransform(frame, f => f.browse);
+  const x = useTransform(frame, f => start.x + (end.x - start.x) * f.ad + (1 - f.browse) * 2 * stride);
+  const y = useTransform(frame, f => start.y + (end.y - start.y) * f.ad - f.hop * 10);
+  const scale = useTransform(frame, f => 1 + (end.scale - 1) * f.ad);
+  const galleryOpacity = useTransform(frame, f => f.gallery);
+  const panelOpacity = useTransform(frame, f => f.panel * f.shellAlpha);
+  const panelScale = useTransform(frame, f => f.shell);
+  const panelX = useTransform(frame, f => narrow ? 0 : (1 - f.ad) * geometry.adWidth * 0.6);
+  const panelY = useTransform(frame, f => narrow ? (1 - f.ad) * geometry.adHeight * 1.2 : 0);
+  const editOpacity = useTransform(frame, f => f.edit);
+  const reviewOpacity = useTransform(frame, f => f.review);
+  const approvalReady = useTransform(frame, f => f.approved > 0 ? 1 : 0);
+  const pendingOpacity = useTransform(frame, f => 1 - f.approved);
+  const approvedOpacity = useTransform(frame, f => f.approved);
+  const layout = studyEditLayout({ ...geometry, narrow });
 
   useEffect(() => {
     const stage = stageRef.current;
     const ad = adRef.current;
     if (!stage || !ad) return;
     const measure = () => {
-      setStageSize({ width: stage.clientWidth, height: stage.clientHeight });
-      setAdSize({ width: ad.offsetWidth, height: ad.offsetHeight });
+      setGeometry({ stageWidth: stage.clientWidth, stageHeight: stage.clientHeight, adWidth: ad.offsetWidth, adHeight: ad.offsetHeight });
       setGeometryReady(true);
     };
     measure();
-    const observer = new ResizeObserver(measure);
+    const resize = new ResizeObserver(measure);
+    resize.observe(stage);
+    resize.observe(ad);
+    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting && entry.intersectionRatio >= 0.6), { threshold: [0, 0.6] });
     observer.observe(stage);
-    observer.observe(ad);
-    return () => observer.disconnect();
+    const visibility = () => setPageVisible(document.visibilityState === "visible");
+    visibility();
+    document.addEventListener("visibilitychange", visibility);
+    return () => { resize.disconnect(); observer.disconnect(); document.removeEventListener("visibilitychange", visibility); };
   }, []);
 
   useEffect(() => {
-    if (!geometryReady) return;
-    const frame = window.requestAnimationFrame(() => setMotionReady(true));
-    return () => window.cancelAnimationFrame(frame);
-  }, [geometryReady]);
+    if (reduced) { setManual(true); setScene(3); }
+  }, [reduced]);
 
-  const customise = step !== "Choose";
-  const review = step === "Review";
-  const adMotion = studyAdMotion({
-    stageWidth: stageSize.width,
-    stageHeight: stageSize.height,
-    adWidth: adSize.width,
-    adHeight: adSize.height,
-    narrow,
-    customise,
-  });
+  useEffect(() => {
+    playback.current?.stop();
+    const from = frame.get();
+    const to = studyFrame(scene);
+    if (reduced || Object.keys(to).every(key => from[key as keyof typeof from] === to[key as keyof typeof to])) {
+      frame.set(to);
+      setSettledScene(scene);
+      return;
+    }
+    if (scene === 1) draft.set(0);
+    if (scene === 2) { reviewFill.set(0); draft.set(1); }
+    setContentDone(false);
+    setSettledScene(null);
+    // Capture the current visual frame before restarting the clock, never the previous screen endpoint.
+    progress.set(0);
+    const panelSwap = from.ad === 1 && to.ad === 1 && (from.edit !== to.edit || from.review !== to.review);
+    const controls = animate(progress, 1, {
+      duration: (scene < 0 ? TIMING.browseMs : panelSwap ? TIMING.panelSwapMs : scene < 3 ? TIMING.travelMs : TIMING.crossfadeMs) / 1000,
+      ease: panelSwap ? "linear" : TIMING.ease,
+      onUpdate: value => frame.set(studyTransition(from, to, value)),
+      onComplete: () => { frame.set(to); setSettledScene(scene); },
+    });
+    playback.current = controls;
+    return () => controls.stop();
+  }, [draft, frame, progress, reduced, reviewFill, scene]);
 
-  const editLayout = studyEditLayout({ stageWidth: stageSize.width, adWidth: adSize.width, adHeight: adSize.height, narrow });
-  const stageStyle = {
-    "--study-panel-left": `${editLayout.panelLeft}px`,
-    "--study-panel-top": `${editLayout.panelTop}px`,
-    "--study-panel-width": `${editLayout.panelWidth}px`,
-  } as import("react").CSSProperties;
+  // Writing starts only after the empty panel has reached its final position.
+  useEffect(() => {
+    contentPlayback.current?.stop();
+    if (reduced) { draft.set(1); reviewFill.set(1); setContentDone(true); return; }
+    if (settledScene !== scene || (scene !== 1 && scene !== 2)) return;
+    const clock = scene === 1 ? draft : reviewFill;
+    const controls = animate(clock, 1, {
+      duration: (scene === 1 ? EDIT_WRITING.durationMs : REVIEW_WRITING.durationMs) / 1000,
+      ease: "linear",
+      onComplete: () => setContentDone(true),
+    });
+    contentPlayback.current = controls;
+    if (!active) controls.pause();
+    return () => controls.stop();
+  }, [draft, reduced, reviewFill, scene, settledScene]);
 
-  return (
-    <MotionConfig reducedMotion="user">
-      <div className={"tw " + styles.bwStudy} ref={rootRef} data-narrow={narrow ? "true" : "false"}>
-        <header className={styles.bwStudyIntro}>
-          <h2><span>Lead generating ads for</span><span>Facebook &amp; Instagram</span></h2>
-          <div><Button asChild size="lg"><a href={TRIAL_SIGNUP_URL}>Start free trial</a></Button><small>Free trial · No card required · Cancel anytime</small></div>
-        </header>
-        <section className={styles.bwStudyFrame} aria-label="Ad Builder motion study">
-          <header className={styles.bwStudyToolbar}>
-            <span className={styles.bwStudyTitle}><i aria-hidden="true" /> Ad Builder</span>
-            <div className={styles.bwStudySelector} role="group" aria-label="Motion study screen">
-              {STUDY_STEPS.map((item) => (
-                <Button key={item.label} type="button" variant="ghost-pill" size="pill" arrow={null} aria-pressed={step === item.label} onClick={() => selectStep(item.label)}>
-                  {item.label}
-                </Button>
-              ))}
-            </div>
-          </header>
-          <div className={styles.bwStudyStage} ref={stageRef} data-step={step.toLowerCase()} style={stageStyle}>
-            <div className={styles.bwStudyGallery} aria-hidden={customise}>
-              {SIDE_ADS.map((ad) => <SideAd key={ad.id} ad={ad} />)}
-            </div>
-            <motion.div className={styles.bwStudyAdMotion} ref={adRef} style={{ left: geometryReady ? 0 : undefined }} initial={false} animate={geometryReady ? adMotion : undefined} transition={{ duration: !motionReady || reduced ? 0 : TIMING.adMoveMs / 1000, ease: TIMING.ease }}>
-              <StudyAd headlineChars={headlineChars} />
-            </motion.div>
-            <AnimatePresence initial={false} mode="wait">{customise ? <div key={review ? "review" : "edit"} className={styles.bwStudyEditSlot}>{review ? <ReviewPanel approved={reviewConfirmed} reduced={reduced} /> : <EditPanel headlineChars={headlineChars} reduced={reduced} />}</div> : null}</AnimatePresence>
-          </div>
-          <p className={styles.bwStudyHint} aria-live="polite">{STUDY_STEPS.find((item) => item.label === step)?.hint}</p>
-        </section>
+  useEffect(() => {
+    if (active) playback.current?.play();
+    else playback.current?.pause();
+    if (active) contentPlayback.current?.play();
+    else contentPlayback.current?.pause();
+  }, [active, scene]);
+
+  useEffect(() => {
+    if (!geometryReady || !active || reduced || settledScene !== scene || ((scene === 1 || scene === 2) && !contentDone) || scene === 3 || (manual && scene >= 0 && scene < 2)) return;
+    const hold = scene < 0 ? TIMING.browseHoldMs : scene === 0 ? TIMING.autoHoldMs : scene === 1 ? TIMING.reviewHoldMs : TIMING.approvalHoldMs;
+    const timer = window.setTimeout(() => setScene(scene + 1), hold);
+    return () => window.clearTimeout(timer);
+  }, [active, contentDone, geometryReady, manual, reduced, scene, settledScene]);
+
+  const selectStep = (next: number) => {
+    setManual(true);
+    if (next === step) return;
+    setScene(reduced && next === 2 ? 3 : next);
+  };
+
+  return <div className={"tw " + styles.bwStudy} data-narrow={narrow ? "true" : "false"}>
+    <header className={styles.bwStudyIntro}>
+      <h2><span>Build lead ads.</span><span>Skip Ads Manager.</span></h2>
+      <p>Get from a proven template to an on-brand lead ad, ready to review in one clear flow.</p>
+      <div><Button asChild size="lg"><a href={TRIAL_SIGNUP_URL}>Start free trial</a></Button><small>Free trial · No card required · Cancel anytime</small></div>
+    </header>
+    <section className={styles.bwStudyFrame} aria-label="Ad Builder motion study">
+      <header className={styles.bwStudyToolbar}>
+        <span className={styles.bwStudyTitle}><i aria-hidden="true" /> Ad Builder</span>
+        <div className={styles.bwStudySelector} role="group" aria-label="Motion study screen">
+          {STUDY_STEPS.map((item, index) => <Button key={item.label} type="button" variant="ghost-pill" size="pill" aria-pressed={step === index} onClick={() => selectStep(index)}>{item.label}</Button>)}
+        </div>
+      </header>
+      <div className={styles.bwStudyStage} ref={stageRef} data-step={STUDY_STEPS[step].label.toLowerCase()} data-settled={settledScene === scene} style={{ "--study-panel-left": `${layout.panelLeft}px`, "--study-panel-top": `${layout.panelTop}px`, "--study-panel-width": `${layout.panelWidth}px` } as React.CSSProperties}>
+        <motion.div className={styles.bwStudyGallery} style={{ opacity: galleryOpacity }} aria-hidden={step !== 0}>
+          {SIDE_ADS.map(ad => <BrowseAd key={ad.id} ad={ad} browse={browse} start={start} stride={stride} />)}
+        </motion.div>
+        <motion.div className={styles.bwStudyAdMotion} ref={adRef} style={geometryReady ? { left: 0, x, y, scale } : { visibility: "hidden" }}>
+          <StudyAd draft={draft} live={approvedOpacity} isLive={scene === 3} />
+        </motion.div>
+        <div className={styles.bwStudyEditSlot} inert={step === 0} aria-hidden={step === 0}>
+          <motion.div className={styles.bwStudyPanelSurface} style={{ opacity: panelOpacity, scale: panelScale, x: panelX, y: panelY }}>
+            <motion.section className={styles.bwStudyEditPanel} style={{ opacity: editOpacity }} aria-label="Customise your ad" aria-hidden={step !== 1} inert={step !== 1}>
+              <div className={styles.bwStudyPanelHeading}><h2>Make it yours</h2></div>
+              <StudyField clock={draft} id="study-headline" label="Headline" text={SELECTED_AD.adTitle} {...EDIT_WRITING.ranges[0]} />
+              <StudyField clock={draft} id="study-ad-text" label="Ad text" text={AD_TEXT} {...EDIT_WRITING.ranges[1]} rows={3} />
+            </motion.section>
+            <motion.section className={styles.bwStudyEditPanel} style={{ opacity: reviewOpacity }} aria-label="Review your ad setup" aria-hidden={step !== 2} inert={step !== 2}>
+              <div className={styles.bwStudyPanelHeading}><h2>Ready to review</h2></div>
+              <dl className={styles.bwStudyReviewList}><div><dt>Who sees it</dt><StudyReviewValue clock={reviewFill} text={REVIEW_TEXTS[0]} {...REVIEW_WRITING.ranges[0]} /></div><div><dt>Daily budget</dt><StudyReviewValue clock={reviewFill} text={REVIEW_TEXTS[1]} {...REVIEW_WRITING.ranges[1]} /></div><div><dt>Duration</dt><StudyReviewValue clock={reviewFill} text={REVIEW_TEXTS[2]} {...REVIEW_WRITING.ranges[2]} /></div></dl>
+              <motion.div className={styles.bwStudyApprovalStack} style={{ opacity: approvalReady }}>
+                <motion.div className={styles.bwStudyApprovalStatus} style={{ opacity: pendingOpacity }} aria-hidden="true">Approving ad</motion.div>
+                <motion.div className={styles.bwStudyApprovalStatus} data-approved="true" style={{ opacity: approvedOpacity }} aria-hidden="true"><Check aria-hidden="true" size={18} /> Ad approved</motion.div>
+                <span className={styles.bwStudySrOnly} role="status">{scene === 3 ? "Ad approved" : "Approving ad"}</span>
+              </motion.div>
+            </motion.section>
+          </motion.div>
+        </div>
       </div>
-    </MotionConfig>
-  );
+    </section>
+  </div>;
 }
