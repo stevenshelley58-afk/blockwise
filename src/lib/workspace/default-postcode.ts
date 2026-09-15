@@ -4,7 +4,7 @@ import type { User } from "@supabase/supabase-js";
 import { z } from "zod";
 
 import type { createSupabaseServiceClient } from "@/lib/supabase/service";
-import { resolveAdRadarPostcodeSuburbs } from "@/lib/research/ad-radar-location";
+import { resolveAdRadarPostcodeSuburbs } from "../research/ad-radar-location.ts";
 
 export const workspacePostcodeSchema = z.string().trim()
   .regex(/^\d{4}$/u, "Enter a four-digit Australian postcode.")
