@@ -24,7 +24,7 @@ export default async function AdBuilderPage() {
   templatesLoadError = templatesResult.status === "rejected";
 
   return (
-    <div className="mx-auto w-full max-w-[1120px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
+    <div className="mx-auto w-full max-w-[880px] px-4 pt-6 pb-28 md:px-6 md:pt-8 md:pb-16">
       <HomeCommand ads={ads} adsError={adsError} timeZone={timeZone} dateLocale={dateLocale} hasAvailableTemplates={hasAvailableTemplates} templatesLoadError={templatesLoadError} />
     </div>
   );

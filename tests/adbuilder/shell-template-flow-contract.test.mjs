@@ -11,7 +11,7 @@ const mediaLibrary = readFileSync("src/components/adbuilder/media-library.tsx", 
 const homeCommand = readFileSync("src/components/adbuilder/home-command.tsx", "utf8");
 
 test("Ad Builder preserves the desktop symbol and gives mobile an explicit home link", () => {
-  assert.match(shell, /href="\/ad-studio"[\s\S]*?aria-label="Back to Blockwise"[\s\S]*?<BlockwiseLogo tokens showWordmark=\{false\}/);
+  assert.match(shell, /href="\/ad-studio"[\s\S]*?aria-label="Blockwise home"[\s\S]*?<BlockwiseLogo tokens \/>/);
   const mobileHeader = shell.slice(shell.indexOf("<header"), shell.indexOf("</header>"));
   assert.match(mobileHeader, /href="\/ad-studio"/);
   assert.match(mobileHeader, /<ArrowLeft size=\{16\} aria-hidden/);
@@ -22,22 +22,41 @@ test("Ad Builder preserves the desktop symbol and gives mobile an explicit home 
 });
 
 test("Ad Builder keeps its legible desktop mark and mobile exit", () => {
-  // The chrome is themed, not hardcoded: the mark and the mobile exit read on
-  // the sidebar's surface through the ink role, and the shell stays dark.
-  assert.match(shell, /size-9[^\n]*bg-transparent text-\(--ink\)/);
+  // The chrome is themed, not hardcoded: the lockup and the mobile exit read on
+  // the rail's dark surface through the brand-ink and ink roles.
+  assert.match(shell, /text-\(--brand-ink\)/);
   const mobileHeader = shell.slice(shell.indexOf("<header"), shell.indexOf("</header>"));
   assert.match(mobileHeader, /font-semibold text-\(--ink\)/);
-  assert.match(shell, /data-theme="studio-dark"/);
+  assert.match(shell, /<aside\s+data-theme="studio-dark"/);
+  assert.match(shell, /<header\s+data-theme="studio-dark"/);
 });
 
-test("Ad Builder navigation exposes the simplified Home, Templates, Library, and Brand path", () => {
+test("the dark scope is the rail and the mobile header, never the document", () => {
+  // The canvas, the dialogs, the sheets and every portaled overlay are the light
+  // theme. The scope must not come back onto <html>, and the shell root must not
+  // carry it, or Ad Builder becomes a second dark app again.
+  assert.doesNotMatch(shell, /documentElement/);
+  assert.match(shell, /<div\s+className=\{cn\("tw flex bg-background text-foreground"/);
+});
+
+test("Ad Builder navigation exposes the simplified Home, Templates, Video, Library, and Brand path", () => {
   assert.match(shell, /label: "Home", icon: Home/);
   assert.match(shell, /label: "Templates", icon: LayoutTemplate/);
+  assert.match(shell, /label: "Video", icon: Film/);
   assert.match(shell, /label: "Library", icon: Library/);
   assert.match(shell, /label: "Brand Pack", icon: Palette/);
   assert.doesNotMatch(shell, /Sparkles/);
   assert.match(shell, /const contextual = pathname\.startsWith\("\/ad-builder\/ads\/"\)/);
   assert.doesNotMatch(shell, /contextual[\s\S]{0,120}templates/);
+});
+
+test("the rail carries the one create action and it is not a sixth nav row", () => {
+  // The rail is already at five siblings. Creation is the filled pill above the
+  // list, so it is reachable from every Ad Builder route without adding a row.
+  assert.match(shell, /href="\/ad-builder\/templates" aria-label="Create a new ad from a reviewed template"/);
+  assert.match(shell, /<Button asChild className="w-full justify-start">/);
+  const nav = shell.slice(shell.indexOf("<nav"), shell.indexOf("</nav>"));
+  assert.doesNotMatch(nav, /Create|New ad/);
 });
 
 test("template search preserves the active lead filter", () => {
@@ -70,7 +89,29 @@ test("Home uses one obvious creation action without a second search", () => {
   assert.doesNotMatch(homeCommand, /studio-command|role="search"|Or search templates/);
 });
 
- test("hub routes creation to templates while selected cards create directly", () => {
+test("Home names the place once and keeps the phone nav complete", () => {
+  // The sidebar said "Home" and the page said "Ads". The page now heads the list
+  // it actually shows, and the narrow-width row is the full builder nav, so
+  // Video is reachable on a phone.
+  assert.match(homeCommand, /<h1 id="recent-work-heading"/);
+  assert.doesNotMatch(homeCommand, />Ads<\/h1>/);
+  const nav = homeCommand.slice(homeCommand.indexOf("<nav"), homeCommand.indexOf("</nav>"));
+  assert.match(nav, /md:hidden/);
+  for (const href of ["/ad-builder/templates", "/ad-builder/video", "/ad-builder/library?view=assets", "/ad-builder/brand"]) {
+    assert.match(nav, new RegExp(href.replace(/[/?]/g, "\\$&")));
+  }
+});
+
+test("a recent ad has one way in and one secondary action", () => {
+  const recent = homeCommand.slice(homeCommand.indexOf("function RecentAd"));
+  assert.match(recent, /<Link href=\{editorHref\}/);
+  assert.doesNotMatch(recent, />Edit</);
+  assert.match(recent, /<Link href=\{reviewHref\}>Review<\/Link>/);
+  // Review must not be desktop-only: the publish path has to exist on a phone.
+  assert.doesNotMatch(recent, /hidden sm:inline-flex/);
+});
+
+test("hub routes creation to templates while selected cards create directly", () => {
   assert.match(homeCommand, /href="\/ad-builder\/templates"/);
   assert.match(homeCommand, />New ad<\//);
   assert.doesNotMatch(home, /createAdAction|createCustomerAd|"use server"/);
