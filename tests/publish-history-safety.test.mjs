@@ -36,15 +36,28 @@ test("archive client has no network, persistence, mutation or download capabilit
   }
 });
 
-test("archive is authenticated and the current publish route uses it as a safe test flow", () => {
+test("archive is authenticated, and the live publish route is restored behind the write gate", () => {
   const page = readFileSync(base + "page.tsx", "utf8");
   assert.match(page, /await requirePageSurfaceAccess\("adbuilder"\)/);
   assert.match(page, /Example data/);
   assert.match(page, /Publishing disabled/);
+
+  // The live publish route renders the real flow again (it did from b752ec4af
+  // until b626158a5 swapped in this archive "for testing"). It must never
+  // hardcode the write decision: the gate requires the global switch AND a
+  // per-workspace allowlist and fails closed, so a closed gate still creates
+  // nothing in Meta.
   const current = readFileSync("src/app/(customer)/ad-builder/templates/[templateId]/publish/page.tsx", "utf8");
-  assert.match(current, /publish-history\/publish-history-flow/);
-  assert.match(current, /const providerWrites = false/);
-  assert.match(current, /Test flow · nothing will be created/);
+  assert.match(current, /import \{ PublishFlow \} from "\.\/publish-flow"/);
+  assert.match(current, /metaPublishProviderWritesEnabled\(access\.workspaceId\)/);
+  assert.doesNotMatch(current, /const providerWrites = false/);
+  assert.match(current, /const automatedPublishAvailable = providerWrites && metaConnectionConnected/);
+  // Without publishing defaults the flow can never enable its publish button,
+  // so the restored route has to supply them.
+  assert.match(current, /publishingDefaults=\{\{/);
+  assert.match(current, /Preview only · nothing will be created/);
+  // The read-only four-stage flow stays reachable for comparison.
+  assert.match(current, /href="\/ad-builder\/publish-history"/);
 });
 
 test("historical catalogue distinguishes evidence and keeps the July mockup static", () => {

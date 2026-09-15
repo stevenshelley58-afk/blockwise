@@ -1,12 +1,13 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 
-import { PublishFlow } from "../../../publish-history/publish-history-flow";
+import { PublishFlow } from "./publish-flow";
 import { normalizeSavedPublishAudienceLocations } from "./publish-controls";
 import { CustomerAdNotFoundError, loadCustomerAd, parseCustomerAdId } from "@/lib/adbuilder/create-customer-ad";
 import { getTemplateForExistingCustomerAd } from "@/lib/adbuilder/pack-gallery";
 import { loadPublishState, PublishError, readTemplatePublishRequirements, validatePublishState } from "@/lib/adbuilder/publish-adapter";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
+import { metaPublishProviderWritesEnabled } from "@/lib/providers/meta-provider-write-gate";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
@@ -14,8 +15,13 @@ export const dynamic = "force-dynamic";
 // ---------------------------------------------------------------------------
 // Ad Builder — Publish flow.
 //
-// Recovered 8 September four-stage flow for customer UX testing.
-// It is deliberately read-only: provider writes remain disabled.
+// One final approval freezes the saved creative and authorises the durable
+// create-then-activate workflow. Provider writes remain separately gated by
+// BLOCKWISE_ENABLE_PROVIDER_WRITES, so with the gate closed this surface shows
+// the exact setup and creates nothing in Meta.
+//
+// The four-stage read-only flow is still available at /ad-builder/publish-history
+// for comparison.
 // ---------------------------------------------------------------------------
 
 export default async function PublishPage({
@@ -78,7 +84,13 @@ export default async function PublishPage({
   const issues = state
     ? validatePublishState(state, { controls: validationControls }).filter((issue) => !isInteractiveDependencyIssue(issue))
     : [];
-  const providerWrites = false;
+  const { data: publishDefaults } = await supabase
+    .from("workspaces")
+    .select("country_code,publishing_currency,lead_destination_type,lead_destination_label")
+    .eq("id", access.workspaceId)
+    .maybeSingle();
+  // The single source of truth for whether this workspace may write to Meta.
+  const providerWrites = metaPublishProviderWritesEnabled(access.workspaceId);
   const { data: metaConnection } = await supabase
     .from("provider_connections")
     .select("status")
@@ -88,7 +100,8 @@ export default async function PublishPage({
     .limit(1)
     .maybeSingle();
   const metaConnectionConnected = metaConnection?.status === "connected";
-  const automatedPublishAvailable = false;
+  // Automated publishing needs both the gate and a live Meta connection.
+  const automatedPublishAvailable = providerWrites && metaConnectionConnected;
   const metadata = (pack as unknown as { metadata?: { title?: string } }).metadata;
   const templateName = metadata?.title?.trim() || pack.metadata.title || pack.templateId;
 
@@ -111,11 +124,19 @@ export default async function PublishPage({
           Back to editor
         </Link>
         <span className="ml-4 min-w-0 flex-1 truncate text-sm font-medium">
-          Publish · {templateName}
+          Review · {templateName}
         </span>
+        <Link
+          href="/ad-builder/publish-history"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-11 items-center px-3 text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Previous flow<span className="sr-only"> (opens in a new tab)</span>
+        </Link>
         {!providerWrites && (
           <span className="ml-auto rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
-            Test flow · nothing will be created
+            Preview only · nothing will be created
           </span>
         )}
       </header>
@@ -125,12 +146,22 @@ export default async function PublishPage({
           workspaceId={access.workspaceId}
           templateId={templateId}
           templateName={templateName}
+          adName={ad.name?.trim() || templateName}
           publishRequirements={publishRequirements}
           notSaved={notSaved}
           initialState={state}
           initialIssues={issues}
           providerWritesEnabled={providerWrites}
           audienceLocations={audienceLocations}
+          // The flow refuses to publish without a currency, so the workspace
+          // publishing defaults must come from the same row the API reads.
+          publishingDefaults={{
+            country: publishDefaults?.country_code ?? "",
+            currency: publishDefaults?.publishing_currency ?? "",
+            leadDestination: publishDefaults?.lead_destination_type === "manual"
+              ? publishDefaults?.lead_destination_label || "Manual lead collection"
+              : publishDefaults?.lead_destination_label || "",
+          }}
           canRequestManualPublish={access.isOperator || access.role === "owner" || access.role === "admin"}
           automatedPublishAvailable={automatedPublishAvailable}
           metaConnectionConnected={metaConnectionConnected}
