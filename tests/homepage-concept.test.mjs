@@ -63,7 +63,7 @@ test("homepage FAQ remains grouped, collapsed and matches the offer", async () =
   assert.deepEqual(FAQ_GROUPS.map((group) => group.heading), ["Getting started", "Plans", "Costs", "Billing", "Ownership and support", "Let’s talk"]);
   const faqs = FAQ_GROUPS.flatMap((group) => group.faqs);
   assert.equal(faqs.length, 15);
-  assert.equal(faqs.find((faq) => faq.question === "What happens after the free allowance?")?.answer, "Saved designs and leads stay available. You only pay Blockwise if you choose a paid plan.");
+  assert.equal(faqs.find((faq) => faq.question === "What happens after the free allowance?")?.answer, "Saved designs, downloaded files and leads stay available. You can keep using the free allowance to create and download ads.");
   assert.equal(faqs.find((faq) => faq.question === "Is Meta ad spend included?")?.answer, "No. You pay Meta directly through your own ad account.");
   assert.ok(faqs.every((faq) => !/\u2014/.test(faq.answer)));
   const faqSection = component.slice(component.indexOf('className="hc-faq"'), component.indexOf('className="hc-trial"'));

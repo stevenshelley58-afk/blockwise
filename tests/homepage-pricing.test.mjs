@@ -13,9 +13,9 @@ test("homepage pricing presents three honest choices with direct signup", async 
     'TRIAL_CTA_LABEL = "Start your free trial"', "A$0", "A$249", "from A$1,500",
     "No Blockwise subscription fee", "per month, plus Meta ad spend",
     "Cancel anytime. Monthly billing, no lock-in.",
-    "You only pay Blockwise if you choose a paid plan.",
-    "Choosing this plan is the paid step. Starting free does not auto-charge you.",
-    "Three Feed + Story ad packs", "One campaign",
+    "Creating and downloading ads is free. Publishing an ad needs a card and starts a 7-day trial.",
+    "Publishing an ad starts a 7-day trial. After the trial this plan renews at A$249 per month until you cancel.",
+    "Three Feed + Story ad packs", "Download and run them yourself",
     "Saved designs and leads stay available", "Up to 50 Feed + Story ad packs", "Up to four live campaigns",
   ]) assert.ok(data.includes(value), `missing offer fact: ${value}`);
   // Three distinct plans, each priced with its own action, and only one featured.

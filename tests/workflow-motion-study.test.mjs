@@ -80,7 +80,7 @@ test("completion-gated writing, accessible selectors, finite autoplay and reduce
   assert.match(source,/scene === 3/);
   assert.match(source,/frame.set\(to\)/);
   assert.match(styles,/prefers-reduced-motion/);
-  assert.match(source,/Free trial · No card required · Cancel anytime/);
+  assert.match(source,/Free to create · No card to download · Cancel anytime/);
 });
 
 test("workflow copy explains the job and the relief from Ads Manager", () => {
