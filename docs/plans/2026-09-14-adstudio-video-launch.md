@@ -231,3 +231,55 @@ The paid path cannot be sold: no Stripe payment-mode session exists, by design,
 pending the GST decision. Fulfilment, notifications, upload, inspection,
 resizing and downloading are all built, but the operator queue has never been
 used on a live order and no uploaded file has crossed a real network.
+
+## Live record
+
+**Released and verified live on 2026-09-15.**
+
+| Item | Value |
+| --- | --- |
+| Deployed revision | `e33b2d9f0c890ff3bdfb12dce569f4c4e431bc36` |
+| Previous revision | `1c654aecad81d854ee49989af7dde45fbeffc9c0` |
+| Rollback | `scripts/vps/product-rollback.sh` to `1c654aecad` |
+| Migrations recorded | 127 ledger rows including all four video migrations |
+| Health | readiness endpoint ready; all product services healthy |
+
+The handoff open item is closed: `20260914100000` and its three siblings now
+have ledger rows, applied by the sanctioned runner from the worktree.
+
+### Live verification, and its limit
+
+Verified against the running revision: `/ad-studio/video` returns 307 to
+`/login`, so the route exists and requires authentication rather than 404;
+`/api/adstudio/videos` returns 401; the private `adstudio-video` bucket exists
+with a 2 GB ceiling; the deadline function returns Tuesday 17:00 Sydney for a
+Monday start; the privilege boundary holds on the live database.
+
+**Not verified:** no authenticated customer journey has been walked end to end
+on the live deployment, and no real file has been uploaded through the live
+surface. The live checks prove the routes are present, authorised and wired;
+they do not prove the whole journey.
+
+### A privilege defect found only by checking live
+
+After the first release, `authenticated` held INSERT, UPDATE and DELETE on
+`video_orders`. The migration revoked them, but the central post-migration
+grants script runs after the entire migration set and re-grants browser DML on
+every RLS-enabled table. Leaving `video_orders` out of its exclusion list only
+declined to grant it again, and nothing revoked what the migration had already
+issued. A customer could therefore have inserted an order and chosen the amount
+owed, and RLS did not prevent it because the row is legitimately in their own
+workspace. The grants script now revokes explicitly for the five server-only
+video tables. Released as `e33b2d9f0`.
+
+The rehearsal missed it because it ran the migration alone, without the grants
+script. Recorded here rather than quietly fixed.
+
+### Still to build
+
+The operator fulfilment queue in **Frank Window**, per the owner decision on
+2026-09-15. The equivalent queue exists in Blockwise at `/operator/video` and
+works, but the owner surface of record is Frank.
+
+The paid path cannot be sold: no Stripe payment-mode session exists and
+`checkoutEnabled` is false, pending the accountant GST confirmation.
