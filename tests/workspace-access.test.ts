@@ -55,7 +55,7 @@ test("workspace mode does not restrict monitor, ad-studio or property-check surf
       isOperator: false,
       memberships: [
         {
-          workspaceId: "workspace_adstudio",
+          workspaceId: "workspace_adbuilder",
           workspaceMode: "ad_studio",
           role: "member",
         },
