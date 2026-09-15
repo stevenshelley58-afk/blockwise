@@ -10,12 +10,12 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Start free",
-  description: "Create your first three real estate ads with Blockwise. Email only, no password, and no card to create or download.",
+  description: "Create your first real estate ad pack with Blockwise. Email only, no password, and no card to create or download.",
   alternates: { canonical: "/signup" },
   openGraph: {
     type: "website",
-    title: "Create your first three ads",
-    description: "Start with your email and build three complete real estate ads before adding a card.",
+    title: "Create your first ad pack",
+    description: "Start with your email and build one complete ad pack, one Feed ad and one Story ad, before adding a card.",
     url: "/signup",
     locale: "en_AU",
   },
@@ -53,7 +53,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
           <span>Blockwise</span>
         </div>
         <div>
-          <h1 id="signup-heading">Create your first three ads</h1>
+          <h1 id="signup-heading">Create your first ad pack</h1>
           <p className="login-copy">
             Enter your email and we&rsquo;ll send a secure sign-in link. No password or card
             required.

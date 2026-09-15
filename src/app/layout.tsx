@@ -49,7 +49,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://blockwise.sale";
 const SITE_TITLE = "Blockwise | Real Estate Meta Ads Workflow";
 const SITE_DESCRIPTION = HOMEPAGE_PREVIEW
   ? "Blockwise homepage concept. Create, approve and track real estate ads in one place."
-  : "Create, approve, publish, and track Meta ad campaigns through your own ad account. Start with email and create three complete ads before adding a card.";
+  : "Create, approve, publish, and track Meta ad campaigns through your own ad account. Start with email and create one complete ad pack before adding a card.";
 
 export const viewport: Viewport = {
   width: "device-width",

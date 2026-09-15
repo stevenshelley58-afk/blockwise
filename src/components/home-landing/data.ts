@@ -25,7 +25,7 @@ export const FAQ_DATA = [
   },
   {
     q: "What do I get before paying?",
-    a: "You can create and download three complete Feed + Story ads without a card. Publishing an ad needs a card and starts a 7-day Blockwise trial. Free means no Blockwise subscription fee, not free advertising: Meta charges ad spend separately.",
+    a: "You can create and download one complete ad pack, one Feed ad and one Story ad, without a card. Publishing an ad needs a card and starts a 7-day Blockwise trial. Free means no Blockwise subscription fee, not free advertising: Meta charges ad spend separately.",
   },
   {
     q: "What is included after I subscribe?",

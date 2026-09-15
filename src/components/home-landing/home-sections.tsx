@@ -349,9 +349,9 @@ export function PropertyCheck() {
 export function FreeTrial() {
   return (
     <div className="hw-band hw-band--wide hw-trial">
-      <h2>Create three complete ads free.</h2>
+      <h2>Create one complete ad pack free.</h2>
       <p className="hw-sub">
-        Start with only your email — no card required. Build and review three Feed + Story ad packs
+        Start with only your email. No card is needed to create or download. Build and review one Feed + Story ad pack
         before connecting Meta.
       </p>
       <Button asChild size="lg">
@@ -361,8 +361,8 @@ export function FreeTrial() {
       </Button>
       <div className="hw-trial-facts">
         <div className="hw-trial-fact">
-          <h3>Three complete ads</h3>
-          <p>Each includes a finished Feed and Story creative.</p>
+          <h3>One complete ad pack</h3>
+          <p>A finished Feed ad and a finished Story ad.</p>
         </div>
         <div className="hw-trial-fact">
           <h3>No card</h3>

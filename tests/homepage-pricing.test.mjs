@@ -15,7 +15,7 @@ test("homepage pricing presents three honest choices with direct signup", async 
     "Cancel anytime. Monthly billing, no lock-in.",
     "Creating and downloading ads is free. Publishing an ad needs a card and starts a 7-day trial.",
     "Publishing an ad starts a 7-day trial. After the trial this plan renews at A$249 per month until you cancel.",
-    "Three Feed + Story ad packs", "Download and run them yourself",
+    "One free ad pack: one Feed ad and one Story ad", "Download and run them yourself",
     "Saved designs and leads stay available", "Up to 50 Feed + Story ad packs", "Up to four live campaigns",
   ]) assert.ok(data.includes(value), `missing offer fact: ${value}`);
   // Three distinct plans, each priced with its own action, and only one featured.

@@ -16,7 +16,7 @@ const PLAN_SUMMARY = [
     bestFor: "Trying Blockwise",
     outcome: "Create and download your first ads. No card needed.",
     features: [
-      "Three Feed + Story ads",
+      "One free ad pack: one Feed ad and one Story ad",
       "One trial campaign",
       "Keep managing your ads for free",
     ],
@@ -43,7 +43,7 @@ const PLAN_SUMMARY = [
     ],
     terms: "Ad spend is separate. GST included where required.",
     cta: {
-      label: "Create three ads free",
+      label: "Create your first ad pack free",
       href: "/signup?offer=ad-studio",
       location: "pricing-summary-ad-studio",
     },
@@ -78,7 +78,7 @@ const DETAIL_SECTIONS = [
     kicker: "Free",
     title: "Try it free.",
     intro:
-      "Make three Feed + Story ads and download them. Publishing an ad needs a card and starts a 7-day trial.",
+      "Make one free ad pack, one Feed ad and one Story ad, and download it. Publishing an ad needs a card and starts a 7-day trial.",
     rows: [
       [
         "After the trial",

@@ -66,7 +66,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           testProfilePassword={process.env.NODE_ENV !== "production" ? process.env.BLOCKWISE_DEV_PASSWORD : undefined}
         />
         <p className="auth-alt-link">
-          New to Blockwise? <Link href="/signup">Create three ads free</Link>
+          New to Blockwise? <Link href="/signup">Create your first ad pack free</Link>
         </p>
       </section>
     </main>

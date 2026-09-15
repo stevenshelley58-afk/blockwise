@@ -15,7 +15,7 @@ function includesCopy(source: string, copy: string) {
 
 test("Terms state the exact Ad studio trigger, credit, seat, and Meta-spend rules", () => {
   for (const required of [
-    "three complete Feed and Story ad packs",
+    "two render credits, which is one complete Feed and Story ad pack: one Feed ad and one Story ad",
     "Publishing through Blockwise needs a card and starts a seven-day Blockwise",
     "The first charge is A$0.00",
     "The seven days run from the moment Checkout completes",

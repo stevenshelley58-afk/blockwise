@@ -156,7 +156,7 @@ export const FAQ_GROUPS = [
     { question: "How does managed start?", answer: "We agree the scope and price before anything starts.", links: [{ label: "Managed setup", href: MANAGED_SETUP_HREF }, { label: `Email ${CONTACT_EMAIL}`, href: CONTACT_HREF }] },
   ] },
   { heading: "Plans", faqs: [
-    { question: "What does the free option include?", answer: "Three Feed and Story packs to create and download. Creating and downloading an ad needs no card." },
+    { question: "What does the free option include?", answer: "One free ad pack, one Feed ad and one Story ad, to create and download. Creating and downloading an ad needs no card." },
     { question: "What happens after the free allowance?", answer: "Saved designs, downloaded files and leads stay available. You can keep using the free allowance to create and download ads." },
   ] },
   { heading: "Costs", faqs: [

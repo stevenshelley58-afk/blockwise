@@ -21,7 +21,7 @@ const FAQ_GROUPS = [
     questions: [
       {
         q: "What does the free option include?",
-        a: "Try three Feed + Story ads and one campaign without a Blockwise subscription.",
+        a: "Try one free ad pack, one Feed ad and one Story ad, and one campaign without a Blockwise subscription.",
       },
       {
         q: "What happens after the free trial?",

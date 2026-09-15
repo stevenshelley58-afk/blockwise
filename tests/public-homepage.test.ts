@@ -291,7 +291,8 @@ test("public marketing copy states the approved progressive offer", () => {
   assert.match(home, /No card to create or download/i);
   assert.match(home, /Creating and downloading an ad needs no card/i);
   assert.match(home, /Publishing needs a card and starts a 7-day trial/i);
-  assert.match(home, /three Feed and Story packs/i);
+  assert.match(home, /one free ad pack: one Feed ad and one Story ad/i);
+  assert.doesNotMatch(home, /three Feed and Story packs|three ads|three .*packs/i);
   assert.ok(pricing.includes("Start free. Manage your own ads, or let us help."));
   assert.match(pricingMarket, /no card/i);
   assert.match(pricingMarket, /Publishing an ad needs a card and starts a 7-day trial/i);

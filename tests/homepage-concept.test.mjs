@@ -32,7 +32,7 @@ test("homepage composition explains the product, flow, pricing and final signup"
   for (const copy of [
     "More leads.", "Less ad management.", "real estate agents",
     "HeroAdShowcase", "<WorkflowMotionStudy />", "<ResultsReporting />", "<HomepagePricing />",
-    "Ready to make your next ad?", "Start with three Feed and Story packs.",
+    "Ready to make your next ad?", "Start with one free ad pack: one Feed ad and one Story ad.",
   ]) assert.ok(component.includes(copy), `missing composition content: ${copy}`);
   assert.match(component, /TRIAL_SIGNUP_URL/);
   assert.match(component, /TRIAL_CTA_LABEL/);

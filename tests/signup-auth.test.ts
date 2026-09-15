@@ -118,7 +118,7 @@ test("login page points new clients to signup", () => {
   assert.match(source, /error === "confirm_failed"/);
   assert.match(source, /That confirmation link is invalid or expired/);
   assert.match(source, /href="\/signup"/);
-  assert.match(source, /Create three ads free/i);
+  assert.match(source, /Create your first ad pack free/i);
 });
 
 test("login form keeps email validation while identifying the account field to password managers", () => {

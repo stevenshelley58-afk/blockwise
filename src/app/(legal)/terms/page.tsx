@@ -82,8 +82,8 @@ export default function TermsOfServicePage() {
       </h2>
       <p>
         <strong>Creating and downloading an ad never needs a card.</strong> A new workspace starts
-        with six render credits, which is three complete Feed and Story ad packs. A complete pack
-        uses two render credits. Those credits are granted once your email address is verified and
+        with two render credits, which is one complete Feed and Story ad pack: one Feed ad and one
+        Story ad. A complete pack uses two render credits. Those credits are granted once your email address is verified and
         are yours to use whether or not you ever start a subscription. Creating, editing, saving,
         and downloading an ad are not the trial and never start a subscription or a charge.
       </p>

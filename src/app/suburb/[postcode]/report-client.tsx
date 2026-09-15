@@ -71,7 +71,7 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
           <div className="sr-topbar-actions">
             <Button variant="outline" size="lg" className="max-[760px]:hidden" type="button" onClick={() => setEmailOpen(true)}>Email me this audit</Button>
             <Button asChild size="lg">
-              <GateLink href={trialHref} intent="trial" postcode={postcode}>Create three ads free</GateLink>
+              <GateLink href={trialHref} intent="trial" postcode={postcode}>Create your first ad pack free</GateLink>
             </Button>
           </div>
         </div>
@@ -188,7 +188,7 @@ function ReportAdCard({ ad, postcode, suburb, longestId, longestDays }: { ad: Pu
 }
 
 function EmptyState({ suburb, postcode, nearby, trialHref }: { suburb: string; postcode: string; nearby: NearbyArea[]; trialHref: string }) {
-  return <section className="sr-empty"><h2>No live ads were observed for {suburb} today.</h2><p>That does not mean nobody is advertising. It means the current public dataset did not return a match for {postcode} or its surrounds.</p>{nearby.length ? <div><h3>Try a nearby report</h3>{nearby.map((area) => <Link key={area.postcode} href={`/suburb/${area.postcode}`}>{area.suburb} {area.postcode}<span>{area.count} ads</span></Link>)}</div> : null}<Button asChild size="lg"><GateLink href={trialHref} intent="trial" postcode={postcode}>Create three ads free</GateLink></Button></section>;
+  return <section className="sr-empty"><h2>No live ads were observed for {suburb} today.</h2><p>That does not mean nobody is advertising. It means the current public dataset did not return a match for {postcode} or its surrounds.</p>{nearby.length ? <div><h3>Try a nearby report</h3>{nearby.map((area) => <Link key={area.postcode} href={`/suburb/${area.postcode}`}>{area.suburb} {area.postcode}<span>{area.count} ads</span></Link>)}</div> : null}<Button asChild size="lg"><GateLink href={trialHref} intent="trial" postcode={postcode}>Create your first ad pack free</GateLink></Button></section>;
 }
 
 function GateLink({ href, intent, postcode, className, children }: { href: string; intent: string; postcode: string; className?: string; children: React.ReactNode }) {

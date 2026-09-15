@@ -138,7 +138,7 @@ export function StartStudio() {
 
               <Button asChild size="lg" className="hw-studio-cta">
                 <CtaLink location="start_studio" href="/signup">
-                  Create three ads free
+                  Create your first ad pack free
                 </CtaLink>
               </Button>
               <p className="hw-note">Nothing spends until you approve.</p>
