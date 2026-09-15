@@ -13,7 +13,7 @@ export const dynamic = "force-static";
 export default function PrivacyPolicyPage() {
   return (
     <>
-      <p style={{ color: "#475569", fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5 }}>
+      <p style={{ color: "var(--muted)", fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5 }}>
         Last updated: 7 September 2026
       </p>
       <h1 style={{ fontSize: 36, margin: "8px 0 24px", fontWeight: 600 }}>Privacy Policy</h1>

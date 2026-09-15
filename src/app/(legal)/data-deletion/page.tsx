@@ -22,7 +22,7 @@ export default async function DataDeletionPage({ searchParams }: PageProps) {
 
   return (
     <>
-      <p style={{ color: "#475569", fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5 }}>
+      <p style={{ color: "var(--muted)", fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5 }}>
         Last updated: 27 July 2026
       </p>
       <h1 style={{ fontSize: 36, margin: "8px 0 24px", fontWeight: 600 }}>Requesting Data Deletion</h1>
