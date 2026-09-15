@@ -136,6 +136,20 @@ async function applyCheckoutCompleted(
     return { outcome: "ignored", workspaceIds: [], reason: "checkout_workspace_not_found" };
   }
 
+  // Capture the billing contact Stripe collected at Checkout when the
+  // workspace has none, so transactional billing mail (the day-six trial
+  // reminder) has a real recipient. Never overwrite an address the customer
+  // set in Settings.
+  const checkoutEmail = checkoutBillingEmail(session);
+  if (checkoutEmail) {
+    const { error: emailError } = await service
+      .from("workspaces")
+      .update({ billing_email: checkoutEmail })
+      .eq("id", workspaceId)
+      .is("billing_email", null);
+    if (emailError) throw new Error(emailError.message);
+  }
+
   const acceptance = checkoutAcceptance(session, workspaceId, customerId, subscriptionId);
   if (acceptance) {
     const { error } = await service
@@ -497,8 +511,13 @@ function checkoutAcceptance(
   };
 }
 
-function accessStateForSubscription(status: string): string {
-  if (status === "trialing") return "trialing";
+/** The billing contact Stripe collected at Checkout, if any. */
+function checkoutBillingEmail(session: StripeObject): string | null {
+  const details = objectValue(session.customer_details);
+  return stringValue(details?.email) ?? stringValue(session.customer_email);
+}
+
+function accessStateForSubscription(status: string): string {  if (status === "trialing") return "trialing";
   if (status === "active") return "paid";
   if (status === "canceled" || status === "incomplete_expired") return "canceled";
   if (isPaymentRecoveryStatus(status)) return "payment_recovery";

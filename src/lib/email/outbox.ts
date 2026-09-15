@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { redactString } from "../redact.ts";
+import {
+  TRIAL_REMINDER_MESSAGE_TYPE,
+  evaluateTrialReminderSend,
+} from "../billing/trial-reminder-state.ts";
 import { escapeHtml } from "./provider.ts";
 import type { EmailMessage, EmailProvider } from "./provider.ts";
 
@@ -216,6 +220,36 @@ export async function drainEmailOutbox(
       } catch {
         await finalizeRow(supabase, row.id, leaseToken, { status: "failed", lastError: "follow_up_lifecycle_check_unavailable", nextAttemptAt: retryAt(row.attempts), projection });
         summary.failed += 1;
+        continue;
+      }
+    }
+
+    // A trial reminder is scheduled days ahead, so its premise can expire while
+    // it waits. Re-read subscription truth at send time and suppress rather
+    // than tell a customer their trial ends tomorrow when it has already ended,
+    // renewed, changed length or been cancelled.
+    if (row.message_type === TRIAL_REMINDER_MESSAGE_TYPE) {
+      let decision: Awaited<ReturnType<typeof evaluateTrialReminderSend>>;
+      try {
+        decision = await evaluateTrialReminderSend(supabase, row);
+      } catch {
+        await finalizeRow(supabase, row.id, leaseToken, {
+          status: "failed",
+          lastError: "trial_reminder_state_check_unavailable",
+          nextAttemptAt: retryAt(row.attempts),
+          projection,
+        });
+        summary.failed += 1;
+        continue;
+      }
+      if (decision.action === "suppress") {
+        const finalized = await finalizeRow(supabase, row.id, leaseToken, {
+          status: "suppressed",
+          lastError: decision.reason,
+          projection,
+        });
+        if (finalized) summary.suppressed += 1;
+        else summary.failed += 1;
         continue;
       }
     }
