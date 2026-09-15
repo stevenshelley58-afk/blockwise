@@ -8,7 +8,7 @@ test("self-serve setup navigation exposes Brand Pack and one combined Settings e
   const config = readFileSync("src/config/niche/blockwise.ts", "utf8");
   const navBlock = config.match(/items: \[[\s\S]*?\]/)?.[0] ?? "";
 
-  assert.match(navBlock, /href: "\/ad-studio\/brand", label: "Brand Pack"/);
+  assert.match(navBlock, /href: "\/ad-builder\/brand", label: "Brand Pack"/);
   assert.match(navBlock, /href: "\/settings", label: "Settings"/);
   assert.doesNotMatch(navBlock, /label: "Identity"/);
   assert.doesNotMatch(navBlock, /label: "Integrations"/);

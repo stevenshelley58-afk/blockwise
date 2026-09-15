@@ -32,8 +32,8 @@ test("Radar viewer exposes Save feedback inside the modal and keeps internal det
 });
 
 test("Ads overview only offers New ad when reviewed templates exist", () => {
-  const home = read("src/components/adstudio/home-command.tsx");
-  const page = read("src/app/(customer)/ad-studio/page.tsx");
+  const home = read("src/components/adbuilder/home-command.tsx");
+  const page = read("src/app/(customer)/ad-builder/page.tsx");
   // The page only needs `length > 0` to decide whether to offer New ad, so it
   // uses the existence probe instead of loading the whole template library:
   // listTemplates selects template_json for every active template, which
@@ -45,8 +45,8 @@ test("Ads overview only offers New ad when reviewed templates exist", () => {
 });
 
 test("Empty libraries do not expose zero-count filter controls", () => {
-  const ads = read("src/components/adstudio/ads-library.tsx");
-  const media = read("src/components/adstudio/media-library.tsx");
+  const ads = read("src/components/adbuilder/ads-library.tsx");
+  const media = read("src/components/adbuilder/media-library.tsx");
   assert.ok(ads.includes("ads.length > 0 ? <>"));
   assert.ok(media.includes("allAssets.length > 0 ? <>"));
 });

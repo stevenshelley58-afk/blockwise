@@ -166,8 +166,8 @@ test("best-effort writer never changes the owning transaction outcome", async ()
 test("owning server transactions emit authoritative funnel events with stable keys", () => {
   const sources = {
     auth: readFileSync("src/app/auth/confirm/route.ts", "utf8"),
-    website: readFileSync("src/app/api/adstudio/brand-kits/extract/route.ts", "utf8"),
-    brand: readFileSync("src/app/api/adstudio/brand-kits/[id]/approve/route.ts", "utf8"),
+    website: readFileSync("src/app/api/adbuilder/brand-kits/extract/route.ts", "utf8"),
+    brand: readFileSync("src/app/api/adbuilder/brand-kits/[id]/approve/route.ts", "utf8"),
     meta: readFileSync("src/app/api/integrations/meta/callback/route.ts", "utf8"),
     metaHelp: readFileSync("src/app/api/integrations/meta/help/route.ts", "utf8"),
     metaPublish: readFileSync("src/lib/providers/meta-publish-worker.ts", "utf8"),

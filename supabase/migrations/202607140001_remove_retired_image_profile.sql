@@ -1,4 +1,4 @@
--- AdStudio now has one image path: sample clone first, then targeted edits.
+-- AdBuilder now has one image path: sample clone first, then targeted edits.
 -- Remove the retired profile while retaining immutable run history. The counts
 -- are emitted before nullable historical links are detached.
 update public.model_profile_versions v

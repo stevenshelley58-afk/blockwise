@@ -83,9 +83,9 @@ async function withLegacyBearerEnabled<T>(fn: () => Promise<T>): Promise<T> {
 function validHeaders(overrides: Record<string, string> = {}, secret = SECRET) {
   const timestamp = String(Math.floor(Date.now() / 1000));
   const nonce = overrides["x-blockwise-nonce"] ?? crypto.randomUUID();
-  const scope = overrides["x-blockwise-scope"] ?? "adstudio.publish";
+  const scope = overrides["x-blockwise-scope"] ?? "adbuilder.publish";
   const method = overrides["x-blockwise-method"] ?? "GET";
-  const path = overrides["x-blockwise-path"] ?? "/api/internal/adstudio/publish/state?adId=a&workspaceId=w";
+  const path = overrides["x-blockwise-path"] ?? "/api/internal/adbuilder/publish/state?adId=a&workspaceId=w";
   const body = overrides["x-blockwise-body"] ?? "";
   const signature = sign({ timestamp, nonce, scope, method, path, bodyHash: hashInternalBody(body) }, secret);
   return {
@@ -98,8 +98,8 @@ function validHeaders(overrides: Record<string, string> = {}, secret = SECRET) {
 
 test("valid signed GET request is accepted and audited", async () => {
   const { client, audits } = makeSupabase();
-  const url = "https://blockwise.sale/api/internal/adstudio/publish/state?adId=a&workspaceId=w";
-  const result = await verifyInternalRequest(makeRequest(url, validHeaders()), "adstudio.publish", {
+  const url = "https://blockwise.sale/api/internal/adbuilder/publish/state?adId=a&workspaceId=w";
+  const result = await verifyInternalRequest(makeRequest(url, validHeaders()), "adbuilder.publish", {
     secret: SECRET,
     supabase: client as never,
   });
@@ -107,7 +107,7 @@ test("valid signed GET request is accepted and audited", async () => {
   assert.equal(result.ok, true);
   assert.equal(audits.length, 1);
   assert.equal(audits[0].action, "internal.api.request");
-  assert.equal(audits[0].metadata.scope, "adstudio.publish");
+  assert.equal(audits[0].metadata.scope, "adbuilder.publish");
 });
 
 test("valid signed POST request with body is accepted", async () => {
@@ -115,12 +115,12 @@ test("valid signed POST request with body is accepted", async () => {
   const body = JSON.stringify({ adId: "a", workspaceId: "w" });
   const headers = validHeaders({
     "x-blockwise-method": "POST",
-    "x-blockwise-path": "/api/internal/adstudio/publish/freeze",
+    "x-blockwise-path": "/api/internal/adbuilder/publish/freeze",
     "x-blockwise-body": body,
   });
   const result = await verifyInternalRequest(
-    makeRequest("https://blockwise.sale/api/internal/adstudio/publish/freeze", headers, "POST", body),
-    "adstudio.publish",
+    makeRequest("https://blockwise.sale/api/internal/adbuilder/publish/freeze", headers, "POST", body),
+    "adbuilder.publish",
     { secret: SECRET, supabase: client as never, body },
   );
 
@@ -130,14 +130,14 @@ test("valid signed POST request with body is accepted", async () => {
 test("successful legacy bearer access is audited without nonce replay protection", async () => {
   const { client, audits, seen } = makeSupabase();
   const result = await withLegacyBearerEnabled(() => verifyInternalRequest(
-    makeRequest("https://blockwise.sale/api/internal/adstudio/publish/state", {
+    makeRequest("https://blockwise.sale/api/internal/adbuilder/publish/state", {
       authorization: `Bearer ${SECRET}`,
     }),
-    "adstudio.publish",
+    "adbuilder.publish",
     { secret: SECRET, supabase: client as never },
   ));
 
-  assert.deepEqual(result, { ok: true, scope: "adstudio.publish" });
+  assert.deepEqual(result, { ok: true, scope: "adbuilder.publish" });
   assert.equal(seen.size, 0);
   assert.equal(audits.length, 1);
   assert.equal(audits[0].metadata.authMethod, "legacy_bearer");
@@ -155,10 +155,10 @@ test("legacy bearer access fails closed when its audit receipt cannot persist", 
     },
   };
   const result = await withLegacyBearerEnabled(() => verifyInternalRequest(
-    makeRequest("https://blockwise.sale/api/internal/adstudio/publish/state", {
+    makeRequest("https://blockwise.sale/api/internal/adbuilder/publish/state", {
       authorization: `Bearer ${SECRET}`,
     }),
-    "adstudio.publish",
+    "adbuilder.publish",
     { secret: SECRET, supabase: failing as never },
   ));
 
@@ -168,10 +168,10 @@ test("legacy bearer access fails closed when its audit receipt cannot persist", 
 test("legacy bearer access remains rejected when compatibility is disabled", async () => {
   const { client } = makeSupabase();
   const result = await verifyInternalRequest(
-    makeRequest("https://blockwise.sale/api/internal/adstudio/publish/state", {
+    makeRequest("https://blockwise.sale/api/internal/adbuilder/publish/state", {
       authorization: `Bearer ${SECRET}`,
     }),
-    "adstudio.publish",
+    "adbuilder.publish",
     { secret: SECRET, supabase: client as never },
   );
 
@@ -181,8 +181,8 @@ test("legacy bearer access remains rejected when compatibility is disabled", asy
 test("missing secret fails closed with 503", async () => {
   const { client } = makeSupabase();
   const result = await verifyInternalRequest(
-    makeRequest("https://x.test/api/internal/adstudio/publish/state", {}),
-    "adstudio.publish",
+    makeRequest("https://x.test/api/internal/adbuilder/publish/state", {}),
+    "adbuilder.publish",
     { secret: "", supabase: client as never },
   );
 
@@ -194,8 +194,8 @@ test("tampered signature is rejected", async () => {
   const headers = validHeaders();
   headers["x-blockwise-signature"] = "0".repeat(64);
   const result = await verifyInternalRequest(
-    makeRequest("https://blockwise.sale/api/internal/adstudio/publish/state?adId=a&workspaceId=w", headers),
-    "adstudio.publish",
+    makeRequest("https://blockwise.sale/api/internal/adbuilder/publish/state?adId=a&workspaceId=w", headers),
+    "adbuilder.publish",
     { secret: SECRET, supabase: client as never },
   );
 
@@ -206,8 +206,8 @@ test("signature signed with the wrong secret is rejected", async () => {
   const { client } = makeSupabase();
   const headers = validHeaders({}, "another-secret-entirely-0123456789");
   const result = await verifyInternalRequest(
-    makeRequest("https://blockwise.sale/api/internal/adstudio/publish/state?adId=a&workspaceId=w", headers),
-    "adstudio.publish",
+    makeRequest("https://blockwise.sale/api/internal/adbuilder/publish/state?adId=a&workspaceId=w", headers),
+    "adbuilder.publish",
     { secret: SECRET, supabase: client as never },
   );
 
@@ -219,16 +219,16 @@ test("stale timestamp beyond the skew window is rejected", async () => {
   const { client } = makeSupabase();
   const staleSeconds = Math.floor(Date.now() / 1000) - INTERNAL_AUTH_MAX_CLOCK_SKEW_SECONDS - 5;
   const nonce = crypto.randomUUID();
-  const path = "/api/internal/adstudio/publish/state?adId=a&workspaceId=w";
-  const signature = sign({ timestamp: String(staleSeconds), nonce, scope: "adstudio.publish", method: "GET", path, bodyHash: hashInternalBody("") });
+  const path = "/api/internal/adbuilder/publish/state?adId=a&workspaceId=w";
+  const signature = sign({ timestamp: String(staleSeconds), nonce, scope: "adbuilder.publish", method: "GET", path, bodyHash: hashInternalBody("") });
   const result = await verifyInternalRequest(
     makeRequest(`https://blockwise.sale${path}`, {
       "x-blockwise-timestamp": String(staleSeconds),
       "x-blockwise-nonce": nonce,
-      "x-blockwise-scope": "adstudio.publish",
+      "x-blockwise-scope": "adbuilder.publish",
       "x-blockwise-signature": signature,
     }),
-    "adstudio.publish",
+    "adbuilder.publish",
     { secret: SECRET, supabase: client as never },
   );
 
@@ -237,10 +237,10 @@ test("stale timestamp beyond the skew window is rejected", async () => {
 
 test("wrong scope claim is rejected with 403", async () => {
   const { client } = makeSupabase();
-  const headers = validHeaders({ "x-blockwise-scope": "adstudio.templates" });
+  const headers = validHeaders({ "x-blockwise-scope": "adbuilder.templates" });
   const result = await verifyInternalRequest(
-    makeRequest("https://blockwise.sale/api/internal/adstudio/publish/state?adId=a&workspaceId=w", headers),
-    "adstudio.publish",
+    makeRequest("https://blockwise.sale/api/internal/adbuilder/publish/state?adId=a&workspaceId=w", headers),
+    "adbuilder.publish",
     { secret: SECRET, supabase: client as never },
   );
 
@@ -252,8 +252,8 @@ test("replayed nonce is rejected", async () => {
   const { client } = makeSupabase({ existingNonces: new Set([nonce]) });
   const headers = validHeaders({ "x-blockwise-nonce": nonce });
   const result = await verifyInternalRequest(
-    makeRequest("https://blockwise.sale/api/internal/adstudio/publish/state?adId=a&workspaceId=w", headers),
-    "adstudio.publish",
+    makeRequest("https://blockwise.sale/api/internal/adbuilder/publish/state?adId=a&workspaceId=w", headers),
+    "adbuilder.publish",
     { secret: SECRET, supabase: client as never },
   );
 
@@ -263,8 +263,8 @@ test("replayed nonce is rejected", async () => {
 test("missing auth headers are rejected without touching the nonce store", async () => {
   const { client, seen } = makeSupabase();
   const result = await verifyInternalRequest(
-    makeRequest("https://blockwise.sale/api/internal/adstudio/publish/state?adId=a&workspaceId=w", {}),
-    "adstudio.publish",
+    makeRequest("https://blockwise.sale/api/internal/adbuilder/publish/state?adId=a&workspaceId=w", {}),
+    "adbuilder.publish",
     { secret: SECRET, supabase: client as never },
   );
 
@@ -284,8 +284,8 @@ test("nonce store failure fails closed with 503", async () => {
   };
   const headers = validHeaders();
   const result = await verifyInternalRequest(
-    makeRequest("https://blockwise.sale/api/internal/adstudio/publish/state?adId=a&workspaceId=w", headers),
-    "adstudio.publish",
+    makeRequest("https://blockwise.sale/api/internal/adbuilder/publish/state?adId=a&workspaceId=w", headers),
+    "adbuilder.publish",
     { secret: SECRET, supabase: failing as never },
   );
 

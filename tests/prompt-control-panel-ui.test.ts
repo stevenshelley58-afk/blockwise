@@ -19,5 +19,5 @@ test("operator prompt controls expose trace fields without enabling provider tes
   assert.match(detailPage, /Provider Response/);
   assert.match(detailPage, /Artifacts And Approvals/);
   assert.match(detailPage, /Lead Result Trace/);
-  assert.doesNotMatch(detailPage, /recordAdStudioProviderRun/);
+  assert.doesNotMatch(detailPage, /recordAdBuilderProviderRun/);
 });

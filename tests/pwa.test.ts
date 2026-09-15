@@ -14,7 +14,7 @@ import {
   canUseOfflineFallbackForNavigation,
   createServiceWorkerSource,
   isExcludedServiceWorkerPath,
-  isAdStudioThumbnailPath,
+  isAdBuilderThumbnailPath,
   isCacheableStaticAssetRequest,
 } from "../src/lib/pwa/sw-policy.ts";
 
@@ -54,15 +54,15 @@ test("service worker policy caches only same-origin static assets", () => {
   assert.equal(isCacheableStaticAssetRequest({ url: "/icons/icon-192.png", destination: "image" }, ORIGIN), true);
   // Display-image width variants go to the bounded thumbnail cache, whatever
   // ladder produced them, so they cannot evict app assets from the static cache.
-  assert.equal(isCacheableStaticAssetRequest({ url: "/adstudio-thumbnails/meta/abc-384.webp", destination: "image" }, ORIGIN), false);
-  assert.equal(isAdStudioThumbnailPath("/adstudio-thumbnails/meta/abc-384.webp"), true);
-  assert.equal(isAdStudioThumbnailPath("/adstudio-thumbnails/meta/abc-preview.webp"), false);
+  assert.equal(isCacheableStaticAssetRequest({ url: "/adbuilder-thumbnails/meta/abc-384.webp", destination: "image" }, ORIGIN), false);
+  assert.equal(isAdBuilderThumbnailPath("/adbuilder-thumbnails/meta/abc-384.webp"), true);
+  assert.equal(isAdBuilderThumbnailPath("/adbuilder-thumbnails/meta/abc-preview.webp"), false);
   assert.equal(isCacheableStaticAssetRequest({ url: "/hero/hero-wide.jpg", destination: "image" }, ORIGIN), true);
   assert.equal(
-    isCacheableStaticAssetRequest({ url: "/adstudio-samples/sample.png", destination: "image" }, ORIGIN),
+    isCacheableStaticAssetRequest({ url: "/adbuilder-samples/sample.png", destination: "image" }, ORIGIN),
     false,
   );
-  assert.equal(isExcludedServiceWorkerPath("/adstudio-samples/sample.png"), true);
+  assert.equal(isExcludedServiceWorkerPath("/adbuilder-samples/sample.png"), true);
 
   assert.equal(isCacheableStaticAssetRequest({ url: "/api/report.png", destination: "image" }, ORIGIN), false);
   assert.equal(isCacheableStaticAssetRequest({ url: "/auth/callback.js", destination: "script" }, ORIGIN), false);

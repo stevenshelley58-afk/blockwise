@@ -93,7 +93,7 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
   const { id } = await Promise.resolve(params);
   const { supabase, access } = await requirePageSurfaceAccess("operator");
   let providerRunQuery = supabase
-    .from("adstudio_provider_runs")
+    .from("adbuilder_provider_runs")
     .select(
       "id,workspace_id,user_id,correlation_id,ai_run_id,ai_usage_ledger_id,task_type,model_profile,provider_name,provider_type,model_name,prompt_version_id,input_json,output_json,usage_json,cost_estimate,status,error_json,created_at",
     )
@@ -179,7 +179,7 @@ export default async function ModelRunDetailPage({ params }: PageProps) {
     correlationId
       ? supabase
           .from("lead_source_attribution")
-          .select("id,lead_id,provider,source,meta_publish_plan_id,adstudio_campaign_id,approval_request_id,created_at")
+          .select("id,lead_id,provider,source,meta_publish_plan_id,adbuilder_campaign_id,approval_request_id,created_at")
           .eq("workspace_id", traceWorkspaceId)
           .eq("correlation_id", correlationId)
           .order("created_at", { ascending: false })

@@ -9,8 +9,8 @@ alter table public.provider_connections
 create table if not exists public.meta_publish_plans (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null references public.workspaces (id) on delete cascade,
-  adstudio_campaign_id uuid not null references public.adstudio_campaigns (id) on delete cascade,
-  adstudio_export_id uuid references public.adstudio_exports (id) on delete set null,
+  adbuilder_campaign_id uuid not null references public.adbuilder_campaigns (id) on delete cascade,
+  adbuilder_export_id uuid references public.adbuilder_exports (id) on delete set null,
   campaign_id uuid references public.campaigns (id) on delete set null,
   provider_connection_id uuid not null references public.provider_connections (id) on delete restrict,
   approval_request_id uuid references public.approval_requests (id) on delete set null,

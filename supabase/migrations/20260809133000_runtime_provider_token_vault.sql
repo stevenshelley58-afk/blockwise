@@ -1,4 +1,4 @@
--- Ad Studio recovery runs on the VPS, but provider credentials must remain in
+-- Ad Builder recovery runs on the VPS, but provider credentials must remain in
 -- the encrypted private vault rather than the worker environment. Extend the
 -- existing vault with a service-scoped lane while preserving all connection-
 -- scoped Meta/Google rows and their service-role-only RPC surface.

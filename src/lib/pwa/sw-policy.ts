@@ -4,7 +4,7 @@ export const PWA_CACHE_PREFIX = "blockwise-pwa";
 // instead of serving a stale cache-first copy.
 export const PWA_CACHE_VERSION = "v5";
 export const STATIC_CACHE_NAME = `${PWA_CACHE_PREFIX}-${PWA_CACHE_VERSION}-static`;
-export const THUMBNAIL_CACHE_NAME = `${PWA_CACHE_PREFIX}-${PWA_CACHE_VERSION}-adstudio-thumbnails`;
+export const THUMBNAIL_CACHE_NAME = `${PWA_CACHE_PREFIX}-${PWA_CACHE_VERSION}-adbuilder-thumbnails`;
 export const STATIC_CACHE_MAX_ENTRIES = 160;
 export const THUMBNAIL_CACHE_MAX_ENTRIES = 240;
 export const OFFLINE_FALLBACK_URL = "/offline.html";
@@ -14,7 +14,7 @@ export const PRECACHE_URLS = [OFFLINE_FALLBACK_URL, "/icons/icon-192.png", "/ico
 // Canonical samples are 1-3.5 MB generation inputs. The browser's normal HTTP
 // cache may retain them, but the service worker must not pin the whole 182 MB
 // library indefinitely.
-export const EXCLUDED_PATH_PREFIXES = ["/api/", "/auth/", "/_next/data/", "/adstudio-samples/"] as const;
+export const EXCLUDED_PATH_PREFIXES = ["/api/", "/auth/", "/_next/data/", "/adbuilder-samples/"] as const;
 
 export const STATIC_ASSET_PATH_PREFIXES = ["/_next/static/", "/icons/", "/hero/", "/ads/"] as const;
 
@@ -99,7 +99,7 @@ export function isCacheableStaticAssetRequest(request: ServiceWorkerRequestLike,
   if (isProviderUrl(url) || isExcludedServiceWorkerPath(url.pathname)) {
     return false;
   }
-  if (isAdStudioThumbnailPath(url.pathname)) return false;
+  if (isAdBuilderThumbnailPath(url.pathname)) return false;
 
   if (request.mode === "navigate" || request.destination === "document") {
     return false;
@@ -109,12 +109,12 @@ export function isCacheableStaticAssetRequest(request: ServiceWorkerRequestLike,
 }
 
 /**
- * A width variant of an Ad Studio display image. These are numerous and cheap,
+ * A width variant of an Ad Builder display image. These are numerous and cheap,
  * so they go to their own bounded cache instead of competing with app assets;
  * the rule matches any `-<width>.webp` suffix, not one hard-coded ladder.
  */
-export function isAdStudioThumbnailPath(pathname: string): boolean {
-  return pathname.startsWith("/adstudio-thumbnails/") && /-\d+\.webp$/.test(pathname);
+export function isAdBuilderThumbnailPath(pathname: string): boolean {
+  return pathname.startsWith("/adbuilder-thumbnails/") && /-\d+\.webp$/.test(pathname);
 }
 
 export function canUseOfflineFallbackForNavigation(request: ServiceWorkerRequestLike, origin: string): boolean {
@@ -191,7 +191,7 @@ function isCacheableStaticAssetRequest(request) {
   if (isProviderUrl(url) || isExcludedServiceWorkerPath(url.pathname)) {
     return false;
   }
-  if (isAdStudioThumbnailPath(url.pathname)) return false;
+  if (isAdBuilderThumbnailPath(url.pathname)) return false;
 
   if (request.mode === "navigate" || request.destination === "document") {
     return false;
@@ -200,8 +200,8 @@ function isCacheableStaticAssetRequest(request) {
   return isStaticAssetPath(url.pathname, request.destination);
 }
 
-function isAdStudioThumbnailPath(pathname) {
-  return pathname.startsWith("/adstudio-thumbnails/") && /-\d+\.webp$/.test(pathname);
+function isAdBuilderThumbnailPath(pathname) {
+  return pathname.startsWith("/adbuilder-thumbnails/") && /-\d+\.webp$/.test(pathname);
 }
 
 function canUseOfflineFallbackForNavigation(request) {
@@ -320,7 +320,7 @@ self.addEventListener("fetch", (event) => {
 
   if (!isCacheableStaticAssetRequest(request)) {
     const url = new URL(request.url);
-    if (request.method === "GET" && isSameOrigin(url) && isAdStudioThumbnailPath(url.pathname)) {
+    if (request.method === "GET" && isSameOrigin(url) && isAdBuilderThumbnailPath(url.pathname)) {
       event.respondWith(boundedThumbnailCacheFirst(request, event));
     }
     return;

@@ -17,7 +17,7 @@ import { sendPaidServiceAlert, type AlertMessage } from "./notify.ts";
 export type ModelFallbackEvent = {
   /** Stable id for this provider handoff (not the whole model outage). */
   eventId?: string;
-  /** Generation stage, e.g. "adstudio.copy" or "adstudio.image". */
+  /** Generation stage, e.g. "adbuilder.copy" or "adbuilder.image". */
   stage: string;
   /** The operator-selected primary model that failed. */
   fromModel: string;

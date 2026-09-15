@@ -802,7 +802,7 @@ export function WorkflowShowcase() {
         variants={DEMO_RISE}
       >
         <div className="hc-process-demo-topbar">
-          <span><i aria-hidden="true" /> Blockwise Ad Studio</span>
+          <span><i aria-hidden="true" /> Blockwise Ad Builder</span>
 
           <div className="hc-process-stage">
             <div className="hc-process-steps" ref={stepsRef} role="group" aria-label="How Blockwise works">

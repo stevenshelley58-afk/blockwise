@@ -92,7 +92,7 @@ create table if not exists public.research_saved_ads (
   note text,
   source_snapshot_url text,
   handoff_status text not null default 'saved'
-    check (handoff_status in ('saved', 'sent_to_adstudio', 'archived')),
+    check (handoff_status in ('saved', 'sent_to_adbuilder', 'archived')),
   handoff_payload jsonb not null default '{}'::jsonb,
   created_by uuid references public.profiles (id) on delete set null,
   created_at timestamptz not null default now(),

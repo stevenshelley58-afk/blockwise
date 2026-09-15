@@ -9,7 +9,7 @@ values
   ('72222222-2222-4222-8222-222222222222', 'Queue lease test B', 'self_serve', 'AU')
 on conflict (id) do nothing;
 
-insert into public.adstudio_brand_kits (
+insert into public.adbuilder_brand_kits (
   id,
   workspace_id,
   business_name
@@ -21,7 +21,7 @@ values (
 )
 on conflict (id) do nothing;
 
-insert into public.adstudio_campaigns (
+insert into public.adbuilder_campaigns (
   id,
   workspace_id,
   brand_kit_id,
@@ -58,7 +58,7 @@ on conflict (id) do nothing;
 insert into public.meta_publish_plans (
   id,
   workspace_id,
-  adstudio_campaign_id,
+  adbuilder_campaign_id,
   provider_connection_id,
   adapter,
   status,

@@ -33,15 +33,15 @@ const SHEET_DANGER_CLASS =
 function customerItems(): { primaryItems: MobileNavItem[]; overflowItems: MobileNavItem[] } {
   const allItems = navByVariant.self_serve;
   const byHref = (href: string) => allItems.find((item) => item.href === href);
-  const primaryItems = [byHref("/self-serve"), byHref("/ad-studio"), byHref("/results"), byHref("/leads")]
+  const primaryItems = [byHref("/self-serve"), byHref("/ad-builder"), byHref("/results"), byHref("/leads")]
     .filter((item): item is NavItem => Boolean(item));
   const primaryHrefs = new Set(primaryItems.map((item) => item.href));
   return { primaryItems, overflowItems: allItems.filter((item) => !primaryHrefs.has(item.href)) };
 }
 
 function itemIsActive(pathname: string, item: MobileNavItem, homeHref: string) {
-  if (item.href === "/ad-studio") return pathname === "/ad-studio" || pathname.startsWith("/ad-studio/");
-  if (pathname.startsWith("/ad-studio/")) return false;
+  if (item.href === "/ad-builder") return pathname === "/ad-builder" || pathname.startsWith("/ad-builder/");
+  if (pathname.startsWith("/ad-builder/")) return false;
   if (item.href === homeHref) {
     return pathname === homeHref || pathname.startsWith(`${homeHref}/`);
   }
@@ -57,7 +57,7 @@ export function MobileBottomNav({ homeHref = "/self-serve", account, homePilot =
   const { primaryItems, overflowItems } = useMemo(() => customerItems(), []);
   const copy = niche.copy.shell;
   const activeItems = navByVariant.self_serve;
-  const moreCurrent = !pathname.startsWith("/ad-studio/") && overflowItems.some((item) => itemIsActive(pathname, item, homeHref));
+  const moreCurrent = !pathname.startsWith("/ad-builder/") && overflowItems.some((item) => itemIsActive(pathname, item, homeHref));
   const moreActive = moreOpen || moreCurrent;
 
   async function signOut() {
@@ -81,7 +81,7 @@ export function MobileBottomNav({ homeHref = "/self-serve", account, homePilot =
           const Icon = homePilot
             ? item.href === homeHref
               ? House
-              : item.href === "/ad-studio"
+              : item.href === "/ad-builder"
                 ? Palette
                 : item.href === "/results"
                   ? ChartNoAxesCombined

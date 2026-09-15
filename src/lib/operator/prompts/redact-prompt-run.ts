@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import type { ModelProfileKey } from "../../ai/model-registry.ts";
 import { estimateRunCostUsd } from "../../ai/model-registry.ts";
-import { ProviderRequestError } from "../../adstudio/providers.ts";
+import { ProviderRequestError } from "../../adbuilder/providers.ts";
 import type {
   ImageProviderAdapter,
   ImageProviderResponse,
@@ -10,7 +10,7 @@ import type {
   ProviderUsage,
   TextProviderAdapter,
   TextProviderResponse,
-} from "../../adstudio/providers.ts";
+} from "../../adbuilder/providers.ts";
 import { recordAuditLog as writeAuditLog } from "../../supabase/audit.ts";
 import { createSupabaseServiceClient } from "../../supabase/service.ts";
 
@@ -18,15 +18,15 @@ import type { AssembledPrompt } from "./assemble-prompt.ts";
 
 export type RedactedProviderRunInput = {
   taskType:
-    | "adstudio.copy"
-    | "adstudio.template_copy"
-    | "adstudio.image"
-    | "adstudio.clone"
-    | "adstudio.clone_qa"
-    | "adstudio.clone_regions"
-    | "adstudio.text_layer_styles"
-    | "adstudio.background"
-    | "adstudio.scoring";
+    | "adbuilder.copy"
+    | "adbuilder.template_copy"
+    | "adbuilder.image"
+    | "adbuilder.clone"
+    | "adbuilder.clone_qa"
+    | "adbuilder.clone_regions"
+    | "adbuilder.text_layer_styles"
+    | "adbuilder.background"
+    | "adbuilder.scoring";
   modelProfile: ModelProfileKey;
   correlationId?: string;
   userId?: string | null;
@@ -177,7 +177,7 @@ export function buildProviderRunAttempt(input: {
   };
 }
 
-export async function reserveAdStudioProviderAttempt(input: {
+export async function reserveAdBuilderProviderAttempt(input: {
   workspaceId: string;
   mutationId: string;
   attemptIndex: number;
@@ -212,7 +212,7 @@ export async function reserveAdStudioProviderAttempt(input: {
   let data: unknown;
   let error: { message: string } | null;
   try {
-    const response = await serviceSupabase.rpc("adstudio_reserve_provider_attempt", {
+    const response = await serviceSupabase.rpc("adbuilder_reserve_provider_attempt", {
       p_workspace_id: input.workspaceId,
       p_mutation_id: input.mutationId,
       p_attempt_index: input.attemptIndex,
@@ -256,26 +256,26 @@ export function parseProviderAttemptReservationResult(data: unknown): {
   };
 }
 
-export async function markAdStudioProviderAttemptSubmitted(input: {
+export async function markAdBuilderProviderAttemptSubmitted(input: {
   workspaceId: string;
   mutationId: string;
   attemptIndex: number;
 }): Promise<void> {
   await updateProviderAttemptOutbox({
-    rpc: "adstudio_mark_provider_attempt_submitted",
+    rpc: "adbuilder_mark_provider_attempt_submitted",
     failureMessage: "Provider attempt submission marker failed; request was not sent.",
     input,
   });
 }
 
-export async function cancelAdStudioProviderAttempt(input: {
+export async function cancelAdBuilderProviderAttempt(input: {
   workspaceId: string;
   mutationId: string;
   attemptIndex: number;
   reason: string;
 }): Promise<void> {
   await updateProviderAttemptOutbox({
-    rpc: "adstudio_cancel_provider_attempt",
+    rpc: "adbuilder_cancel_provider_attempt",
     failureMessage: "Provider attempt cancellation failed.",
     input,
   });
@@ -286,7 +286,7 @@ export async function cancelAdStudioProviderAttempt(input: {
  * provider can be tried; provider failures return a normalized attempt so the
  * caller may choose an explicitly priced fallback.
  */
-export async function executeAdStudioProviderAttempt<T extends TextProviderResponse | ImageProviderResponse>(input: {
+export async function executeAdBuilderProviderAttempt<T extends TextProviderResponse | ImageProviderResponse>(input: {
   workspaceId: string;
   mutationId: string;
   attemptIndex: number;
@@ -294,16 +294,16 @@ export async function executeAdStudioProviderAttempt<T extends TextProviderRespo
   provider: TextProviderAdapter | ImageProviderAdapter;
   execute(): Promise<T>;
 }): Promise<ProviderAttemptExecution<T>> {
-  await reserveAdStudioProviderAttempt(input);
+  await reserveAdBuilderProviderAttempt(input);
 
   try {
-    await markAdStudioProviderAttemptSubmitted(input);
+    await markAdBuilderProviderAttemptSubmitted(input);
   } catch (error) {
     // The request has not been invoked. Close the durable claim when possible;
     // the finalizer can also synthesize an unbilled recovery attempt if this
     // cancellation write itself is unavailable.
     try {
-      await cancelAdStudioProviderAttempt({ ...input, reason: errorSummary(error) });
+      await cancelAdBuilderProviderAttempt({ ...input, reason: errorSummary(error) });
     } catch (cancelError) {
       throw new ProviderRunPersistenceError(
         `Provider dispatch was blocked and its reservation could not be closed: ${errorSummary(cancelError)}`,
@@ -329,7 +329,7 @@ export async function executeAdStudioProviderAttempt<T extends TextProviderRespo
     };
   } catch (error) {
     if (error instanceof ProviderRequestError && !error.requestSubmitted) {
-      await cancelAdStudioProviderAttempt({
+      await cancelAdBuilderProviderAttempt({
         ...input,
         reason: errorSummary(error),
       });
@@ -386,7 +386,7 @@ export function buildProviderRunAccounting(
   };
 }
 
-export async function recordAdStudioProviderRun(input: ProviderRunLogInput): Promise<void> {
+export async function recordAdBuilderProviderRun(input: ProviderRunLogInput): Promise<void> {
   let serviceSupabase: ReturnType<typeof createSupabaseServiceClient>;
   try {
     serviceSupabase = createSupabaseServiceClient();
@@ -429,7 +429,7 @@ export async function recordAdStudioProviderRun(input: ProviderRunLogInput): Pro
   let data: unknown;
   let error: { message: string } | null;
   try {
-    let response = await serviceSupabase.rpc("adstudio_record_provider_run", {
+    let response = await serviceSupabase.rpc("adbuilder_record_provider_run", {
       p_workspace_id: input.workspaceId,
       p_mutation_id: mutationId,
       p_payload_hash: payloadHash,
@@ -437,7 +437,7 @@ export async function recordAdStudioProviderRun(input: ProviderRunLogInput): Pro
       p_attempts: attempts,
     });
     if (shouldRecoverProviderRun(attempts, response.error)) {
-      response = await serviceSupabase.rpc("adstudio_recover_provider_run", {
+      response = await serviceSupabase.rpc("adbuilder_recover_provider_run", {
         p_workspace_id: input.workspaceId,
         p_mutation_id: mutationId,
         p_payload_hash: payloadHash,
@@ -448,13 +448,13 @@ export async function recordAdStudioProviderRun(input: ProviderRunLogInput): Pro
     data = response.data;
     error = response.error;
   } catch (cause) {
-    throw new ProviderRunPersistenceError("Failed to record Ad Studio provider run.", { cause });
+    throw new ProviderRunPersistenceError("Failed to record Ad Builder provider run.", { cause });
   }
 
   if (error) {
     const originalFailure = input.error ? ` Original provider lifecycle failure: ${errorSummary(input.error)}` : "";
     throw new ProviderRunPersistenceError(
-      `Failed to record Ad Studio provider run: ${error.message}.${originalFailure}`,
+      `Failed to record Ad Builder provider run: ${error.message}.${originalFailure}`,
     );
   }
 
@@ -485,7 +485,7 @@ export async function runAuditAfterDurableAccounting(writeAudit: () => Promise<v
   try {
     await writeAudit();
   } catch (error) {
-    console.error("Failed to record Ad Studio provider run audit", errorSummary(error));
+    console.error("Failed to record Ad Builder provider run audit", errorSummary(error));
   }
 }
 
@@ -504,8 +504,8 @@ async function recordAuditLog(input: {
   await writeAuditLog(input.serviceSupabase, {
     workspaceId: input.input.workspaceId,
     actorProfileId: input.input.userId ?? null,
-    action: "adstudio.ai_run",
-    targetType: "adstudio_provider_run",
+    action: "adbuilder.ai_run",
+    targetType: "adbuilder_provider_run",
     targetId: input.providerRunId,
     correlationId: input.input.correlationId ?? null,
     metadata: {
@@ -638,7 +638,7 @@ function summarizeRunResult(output: TextProviderResponse | ImageProviderResponse
   return typeof output.rawText === "string" ? `json:${output.rawText.length}` : "json";
 }
 
-export function estimateAdStudioProviderRunCostUsd(input: ProviderRunLogInput): number {
+export function estimateAdBuilderProviderRunCostUsd(input: ProviderRunLogInput): number {
   return buildProviderRunAccounting(input.attempts ?? []).preferredCostUsd;
 }
 
@@ -667,7 +667,7 @@ function defaultMutationId(input: ProviderRunLogInput, redactedInput: Record<str
 }
 
 async function updateProviderAttemptOutbox(input: {
-  rpc: "adstudio_mark_provider_attempt_submitted" | "adstudio_cancel_provider_attempt";
+  rpc: "adbuilder_mark_provider_attempt_submitted" | "adbuilder_cancel_provider_attempt";
   failureMessage: string;
   input: { workspaceId: string; mutationId: string; attemptIndex: number; reason?: string };
 }): Promise<void> {
@@ -683,7 +683,7 @@ async function updateProviderAttemptOutbox(input: {
       p_workspace_id: input.input.workspaceId,
       p_mutation_id: input.input.mutationId,
       p_attempt_index: input.input.attemptIndex,
-      ...(input.rpc === "adstudio_cancel_provider_attempt"
+      ...(input.rpc === "adbuilder_cancel_provider_attempt"
         ? { p_reason: input.input.reason ?? "pre-dispatch cancellation" }
         : {}),
     };

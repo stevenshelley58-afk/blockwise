@@ -156,7 +156,7 @@ No follower content is displayed.
 >    spend, leads (ads_read).
 > 5. Leads shows lead-form submissions retrieved from Meta
 >    (leads_retrieval). Use the Lead Ads Testing Tool to submit a test lead.
-> 6. Ad Studio → Publish creates the campaign/ad set/lead form/creative/ad
+> 6. Ad Builder → Publish creates the campaign/ad set/lead form/creative/ad
 >    on the connected ad account in PAUSED state after the human approval
 >    step (ads_management, pages_manage_ads). Verify in Ads Manager.
 > Test user: meta-review@blockwise.sale / <password> (seeded by
@@ -174,7 +174,7 @@ No follower content is displayed.
 ## 7. Screencasts — required content vs current script
 
 `scripts/record-meta-app-review.mjs` already walks privacy → data deletion →
-settings/connect → results → leads → ad-studio publish → approvals with
+settings/connect → results → leads → ad-builder publish → approvals with
 per-permission annotations. Gaps to close before recording the final take:
 
 - [ ] **Show the real Facebook consent dialog.** Meta's screencast
@@ -223,7 +223,7 @@ per-permission annotations. Gaps to close before recording the final take:
 
 - [ ] Set `BLOCKWISE_ENABLE_PROVIDER_WRITES=true` in production.
 - [ ] Switch the app to Live mode.
-- [ ] Re-run `node scripts/verify/adstudio-templates.mjs` and the publish
+- [ ] Re-run `node scripts/verify/adbuilder-templates.mjs` and the publish
       smoke on production.
 - [ ] Expect Meta's annual Data Protection Assessment while holding Advanced
       Access; the privacy policy and token-handling answers in it are already

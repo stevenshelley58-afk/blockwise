@@ -6,8 +6,8 @@
 -- Fresh preview databases replay this recovered ledger before the installer exists.
 do $$
 begin
-  if to_regprocedure('public.adstudio_install_workspace_policies(regclass)') is not null then
-    REVOKE EXECUTE ON FUNCTION public.adstudio_install_workspace_policies(regclass) FROM PUBLIC, anon, authenticated;
+  if to_regprocedure('public.adbuilder_install_workspace_policies(regclass)') is not null then
+    REVOKE EXECUTE ON FUNCTION public.adbuilder_install_workspace_policies(regclass) FROM PUBLIC, anon, authenticated;
   end if;
 end;
 $$;

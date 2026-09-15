@@ -446,7 +446,7 @@ export async function listCampaignReadinessRows(supabase: SupabaseServerClient, 
     await Promise.all([
       supabase.from("campaigns").select("id,name,provider,status,draft_payload").eq("workspace_id", workspaceId).order("updated_at", { ascending: false }),
       supabase.from("approval_requests").select("target_id,status,created_at").eq("workspace_id", workspaceId).order("created_at", { ascending: false }),
-      supabase.from("adstudio_compliance_reports").select("campaign_id,status,checked_at").eq("workspace_id", workspaceId).order("checked_at", { ascending: false }),
+      supabase.from("adbuilder_compliance_reports").select("campaign_id,status,checked_at").eq("workspace_id", workspaceId).order("checked_at", { ascending: false }),
       supabase.from("provider_connections").select("provider,status").eq("workspace_id", workspaceId),
     ]);
 

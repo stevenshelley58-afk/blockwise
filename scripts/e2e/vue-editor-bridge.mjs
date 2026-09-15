@@ -6,7 +6,7 @@ import { chromium } from '@playwright/test';
 import sharp from 'sharp';
 
 const root = resolve('public/vue-ad-editor');
-const output = process.env.VUE_EDITOR_EVIDENCE_DIR || '/root/work/adstudio-vue-browser-20260912';
+const output = process.env.VUE_EDITOR_EVIDENCE_DIR || '/root/work/adbuilder-vue-browser-20260912';
 const scene = (height, text) => ({ version: '5.3.0', width: 1080, height, objects: [
   { type: 'rect', id: 'workspace', left: 0, top: 0, originX: 'left', originY: 'top', width: 1080, height, fill: '#fbf7ef', selectable: false, evented: false },
   { type: 'rect', id: 'shape', left: 80, top: 90, originX: 'left', originY: 'top', width: 920, height: 650, fill: '#244c43' },
@@ -38,7 +38,7 @@ const server = createServer(async (req, res) => {
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const deployment = process.env.VUE_EDITOR_DEPLOYMENT_URL;
 const origin = deployment ? new URL(deployment).origin : `http://127.0.0.1:${server.address().port}`;
-const browser = await chromium.launch({ executablePath: process.env.ADSTUDIO_E2E_CHROMIUM || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
+const browser = await chromium.launch({ executablePath: process.env.ADBUILDER_E2E_CHROMIUM || '/usr/bin/google-chrome', args: ['--no-sandbox'] });
 const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, deviceScaleFactor: 1 });
 const page = await context.newPage();
 const errors = [], requests = [], blockedRequests = [];

@@ -52,9 +52,9 @@ export function HomeSetupCard({
   const copy = niche.copy.home.setup;
 
   const steps: StepState[] = [
-    { key: "brand", href: "/ad-studio/brand", done: hasBrand },
+    { key: "brand", href: "/ad-builder/brand", done: hasBrand },
     { key: "connect", href: "/connect-meta", done: hasProvider },
-    { key: "publish", href: "/ad-studio?newAd=1", done: adsCreated > 0 },
+    { key: "publish", href: "/ad-builder?newAd=1", done: adsCreated > 0 },
   ];
 
   const doneCount = steps.filter((step) => step.done).length;
@@ -96,11 +96,11 @@ export function HomeSetupCard({
           <div className="mt-4 flex flex-1 flex-col">
             <p className="text-[12.5px] leading-relaxed text-muted-foreground">{copy.readyBody}</p>
             <div className="mt-4 flex flex-wrap items-center gap-2.5">
-              <ButtonArrow href="/ad-studio?newAd=1" className="h-11 text-[13px]">
+              <ButtonArrow href="/ad-builder?newAd=1" className="h-11 text-[13px]">
                 {niche.copy.home.states.ready.ctaLabel}
               </ButtonArrow>
               <Button asChild variant="ghost-pill" className="min-h-11">
-                <Link href="/ad-studio">{copy.adLibrary}</Link>
+                <Link href="/ad-builder">{copy.adLibrary}</Link>
               </Button>
             </div>
             <Link

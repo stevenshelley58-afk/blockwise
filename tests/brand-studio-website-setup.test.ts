@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const source = readFileSync("src/components/adstudio/brand-studio.tsx", "utf8");
-const page = readFileSync("src/app/(customer)/ad-studio/brand/page.tsx", "utf8");
+const source = readFileSync("src/components/adbuilder/brand-studio.tsx", "utf8");
+const page = readFileSync("src/app/(customer)/ad-builder/brand/page.tsx", "utf8");
 
 test("Brand Studio explains the website-first setup path", () => {
   assert.match(source, /Enter your website\. We’ll build your brand kit\./);
@@ -15,7 +15,7 @@ test("Brand Studio explains the website-first setup path", () => {
 });
 
 test("website extraction copies discovered logos behind the authenticated media route", () => {
-  const source = readFileSync("src/app/api/adstudio/brand-kits/extract/route.ts", "utf8");
+  const source = readFileSync("src/app/api/adbuilder/brand-kits/extract/route.ts", "utf8");
 
   assert.match(source, /storeBrandKitLogoAssets/);
   assert.match(source, /logoAssets:/);
@@ -29,7 +29,7 @@ test("Brand Studio keeps setup optional and treats missing persistence as a fail
 
 test("approving sends the edited website through the canonical approval endpoint", () => {
   assert.match(source, /source:\s*\{\s*\.\.\.kit\.source,\s*url:\s*sourceUrl\s*\}/);
-  assert.match(source, /`\/api\/adstudio\/brand-kits\/\$\{kit\.brandKitId\}\/approve`/);
+  assert.match(source, /`\/api\/adbuilder\/brand-kits\/\$\{kit\.brandKitId\}\/approve`/);
   assert.match(source, /method:\s*"POST"/);
   assert.match(source, /body:\s*JSON\.stringify\(\{ brandKit: submittedKit \}\)/);
   assert.match(source, /const savedKit = requirePersistedBrandKit/);
@@ -39,14 +39,14 @@ test("approving sends the edited website through the canonical approval endpoint
   assert.match(source, /href=\{returnTo\}/);
 });
 
-test("Brand Studio accepts only an Ad Studio return path", () => {
-  assert.match(page, /safeAdStudioReturnTo/);
-  assert.match(page, /parsed\.pathname !== "\/ad-studio"/);
-  assert.match(page, /returnTo=\{safeAdStudioReturnTo\(params\.returnTo\)\}/);
+test("Brand Studio accepts only an Ad Builder return path", () => {
+  assert.match(page, /safeAdBuilderReturnTo/);
+  assert.match(page, /parsed\.pathname !== "\/ad-builder"/);
+  assert.match(page, /returnTo=\{safeAdBuilderReturnTo\(params\.returnTo\)\}/);
 });
 
 test("Brand Studio reloads the newest workspace kit instead of a campaign-linked kit", () => {
   assert.match(page, /loadLatestBrandKit/);
   assert.match(page, /\.order\("updated_at", \{ ascending: false \}\)/);
-  assert.doesNotMatch(page, /loadLiveAdStudioBundle/);
+  assert.doesNotMatch(page, /loadLiveAdBuilderBundle/);
 });

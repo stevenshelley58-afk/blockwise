@@ -12,14 +12,14 @@ import {
 test("buildModelFallbackAlert names the stage, both models, and the reason", () => {
   const message = buildModelFallbackAlert({
     eventId: "run-1:4x5",
-    stage: "adstudio.copy",
+    stage: "adbuilder.copy",
     fromModel: "gpt-5.5",
     toModel: "openai/gpt-5.5",
     reason: "429 rate limited",
   });
 
   assert.match(message.subject, /model fallback/i);
-  assert.match(message.subject, /adstudio\.copy/);
+  assert.match(message.subject, /adbuilder\.copy/);
   assert.match(message.subject, /gpt-5\.5 → openai\/gpt-5\.5/);
   assert.match(message.text, /Primary model failed: gpt-5\.5/);
   assert.match(message.text, /Now serving with: openai\/gpt-5\.5/);
@@ -29,7 +29,7 @@ test("buildModelFallbackAlert names the stage, both models, and the reason", () 
 
 test("buildModelFallbackAlert truncates an overlong reason", () => {
   const message = buildModelFallbackAlert({
-    stage: "adstudio.image",
+    stage: "adbuilder.image",
     fromModel: "a",
     toModel: "b",
     reason: "x".repeat(500),
@@ -41,8 +41,8 @@ test("buildModelFallbackAlert truncates an overlong reason", () => {
 
 test("dedupeKeyForFallback keys on stage + target model", () => {
   assert.equal(
-    dedupeKeyForFallback({ stage: "adstudio.copy", toModel: "env_default" }),
-    "adstudio.copy::env_default",
+    dedupeKeyForFallback({ stage: "adbuilder.copy", toModel: "env_default" }),
+    "adbuilder.copy::env_default",
   );
 });
 
@@ -51,7 +51,7 @@ test("dedupeKeyForFallback uses the event id so every distinct fallback alerts",
   assert.equal(
     dedupeKeyForFallback({
       eventId: "run-1:4x5",
-      stage: "adstudio.image.4:5",
+      stage: "adbuilder.image.4:5",
       toModel: "gpt-image-2",
     }),
     "event::run-1:4x5",
@@ -62,7 +62,7 @@ test("dedupeKeyForFallback uses the event id so every distinct fallback alerts",
     return { email: true, whatsapp: false };
   };
   const base = {
-    stage: "adstudio.image.4:5",
+    stage: "adbuilder.image.4:5",
     fromModel: "gemini-3.1-flash-image",
     toModel: "gpt-image-2",
     reason: "429",
@@ -81,7 +81,7 @@ test("emitModelFallbackAlert sends once and then de-dupes within the window", as
     return { email: true, whatsapp: false };
   };
 
-  const event = { stage: "adstudio.copy", fromModel: "gpt-5.5", toModel: "env_default", reason: "boom" };
+  const event = { stage: "adbuilder.copy", fromModel: "gpt-5.5", toModel: "env_default", reason: "boom" };
   let clock = 1_000;
   const now = () => clock;
 
@@ -111,15 +111,15 @@ test("emitModelFallbackAlert de-dupes per (stage,toModel) — different targets 
   };
   const now = () => 5_000;
 
-  await emitModelFallbackAlert({ stage: "adstudio.copy", fromModel: "p", toModel: "a", reason: "x" }, { send, now });
-  await emitModelFallbackAlert({ stage: "adstudio.copy", fromModel: "p", toModel: "b", reason: "x" }, { send, now });
+  await emitModelFallbackAlert({ stage: "adbuilder.copy", fromModel: "p", toModel: "a", reason: "x" }, { send, now });
+  await emitModelFallbackAlert({ stage: "adbuilder.copy", fromModel: "p", toModel: "b", reason: "x" }, { send, now });
   assert.equal(sent.length, 2);
 });
 
 test("emitModelFallbackAlert never throws when delivery fails", async () => {
   resetModelFallbackAlertDedupe();
   const result = await emitModelFallbackAlert(
-    { stage: "adstudio.copy", fromModel: "p", toModel: "q", reason: "x" },
+    { stage: "adbuilder.copy", fromModel: "p", toModel: "q", reason: "x" },
     {
       send: async () => {
         throw new Error("resend down");
@@ -139,7 +139,7 @@ test("emitModelFallbackAlert retries after a failed delivery instead of suppress
     if (attempts === 1) throw new Error("resend down");
     return { email: true, whatsapp: false };
   };
-  const event = { stage: "adstudio.copy", fromModel: "gpt-5.5", toModel: "env_default", reason: "boom" };
+  const event = { stage: "adbuilder.copy", fromModel: "gpt-5.5", toModel: "env_default", reason: "boom" };
   const now = () => 1_000; // same instant, well inside the window
 
   const first = await emitModelFallbackAlert(event, { send, now, dedupeWindowMs: 60_000 });

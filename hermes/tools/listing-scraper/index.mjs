@@ -36,7 +36,7 @@ const SUPABASE_SERVER_CREDENTIAL =
   process.env.SUPABASE_SECRET_KEY ||
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   "";
-const BUCKET = "adstudio-media";
+const BUCKET = "adbuilder-media";
 
 const STATIC_TIMEOUT_MS = 10_000;
 const STEALTH_TIMEOUT_MS = 20_000;
@@ -443,7 +443,7 @@ async function uploadAssets(photos, listing, folder) {
 }
 
 // ---------------------------------------------------------------------------
-// Extraction logic (mirrors src/lib/adstudio/listing-extract.ts)
+// Extraction logic (mirrors src/lib/adbuilder/listing-extract.ts)
 // ---------------------------------------------------------------------------
 
 function extractListingData(html, sourceUrl) {

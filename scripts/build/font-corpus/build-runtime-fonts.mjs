@@ -10,12 +10,12 @@ import { APILicense, APIv2 } from "google-font-metadata";
 import {
   MAGIC_LAYER_MIN_FONT_FIT,
   MAGIC_LAYER_MIN_REGION_CONFIDENCE,
-} from "../../../src/lib/adstudio/magic-layers-config.mjs";
+} from "../../../src/lib/adbuilder/magic-layers-config.mjs";
 import { parseArgs, selectTemplateFiles } from "./type-specs-args.mjs";
 
 const ROOT = process.cwd();
-const GALLERY_DIR = path.join(ROOT, "src/lib/adstudio/template-gallery");
-const OUTPUT_DIR = path.join(ROOT, "public/fonts/adstudio");
+const GALLERY_DIR = path.join(ROOT, "src/lib/adbuilder/template-gallery");
+const OUTPUT_DIR = path.join(ROOT, "public/fonts/adbuilder");
 const MANIFEST_PATH = path.join(OUTPUT_DIR, "manifest.json");
 
 function hash(bytes) {
@@ -67,7 +67,7 @@ async function main() {
       }
       const name = faceName(spec);
       wanted.set(name, {
-        file: `/fonts/adstudio/${name}`,
+        file: `/fonts/adbuilder/${name}`,
         fontId: spec.fontId,
         family: spec.family,
         weight: spec.weight,
@@ -111,7 +111,7 @@ async function main() {
   for (const { filePath, raw } of templates) {
     for (const spec of Object.values(raw.typography ?? {})) {
       if (!eligible(spec)) continue;
-      const file = `/fonts/adstudio/${faceName(spec)}`;
+      const file = `/fonts/adbuilder/${faceName(spec)}`;
       if (!available.has(file)) continue;
       spec.fontFile = file;
       liveRegions += 1;

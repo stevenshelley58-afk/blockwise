@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
-const source = readFileSync("src/components/adstudio/brand-studio.tsx", "utf8");
+const source = readFileSync("src/components/adbuilder/brand-studio.tsx", "utf8");
 
 test("Brand Pack uses the shared Premium v2 vocabulary", () => {
   assert.match(source, /from "@\/components\/ui\/button"/);
@@ -38,9 +38,9 @@ test("colour picker stays open for in-picker clicks and supports Escape dismissa
 });
 
 test("the removed parallel Brand Pack visual system is absent", () => {
-  assert.equal(existsSync("src/components/adstudio/brand-studio-styles.ts"), false);
-  assert.equal(existsSync("src/components/adstudio/brand-preview.tsx"), false);
-  assert.equal(existsSync("src/components/adstudio/brand-details-cards.tsx"), false);
-  assert.equal(existsSync("src/components/adstudio/brand-color-swatch.tsx"), false);
-  assert.equal(existsSync("src/components/adstudio/brand-voice-card.tsx"), false);
+  assert.equal(existsSync("src/components/adbuilder/brand-studio-styles.ts"), false);
+  assert.equal(existsSync("src/components/adbuilder/brand-preview.tsx"), false);
+  assert.equal(existsSync("src/components/adbuilder/brand-details-cards.tsx"), false);
+  assert.equal(existsSync("src/components/adbuilder/brand-color-swatch.tsx"), false);
+  assert.equal(existsSync("src/components/adbuilder/brand-voice-card.tsx"), false);
 });

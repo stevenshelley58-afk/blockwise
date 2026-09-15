@@ -30,8 +30,8 @@ const AD_TOKENS = [
 // image generation and Google Identity), so they are out of this scan's scope.
 const AI_OR_SIGN_IN_PATHS = [
   "src/lib/ai",
-  "src/lib/adstudio",
-  "src/app/api/adstudio",
+  "src/lib/adbuilder",
+  "src/app/api/adbuilder",
   "src/components/auth",
   "src/components/model-control-panel.tsx",
 ];

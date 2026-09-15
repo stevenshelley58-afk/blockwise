@@ -260,7 +260,7 @@ data migration.
 - The serving checkout `/projects/blockwise-cleanup-20260905` is committed and
   clean; its HEAD is a docs-only evidence commit directly after the serving
   SHA, not a new application build. `main` remains deliberately divergent from
-  live (customer-ops work and migrations on main; newer AdStudio changes on
+  live (customer-ops work and migrations on main; newer AdBuilder changes on
   live); reconciliation is not part of this release.
 
 ## Current runtime

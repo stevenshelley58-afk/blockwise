@@ -2,8 +2,8 @@ import { existsSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL;
-const workspaceId = process.env.ADSTUDIO_E2E_WORKSPACE_ID;
-const storageState = process.env.ADSTUDIO_E2E_STORAGE_STATE;
+const workspaceId = process.env.ADBUILDER_E2E_WORKSPACE_ID;
+const storageState = process.env.ADBUILDER_E2E_STORAGE_STATE;
 const canRun = Boolean(baseUrl && workspaceId && storageState && existsSync(storageState));
 
 test.skip(!canRun, "Requires the authenticated Ad Radar canary URL, workspace, and storage state.");
@@ -12,7 +12,7 @@ test.use({
   storageState, serviceWorkers: "block",
   ignoreHTTPSErrors: controlledCanary,
   launchOptions: {
-    executablePath: process.env.ADSTUDIO_E2E_CHROMIUM,
+    executablePath: process.env.ADBUILDER_E2E_CHROMIUM,
     args: controlledCanary ? ["--host-resolver-rules=MAP blockwise.sale 127.0.0.1,EXCLUDE localhost"] : undefined,
   },
 });

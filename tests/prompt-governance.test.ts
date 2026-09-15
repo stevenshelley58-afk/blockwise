@@ -25,7 +25,7 @@ import {
   buildProviderRunPayloadHash,
   buildRedactedProviderRunInput,
   deriveProviderRunIdentity,
-  estimateAdStudioProviderRunCostUsd,
+  estimateAdBuilderProviderRunCostUsd,
   parseProviderAttemptReservationResult,
   redactRecord,
   shouldRecoverProviderRun,
@@ -40,18 +40,18 @@ const stabilizationMigrationSql = readFileSync(
 const migrationSql = `${promptGovernanceMigrationSql}\n\n${stabilizationMigrationSql}`;
 
 const copyKeys: PromptKey[] = [
-  "adstudio.copy.system",
-  "adstudio.copy.input_template",
-  "adstudio.copy.output_schema",
-  "adstudio.copy.compliance_rules",
+  "adbuilder.copy.system",
+  "adbuilder.copy.input_template",
+  "adbuilder.copy.output_schema",
+  "adbuilder.copy.compliance_rules",
 ];
 
 const imageKeys: PromptKey[] = [
-  "adstudio.image.system",
-  "adstudio.image.input_template",
-  "adstudio.image.brand_rules",
-  "adstudio.image.negative_prompt",
-  "adstudio.image.aspect_ratio_rules",
+  "adbuilder.image.system",
+  "adbuilder.image.input_template",
+  "adbuilder.image.brand_rules",
+  "adbuilder.image.negative_prompt",
+  "adbuilder.image.aspect_ratio_rules",
 ];
 
 test("prompt governance migrations keep lifecycle RPCs service-only and key-locked", () => {
@@ -73,9 +73,9 @@ test("prompt governance migrations keep lifecycle RPCs service-only and key-lock
 
 test("active prompt registry excludes deferred future workflow prompts", () => {
   const futureKeys = [
-    "adstudio.brief_refiner.system",
-    "adstudio.template_selector.system",
-    "adstudio.compliance_review.system",
+    "adbuilder.brief_refiner.system",
+    "adbuilder.template_selector.system",
+    "adbuilder.compliance_review.system",
   ];
   const listedKeys = listPromptKeys().map((prompt) => prompt.key);
 
@@ -87,7 +87,7 @@ test("active prompt registry excludes deferred future workflow prompts", () => {
 });
 
 test("active prompt lookup falls back to bundled prompt when no service client is available", async () => {
-  const section = await getActivePromptSection("adstudio.copy.system", PROMPT_FALLBACKS["adstudio.copy.system"], null);
+  const section = await getActivePromptSection("adbuilder.copy.system", PROMPT_FALLBACKS["adbuilder.copy.system"], null);
 
   assert.equal(section.source, "fallback");
   assert.equal(section.version, 0);
@@ -131,7 +131,7 @@ test("draft creation uses the locked RPC and sends section_type metadata", async
     },
   };
 
-  const draft = await createDraftPromptVersion(client as any, "adstudio.copy.input_template", {
+  const draft = await createDraftPromptVersion(client as any, "adbuilder.copy.input_template", {
     body: "{{BRAND_CONSTRAINTS}}",
     metadata: { reviewer: "operator" },
     createdBy: "22222222-2222-4222-8222-222222222222",
@@ -139,7 +139,7 @@ test("draft creation uses the locked RPC and sends section_type metadata", async
 
   assert.equal(calls.length, 1);
   assert.equal(calls[0]?.name, "create_global_prompt_draft");
-  assert.equal(calls[0]?.args?.target_key, "adstudio.copy.input_template");
+  assert.equal(calls[0]?.args?.target_key, "adbuilder.copy.input_template");
   assert.equal((calls[0]?.args?.prompt_metadata as Record<string, unknown>).section_type, "input_template");
   assert.equal(draft.version, 2);
   assert.equal(draft.source, "db");
@@ -168,7 +168,7 @@ test("template renderer rejects unknown placeholders", () => {
 test("malformed active database prompt fails loudly instead of falling back", async () => {
   const bundle = await getActivePromptBundle(copyKeys, undefined, null);
   const badSection: PromptSection = {
-    ...bundle["adstudio.copy.input_template"],
+    ...bundle["adbuilder.copy.input_template"],
     id: "33333333-3333-4333-8333-333333333333",
     source: "db",
     version: 7,
@@ -180,14 +180,14 @@ test("malformed active database prompt fails loudly instead of falling back", as
       assembleMetaCopyPrompt({
         bundle: {
           ...bundle,
-          "adstudio.copy.input_template": badSection,
+          "adbuilder.copy.input_template": badSection,
         },
         mode: "generate",
         context: { businessName: "Northstar Realty" },
       }),
     (error) => {
       assert.equal(error instanceof PromptAssemblyError, true);
-      assert.equal((error as PromptAssemblyError).key, "adstudio.copy.input_template");
+      assert.equal((error as PromptAssemblyError).key, "adbuilder.copy.input_template");
       assert.equal((error as PromptAssemblyError).version, 7);
       assert.equal((error as PromptAssemblyError).source, "database");
       assert.match((error as Error).message, /Unknown prompt placeholder: NOT_ALLOWED/);
@@ -245,19 +245,19 @@ test("image assembly includes negative prompt, aspect ratio rules, and redacted 
 
 test("prompt preview runner is assemble-only by default and blocks provider execution", async () => {
   const result = await runPromptTest({
-    key: "adstudio.copy.input_template",
+    key: "adbuilder.copy.input_template",
     fixtureId: "copy_appraisal_no_listing",
     client: null,
   });
 
   assert.equal(result.status, "assembled");
-  assert.equal(result.redactionPreview.task_type, "adstudio.copy");
+  assert.equal(result.redactionPreview.task_type, "adbuilder.copy");
   assert.equal(JSON.stringify(result.redactionPreview).includes(result.assembledPrompt.fullPrompt), false);
 
   await assert.rejects(
     () =>
       runPromptTest({
-        key: "adstudio.copy.input_template",
+        key: "adbuilder.copy.input_template",
         fixtureId: "copy_appraisal_no_listing",
         runProvider: true,
         client: null,
@@ -276,7 +276,7 @@ test("provider run redaction removes raw prompts and uploaded image base64", asy
     referenceAssets: ["data:image/png;base64,aW1hZ2U="],
   });
   const redacted = buildRedactedProviderRunInput({
-    taskType: "adstudio.image",
+    taskType: "adbuilder.image",
     modelProfile: "image_draft",
     correlationId: "trace_image_1",
     userId: "44444444-4444-4444-8444-444444444444",
@@ -305,11 +305,11 @@ test("provider run accounting prefers actual cost and exact runtime pricing with
     stylePreset: "real_estate_photography",
     referenceAssets: [],
   });
-  const cost = estimateAdStudioProviderRunCostUsd({
+  const cost = estimateAdBuilderProviderRunCostUsd({
     workspaceId: "workspace_1",
     userId: "44444444-4444-4444-8444-444444444444",
     correlationId: "trace_image_2",
-    taskType: "adstudio.image",
+    taskType: "adbuilder.image",
     modelProfile: "image_draft",
     prompt,
     input: { prompt: "Create a bright local real estate background." },
@@ -394,11 +394,11 @@ test("provider run accounting preserves sub-cent actual cost and marks uncertain
 
 test("provider run payload hash is stable across persistence retry timestamps", () => {
   const first = buildProviderRunPayloadHash(
-    { task_type: "adstudio.image", completed_at: "2026-07-13T00:00:00.000Z" },
+    { task_type: "adbuilder.image", completed_at: "2026-07-13T00:00:00.000Z" },
     [],
   );
   const retry = buildProviderRunPayloadHash(
-    { task_type: "adstudio.image", completed_at: "2026-07-13T00:00:05.000Z" },
+    { task_type: "adbuilder.image", completed_at: "2026-07-13T00:00:05.000Z" },
     [],
   );
 

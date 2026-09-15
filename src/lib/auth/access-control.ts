@@ -4,7 +4,7 @@ export type WorkspaceMode = "monitor" | "self_serve";
 // "operator" covers the whole operator console (overview, research ops,
 // workforce, model control). The old "agents" / "model_control" surfaces had
 // identical rules and were collapsed into it.
-export type ProductSurface = "operator" | "monitor" | "self_serve" | "adstudio" | "property_check" | "approvals";
+export type ProductSurface = "operator" | "monitor" | "self_serve" | "adbuilder" | "property_check" | "approvals";
 
 export type AccessContext = {
   role: WorkspaceRole;
@@ -17,7 +17,7 @@ const SURFACE_RULES: Record<ProductSurface, (context: AccessContext) => boolean>
   monitor: ({ role }) => ["owner", "admin", "member", "viewer", "operator"].includes(role),
   self_serve: ({ role }) =>
     ["owner", "admin", "member", "viewer", "operator"].includes(role),
-  adstudio: ({ role }) =>
+  adbuilder: ({ role }) =>
     ["owner", "admin", "member", "viewer", "operator"].includes(role),
   property_check: ({ role }) =>
     ["owner", "admin", "member", "viewer", "operator"].includes(role),

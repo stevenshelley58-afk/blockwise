@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
-import type { AdStudioCampaignPack } from "../adstudio/index.ts";
-import { deterministicUuid } from "../adstudio/id.ts";
+import type { AdBuilderCampaignPack } from "../adbuilder/index.ts";
+import { deterministicUuid } from "../adbuilder/id.ts";
 import { evaluatePublishReadiness, type ApprovalStatus, type ProviderConnectionStatus } from "../publishing/readiness.ts";
 import type { ComplianceStatus } from "../compliance/real-estate-policy.ts";
 import type { createSupabaseServiceClient } from "../supabase/service.ts";
@@ -192,7 +192,7 @@ export type MetaPublishCreativePlan = {
   description: string;
   cta: string;
   leadFormLocalId: string;
-  adStudioCreativeId: string | null;
+  adBuilderCreativeId: string | null;
   format: string | null;
   asset?: MetaCreativeAssetPlan | null;
 };
@@ -209,7 +209,7 @@ export type MetaPublishAdPlan = {
   adSetLocalId: string;
   creativeLocalId: string;
   status: "PAUSED";
-  /** Ad Studio variant mapping; also encoded into the ad name (additive, see buildAdVariantTagSuffix). */
+  /** Ad Builder variant mapping; also encoded into the ad name (additive, see buildAdVariantTagSuffix). */
   variantTag?: MetaAdVariantTag | null;
 };
 
@@ -264,8 +264,8 @@ export type MetaProviderLogEntry = {
 export type MetaPublishPlan = {
   planId: string;
   workspaceId: string;
-  adStudioCampaignId: string;
-  adStudioExportId: string | null;
+  adBuilderCampaignId: string;
+  adBuilderExportId: string | null;
   legacyCampaignId: string | null;
   providerConnectionId: string;
   approvalRequestId: string | null;
@@ -330,7 +330,7 @@ export type MetaExecutionAdapterImplementation = {
 
 function buildMetaPlanIdempotencyKey(input: {
   workspaceId: string;
-  adStudioCampaignId: string;
+  adBuilderCampaignId: string;
   adapter: MetaExecutionAdapter;
   approvalRequestId?: string | null;
   existingMetaCampaignId?: string | null;
@@ -344,7 +344,7 @@ function buildMetaPlanIdempotencyKey(input: {
   return [
     "meta_publish",
     input.workspaceId,
-    input.adStudioCampaignId,
+    input.adBuilderCampaignId,
     input.adapter,
     input.approvalRequestId ?? "draft",
     input.existingMetaCampaignId ? `campaign_${input.existingMetaCampaignId}` : "campaign_new",
@@ -390,14 +390,14 @@ export function hasExplicitMetaPublishAudience(controls: MetaPublishControls | u
 
 export function buildMetaPublishPlan(input: {
   workspaceId: string;
-  campaignPack: AdStudioCampaignPack;
+  campaignPack: AdBuilderCampaignPack;
   connectionId: string;
   setup: MetaConnectionSetup;
   controls?: MetaPublishControls;
   adapter?: MetaExecutionAdapter;
   approvalRequestId?: string | null;
   legacyCampaignId?: string | null;
-  adStudioExportId?: string | null;
+  adBuilderExportId?: string | null;
   existingMetaCampaignId?: string | null;
   existingMetaCampaignBudgetMode?: "campaign" | "adset";
   /**
@@ -451,7 +451,7 @@ export function buildMetaPublishPlan(input: {
   });
   const idempotencyKey = buildMetaPlanIdempotencyKey({
     workspaceId: input.workspaceId,
-    adStudioCampaignId: campaignPack.campaign.campaignId,
+    adBuilderCampaignId: campaignPack.campaign.campaignId,
     adapter,
     approvalRequestId: input.approvalRequestId,
     existingMetaCampaignId,
@@ -462,8 +462,8 @@ export function buildMetaPublishPlan(input: {
   return {
     planId: deterministicUuid(`meta_publish_plan:${idempotencyKey}`),
     workspaceId: input.workspaceId,
-    adStudioCampaignId: campaignPack.campaign.campaignId,
-    adStudioExportId: input.adStudioExportId ?? null,
+    adBuilderCampaignId: campaignPack.campaign.campaignId,
+    adBuilderExportId: input.adBuilderExportId ?? null,
     legacyCampaignId: input.legacyCampaignId ?? null,
     providerConnectionId: input.connectionId,
     approvalRequestId: input.approvalRequestId ?? null,
@@ -498,7 +498,7 @@ export function buildMetaPublishPlan(input: {
  * ids simply produce an empty selection, which readiness validation then
  * blocks (no draft payload) instead of silently publishing everything.
  */
-function filterPackToVariants(pack: AdStudioCampaignPack, variantIds: string[]): AdStudioCampaignPack {
+function filterPackToVariants(pack: AdBuilderCampaignPack, variantIds: string[]): AdBuilderCampaignPack {
   const selected = new Set(variantIds);
 
   return {
@@ -2344,7 +2344,7 @@ async function getMetaObjectStatus(
   };
 }
 
-function buildAdSetPlans(pack: AdStudioCampaignPack, controls: MetaPublishControls): MetaPublishAdSetPlan[] {
+function buildAdSetPlans(pack: AdBuilderCampaignPack, controls: MetaPublishControls): MetaPublishAdSetPlan[] {
   const suburb = pack.campaign.market.suburb;
   const targeting = buildTargeting(controls);
   const target = controls.target;
@@ -2435,7 +2435,7 @@ function buildTargeting(controls: MetaPublishControls): Record<string, unknown> 
   };
 }
 
-function buildLeadFormPlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup, destinationUrl?: string): MetaPublishLeadFormPlan[] {
+function buildLeadFormPlans(pack: AdBuilderCampaignPack, setup: MetaConnectionSetup, destinationUrl?: string): MetaPublishLeadFormPlan[] {
   return pack.copyPacks.slice(0, 6).map((copy, index) => ({
     localId: `form_${index + 1}`,
     name: `${pack.campaign.market.suburb} ${copy.meta.leadForm.headline}`,
@@ -2448,7 +2448,7 @@ function buildLeadFormPlans(pack: AdStudioCampaignPack, setup: MetaConnectionSet
   }));
 }
 
-function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSetup): MetaPublishCreativePlan[] {
+function buildCreativePlans(pack: AdBuilderCampaignPack, setup: MetaConnectionSetup): MetaPublishCreativePlan[] {
   return pack.copyPacks.slice(0, 6).map((copy, index) => {
     const creative = pack.creatives.find((item) => item.variantId === copy.variantId) ?? pack.creatives[index] ?? null;
 
@@ -2462,7 +2462,7 @@ function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSet
       description: copy.meta.descriptions[0] ?? pack.campaign.audienceIntent,
       cta: copy.meta.cta,
       leadFormLocalId: `form_${index + 1}`,
-      adStudioCreativeId: creative?.creativeId ?? null,
+      adBuilderCreativeId: creative?.creativeId ?? null,
       format: creative?.format ?? null,
       asset: creative ? buildCreativeImageAsset(creative) : null,
     };
@@ -2472,11 +2472,11 @@ function buildCreativePlans(pack: AdStudioCampaignPack, setup: MetaConnectionSet
 /**
  * The finished ad image is the full-canvas clone. After autosave its storage
  * reference lives on the clone object as either a raw workspace-artifacts
- * path or an `/api/adstudio/media?path=…` URL; freshly generated packs may
+ * path or an `/api/adbuilder/media?path=…` URL; freshly generated packs may
  * still hold a data URL. Storage references are resolved to bytes by the
  * publish worker just before upload, so plans stay small in the database.
  */
-function buildCreativeImageAsset(creative: AdStudioCampaignPack["creatives"][number]): MetaCreativeAssetPlan | null {
+function buildCreativeImageAsset(creative: AdBuilderCampaignPack["creatives"][number]): MetaCreativeAssetPlan | null {
   const imageObject = creative.canvas.objects.find((object) => object.role === "primary_image");
   const reference = imageObject?.content?.trim() || imageObject?.assetId?.trim() || "";
 
@@ -2493,7 +2493,7 @@ function buildCreativeImageAsset(creative: AdStudioCampaignPack["creatives"][num
     };
   }
 
-  const storagePath = reference.startsWith("/api/adstudio/media?")
+  const storagePath = reference.startsWith("/api/adbuilder/media?")
     ? new URL(reference, "https://blockwise.invalid").searchParams.get("path")
     : reference.startsWith("data:") || isHttpUrl(reference)
       ? null
@@ -2530,7 +2530,7 @@ function isHttpsDestination(value: string): boolean {
   try { return new URL(value).protocol === "https:"; } catch { return false; }
 }
 
-function buildAdPlans(pack: AdStudioCampaignPack, adSets: MetaPublishAdSetPlan[]): MetaPublishAdPlan[] {
+function buildAdPlans(pack: AdBuilderCampaignPack, adSets: MetaPublishAdSetPlan[]): MetaPublishAdPlan[] {
   const copies = pack.copyPacks.slice(0, 6);
   return adSets.flatMap((adSet, adSetIndex) => copies.map((copy, index) => {
     const variant = pack.variants.find((item) => item.variantId === copy.variantId) ?? null;
@@ -2567,7 +2567,7 @@ export function buildAdVariantTagSuffix(tag: MetaAdVariantTag): string {
 
 function normalizeMetaPublishControls(
   controls: MetaPublishControls | undefined,
-  pack: AdStudioCampaignPack,
+  pack: AdBuilderCampaignPack,
   input: { existingMetaCampaignId?: string | null; existingMetaCampaignBudgetMode?: "campaign" | "adset" },
 ): MetaPublishControls {
   const destinationUrl = controls?.destinationUrl?.trim();
@@ -2636,8 +2636,8 @@ function planToRow(plan: MetaPublishPlan, userId: string) {
   return {
     id: plan.planId,
     workspace_id: plan.workspaceId,
-    adstudio_campaign_id: plan.adStudioCampaignId,
-    adstudio_export_id: plan.adStudioExportId,
+    adbuilder_campaign_id: plan.adBuilderCampaignId,
+    adbuilder_export_id: plan.adBuilderExportId,
     campaign_id: plan.legacyCampaignId,
     provider_connection_id: plan.providerConnectionId,
     approval_request_id: plan.approvalRequestId,
@@ -2666,8 +2666,8 @@ function planToRow(plan: MetaPublishPlan, userId: string) {
 type MetaPublishPlanRow = {
   id: string;
   workspace_id: string;
-  adstudio_campaign_id: string;
-  adstudio_export_id: string | null;
+  adbuilder_campaign_id: string;
+  adbuilder_export_id: string | null;
   campaign_id: string | null;
   provider_connection_id: string;
   approval_request_id: string | null;
@@ -2716,8 +2716,8 @@ function rowToPlan(row: MetaPublishPlanRow): MetaPublishPlan {
   return {
     planId: row.id,
     workspaceId: row.workspace_id,
-    adStudioCampaignId: row.adstudio_campaign_id,
-    adStudioExportId: row.adstudio_export_id,
+    adBuilderCampaignId: row.adbuilder_campaign_id,
+    adBuilderExportId: row.adbuilder_export_id,
     legacyCampaignId: row.campaign_id,
     providerConnectionId: row.provider_connection_id,
     approvalRequestId: row.approval_request_id,

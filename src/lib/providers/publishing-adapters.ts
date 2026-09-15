@@ -10,7 +10,7 @@ export type ProviderPublishRequest = {
   body: Record<string, unknown>;
 };
 
-export function resolveAdStudioPublishReadiness(input: {
+export function resolveAdBuilderPublishReadiness(input: {
   approvalStatus: ApprovalStatus;
   complianceStatus: ComplianceStatus;
   providerStatuses: Partial<Record<ProviderKey, ProviderConnectionStatus>>;
@@ -28,7 +28,7 @@ export function resolveAdStudioPublishReadiness(input: {
   });
 }
 
-export function buildAdStudioPublishRequests(input: {
+export function buildAdBuilderPublishRequests(input: {
   exportPackageId: string;
   workspaceId: string;
   metaAccountId?: string | null;

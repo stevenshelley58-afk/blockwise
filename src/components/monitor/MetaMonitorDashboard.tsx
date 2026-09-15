@@ -914,7 +914,7 @@ function AnglePerformanceTable({ rows }: { rows: AnglePerformance[] }) {
     <section className={panelClass}>
       <h3 className={panelTitleClass}>Angle performance</h3>
       <p className="mt-0.5 text-[11.5px] text-(--faint)">
-        Built from Ads variant tags in ad names. Ads published outside Ad Studio group under &quot;Untagged&quot;.
+        Built from Ads variant tags in ad names. Ads published outside Ad Builder group under &quot;Untagged&quot;.
       </p>
       <div className="mt-4 -mx-5 overflow-x-auto px-5">
         <Table className="min-w-[680px]">

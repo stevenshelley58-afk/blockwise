@@ -4,10 +4,10 @@ import { blockwise } from "../src/config/niche/blockwise.ts";
 import { activeRouteHref } from "../src/lib/navigation/active-nav-item.ts";
 
 test("navigation picks exactly the deepest destination and respects path boundaries", () => {
-  const items = [{ href: "/ad-studio" }, { href: "/ad-studio/brand" }, { href: "/settings" }];
-  assert.equal(activeRouteHref("/ad-studio/brand", items), "/ad-studio/brand");
-  assert.equal(activeRouteHref("/ad-studio/brand/edit", items), "/ad-studio/brand");
-  assert.equal(activeRouteHref("/ad-studio/templates", items), "/ad-studio");
+  const items = [{ href: "/ad-builder" }, { href: "/ad-builder/brand" }, { href: "/settings" }];
+  assert.equal(activeRouteHref("/ad-builder/brand", items), "/ad-builder/brand");
+  assert.equal(activeRouteHref("/ad-builder/brand/edit", items), "/ad-builder/brand");
+  assert.equal(activeRouteHref("/ad-builder/templates", items), "/ad-builder");
   assert.equal(activeRouteHref("/settings/profile", items), "/settings");
   assert.equal(activeRouteHref("/settings-other", items), undefined);
   assert.equal(activeRouteHref("/unknown", items), undefined);
@@ -20,7 +20,7 @@ test("the customer registry declares unique destinations and at most five mobile
   assert.ok(items.every(item => item.icon && item.label));
   const tabs = items.filter(item => item.mobileLabel && (!item.feature || blockwise.features[item.feature]));
   assert.ok(tabs.length > 0 && tabs.length <= 5);
-  assert.deepEqual(tabs.map(item => item.href), ["/self-serve", "/ad-studio", "/results", "/leads"]);
+  assert.deepEqual(tabs.map(item => item.href), ["/self-serve", "/ad-builder", "/results", "/leads"]);
 });
 
 

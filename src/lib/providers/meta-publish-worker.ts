@@ -1,4 +1,4 @@
-import { activateApprovedAdStudioPlan } from "./adstudio-activation.ts";
+import { activateApprovedAdBuilderPlan } from "./adbuilder-activation.ts";
 import {
   applyMetaPublishExecutionResult,
   createMetaExecutionAdapter,
@@ -26,7 +26,7 @@ import { DEFAULT_META_GRAPH_VERSION } from "./meta-graph-version.ts";
 import { resolveMetaPageAccessToken } from "./meta-assets.ts";
 import { assertProviderConnectionActive, loadStoredProviderTokens } from "./provider-connections.ts";
 import { metaPublishProviderWritesEnabled } from "./meta-provider-write-gate.ts";
-import { deterministicUuid } from "../adstudio/id.ts";
+import { deterministicUuid } from "../adbuilder/id.ts";
 import {
   endTrialAfterFirstLiveCampaign,
   validateFirstLiveCampaignBilling,
@@ -193,7 +193,7 @@ export async function executeMetaPublishPlan(input: {
   }
   if (input.plan.status === "paused_live") {
     await finalizeFreeLiveConversion(input, input.plan, freeLive);
-    await finishApprovedAdStudioPublish(input.plan, input);
+    await finishApprovedAdBuilderPublish(input.plan, input);
     await queueReportingRefreshAfterProviderChange(input.plan.workspaceId, "publish");
     return input.plan;
   }
@@ -310,18 +310,18 @@ export async function executeMetaPublishPlan(input: {
   input.signal?.throwIfAborted();
   await updateMetaPublishPlanExecution(input.serviceSupabase, completedPlan);
   await persistPublishAudit(input.serviceSupabase, completedPlan);
-  await finishApprovedAdStudioPublish(completedPlan, input);
+  await finishApprovedAdBuilderPublish(completedPlan, input);
   await queueReportingRefreshAfterProviderChange(completedPlan.workspaceId, "publish");
   return completedPlan;
 }
 
 /** Finish the same durable approval after creation, including worker retries. */
-async function finishApprovedAdStudioPublish(plan: MetaPublishPlan, input: { serviceSupabase: SupabaseServiceClient; fetchImpl?: typeof fetch; compensationFetchImpl?: typeof fetch }) {
+async function finishApprovedAdBuilderPublish(plan: MetaPublishPlan, input: { serviceSupabase: SupabaseServiceClient; fetchImpl?: typeof fetch; compensationFetchImpl?: typeof fetch }) {
   const approval = plan.controls.activationApproval;
   if (!approval) return;
-  if (!plan.adStudioCampaignId || plan.status !== "paused_live") throw new Error("Creation must finish before activation.");
-  const response = await activateApprovedAdStudioPlan({
-    adId: plan.adStudioCampaignId, workspaceId: plan.workspaceId, requestedBy: approval.requestedBy,
+  if (!plan.adBuilderCampaignId || plan.status !== "paused_live") throw new Error("Creation must finish before activation.");
+  const response = await activateApprovedAdBuilderPlan({
+    adId: plan.adBuilderCampaignId, workspaceId: plan.workspaceId, requestedBy: approval.requestedBy,
     planId: plan.planId, controlsFingerprint: plan.idempotencyKey,
     clientMutationKey: deterministicUuid(plan.planId + ":approved-publish"),
     serviceSupabase: input.serviceSupabase, fetchImpl: input.fetchImpl, compensationFetchImpl: input.compensationFetchImpl,

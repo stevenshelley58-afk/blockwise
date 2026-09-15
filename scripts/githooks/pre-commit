@@ -3,8 +3,8 @@
 #
 # Sessions share the canonical checkout, so `git add -A` there sweeps up whatever
 # another session had left uncommitted. That happened twice: eight home-page
-# files landed inside an AdStudio gallery commit, and a new release script landed
-# inside an AdStudio preview commit. Each time the message did not match the
+# files landed inside an AdBuilder gallery commit, and a new release script landed
+# inside an AdBuilder preview commit. Each time the message did not match the
 # contents, and because main deploys on push, the mistake can now reach
 # production.
 #

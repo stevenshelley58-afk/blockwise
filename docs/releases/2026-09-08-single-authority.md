@@ -33,7 +33,7 @@ onto the current `main`, with its own gates and migration evidence.
   prior references and hashes of pre-existing uncommitted documents/artwork.
 - The same protected directory retains the bounded document backup, original
   patch, stash identifier, previous environment, check logs and release receipt.
-- Existing artwork under `/projects/blockwise/adstudio/` is retained untouched
+- Existing artwork under `/projects/blockwise/adbuilder/` is retained untouched
   and is not included in the immutable release build context.
 - Owner product preferences and dated lead-management evidence are preserved.
   Live DESIGN.md already contains the owner preferences plus newer Home-scoped

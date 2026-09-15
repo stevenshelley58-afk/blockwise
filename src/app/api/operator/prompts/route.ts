@@ -23,7 +23,7 @@ export async function GET() {
     const [prompts, recentRunsResult] = await Promise.all([
       listPromptKeySummaries(client),
       client
-        .from("adstudio_provider_runs")
+        .from("adbuilder_provider_runs")
         .select("id, provider_name, provider_type, model_name, task_type, model_profile, correlation_id, user_id, ai_run_id, ai_usage_ledger_id, input_json, usage_json, cost_estimate, status, error_json, created_at")
         .order("created_at", { ascending: false })
         .limit(20),

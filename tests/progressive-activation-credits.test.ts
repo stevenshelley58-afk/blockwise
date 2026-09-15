@@ -156,7 +156,7 @@ test("duplicate reservation keys reuse one reservation and partial render closur
     actorProfileId: "user-1",
     credits: 2,
     mutationKey: "generation:one",
-    purpose: "adstudio.feed_story_pack",
+    purpose: "adbuilder.feed_story_pack",
     serviceSupabase: service as never,
   });
   const duplicate = await reserveWorkspaceCredits({
@@ -164,7 +164,7 @@ test("duplicate reservation keys reuse one reservation and partial render closur
     actorProfileId: "user-1",
     credits: 2,
     mutationKey: "generation:one",
-    purpose: "adstudio.feed_story_pack",
+    purpose: "adbuilder.feed_story_pack",
     serviceSupabase: service as never,
   });
   assert.equal(duplicate.reservationId, first.reservationId);
@@ -280,7 +280,7 @@ test("activation always derives the real next onboarding step", async () => {
   });
 
   assert.equal(result.currentStage, "confirm_country");
-  assert.equal(result.resumePath, "/ad-studio/brand");
+  assert.equal(result.resumePath, "/ad-builder/brand");
   assert.deepEqual(result.operatorBlockers, []);
 });
 

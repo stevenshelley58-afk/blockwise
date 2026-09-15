@@ -8,7 +8,7 @@ const AUDIT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
 /**
  * Picks up an audit claim after signup: a visitor who generated audit ads and
  * then signed up lands on /self-serve?auditId=... — this saves those three
- * previews into their new workspace and sends them to Ad Studio.
+ * previews into their new workspace and sends them to Ad Builder.
  */
 export function AuditClaimHandler({ workspaceId }: { workspaceId: string }) {
   const params = useSearchParams();
@@ -29,7 +29,7 @@ export function AuditClaimHandler({ workspaceId }: { workspaceId: string }) {
       .then(async (response) => {
         const data = (await response.json().catch(() => ({}))) as { adIds?: unknown };
         if (!response.ok || !Array.isArray(data.adIds) || data.adIds.length === 0) throw new Error("claim failed");
-        router.replace("/ad-studio");
+        router.replace("/ad-builder");
       })
       .catch(() => setFailed(true));
   }, [params, router, workspaceId]);
@@ -37,8 +37,8 @@ export function AuditClaimHandler({ workspaceId }: { workspaceId: string }) {
   if (!failed) return null;
   return (
     <div role="alert" style={{ margin: "12px 0", padding: "12px 16px", borderRadius: 12, background: "#fdf0ef", color: "#7c241f", fontSize: 14 }}>
-      We could not move your 3 audit ads into Ad Studio. Your trial is ready — open Ad Studio and try the audit
-      link again, or <a href="/ad-studio">continue to Ad Studio</a>.
+      We could not move your 3 audit ads into Ad Builder. Your trial is ready — open Ad Builder and try the audit
+      link again, or <a href="/ad-builder">continue to Ad Builder</a>.
     </div>
   );
 }

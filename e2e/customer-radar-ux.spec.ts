@@ -11,7 +11,7 @@ import { expect, test, type Page } from "@playwright/test";
  */
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL;
 const storageState =
-  process.env.ADSTUDIO_E2E_STORAGE_STATE ??
+  process.env.ADBUILDER_E2E_STORAGE_STATE ??
   "/srv/blockwise/e2e-runs/mobile-app-implementation-20260908/fixture-browser-state.json";
 const controlledCanary = process.env.BLOCKWISE_CONTROLLED_CANARY === "1";
 const canRun = Boolean(baseUrl && existsSync(storageState));
@@ -64,7 +64,7 @@ test.use({
   serviceWorkers: "block",
   ignoreHTTPSErrors: controlledCanary,
   launchOptions: {
-    executablePath: process.env.ADSTUDIO_E2E_CHROMIUM,
+    executablePath: process.env.ADBUILDER_E2E_CHROMIUM,
     args: controlledCanary
       ? ["--host-resolver-rules=MAP blockwise.sale 127.0.0.1,EXCLUDE localhost"]
       : undefined,

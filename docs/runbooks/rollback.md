@@ -25,7 +25,7 @@ release. Never rebuild an old release from a changed working tree.
   standalone app, PostgREST, GoTrue, Storage API, and optional Realtime.
 - The `product-worker` profile consumes the durable `public.job_queue` through
   the self-hosted PostgREST/Auth contract and performs provider, reporting,
-  lead-delivery, and Ad Studio recovery jobs.
+  lead-delivery, and Ad Builder recovery jobs.
 - `@supabase/supabase-js` is a protocol client only; its URL must resolve to
   the product Caddy origin, not a managed Supabase project.
 - Frank/Hermes separation is a migration invariant; rollback commands affect

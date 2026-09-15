@@ -1,4 +1,4 @@
-import type { AdStudioBrandKit } from "../../adstudio/types.ts";
+import type { AdBuilderBrandKit } from "../../adbuilder/types.ts";
 
 export type PromptTestFixtureTask = "copy" | "image" | "background";
 
@@ -10,7 +10,7 @@ export type PromptTestFixture = {
   payload: Record<string, unknown>;
 };
 
-const BASE_BRAND_KIT: Partial<AdStudioBrandKit> = {
+const BASE_BRAND_KIT: Partial<AdBuilderBrandKit> = {
   identity: {
     businessName: "Northstar Realty",
     tradingName: "Northstar Realty",

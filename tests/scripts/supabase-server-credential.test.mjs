@@ -10,7 +10,7 @@ import {
 
 const legacyJwt = "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.signature";
 const liveScripts = [
-  "scripts/e2e/seed-adstudio-e2e.mjs",
+  "scripts/e2e/seed-adbuilder-e2e.mjs",
   "scripts/record-meta-app-review.mjs",
   "scripts/research/reconcile-exa-wa-roster-sources.mjs",
   "scripts/research/seed-exa-wa-roster-sources.mjs",
@@ -105,14 +105,14 @@ test("every live elevated script uses the shared secret-first client helper", ()
   }
 });
 
-test("the AdStudio e2e seed provisions render credits and an appearance fixture", () => {
-  const source = readFileSync("scripts/e2e/seed-adstudio-e2e.mjs", "utf8");
+test("the AdBuilder e2e seed provisions render credits and an appearance fixture", () => {
+  const source = readFileSync("scripts/e2e/seed-adbuilder-e2e.mjs", "utf8");
   assert.match(source, /rpc\("grant_workspace_credits"/);
-  assert.match(source, /p_workspace_id:\s*ADSTUDIO_E2E_WORKSPACE_ID/);
+  assert.match(source, /p_workspace_id:\s*ADBUILDER_E2E_WORKSPACE_ID/);
   assert.match(source, /p_entitlement_type:\s*"operator"/);
   assert.match(source, /p_credits:\s*6/);
-  assert.match(source, /adstudio-e2e:credit-grant:\$\{periodStart\.toISOString\(\)\.slice\(0, 7\)\}:v1/);
-  assert.match(source, /from\("adstudio_brand_kits"\)/);
+  assert.match(source, /adbuilder-e2e:credit-grant:\$\{periodStart\.toISOString\(\)\.slice\(0, 7\)\}:v1/);
+  assert.match(source, /from\("adbuilder_brand_kits"\)/);
   assert.match(source, /source_url: "https:\/\/blockwise\.sale"/);
   assert.match(source, /colours_json:/);
 });

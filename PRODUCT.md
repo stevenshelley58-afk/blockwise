@@ -4,7 +4,7 @@ Blockwise is a customer-facing ad-creation product for frustrated, nontechnical 
 
 Frank template pack -> customer inputs -> edit -> save/render -> review -> gated publish
 
-Customers choose a layered template pack, upload or select brand/property assets, edit text and layout in AdStudio, save the latest revision, export Feed and Story creatives, and review a frozen publish state. Publishing remains approval- and provider-configuration-gated; a healthy app does not prove Meta access, SMTP, billing, or provider writes.
+Customers choose a layered template pack, upload or select brand/property assets, edit text and layout in AdBuilder, save the latest revision, export Feed and Story creatives, and review a frozen publish state. Publishing remains approval- and provider-configuration-gated; a healthy app does not prove Meta access, SMTP, billing, or provider writes.
 
 The product benefit is consistent, useful ads that support more lead opportunities; it does not guarantee linear volume or sales outcomes. The hero wording and urgency are product copy and must remain exactly unchanged. Long real-estate conversion cycles mean Blockwise must not invent ROI, appointment conversion, predicted lead quality, winner/loser labels, or an unreviewed lead failure.
 

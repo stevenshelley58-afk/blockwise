@@ -10,8 +10,8 @@ const IDENTITY_KEY = "bw-read-models-identity-v1";
 export type ReadModelSurface =
   | "home"
   | `performance:${string}`
-  | "adstudio:bootstrap"
-  | "adstudio:library";
+  | "adbuilder:bootstrap"
+  | "adbuilder:library";
 
 export type LocalReadModelEnvelope<T> = {
   schemaVersion: typeof READ_MODEL_SCHEMA_VERSION;

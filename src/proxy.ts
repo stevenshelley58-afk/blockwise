@@ -5,7 +5,7 @@ import { providerCallbackRecovery } from "@/lib/auth/provider-callback-recovery"
 import { isFeatureRouteAvailable } from "@/lib/features/route-availability";
 import { refreshSupabaseSession } from "@/lib/supabase/proxy";
 
-const AUTHENTICATED_API_PREFIXES = ["/api/adstudio/", "/api/operator/"] as const;
+const AUTHENTICATED_API_PREFIXES = ["/api/adbuilder/", "/api/operator/"] as const;
 
 /** Routes that must never answer with a provider callback in their query. */
 const CALLBACK_RECOVERY_PATHS = ["/", "/login", "/signup", "/home"] as const;

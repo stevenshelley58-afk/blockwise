@@ -30,7 +30,7 @@ returns boolean language sql stable security definer set search_path = '' as $fn
     );
 $fn$;
 
-create or replace function private.adstudio_has_workspace_access(target_workspace_id uuid)
+create or replace function private.adbuilder_has_workspace_access(target_workspace_id uuid)
 returns boolean language sql stable security definer set search_path = '' as $fn$
   select exists (
     select 1 from public.workspace_members wm
@@ -55,7 +55,7 @@ revoke all on function
   private.is_operator(),
   private.is_workspace_member(uuid),
   private.has_workspace_role(uuid, text[]),
-  private.adstudio_has_workspace_access(uuid),
+  private.adbuilder_has_workspace_access(uuid),
   private.workspace_id_from_storage_path(text)
 from public;
 
@@ -63,6 +63,6 @@ grant execute on function
   private.is_operator(),
   private.is_workspace_member(uuid),
   private.has_workspace_role(uuid, text[]),
-  private.adstudio_has_workspace_access(uuid),
+  private.adbuilder_has_workspace_access(uuid),
   private.workspace_id_from_storage_path(text)
 to anon, authenticated, service_role;

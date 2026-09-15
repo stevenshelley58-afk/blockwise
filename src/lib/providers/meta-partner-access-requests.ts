@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { deterministicUuid } from "../adstudio/id.ts";
+import { deterministicUuid } from "../adbuilder/id.ts";
 
 export const META_PARTNER_REQUEST_TARGET = "meta_partner_access_request";
 export const META_PARTNER_REQUEST_ACTION = "requested";

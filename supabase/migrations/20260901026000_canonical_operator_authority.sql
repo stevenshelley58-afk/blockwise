@@ -38,7 +38,7 @@ as $$
   ), false);
 $$;
 
-create or replace function private.adstudio_has_workspace_access(target_workspace_id uuid)
+create or replace function private.adbuilder_has_workspace_access(target_workspace_id uuid)
 returns boolean language sql stable security definer set search_path = ''
 as $$
   select exists (

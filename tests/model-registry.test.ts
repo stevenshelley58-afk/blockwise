@@ -122,7 +122,7 @@ test("estimateRunCostUsd accounts for text input, text output, and image units",
 
 test("the professional final-image migration never rotates the economical draft profile", () => {
   const migration = readFileSync(
-    "supabase/migrations/20260809112956_adstudio_pro_final_image_quality.sql",
+    "supabase/migrations/20260809112956_adbuilder_pro_final_image_quality.sql",
     "utf8",
   ).replace(/\r\n?/g, "\n");
 
@@ -134,7 +134,7 @@ test("the professional final-image migration never rotates the economical draft 
 
 test("provider recovery migration rotates only final image and vision QA primaries", () => {
   const migration = readFileSync(
-    "supabase/migrations/20260809121000_adstudio_openai_provider_recovery.sql",
+    "supabase/migrations/20260809121000_adbuilder_openai_provider_recovery.sql",
     "utf8",
   );
 

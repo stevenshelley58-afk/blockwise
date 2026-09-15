@@ -40,13 +40,13 @@ test("nonessential trial state streams without blocking the authenticated shell"
 test("dynamic customer navigation has reusable loading boundaries and router cache", () => {
   const nextConfig = read("next.config.ts");
   const customerLoading = "src/app/(customer)/loading.tsx";
-  const studioLoading = "src/app/(customer)/ad-studio/loading.tsx";
+  const studioLoading = "src/app/(customer)/ad-builder/loading.tsx";
 
   assert.match(nextConfig, /staleTimes:\s*\{\s*dynamic: 30,\s*static: 180,/s);
   assert.equal(existsSync(customerLoading), true);
   assert.equal(existsSync(studioLoading), true);
   assert.match(read(customerLoading), /Loading Workspace|label="Workspace"/);
-  assert.match(read(studioLoading), /Opening Ad Studio/);
+  assert.match(read(studioLoading), /Opening Ad Builder/);
   assert.equal(existsSync("src/app/(customer)/template.tsx"), false);
 });
 

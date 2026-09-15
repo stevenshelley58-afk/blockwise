@@ -53,212 +53,212 @@ $$;
 -- public
 do $$
 begin
-  execute 'create index if not exists adstudio_brand_assets_brand_kit_id_idx on public.adstudio_brand_assets (brand_kit_id)';
+  execute 'create index if not exists adbuilder_brand_assets_brand_kit_id_idx on public.adbuilder_brand_assets (brand_kit_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_brand_assets_brand_kit_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_brand_assets_brand_kit_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_brand_assets_workspace_id_idx on public.adstudio_brand_assets (workspace_id)';
+  execute 'create index if not exists adbuilder_brand_assets_workspace_id_idx on public.adbuilder_brand_assets (workspace_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_brand_assets_workspace_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_brand_assets_workspace_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_brand_kits_created_by_idx on public.adstudio_brand_kits (created_by)';
+  execute 'create index if not exists adbuilder_brand_kits_created_by_idx on public.adbuilder_brand_kits (created_by)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_brand_kits_created_by_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_brand_kits_created_by_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_campaign_variants_workspace_id_idx on public.adstudio_campaign_variants (workspace_id)';
+  execute 'create index if not exists adbuilder_campaign_variants_workspace_id_idx on public.adbuilder_campaign_variants (workspace_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_campaign_variants_workspace_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_campaign_variants_workspace_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_campaigns_brand_kit_id_idx on public.adstudio_campaigns (brand_kit_id)';
+  execute 'create index if not exists adbuilder_campaigns_brand_kit_id_idx on public.adbuilder_campaigns (brand_kit_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_campaigns_brand_kit_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_campaigns_brand_kit_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_campaigns_created_by_idx on public.adstudio_campaigns (created_by)';
+  execute 'create index if not exists adbuilder_campaigns_created_by_idx on public.adbuilder_campaigns (created_by)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_campaigns_created_by_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_campaigns_created_by_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_campaigns_legacy_campaign_id_idx on public.adstudio_campaigns (legacy_campaign_id)';
+  execute 'create index if not exists adbuilder_campaigns_legacy_campaign_id_idx on public.adbuilder_campaigns (legacy_campaign_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_campaigns_legacy_campaign_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_campaigns_legacy_campaign_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_campaigns_offer_template_id_idx on public.adstudio_campaigns (offer_template_id)';
+  execute 'create index if not exists adbuilder_campaigns_offer_template_id_idx on public.adbuilder_campaigns (offer_template_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_campaigns_offer_template_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_campaigns_offer_template_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_compliance_reports_campaign_id_idx on public.adstudio_compliance_reports (campaign_id)';
+  execute 'create index if not exists adbuilder_compliance_reports_campaign_id_idx on public.adbuilder_compliance_reports (campaign_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_compliance_reports_campaign_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_compliance_reports_campaign_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_compliance_reports_variant_id_idx on public.adstudio_compliance_reports (variant_id)';
+  execute 'create index if not exists adbuilder_compliance_reports_variant_id_idx on public.adbuilder_compliance_reports (variant_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_compliance_reports_variant_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_compliance_reports_variant_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_compliance_reports_workspace_id_idx on public.adstudio_compliance_reports (workspace_id)';
+  execute 'create index if not exists adbuilder_compliance_reports_workspace_id_idx on public.adbuilder_compliance_reports (workspace_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_compliance_reports_workspace_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_compliance_reports_workspace_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_creative_objects_asset_id_idx on public.adstudio_creative_objects (asset_id)';
+  execute 'create index if not exists adbuilder_creative_objects_asset_id_idx on public.adbuilder_creative_objects (asset_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_creative_objects_asset_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_creative_objects_asset_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_creative_objects_creative_id_idx on public.adstudio_creative_objects (creative_id)';
+  execute 'create index if not exists adbuilder_creative_objects_creative_id_idx on public.adbuilder_creative_objects (creative_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_creative_objects_creative_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_creative_objects_creative_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_creative_objects_workspace_id_idx on public.adstudio_creative_objects (workspace_id)';
+  execute 'create index if not exists adbuilder_creative_objects_workspace_id_idx on public.adbuilder_creative_objects (workspace_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_creative_objects_workspace_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_creative_objects_workspace_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_creatives_variant_id_idx on public.adstudio_creatives (variant_id)';
+  execute 'create index if not exists adbuilder_creatives_variant_id_idx on public.adbuilder_creatives (variant_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_creatives_variant_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_creatives_variant_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_creatives_workspace_id_idx on public.adstudio_creatives (workspace_id)';
+  execute 'create index if not exists adbuilder_creatives_workspace_id_idx on public.adbuilder_creatives (workspace_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_creatives_workspace_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_creatives_workspace_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_exports_approval_request_id_idx on public.adstudio_exports (approval_request_id)';
+  execute 'create index if not exists adbuilder_exports_approval_request_id_idx on public.adbuilder_exports (approval_request_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_exports_approval_request_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_exports_approval_request_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_exports_created_by_idx on public.adstudio_exports (created_by)';
+  execute 'create index if not exists adbuilder_exports_created_by_idx on public.adbuilder_exports (created_by)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_exports_created_by_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_exports_created_by_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_exports_workspace_id_idx on public.adstudio_exports (workspace_id)';
+  execute 'create index if not exists adbuilder_exports_workspace_id_idx on public.adbuilder_exports (workspace_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_exports_workspace_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_exports_workspace_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_performance_imports_campaign_id_idx on public.adstudio_performance_imports (campaign_id)';
+  execute 'create index if not exists adbuilder_performance_imports_campaign_id_idx on public.adbuilder_performance_imports (campaign_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_performance_imports_campaign_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_performance_imports_campaign_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_performance_imports_imported_by_idx on public.adstudio_performance_imports (imported_by)';
+  execute 'create index if not exists adbuilder_performance_imports_imported_by_idx on public.adbuilder_performance_imports (imported_by)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_performance_imports_imported_by_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_performance_imports_imported_by_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_performance_imports_workspace_id_idx on public.adstudio_performance_imports (workspace_id)';
+  execute 'create index if not exists adbuilder_performance_imports_workspace_id_idx on public.adbuilder_performance_imports (workspace_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_performance_imports_workspace_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_performance_imports_workspace_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_platform_copy_campaign_id_idx on public.adstudio_platform_copy (campaign_id)';
+  execute 'create index if not exists adbuilder_platform_copy_campaign_id_idx on public.adbuilder_platform_copy (campaign_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_platform_copy_campaign_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_platform_copy_campaign_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_platform_copy_variant_id_idx on public.adstudio_platform_copy (variant_id)';
+  execute 'create index if not exists adbuilder_platform_copy_variant_id_idx on public.adbuilder_platform_copy (variant_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_platform_copy_variant_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_platform_copy_variant_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_platform_copy_workspace_id_idx on public.adstudio_platform_copy (workspace_id)';
+  execute 'create index if not exists adbuilder_platform_copy_workspace_id_idx on public.adbuilder_platform_copy (workspace_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_platform_copy_workspace_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_platform_copy_workspace_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_provider_runs_ai_run_id_idx on public.adstudio_provider_runs (ai_run_id)';
+  execute 'create index if not exists adbuilder_provider_runs_ai_run_id_idx on public.adbuilder_provider_runs (ai_run_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_provider_runs_ai_run_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_provider_runs_ai_run_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_provider_runs_ai_usage_ledger_id_idx on public.adstudio_provider_runs (ai_usage_ledger_id)';
+  execute 'create index if not exists adbuilder_provider_runs_ai_usage_ledger_id_idx on public.adbuilder_provider_runs (ai_usage_ledger_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_provider_runs_ai_usage_ledger_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_provider_runs_ai_usage_ledger_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_provider_runs_campaign_id_idx on public.adstudio_provider_runs (campaign_id)';
+  execute 'create index if not exists adbuilder_provider_runs_campaign_id_idx on public.adbuilder_provider_runs (campaign_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_provider_runs_campaign_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_provider_runs_campaign_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_provider_runs_prompt_version_id_idx on public.adstudio_provider_runs (prompt_version_id)';
+  execute 'create index if not exists adbuilder_provider_runs_prompt_version_id_idx on public.adbuilder_provider_runs (prompt_version_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_provider_runs_prompt_version_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_provider_runs_prompt_version_id_idx: %', sqlerrm;
 end
 $$;
 do $$
 begin
-  execute 'create index if not exists adstudio_provider_runs_user_id_idx on public.adstudio_provider_runs (user_id)';
+  execute 'create index if not exists adbuilder_provider_runs_user_id_idx on public.adbuilder_provider_runs (user_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping adstudio_provider_runs_user_id_idx: %', sqlerrm;
+  raise notice 'skipping adbuilder_provider_runs_user_id_idx: %', sqlerrm;
 end
 $$;
 do $$
@@ -655,9 +655,9 @@ end
 $$;
 do $$
 begin
-  execute 'create index if not exists lead_source_attribution_adstudio_campaign_id_idx on public.lead_source_attribution (adstudio_campaign_id)';
+  execute 'create index if not exists lead_source_attribution_adbuilder_campaign_id_idx on public.lead_source_attribution (adbuilder_campaign_id)';
 exception when undefined_column or undefined_table then
-  raise notice 'skipping lead_source_attribution_adstudio_campaign_id_idx: %', sqlerrm;
+  raise notice 'skipping lead_source_attribution_adbuilder_campaign_id_idx: %', sqlerrm;
 end
 $$;
 do $$

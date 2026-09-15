@@ -379,8 +379,8 @@ test("activation verifies reused parents but posts ACTIVE only to owned objects"
 });
 
 test("customer activation route verifies an explicit plan belongs to its ad", () => {
-  const source = readFileSync("src/app/api/adstudio/ads/[id]/activate/route.ts", "utf8") + readFileSync("src/lib/providers/adstudio-activation.ts", "utf8");
-  assert.match(source, /plan\.adStudioCampaignId !== id/);
+  const source = readFileSync("src/app/api/adbuilder/ads/[id]/activate/route.ts", "utf8") + readFileSync("src/lib/providers/adbuilder-activation.ts", "utf8");
+  assert.match(source, /plan\.adBuilderCampaignId !== id/);
   assert.match(source, /buildOwnedMetaActivationPayload\(plan\)/);
 });
 
@@ -393,8 +393,8 @@ function publishPlan(
   return {
     planId: "plan_123",
     workspaceId: "workspace_123",
-    adStudioCampaignId: "ad_123",
-    adStudioExportId: null,
+    adBuilderCampaignId: "ad_123",
+    adBuilderExportId: null,
     legacyCampaignId: null,
     providerConnectionId: "connection_123",
     approvalRequestId: "approval_123",
@@ -457,7 +457,7 @@ function publishPlan(
       description: "For Perth homeowners",
       cta: "LEARN_MORE",
       leadFormLocalId: "",
-      adStudioCreativeId: null,
+      adBuilderCreativeId: null,
       format: "4:5",
       asset: { type: "image", source: "meta", imageHash: "image_hash_123" },
     }],

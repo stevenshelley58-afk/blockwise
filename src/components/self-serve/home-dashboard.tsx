@@ -96,7 +96,7 @@ function LeadsSection({
             {copy.emptyTitle}
           </p>
           <p className="mt-1 text-[13px] text-muted-foreground">{copy.emptyBody}</p>
-          <ButtonArrow href="/ad-studio" className="mt-5">
+          <ButtonArrow href="/ad-builder" className="mt-5">
             {copy.ctaLabel}
           </ButtonArrow>
         </div>
@@ -177,7 +177,7 @@ function LeadsSection({
       {areExamples ? (
         <NoticeBar
           text={copy.demoNote}
-          action={{ href: "/ad-studio", label: copy.ctaLabel }}
+          action={{ href: "/ad-builder", label: copy.ctaLabel }}
         />
       ) : null}
     </section>

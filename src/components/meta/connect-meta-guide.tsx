@@ -447,7 +447,7 @@ function StatusCard({
         ) : null}
         {request.status === "ready_for_manual_publishing" ? (
           <Button className="min-h-11" asChild>
-            <a href="/ad-studio">
+            <a href="/ad-builder">
               Create your first ad <ArrowRight />
             </a>
           </Button>

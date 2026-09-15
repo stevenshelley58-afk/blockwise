@@ -2,9 +2,9 @@ import { existsSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL;
-const storageState = process.env.ADSTUDIO_E2E_STORAGE_STATE ?? "/srv/blockwise/e2e-runs/mobile-app-implementation-20260908/fixture-browser-state.json";
-const adId = process.env.ADSTUDIO_E2E_AD_ID ?? "d6703a91-9fcf-4348-8d01-a4de1dc6d68a";
-const templateId = process.env.ADSTUDIO_E2E_TEMPLATE_ID;
+const storageState = process.env.ADBUILDER_E2E_STORAGE_STATE ?? "/srv/blockwise/e2e-runs/mobile-app-implementation-20260908/fixture-browser-state.json";
+const adId = process.env.ADBUILDER_E2E_AD_ID ?? "d6703a91-9fcf-4348-8d01-a4de1dc6d68a";
+const templateId = process.env.ADBUILDER_E2E_TEMPLATE_ID;
 const controlledCanary = process.env.BLOCKWISE_CONTROLLED_CANARY === "1";
 const canRun = Boolean(baseUrl && existsSync(storageState));
 
@@ -13,7 +13,7 @@ test.use({
   serviceWorkers: "block",
   ignoreHTTPSErrors: controlledCanary,
   launchOptions: {
-    executablePath: process.env.ADSTUDIO_E2E_CHROMIUM,
+    executablePath: process.env.ADBUILDER_E2E_CHROMIUM,
     args: controlledCanary ? ["--host-resolver-rules=MAP blockwise.sale 127.0.0.1,EXCLUDE localhost"] : undefined,
   },
 });
@@ -30,7 +30,7 @@ test.describe("customer creation UX acceptance", () => {
       const method = route.request().method();
       if (["GET", "HEAD", "OPTIONS"].includes(method)) return route.continue();
       const requestUrl = new URL(route.request().url());
-      if (requestUrl.pathname.match(/^\/api\/adstudio\/ads\/[^/]+\/preview$/) && method === "POST") return route.continue();
+      if (requestUrl.pathname.match(/^\/api\/adbuilder\/ads\/[^/]+\/preview$/) && method === "POST") return route.continue();
       mutations.push(method + " " + route.request().url());
       return route.fulfill({ status: 409, contentType: "application/json", body: JSON.stringify({ error: "Read-only creation UX acceptance: mutation blocked" }) });
     });
@@ -39,7 +39,7 @@ test.describe("customer creation UX acceptance", () => {
   for (const width of [320, 390, 1440]) {
     test("Brand Pack leads with preview and keeps colour overlay in bounds at " + width + "px", async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: width < 500 ? 844 : 900 });
-      await page.goto("/ad-studio/brand");
+      await page.goto("/ad-builder/brand");
       await expect(page).not.toHaveURL(/\/login/);
       await expect(page.getByRole("main")).toBeVisible();
 
@@ -109,8 +109,8 @@ test.describe("customer creation UX acceptance", () => {
 
   test("editor exposes focused mobile controls and truthful readiness without saving", async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/ad-studio/ads/" + encodeURIComponent(adId));
-    await expect(page.getByRole("region", { name: "Ad Studio editor" })).toBeVisible();
+    await page.goto("/ad-builder/ads/" + encodeURIComponent(adId));
+    await expect(page.getByRole("region", { name: "Ad Builder editor" })).toBeVisible();
     for (const tab of ["Photos", "Content", "Style"]) {
       const control = page.locator('nav[aria-label="Editor tools"] button').filter({ hasText: tab });
       await expect(control).toBeVisible();
@@ -126,9 +126,9 @@ test.describe("customer creation UX acceptance", () => {
   });
 
   test("publish stages forward and back without losing local values", async ({ page }, testInfo) => {
-    test.skip(!templateId, "Requires ADSTUDIO_E2E_TEMPLATE_ID for publish acceptance");
+    test.skip(!templateId, "Requires ADBUILDER_E2E_TEMPLATE_ID for publish acceptance");
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/ad-studio/templates/" + encodeURIComponent(templateId!) + "/publish?adId=" + encodeURIComponent(adId));
+    await page.goto("/ad-builder/templates/" + encodeURIComponent(templateId!) + "/publish?adId=" + encodeURIComponent(adId));
     await expect(page.getByRole("heading", { name: "1. Creative & copy", exact: true })).toBeVisible();
     const downloadBoth = page.getByRole("button", { name: "Download both formats", exact: true });
     await expect(downloadBoth).toBeVisible();

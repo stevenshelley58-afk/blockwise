@@ -83,7 +83,7 @@ const PROFILE_VERSION_COLUMNS = [
   "active_to",
   "model_profiles!inner(key)",
 ].join(",");
-const SCHEMA = "adstudio-provider-run-baseline/v1";
+const SCHEMA = "adbuilder-provider-run-baseline/v1";
 const QUERY_VERSION = "workspace-created-at-id-keyset-v1";
 const MODEL_PROFILE_QUERY_VERSION = "active-at-window-end-active-from-id-desc-keyset-v2";
 const PAGE_SIZE = 1000;
@@ -104,7 +104,7 @@ const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..
 export const MANIFEST_PATH = path.join(
   REPO_ROOT,
   "artifacts",
-  "adstudio",
+  "adbuilder",
   "evidence",
   "provider-runs-manifest.json",
 );
@@ -182,7 +182,7 @@ export async function loadProviderRunRows({ supabase, workspaceId, windowEnd, pa
   let cursor = null;
   while (true) {
     let query = supabase
-      .from("adstudio_provider_runs")
+      .from("adbuilder_provider_runs")
       .select(PROVIDER_RUN_COLUMNS.join(","))
       .eq("workspace_id", workspaceId)
       .gte("created_at", WINDOW_START)
@@ -240,7 +240,7 @@ export async function loadProviderAttemptRows({ supabase, workspaceId, windowEnd
   let cursor = null;
   while (true) {
     let query = supabase
-      .from("adstudio_provider_run_attempts")
+      .from("adbuilder_provider_run_attempts")
       .select(PROVIDER_ATTEMPT_COLUMNS.join(","))
       .eq("workspace_id", workspaceId)
       .gte("created_at", WINDOW_START)
@@ -970,7 +970,7 @@ export function buildProviderBaselineManifest({
   const secondModelProfilesSha256 = sha256Canonical(secondModelProfiles);
   const queryDefinition = {
     version: QUERY_VERSION,
-    table: "adstudio_provider_runs",
+    table: "adbuilder_provider_runs",
     columns: PROVIDER_RUN_COLUMNS,
     window: { startInclusive: WINDOW_START, endExclusive: windowEnd },
     workspaceFilter: "workspace_id=eq.<enumerated-workspace>",
@@ -978,7 +978,7 @@ export function buildProviderBaselineManifest({
   };
   const attemptQueryDefinition = {
     version: QUERY_VERSION,
-    table: "adstudio_provider_run_attempts",
+    table: "adbuilder_provider_run_attempts",
     columns: PROVIDER_ATTEMPT_COLUMNS,
     window: { startInclusive: WINDOW_START, endExclusive: windowEnd },
     workspaceFilter: "workspace_id=eq.<enumerated-workspace>",

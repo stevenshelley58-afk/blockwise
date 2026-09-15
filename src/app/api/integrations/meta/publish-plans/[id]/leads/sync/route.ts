@@ -20,7 +20,7 @@ type SyncBody = {
 export async function POST(request: NextRequest, context: RouteContext) {
   const { id } = await Promise.resolve(context.params);
   const body = (await request.json().catch(() => ({}))) as SyncBody;
-  const guard = await requireApiWorkspace(request, "adstudio", body.workspaceId ?? request.nextUrl.searchParams.get("workspaceId"));
+  const guard = await requireApiWorkspace(request, "adbuilder", body.workspaceId ?? request.nextUrl.searchParams.get("workspaceId"));
 
   if (!guard.ok) return guard.response;
   const { access } = guard;

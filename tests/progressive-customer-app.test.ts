@@ -42,8 +42,8 @@ test("the retired onboarding screen is gone and Brand Pack owns brand setup", ()
   );
 
   // Brand Pack is where a customer scans a website and reviews the pack.
-  const brandStudio = read("src/components/adstudio/brand-studio.tsx");
-  assert.match(brandStudio, /\/api\/adstudio\/brand-kits\/extract/);
+  const brandStudio = read("src/components/adbuilder/brand-studio.tsx");
+  assert.match(brandStudio, /\/api\/adbuilder\/brand-kits\/extract/);
   assert.match(brandStudio, /\/approve/);
 
   // The AU-only market route still backs activation; nothing links the wizard.
@@ -90,9 +90,9 @@ test("team invitation endpoint reserves verified paid seats without creating mem
 });
 
 test("canonical Brand Pack extraction accepts exactly AU and US end to end", () => {
-  const extraction = read("src/lib/adstudio/brand-extraction.ts");
-  const types = read("src/lib/adstudio/types.ts");
-  const route = read("src/app/api/adstudio/brand-kits/extract/route.ts");
+  const extraction = read("src/lib/adbuilder/brand-extraction.ts");
+  const types = read("src/lib/adbuilder/types.ts");
+  const route = read("src/app/api/adbuilder/brand-kits/extract/route.ts");
 
   assert.match(extraction, /marketCountry: "AU" \| "US"/);
   assert.match(types, /marketCountry: "AU" \| "US"/);

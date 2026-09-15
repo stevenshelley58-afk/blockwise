@@ -9,7 +9,7 @@ claim that Blockwise published through the Marketing API.
 
 ## Customer workflow
 
-1. Finish and save the ad in Ad Studio.
+1. Finish and save the ad in Ad Builder.
 2. Open **Review & publish**.
 3. Review the saved Feed and Story PNGs and the Meta copy.
 4. Complete and confirm the destination, budget, audience, placements,

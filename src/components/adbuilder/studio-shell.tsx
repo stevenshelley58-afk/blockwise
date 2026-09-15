@@ -1,0 +1,156 @@
+"use client";
+
+import {
+  ArrowLeft,
+  Home,
+  Library,
+  LayoutTemplate,
+  Palette,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
+import { MobileBottomNav } from "@/components/app/mobile-bottom-nav";
+import { BlockwiseLogo } from "@/components/blockwise-logo";
+import { cn } from "@/lib/utils";
+
+type StudioShellProps = {
+  children: ReactNode;
+  workspaceName: string;
+  homeHref?: string;
+  account: { email: string; name: string; role: string };
+  metaConnectionStatus: "connected" | "attention" | "not_connected" | "unknown";
+};
+
+const items = [
+  { href: "/ad-builder", label: "Home", icon: Home, exact: true },
+  { href: "/ad-builder/templates", label: "Templates", icon: LayoutTemplate },
+  { href: "/ad-builder/library", label: "Library", icon: Library, matches: ["/ad-builder/library", "/ad-builder/ads", "/ad-builder/assets"] },
+  { href: "/ad-builder/brand", label: "Brand Pack", icon: Palette },
+];
+
+function activePath(pathname: string, href: string, exact?: boolean) {
+  return exact
+    ? pathname === href
+    : pathname === href || pathname.startsWith(`${href}/`);
+}
+
+export function StudioShell({
+  children,
+  workspaceName,
+  account,
+  homeHref = "/self-serve",
+  metaConnectionStatus,
+}: StudioShellProps) {
+  const pathname = usePathname() ?? "/ad-builder";
+  const contextual = pathname.startsWith("/ad-builder/ads/");
+  const connectionLabel =
+    metaConnectionStatus === "connected"
+      ? "Meta connected"
+      : metaConnectionStatus === "attention"
+        ? "Meta needs attention"
+        : metaConnectionStatus === "unknown"
+          ? "Meta connection status unavailable"
+          : "Meta not connected";
+  return (
+    <div className={cn("tw flex bg-background text-foreground", contextual ? "h-dvh overflow-hidden" : "min-h-dvh")}>
+      <aside
+        className="hidden w-[220px] shrink-0 flex-col bg-(--ink) text-(--surface) md:flex"
+        aria-label="Ad Builder navigation"
+      >
+        <div className="flex items-center gap-3 px-5 py-7">
+          <Link
+            href="/self-serve"
+            aria-label="Back to Blockwise"
+            className="grid size-9 shrink-0 place-items-center rounded-xl bg-transparent text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            <BlockwiseLogo tokens showWordmark={false} />
+          </Link>
+          <div>
+            <p className="font-display text-[15.5px] font-extrabold leading-tight">
+              Ad Builder
+            </p>
+            <p className="text-[11px] text-white/55">by Blockwise</p>
+          </div>
+        </div>
+        <nav className="grid gap-1 px-3" aria-label="Studio destinations">
+          {items.map(({ href, label, icon: Icon, exact, matches }) => {
+            const active = matches
+              ? matches.some(match => activePath(pathname, match))
+              : activePath(pathname, href, exact);
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex min-h-11 items-center gap-3 rounded-xl px-3 text-[13px] font-semibold transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white",
+                  active ? "bg-white/10 text-white" : "text-white/65",
+                )}
+              >
+                <Icon size={18} aria-hidden />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="mt-auto grid gap-2 px-3 pb-5">
+          <div
+            className="truncate rounded-xl border border-white/10 px-3 py-2.5 text-[11px] text-white/65"
+            title={connectionLabel}
+          >
+            <span
+              className={cn(
+                "mr-2 inline-block size-1.5 rounded-full",
+                metaConnectionStatus === "connected"
+                  ? "bg-success"
+                  : "bg-(--faint)",
+              )}
+              aria-hidden
+            />
+            {connectionLabel}
+          </div>
+          <Link
+            href="/self-serve"
+            className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-[12px] font-semibold text-white/65 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            <ArrowLeft size={17} aria-hidden />
+            Back to Blockwise
+          </Link>
+          <p
+            className="truncate px-3 text-[10px] text-white/35"
+            title={`${workspaceName} · ${account.name}`}
+          >
+            {workspaceName} · {account.name}
+          </p>
+        </div>
+      </aside>
+      <div className="flex min-w-0 flex-1 flex-col">
+        {!contextual ? (
+          <header className="flex min-h-14 items-center border-b border-border bg-(--ink) px-4 text-(--surface) md:hidden">
+            <Link
+              href="/self-serve"
+              className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-1 text-[12px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <ArrowLeft size={16} aria-hidden />
+              <span>Blockwise</span>
+            </Link>
+            <span className="ml-3 min-w-0 truncate font-display text-[15.5px] font-extrabold">
+              Ad Builder
+            </span>
+            <span
+              className="ml-auto max-w-[42%] truncate text-[11px] text-white/60"
+              title={workspaceName}
+            >
+              {workspaceName}
+            </span>
+          </header>
+        ) : null}
+        <main className={cn("min-w-0 flex-1", contextual ? "min-h-0 overflow-hidden pb-[calc(5rem+env(safe-area-inset-bottom)+var(--consent-banner-height,0px))] md:pb-0" : "pb-[calc(5rem+env(safe-area-inset-bottom)+var(--consent-banner-height,0px))] md:pb-0")}>
+          {children}
+        </main>
+        <MobileBottomNav homeHref={homeHref} account={account} />
+      </div>
+    </div>
+  );
+}

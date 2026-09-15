@@ -7,7 +7,7 @@ generate templates - Hermes supplies the direct artifacts and Frank is only the 
 
 This doc is the inventory of what stays, what is leftover, and what is already
 gone. Grep terms audited: `reference_clone`, `reference-clone`,
-`buildCloneImageRequest`, `templateClone`, `AD_STUDIO_TEMPLATES`,
+`buildCloneImageRequest`, `templateClone`, `AD_BUILDER_TEMPLATES`,
 `in-place-ad-editor`, `research-runtime`, `content-engine`, `/operator/email`,
 `/operator/research`.
 
@@ -17,7 +17,7 @@ gone. Grep terms audited: `reference_clone`, `reference-clone`,
 
 | Surface | Paths |
 |---|---|
-| AdStudio editor (picks direct templates, edits ads, Save PNG, Publish) | `src/app/(customer)/ad-studio/**`, `src/app/api/adstudio/**`, `src/lib/adstudio/**` |
+| AdBuilder editor (picks direct templates, edits ads, Save PNG, Publish) | `src/app/(customer)/ad-builder/**`, `src/app/api/adbuilder/**`, `src/lib/adbuilder/**` |
 | Ad Radar customer view (browse/search ads & advertisers) | `src/app/(customer)/ad-radar/**`, `src/app/api/research/ad-radar/**`, `src/app/api/research/ads/**`, `src/app/api/research/advertisers/**`, `src/app/api/research/locations/**`, `src/app/api/research/swipe-file/**` |
 | Property check / suburb reports | `src/app/(customer)/property-check/**`, `src/app/suburb/**`, `src/app/api/property-checks/**`, `src/app/api/research/audit/**`, `src/app/api/research/local-ad-radar/**` |
 | Booking / leads / results / self-serve / settings / onboarding / connect-meta | `src/app/(customer)/booking`, `(customer)/leads`, `(customer)/results`, `(customer)/self-serve`, `(customer)/settings`, `(customer)/onboarding`, `(customer)/connect-meta`, `src/app/api/leads/**` etc. |
@@ -56,7 +56,7 @@ Blockwise no longer owns. Importers are internal to the group unless noted.
 - Components: `src/components/operator/content-runs/**` (content-prompt-editor, content-run-console, content-run-review)
 - Lib: `src/lib/content-engine/**` (contracts.ts, index.ts, queue.ts, repository.ts) — no external importers
 - Tests: `tests/content-engine/**`
-- Skills (blog generator suite — verify none are used by AdStudio before deleting): `hermes/skills/{blockwise-blog-editor,blockwise-blog-formatter,blockwise-blog-writer,blockwise-content-run-orchestrator,blockwise-content-strategist,blockwise-topic-researcher,blockwise-seo-schema-builder,blockwise-social-post-generator,blockwise-image-brief-writer,blockwise-image-generator,blockwise-image-reviewer}` — **verify** `blockwise-image-*` first: image generation may still serve AdStudio. Do not delete `blockwise-instant-form-generator` / `blockwise-lead-ad-generator` / `blockwise-page-builder` / `blockwise-model-router` / `blockwise-prompt-manager` / `blockwise-listing-scraper` without checking (lead/product surfaces).
+- Skills (blog generator suite — verify none are used by AdBuilder before deleting): `hermes/skills/{blockwise-blog-editor,blockwise-blog-formatter,blockwise-blog-writer,blockwise-content-run-orchestrator,blockwise-content-strategist,blockwise-topic-researcher,blockwise-seo-schema-builder,blockwise-social-post-generator,blockwise-image-brief-writer,blockwise-image-generator,blockwise-image-reviewer}` — **verify** `blockwise-image-*` first: image generation may still serve AdBuilder. Do not delete `blockwise-instant-form-generator` / `blockwise-lead-ad-generator` / `blockwise-page-builder` / `blockwise-model-router` / `blockwise-prompt-manager` / `blockwise-listing-scraper` without checking (lead/product surfaces).
 
 ### B3. Operator email console (mailbox UI)
 
@@ -76,19 +76,19 @@ Blockwise no longer owns. Importers are internal to the group unless noted.
 
 ## (c) ALREADY GONE (verified — `node scripts/verify/hard-reset-static.mjs` passes)
 
-The legacy AdStudio flat-clone system was deleted in Phase 1. The verifier
+The legacy AdBuilder flat-clone system was deleted in Phase 1. The verifier
 enforces zero legacy identifiers in `src`, `tests`, `scripts`, `trigger`,
 `hermes/tools`; the only code hits for the legacy terms are inside the verifier
 itself (self-excluded). Deleted paths include:
 
-- `src/lib/adstudio/`: template-gallery/, reference-clone.ts, clone-generation.ts, clone-campaign.ts, clone-creative.ts, clone-regions.ts, region-edit.ts, rasterize-reference.ts, generate-template-campaign.ts, template-resolver.ts, template-preview.ts, creative-preview.ts, creative-export.ts, export-package.ts, export-render-storage.ts, generated-media.ts, generation-credits.ts, generation-error.ts, generation-lock.ts, live-workflow.ts, offers.ts, platform-rules.ts, scoring.ts, templates.ts, template-display.ts, readiness.ts, job-status.ts, clone-candidate-audit.ts, clone-quality-gate.ts, empty-campaign.ts, first-ad-input.ts, load-live-bundle.ts, layer-derivation.ts, magic-layers-config.mjs, outpaint-layout.ts, resolve-image-for-model.ts, smart-crop.ts, text-layers.ts, text-layer-state.ts, creative-library.ts, creative-revisions.ts
-- `public/adstudio-samples`, `scripts/adstudio/{create-template.mjs, local-template-adapter.mjs}`, `scripts/build/rasterize-adstudio-samples.mjs`, `scripts/verify/adstudio-templates.mjs`, `hermes/skills/adstudio-template-builder`, `.github/codex/prompts/adstudio-template-integrator.md`, `mockups/qwen-adstudio-full-process-20260722`
-- `src/app/api/adstudio/{jobs, creatives/[id]/edit, campaigns/route.ts, campaigns/[id]/draft, export-packages}`, `src/app/api/operator/template-trace`
-- `src/components/adstudio/{ad-studio-workbench.tsx, new-ad-dialog.tsx, canvas/in-place-ad-editor.tsx}`
+- `src/lib/adbuilder/`: template-gallery/, reference-clone.ts, clone-generation.ts, clone-campaign.ts, clone-creative.ts, clone-regions.ts, region-edit.ts, rasterize-reference.ts, generate-template-campaign.ts, template-resolver.ts, template-preview.ts, creative-preview.ts, creative-export.ts, export-package.ts, export-render-storage.ts, generated-media.ts, generation-credits.ts, generation-error.ts, generation-lock.ts, live-workflow.ts, offers.ts, platform-rules.ts, scoring.ts, templates.ts, template-display.ts, readiness.ts, job-status.ts, clone-candidate-audit.ts, clone-quality-gate.ts, empty-campaign.ts, first-ad-input.ts, load-live-bundle.ts, layer-derivation.ts, magic-layers-config.mjs, outpaint-layout.ts, resolve-image-for-model.ts, smart-crop.ts, text-layers.ts, text-layer-state.ts, creative-library.ts, creative-revisions.ts
+- `public/adbuilder-samples`, `scripts/adbuilder/{create-template.mjs, local-template-adapter.mjs}`, `scripts/build/rasterize-adbuilder-samples.mjs`, `scripts/verify/adbuilder-templates.mjs`, `hermes/skills/adbuilder-template-builder`, `.github/codex/prompts/adbuilder-template-integrator.md`, `mockups/qwen-adbuilder-full-process-20260722`
+- `src/app/api/adbuilder/{jobs, creatives/[id]/edit, campaigns/route.ts, campaigns/[id]/draft, export-packages}`, `src/app/api/operator/template-trace`
+- `src/components/adbuilder/{ad-builder-workbench.tsx, new-ad-dialog.tsx, canvas/in-place-ad-editor.tsx}`
 
 The old prompt, handover, review, and implementation-plan files were removed
 during canonical-project cleanup. The applied migration
-`supabase/migrations/202607150001_adstudio_fast_quality_profile.sql` remains as
+`supabase/migrations/202607150001_adbuilder_fast_quality_profile.sql` remains as
 required database history.
 
 ## (d) Recommended next delete commit (BW-D)
@@ -113,6 +113,6 @@ and research-ops skills — this must be coordinated with the VPS deploy so the
 supervisor process is stopped, not orphaned.
 
 **Before deleting**: verify `hermes/skills/blockwise-image-*` and
-`blockwise-listing-scraper` are not used by AdStudio/leads (see B2 note);
-`src/lib/adstudio/listing-extract.ts` imports listing-scraper output types, so
+`blockwise-listing-scraper` are not used by AdBuilder/leads (see B2 note);
+`src/lib/adbuilder/listing-extract.ts` imports listing-scraper output types, so
 the scraper stays until that customer path is checked.

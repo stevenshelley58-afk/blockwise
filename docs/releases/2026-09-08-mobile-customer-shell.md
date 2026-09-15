@@ -2,7 +2,7 @@
 
 ## Scope
 
-This candidate makes the customer navigation and Ad Studio editor workable at phone widths. The Ads hub now opens with a New ad action, recent saved ads, and compact links to templates, the media library, and Brand Pack.
+This candidate makes the customer navigation and Ad Builder editor workable at phone widths. The Ads hub now opens with a New ad action, recent saved ads, and compact links to templates, the media library, and Brand Pack.
 
 ## Editor safety
 

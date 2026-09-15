@@ -68,7 +68,7 @@ test("CLI text refusal is one path-free line and leaves no partial output or rec
     const repoRoot = resolve(sourceDir, "../../..");
     const result = spawnSync(
       process.execPath,
-      ["--import", "tsx", join(sourceDir, "cli.ts"), "--input", artifactPath, "--assets-dir", join(repoRoot, "public/fonts/adstudio"), "--out-dir", outDir],
+      ["--import", "tsx", join(sourceDir, "cli.ts"), "--input", artifactPath, "--assets-dir", join(repoRoot, "public/fonts/adbuilder"), "--out-dir", outDir],
       { cwd: repoRoot, encoding: "utf8" },
     );
 

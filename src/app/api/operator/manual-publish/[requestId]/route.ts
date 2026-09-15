@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireOperator } from "@/lib/operator/auth";
-import { ManualPublishError, getManualPublishRequest, updateManualPublishStatus, type ManualPublishStatus } from "@/lib/adstudio/manual-publish";
+import { ManualPublishError, getManualPublishRequest, updateManualPublishStatus, type ManualPublishStatus } from "@/lib/adbuilder/manual-publish";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";

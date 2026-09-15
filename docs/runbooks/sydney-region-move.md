@@ -108,7 +108,7 @@ original byte for byte at the time of writing.
 - `product-row-counts.sh` output matches the source backup exactly.
 - Object count in the restored volume matches `storage.objects`.
 - `curl -s https://blockwise.sale/api/health` reports the new revision.
-- A real signed-in session works: log in and load `/self-serve`, `/ad-studio`,
+- A real signed-in session works: log in and load `/self-serve`, `/ad-builder`,
   `/leads`, `/settings`.
 - Client IP attribution is correct end to end. Substitute a header-capturing
   listener for `product-app` and confirm `X-Blockwise-Client-IP`,

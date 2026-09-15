@@ -5,11 +5,11 @@ begin
   if not exists (
     select 1
       from pg_constraint
-     where conrelid = 'public.adstudio_customer_image_uploads'::regclass
-       and conname = 'adstudio_customer_image_uploads_status_check'
+     where conrelid = 'public.adbuilder_customer_image_uploads'::regclass
+       and conname = 'adbuilder_customer_image_uploads_status_check'
   ) then
-    alter table public.adstudio_customer_image_uploads
-      add constraint adstudio_customer_image_uploads_status_check
+    alter table public.adbuilder_customer_image_uploads
+      add constraint adbuilder_customer_image_uploads_status_check
       check (status in ('pending', 'finalizing', 'deleting', 'finalized'));
   end if;
 end;

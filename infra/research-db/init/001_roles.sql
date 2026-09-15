@@ -26,11 +26,11 @@ create table if not exists public.workspaces (
   id uuid primary key
 );
 
-create table if not exists public.adstudio_campaigns (
+create table if not exists public.adbuilder_campaigns (
   id uuid primary key
 );
 
-create table if not exists public.adstudio_creatives (
+create table if not exists public.adbuilder_creatives (
   id uuid primary key
 );
 

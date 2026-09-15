@@ -4,7 +4,7 @@ import { normalizeBookingMarket } from "../booking/provider.ts";
 import { sendOperatorEmail } from "./email-service.ts";
 import { recordAuditLog } from "../supabase/audit.ts";
 import { createSupabaseServiceClient } from "../supabase/service.ts";
-import { MANUAL_REQUEST_ACTION, MANUAL_REQUEST_TARGET, MANUAL_STATUS_ACTION } from "../adstudio/manual-publish.ts";
+import { MANUAL_REQUEST_ACTION, MANUAL_REQUEST_TARGET, MANUAL_STATUS_ACTION } from "../adbuilder/manual-publish.ts";
 import { META_PARTNER_REQUEST_ACTION, META_PARTNER_REQUEST_TARGET, META_PARTNER_STATUS_ACTION } from "../providers/meta-partner-access-requests.ts";
 
 type ServiceClient = ReturnType<typeof createSupabaseServiceClient>;
@@ -274,10 +274,10 @@ async function loadCustomerRelations(service: ServiceClient, workspaceIds: strin
   ] = await Promise.all([
     table("customer_activations"),
     table("workspace_credit_wallets"),
-    table("adstudio_brand_kits"),
+    table("adbuilder_brand_kits"),
     table("provider_connections"),
     table("meta_publish_plans"),
-    table("adstudio_campaigns"),
+    table("adbuilder_campaigns"),
     table("workspace_members", "*, profiles(full_name,email,is_operator)"),
     table("workspace_onboarding_bookings"),
     table("meta_free_live_claims"),

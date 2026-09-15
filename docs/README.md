@@ -15,7 +15,7 @@ alternate production versions.
 - [Architecture overview](architecture/overview.md)
 - [Product map](architecture/product-map.md)
 - [Extension guide](architecture/extension-guide.md)
-- [Native Ad Studio editor trial](architecture/adstudio-vue-editor.md)
+- [Native Ad Builder editor trial](architecture/adbuilder-vue-editor.md)
 - [Production verification and release](runbooks/production-readiness.md)
 - [VPS access](runbooks/vps-ssh.md)
 - [Rollback](runbooks/rollback.md)

@@ -9,7 +9,7 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { detectTemplateRegions } from "./detect-regions.mjs";
 
-const GALLERY_DIR = path.resolve(process.cwd(), "src/lib/adstudio/template-gallery");
+const GALLERY_DIR = path.resolve(process.cwd(), "src/lib/adbuilder/template-gallery");
 const REPORT_PATH = path.resolve(process.cwd(), ".cache/font-corpus/region-detection-report.json");
 
 async function main() {

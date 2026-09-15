@@ -39,7 +39,7 @@ export function LeadSyncButton({ workspaceId }: { workspaceId: string }) {
         return;
       }
       if (result.reason === "no_published_plan") {
-        setMessage("No published campaign with a lead form yet — publish one in Ad Studio first.");
+        setMessage("No published campaign with a lead form yet — publish one in Ad Builder first.");
         return;
       }
       setMessage(

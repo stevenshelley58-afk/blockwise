@@ -24,7 +24,7 @@ type VerifyOptions = {
 const DEFAULT_MAX_AGE_SECONDS = 10 * 60;
 const ALLOWED_RETURN_PATHS = new Set([
   "/results",
-  "/ad-studio",
+  "/ad-builder",
   "/settings#connections",
 ]);
 

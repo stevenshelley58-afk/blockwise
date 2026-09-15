@@ -2,13 +2,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { AdTemplate } from "../../../packages/ad-template-contract/src/types.ts";
 import { renderPlacement, TextPreflightError } from "../../../packages/ad-template-renderer/src/renderer.ts";
-import type { BrandPackColours } from "../adstudio/brand-colours.ts";
-import { brandPackColoursToRoleMap, resolveBrandColourMap } from "../adstudio/brand-colours.ts";
-import { extractBrandKitFromWebsite } from "../adstudio/brand-extraction.ts";
-import { normalizeAndValidateExtractionUrl } from "../adstudio/extraction-url.ts";
-import { deterministicUuid } from "../adstudio/id.ts";
-import { getTemplate, listTemplates, type TemplateLeadType, type TemplateSummary } from "../adstudio/pack-gallery.ts";
-import { loadTemplateAssets } from "../adstudio/template-review.ts";
+import type { BrandPackColours } from "../adbuilder/brand-colours.ts";
+import { brandPackColoursToRoleMap, resolveBrandColourMap } from "../adbuilder/brand-colours.ts";
+import { extractBrandKitFromWebsite } from "../adbuilder/brand-extraction.ts";
+import { normalizeAndValidateExtractionUrl } from "../adbuilder/extraction-url.ts";
+import { deterministicUuid } from "../adbuilder/id.ts";
+import { getTemplate, listTemplates, type TemplateLeadType, type TemplateSummary } from "../adbuilder/pack-gallery.ts";
+import { loadTemplateAssets } from "../adbuilder/template-review.ts";
 import type { GapConcept } from "../research/suburb-report-insights.ts";
 import {
   buildAuditTextValues,

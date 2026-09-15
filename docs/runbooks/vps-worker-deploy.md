@@ -8,7 +8,7 @@ The durable worker is the `product-worker` profile in
 `infra/coolify/docker-compose.product.yml`. It consumes
 `public.job_queue` through the self-hosted PostgREST/Auth contract and runs
 provider sync, Meta publish/mutation, lead delivery, reporting refresh, token
-health, and Ad Studio recovery. The worker does not run Hermes research or
+health, and Ad Builder recovery. The worker does not run Hermes research or
 Frank generation jobs.
 
 Do not start this profile while `BLOCKWISE_ENABLE_PROVIDER_WRITES=false`; the

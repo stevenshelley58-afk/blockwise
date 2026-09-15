@@ -2,15 +2,15 @@
 import assert from 'node:assert/strict';
 import sharp from 'sharp';
 import { createHash } from 'node:crypto';
-import { buildCustomerImageRef } from '../../src/lib/adstudio/customer-image-ref.ts';
+import { buildCustomerImageRef } from '../../src/lib/adbuilder/customer-image-ref.ts';
 import { createServer } from 'node:http';
 import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises';
 import { resolve, extname } from 'node:path';
 import { build } from 'esbuild';
 import { chromium } from '@playwright/test';
 import { adDocumentSchema } from '../../packages/ad-template-contract/src/schema.ts';
-import { validateNativeEditorDocument, validateNativePngExport } from '../../src/lib/adstudio/vue-native-validation.ts';
-const output = process.env.VUE_EDITOR_EVIDENCE_DIR || '/root/work/adstudio-vue-simple-host-20260912';
+import { validateNativeEditorDocument, validateNativePngExport } from '../../src/lib/adbuilder/vue-native-validation.ts';
+const output = process.env.VUE_EDITOR_EVIDENCE_DIR || '/root/work/adbuilder-vue-simple-host-20260912';
 const photoBytes = await sharp({create:{width:900,height:600,channels:3,background:'#315951'}}).png().toBuffer();
 const photoRef = buildCustomerImageRef('workspace-1','trial-ad',createHash('sha256').update(photoBytes).digest('hex'),'image/png');
 const originalPhotoBytes = await sharp({create:{width:1200,height:800,channels:3,background:'#57716a'}}).png().toBuffer();
@@ -30,7 +30,7 @@ let document = { schema:'blockwise.ad-document', templateId:template.templateId,
 let revision = 1, saves = 0, proposals = 0;
 const props = () => ({ pack:template, adId:'trial-ad', workspaceId:'workspace-1', initialDocument:document, initialRevision:revision, sourceAdId:'source-ad', businessName:'Synthetic test agency', logoUrl:null, libraryAssets:[{id:'library-photo',name:'Test library photo',url:photoRef}] });
 const compiled = await build({
-  stdin:{ contents:`import React from 'react'; import {createRoot} from 'react-dom/client'; import {VueEditorShell} from './src/components/adstudio/vue-editor/vue-editor-shell';createRoot(document.getElementById('root')).render(<VueEditorShell {...window.props}/>);`, loader:'tsx', resolveDir:process.cwd() },
+  stdin:{ contents:`import React from 'react'; import {createRoot} from 'react-dom/client'; import {VueEditorShell} from './src/components/adbuilder/vue-editor/vue-editor-shell';createRoot(document.getElementById('root')).render(<VueEditorShell {...window.props}/>);`, loader:'tsx', resolveDir:process.cwd() },
   bundle:true, write:false, format:'esm', jsx:'automatic', define:{'process.env.NODE_ENV':'"production"'}, tsconfig:'tsconfig.json',
   plugins:[{name:'test-router',setup(build){build.onResolve({filter:/^next\/navigation$/},()=>({path:'router',namespace:'test'}));build.onLoad({filter:/.*/,namespace:'test'},()=>({contents:'export const useRouter=()=>({push:path=>{window.lastNavigation=path}});',loader:'js'}));}}],
 });
@@ -44,7 +44,7 @@ const server = createServer(async(req,res)=>{
     if(path==='/test.js'){res.setHeader('Content-Type','text/javascript');res.end(compiled.outputFiles[0].contents);return;}
     if(path==='/test.css'){res.setHeader('Content-Type','text/css');res.end(css);return;}
     if(path.includes('/copy-proposal')){proposals++;res.setHeader('Content-Type','application/json');res.end(JSON.stringify({onImage:{headline:'Proposed headline'},copy:{primaryText:'Proposed primary text'},source:'Test fixture'}));return;}
-    if(path==='/api/adstudio/customer-media'){res.setHeader('Content-Type','image/png');res.end(req.url===photoRef?photoBytes:originalPhotoBytes);return;}
+    if(path==='/api/adbuilder/customer-media'){res.setHeader('Content-Type','image/png');res.end(req.url===photoRef?photoBytes:originalPhotoBytes);return;}
     if(path.endsWith('/media') && req.method==='POST'){
       const chunks=[];for await(const chunk of req)chunks.push(chunk);
       const body=JSON.parse(Buffer.concat(chunks).toString());

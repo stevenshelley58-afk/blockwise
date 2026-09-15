@@ -82,7 +82,7 @@ export default async function ModelControlPage({ searchParams }: { searchParams?
           </label>
           <label>
             <span>Task</span>
-            <input name="task" defaultValue={ledgerFilters.task ?? ""} placeholder="adstudio.copy" />
+            <input name="task" defaultValue={ledgerFilters.task ?? ""} placeholder="adbuilder.copy" />
           </label>
           <label>
             <span>Day</span>

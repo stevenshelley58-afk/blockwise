@@ -30,7 +30,7 @@ export default async function ResearchPage({ searchParams }: { searchParams?: Se
   // Brand Pack suburb -> auto-load target. Only consulted when the visitor did
   // not type a query; falls back to the IP-derived guess resolved above.
   const { data: brandKitRow } = await supabase
-    .from("adstudio_brand_kits")
+    .from("adbuilder_brand_kits")
     .select("contact_json")
     .eq("workspace_id", access.workspaceId)
     .limit(1)

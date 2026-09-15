@@ -578,9 +578,9 @@ async function recordWalkthrough({ baseUrl, session, workspaceId, campaignPack, 
 
   await gotoStep(
     page,
-    `${baseUrl}/ad-studio`,
+    `${baseUrl}/ad-builder`,
     "ads_management",
-    "Ad Studio creates compliant real-estate creative and prepares the campaign for paused Meta publishing.",
+    "Ad Builder creates compliant real-estate creative and prepares the campaign for paused Meta publishing.",
   );
   await pause(page, 2500);
   await clickIfVisible(page, /Publish/i);
@@ -850,7 +850,7 @@ async function createPublishPlanEvidence(page, { workspaceId, campaignPack }) {
           .slice(0, 3)
       : [];
     const publishResponse = await fetch(
-      `/api/adstudio/export-packages/${encodeURIComponent(campaignPack.campaign.campaignId)}/publish?workspaceId=${encodeURIComponent(workspaceId)}`,
+      `/api/adbuilder/export-packages/${encodeURIComponent(campaignPack.campaign.campaignId)}/publish?workspaceId=${encodeURIComponent(workspaceId)}`,
       {
       method: "POST",
       headers: { "content-type": "application/json" },

@@ -2,7 +2,7 @@
   "name": "@blockwise/vue-ad-editor",
   "private": true,
   "version": "1.0.0",
-  "description": "Pinned Vue Fabric Editor iframe for Blockwise AdStudio.",
+  "description": "Pinned Vue Fabric Editor iframe for Blockwise AdBuilder.",
   "packageManager": "pnpm@11.21.0",
   "scripts": {
     "dev": "vite serve",

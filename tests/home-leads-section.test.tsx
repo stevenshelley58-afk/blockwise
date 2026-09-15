@@ -20,7 +20,7 @@ function homeData(overrides: Partial<HomeData> = {}): HomeData {
     activation: {
       currentStage: "brand",
       nextAction: "brand",
-      resumePath: "/ad-studio/brand",
+      resumePath: "/ad-builder/brand",
       completed: 1,
       total: 3,
       milestones: {},

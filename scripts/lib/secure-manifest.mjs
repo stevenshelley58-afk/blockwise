@@ -82,9 +82,9 @@ async function windowsIdentitySid() {
 
 async function verifyWindowsAcl(target, sid) {
   const command = [
-    "$acl = Get-Acl -LiteralPath $env:ADSTUDIO_EVIDENCE_PATH",
+    "$acl = Get-Acl -LiteralPath $env:ADBUILDER_EVIDENCE_PATH",
     "if (-not $acl.AreAccessRulesProtected) { exit 11 }",
-    "$sid = $env:ADSTUDIO_EVIDENCE_SID",
+    "$sid = $env:ADBUILDER_EVIDENCE_SID",
     "$allow = @($acl.Access | Where-Object { $_.AccessControlType -eq 'Allow' })",
     "if ($allow.Count -ne 1) { exit 12 }",
     "$actual = $allow[0].IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value",
@@ -95,7 +95,7 @@ async function verifyWindowsAcl(target, sid) {
   await execFileAsync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", command], {
     encoding: "utf8",
     windowsHide: true,
-    env: { ...process.env, ADSTUDIO_EVIDENCE_PATH: target, ADSTUDIO_EVIDENCE_SID: sid },
+    env: { ...process.env, ADBUILDER_EVIDENCE_PATH: target, ADBUILDER_EVIDENCE_SID: sid },
   });
 }
 

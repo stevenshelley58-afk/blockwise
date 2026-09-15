@@ -1,14 +1,14 @@
 import { existsSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
-const state = process.env.ADSTUDIO_E2E_STORAGE_STATE;
+const state = process.env.ADBUILDER_E2E_STORAGE_STATE;
 const canary = process.env.BLOCKWISE_CONTROLLED_CANARY === "1";
 test.use({
   storageState: state,
   serviceWorkers: "block",
   ignoreHTTPSErrors: canary,
   launchOptions: {
-    executablePath: process.env.ADSTUDIO_E2E_CHROMIUM,
+    executablePath: process.env.ADBUILDER_E2E_CHROMIUM,
     args: canary ? ["--host-resolver-rules=MAP blockwise.sale 127.0.0.1,EXCLUDE localhost"] : undefined,
   },
 });
@@ -26,7 +26,7 @@ test.describe("simple customer app acceptance", () => {
   for (const width of [320, 375, 390, 414, 768, 1440]) {
     test(`key app screens fit at ${width}px`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: width >= 768 ? 900 : 844 });
-      for (const route of ["/ad-studio", "/ad-studio/templates", "/ad-studio/library?view=assets", "/ad-studio/library?view=ads", "/ad-studio/brand", "/results", "/results?example=1", "/leads", "/settings", "/connect-meta"]) {
+      for (const route of ["/ad-builder", "/ad-builder/templates", "/ad-builder/library?view=assets", "/ad-builder/library?view=ads", "/ad-builder/brand", "/results", "/results?example=1", "/leads", "/settings", "/connect-meta"]) {
         await page.goto(route);
         await expect(page).not.toHaveURL(/\/login/);
         await expect(page.getByRole("main")).toBeVisible();
@@ -58,7 +58,7 @@ test.describe("simple customer app acceptance", () => {
 
   test("working screens keep controls available at double-size zoom", async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
-    for (const route of ["/ad-studio", "/settings", "/results"]) {
+    for (const route of ["/ad-builder", "/settings", "/results"]) {
       await page.goto(route);
       await page.evaluate(() => { document.body.style.zoom = "2"; });
       await expect(page.locator("main[aria-busy=true]")).toHaveCount(0);

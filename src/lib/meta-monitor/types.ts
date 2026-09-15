@@ -45,7 +45,7 @@ export type SuburbPerformance = {
   validCpl: number | null;
 };
 
-/** Variant metadata parsed from the `| bw:v=…;a=…;t=…` ad-name suffix Ad Studio appends at publish. */
+/** Variant metadata parsed from the `| bw:v=…;a=…;t=…` ad-name suffix Ad Builder appends at publish. */
 export type AdVariantTags = {
   variantId: string;
   angle: string;
@@ -107,7 +107,7 @@ export type MetaAdPerformance = {
     managedByBlockwise: boolean;
     adsetDailyBudgetDollars: number | null;
   };
-  /** Parsed Ad Studio variant tags from the ad name; null/absent for untagged ads. Additive. */
+  /** Parsed Ad Builder variant tags from the ad name; null/absent for untagged ads. Additive. */
   variantTags?: AdVariantTags | null;
   /** True when frequency > 2.5 and 7-day CTR dropped >=30% vs the prior 7 days (>=1k impressions per window). Additive. */
   fatigued?: boolean;

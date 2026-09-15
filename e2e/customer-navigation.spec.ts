@@ -1,9 +1,9 @@
 import { existsSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
-const storageState = process.env.ADSTUDIO_E2E_STORAGE_STATE;
+const storageState = process.env.ADBUILDER_E2E_STORAGE_STATE;
 const controlledCanary = process.env.BLOCKWISE_CONTROLLED_CANARY === "1";
-const workspaceId = process.env.ADSTUDIO_E2E_WORKSPACE_ID;
+const workspaceId = process.env.ADBUILDER_E2E_WORKSPACE_ID;
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL;
 const canRun = Boolean(baseUrl && workspaceId && storageState && existsSync(storageState));
 
@@ -12,7 +12,7 @@ test.use({
   serviceWorkers: "block",
   ignoreHTTPSErrors: controlledCanary,
   launchOptions: {
-    executablePath: process.env.ADSTUDIO_E2E_CHROMIUM,
+    executablePath: process.env.ADBUILDER_E2E_CHROMIUM,
     args: controlledCanary ? ["--host-resolver-rules=MAP blockwise.sale 127.0.0.1,EXCLUDE localhost"] : undefined,
   },
 });
@@ -110,7 +110,7 @@ async function assertMobileNavUsable(page: Page) {
 }
 
 test.describe("customer navigation canary", () => {
-  test.skip(!canRun, "Set PLAYWRIGHT_BASE_URL and ADSTUDIO_E2E_WORKSPACE_ID; the controlled auth fixture must exist.");
+  test.skip(!canRun, "Set PLAYWRIGHT_BASE_URL and ADBUILDER_E2E_WORKSPACE_ID; the controlled auth fixture must exist.");
 
   test.beforeEach(async ({ page }) => {
     await page.route("**/*", async (route) => {
@@ -133,8 +133,8 @@ test.describe("customer navigation canary", () => {
     await settle(page);
     await assertNothingClipped(page);
     await page.screenshot({ path: testInfo.outputPath("customer-home-desktop.png"), fullPage: true });
-    await page.goto("/ad-studio?workspaceId=" + encodeURIComponent(workspaceId!));
-    await expect(page).toHaveURL(/\/ad-studio/);
+    await page.goto("/ad-builder?workspaceId=" + encodeURIComponent(workspaceId!));
+    await expect(page).toHaveURL(/\/ad-builder/);
     await expect(page.getByRole("heading", { name: "Ads", exact: true })).toBeVisible();
     await settle(page);
     await assertNothingClipped(page);
@@ -157,7 +157,7 @@ test.describe("customer navigation canary", () => {
     await settle(page);
     await assertNothingClipped(page);
     await page.screenshot({ path: testInfo.outputPath("customer-leads-desktop.png"), fullPage: true });
-    await page.goto(`/ad-studio/brand?workspaceId=${encodeURIComponent(workspaceId!)}`);
+    await page.goto(`/ad-builder/brand?workspaceId=${encodeURIComponent(workspaceId!)}`);
     await expect(page.locator('[aria-current="page"]:visible')).toHaveCount(1);
     await expect(page.getByRole("button", { name: "Approve Brand Pack", exact: true })).toBeVisible();
     await expect(page.locator('img[src*="realtyplushq.com.au"]')).toHaveCount(0);
@@ -184,11 +184,11 @@ test.describe("customer navigation canary", () => {
       await assertNothingClipped(page);
       await assertMobileNavUsable(page);
       await page.screenshot({ path: testInfo.outputPath(`customer-home-${width}.png`), fullPage: true });
-      await page.goto("/ad-studio?workspaceId=" + encodeURIComponent(workspaceId!));
+      await page.goto("/ad-builder?workspaceId=" + encodeURIComponent(workspaceId!));
       const backToBlockwise = page.getByRole("navigation", { name: "Primary mobile navigation" }).getByRole("link", { name: "Home", exact: true });
       await expect(backToBlockwise).toBeVisible();
       await expect(backToBlockwise).toHaveAttribute("href", /\/self-serve/);
-      await expect(page).toHaveURL(/\/ad-studio/);
+      await expect(page).toHaveURL(/\/ad-builder/);
       await expect(page.getByRole("heading", { name: "Ads", exact: true })).toBeVisible();
       await settle(page);
       await assertNothingClipped(page);

@@ -5,7 +5,7 @@ Image: `blockwise-app:df08571156b43967124885327233529a6e74d141`.
 Image ID: `sha256:1a3229ea52917e400989a22390aa4561630da617e6f7e32e141cec990414b741`.
 Previous release retained: `447d05568b22bfb4ae138b70b083d74c12d67b6c`.
 
-The candidate includes that live release's canonical Ad Studio preview work;
+The candidate includes that live release's canonical Ad Builder preview work;
 only the focused email and analytics commits were integrated. Main remains
 divergent and was not deployed. No database migration, data deletion, Meta
 activation or customer/prospect email send was performed.

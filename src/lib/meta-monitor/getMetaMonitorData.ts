@@ -492,7 +492,7 @@ function adSetBudgetDollars(value: string | number | null | undefined): number |
 
 /**
  * Per-angle aggregates from A3 ad-name tags. Returns [] when no ad is tagged,
- * so the dashboard section only appears for Ad Studio-published ads.
+ * so the dashboard section only appears for Ad Builder-published ads.
  */
 function buildAnglePerformance(ads: MetaAdPerformance[]): AnglePerformance[] {
   if (!ads.some((ad) => ad.variantTags)) {

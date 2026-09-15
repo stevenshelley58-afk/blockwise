@@ -868,7 +868,7 @@ begin
       and p.id::text = t.plan_id
       and p.status = 'failed'
       and p.last_error like
-        'Publish did not complete after % automatic recovery attempts. Open Ad Studio and publish again.'
+        'Publish did not complete after % automatic recovery attempts. Open Ad Builder and publish again.'
     returning p.id
   )
   select count(*)::int into v_repaired from repaired;

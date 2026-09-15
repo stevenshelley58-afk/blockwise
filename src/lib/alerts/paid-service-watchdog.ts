@@ -241,7 +241,7 @@ export async function checkOpenAiSpend(): Promise<ServiceStatus | null> {
 }
 
 /**
- * Cheap liveness probe for the provider key Ad Studio uses. A 401/403/5xx here
+ * Cheap liveness probe for the provider key Ad Builder uses. A 401/403/5xx here
  * means a customer pressing "generate" is already getting errors.
  */
 export async function checkOpenAiApiHealth(): Promise<ServiceStatus | null> {

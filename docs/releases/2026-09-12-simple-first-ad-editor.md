@@ -1,4 +1,4 @@
-# Simple-first native Ad Studio (12 September 2026)
+# Simple-first native Ad Builder (12 September 2026)
 
 ## Change
 
@@ -9,7 +9,7 @@ This is a small integration layer over the existing native engine, not another
 canvas editor, format conversion or publish implementation.
 
 The alternatives and decision are in
-[the native editor architecture](../architecture/adstudio-vue-editor.md#simple-first-interaction-decision-12-september).
+[the native editor architecture](../architecture/adbuilder-vue-editor.md#simple-first-interaction-decision-12-september).
 DESIGN.md records the changed interaction contract.
 
 ## Observed checks
@@ -46,9 +46,9 @@ Provider writes were verified disabled before release.
 
 ## Evidence locations
 
-VPS scratch logs: /root/work/adstudio-simple-{tests,types,build}-final-20260912.log,
-adstudio-simple-host-final-20260912.log, adstudio-simple-focused-20260912.log.
-Browser receipts/screenshots: /root/work/adstudio-vue-simple-host-20260912/.
+VPS scratch logs: /root/work/adbuilder-simple-{tests,types,build}-final-20260912.log,
+adbuilder-simple-host-final-20260912.log, adbuilder-simple-focused-20260912.log.
+Browser receipts/screenshots: /root/work/adbuilder-vue-simple-host-20260912/.
 Screenshots were inspected together, then one bounded correction pass was run.
 
 Deployment uses the standard main watcher and immutable product release path.
@@ -67,6 +67,6 @@ The component browser harness now asserts the desktop column geometry and a
 single mobile row at both 390px and 320px, alongside the existing interaction
 checks. Production build (including TypeScript), full repository tests, NUL
 check and layout detector passed. Desktop and 320px screenshots were inspected.
-Evidence: /root/work/adstudio-rail-{build,tests,browser}.log and
-/root/work/adstudio-rail-browser/. The authenticated-live-test limitation above
+Evidence: /root/work/adbuilder-rail-{build,tests,browser}.log and
+/root/work/adbuilder-rail-browser/. The authenticated-live-test limitation above
 is unchanged.

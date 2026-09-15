@@ -1,4 +1,4 @@
-# 12 September native Ad Studio editor trial
+# 12 September native Ad Builder editor trial
 
 ## Scope
 

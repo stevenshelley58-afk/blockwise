@@ -30,9 +30,9 @@ test("resolveAlertEmailRecipient falls back to the owner inbox when nothing is s
 });
 
 test("copy-generation wires the model-fallback alert at the cascade fallback point", () => {
-  const source = readFileSync("src/lib/adstudio/copy-generation.ts", "utf8");
+  const source = readFileSync("src/lib/adbuilder/copy-generation.ts", "utf8");
   assert.match(source, /import \{ emitModelFallbackAlert \} from "\.\.\/alerts\/model-fallback-alert\.ts"/);
-  assert.match(source, /emitModelFallbackAlert\(\{[\s\S]*stage: "adstudio\.copy"/);
+  assert.match(source, /emitModelFallbackAlert\(\{[\s\S]*stage: "adbuilder\.copy"/);
   assert.match(source, /fromModel: candidate\.model/);
 });
 

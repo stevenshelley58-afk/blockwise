@@ -4,7 +4,7 @@ import { resolveCustomerActivation } from "@/lib/activation/customer-activation"
 import { loadReportingSnapshot } from "@/lib/meta-monitor/reporting-snapshots";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { createSupabaseServiceClient } from "@/lib/supabase/service";
-import { listTemplates } from "@/lib/adstudio/pack-gallery";
+import { listTemplates } from "@/lib/adbuilder/pack-gallery";
 import { buildHomeCreativeSuggestions, type HomeCreativeSuggestions } from "@/lib/home/creative-suggestions";
 import { homePerformanceFromReporting, mergeHomeSafeReadModel, type HomeSafeReadModel } from "@/lib/home/home-safe-read-model";
 import { homeLocalAdCandidates, HOME_LOCAL_AD_LIMIT, toHomeLocalAds } from "@/lib/home/home-local-ads";
@@ -130,7 +130,7 @@ export async function loadHomeDashboardData(input: {
   reportingGeneratedAt: string;
 }> {
   const brandKitsQuery = input.supabase
-    .from("adstudio_brand_kits")
+    .from("adbuilder_brand_kits")
     .select("business_name, colours_json, source_url, review_status, contact_json")
     .eq("workspace_id", input.workspaceId)
     .limit(1);
@@ -142,7 +142,7 @@ export async function loadHomeDashboardData(input: {
   const [campaigns, customerAds, brandKits, connections, workspace, wallet, activation, reporting, templates, leadsResult, localAdsResult] =
     await Promise.all([
       input.supabase
-        .from("adstudio_campaigns")
+        .from("adbuilder_campaigns")
         .select("id, created_at, template_key")
         .eq("workspace_id", input.workspaceId),
       input.supabase.from("ad_customer_ads").select("template_id").eq("workspace_id", input.workspaceId),

@@ -36,7 +36,7 @@ export const AD_EXAMPLES = [
     body: "A clear homeowner offer, a polished feed creative, and a simple next step.",
     /* A clean pack render, with no text printed on the artwork, so the headline
        the visitor writes is the only headline on the creative. */
-    image: "/adstudio-fixtures/meta-agent-intro-feed-037/property-photo.webp",
+    image: "/adbuilder-fixtures/meta-agent-intro-feed-037/property-photo.webp",
     postCopy: "Thinking of selling? Find out what your home could be worth with a free property appraisal.",
     linkTitle: "Find out what your home could be worth",
     /* The headline printed on the creative. It is the largest text on the ad,
@@ -49,7 +49,7 @@ export const AD_EXAMPLES = [
     title: "A low-pressure first step.",
     body: "Lead with useful local expertise and invite a no-obligation conversation.",
     image:
-      "/adstudio-thumbnails/meta/6b49016814ffdb9e64eb33943667efda84f3f55e0020d0fc00cbab4f121754d3-preview.webp",
+      "/adbuilder-thumbnails/meta/6b49016814ffdb9e64eb33943667efda84f3f55e0020d0fc00cbab4f121754d3-preview.webp",
     postCopy: "Curious what buyers would pay for your home? Get a free, no-obligation consultation.",
     linkTitle: "Free seller consultation",
     adTitle: "Book a free seller consultation",
@@ -60,7 +60,7 @@ export const AD_EXAMPLES = [
     title: "Make demand feel immediate.",
     body: "A direct creative gives potential sellers a reason to raise their hand.",
     image:
-      "/adstudio-thumbnails/meta/fdc9222b4d16c2666d7767372301545b54679819d1beb3359aef4c05170e59b0-preview.webp",
+      "/adbuilder-thumbnails/meta/fdc9222b4d16c2666d7767372301545b54679819d1beb3359aef4c05170e59b0-preview.webp",
     postCopy: "We have qualified buyers waiting for homes like yours. List with us and meet them.",
     linkTitle: "Meet ready buyers",
     adTitle: "Buyers are waiting for your home",
@@ -71,7 +71,7 @@ export const AD_EXAMPLES = [
     title: "Useful local information.",
     body: "Create a useful entry point for future sellers who are not ready to book yet.",
     image:
-      "/adstudio-thumbnails/meta/eb4bce514070f6ce1566fc8fd2570755157d99eb50518e210739b276a6a1f370-preview.webp",
+      "/adbuilder-thumbnails/meta/eb4bce514070f6ce1566fc8fd2570755157d99eb50518e210739b276a6a1f370-preview.webp",
     postCopy: "What is your suburb really worth right now? Get the latest market report for your area.",
     linkTitle: "Free suburb market report",
     adTitle: "What is your suburb worth now?",
@@ -79,19 +79,19 @@ export const AD_EXAMPLES = [
 ] as const;
 
 /**
- * Real 4:5 Feed creatives from the Ad Studio library, used by the homepage
+ * Real 4:5 Feed creatives from the Ad Builder library, used by the homepage
  * "how it works" browser. Index 3 is the ad the demo selects, so its copy
  * comes from the matching AD_EXAMPLES entry.
  */
 export const AD_LIBRARY = [
-  { id: "just-listed", image: "/adstudio-thumbnails/meta/0899efc11fc68e177c731321421454f0001a393bbc8b0211dafad4a7f3b89347-preview.webp" },
-  { id: "smart-first-steps", image: "/adstudio-thumbnails/meta/1c119a3dae9089ca621e947afe16c7f5307748d3ea956a826750e61d078fe94c-preview.webp" },
-  { id: "open-home", image: "/adstudio-thumbnails/meta/127c60b3d1e238b9289dbe501dba65f249fa99e96fd5be4bd8848733e089fd35-preview.webp" },
+  { id: "just-listed", image: "/adbuilder-thumbnails/meta/0899efc11fc68e177c731321421454f0001a393bbc8b0211dafad4a7f3b89347-preview.webp" },
+  { id: "smart-first-steps", image: "/adbuilder-thumbnails/meta/1c119a3dae9089ca621e947afe16c7f5307748d3ea956a826750e61d078fe94c-preview.webp" },
+  { id: "open-home", image: "/adbuilder-thumbnails/meta/127c60b3d1e238b9289dbe501dba65f249fa99e96fd5be4bd8848733e089fd35-preview.webp" },
   { id: "appraisal", image: AD_EXAMPLES[0].image },
-  { id: "thinking-of-selling", image: "/adstudio-thumbnails/meta/6b49016814ffdb9e64eb33943667efda84f3f55e0020d0fc00cbab4f121754d3-preview.webp" },
+  { id: "thinking-of-selling", image: "/adbuilder-thumbnails/meta/6b49016814ffdb9e64eb33943667efda84f3f55e0020d0fc00cbab4f121754d3-preview.webp" },
   { id: "buyers-wanted", image: AD_EXAMPLES[2].image },
   { id: "own-land", image: AD_EXAMPLES[3].image },
-  { id: "rental-appraisal", image: "/adstudio-thumbnails/meta/8f909f4b8f396a6d3fa1a3940fccb64292ac3df511761d2d8b72b6b39f0ca8de-preview.webp" },
+  { id: "rental-appraisal", image: "/adbuilder-thumbnails/meta/8f909f4b8f396a6d3fa1a3940fccb64292ac3df511761d2d8b72b6b39f0ca8de-preview.webp" },
 ] as const;
 
 export const CONTACT_EMAIL = "hello@blockwise.sale";

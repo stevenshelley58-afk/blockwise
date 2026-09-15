@@ -26,11 +26,11 @@ test("operator console (workforce, model control) is operator-only", () => {
   assert.equal(canAccessSurface({ role: "member", workspaceMode: "self_serve" }, "operator"), false);
 });
 
-test("adstudio is available to every role in any workspace mode", () => {
+test("adbuilder is available to every role in any workspace mode", () => {
   const roles = ["owner", "admin", "member", "viewer", "operator"] as const;
   for (const role of roles) {
-    assert.equal(canAccessSurface({ role, workspaceMode: "self_serve" }, "adstudio"), true);
-    assert.equal(canAccessSurface({ role, workspaceMode: "monitor" }, "adstudio"), true);
+    assert.equal(canAccessSurface({ role, workspaceMode: "self_serve" }, "adbuilder"), true);
+    assert.equal(canAccessSurface({ role, workspaceMode: "monitor" }, "adbuilder"), true);
   }
 });
 

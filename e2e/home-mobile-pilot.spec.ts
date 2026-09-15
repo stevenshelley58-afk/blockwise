@@ -1,10 +1,10 @@
 import { existsSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
-const storageState = process.env.ADSTUDIO_E2E_STORAGE_STATE ?? "/srv/blockwise/e2e-runs/mobile-app-implementation-20260908/fixture-browser-state.json";
-const workspaceId = process.env.ADSTUDIO_E2E_WORKSPACE_ID;
+const storageState = process.env.ADBUILDER_E2E_STORAGE_STATE ?? "/srv/blockwise/e2e-runs/mobile-app-implementation-20260908/fixture-browser-state.json";
+const workspaceId = process.env.ADBUILDER_E2E_WORKSPACE_ID;
 const controlled = process.env.BLOCKWISE_CONTROLLED_CANARY === "1";
 test.use({ storageState, serviceWorkers: "block", ignoreHTTPSErrors: controlled, launchOptions: {
-  executablePath: process.env.ADSTUDIO_E2E_CHROMIUM,
+  executablePath: process.env.ADBUILDER_E2E_CHROMIUM,
   args: controlled ? ["--host-resolver-rules=MAP blockwise.sale 127.0.0.1,EXCLUDE localhost"] : undefined,
 } });
 test.describe("Creative Home", () => {
@@ -49,7 +49,7 @@ test.describe("Creative Home", () => {
         await expect(preview).toHaveCount(0);
         await expect(page.getByRole('link', { name: 'Browse templates', exact: true }).first()).toBeVisible();
       }
-      await expect(page.locator('[data-home-creative]')).not.toContainText(/AdStudio E2E Realty|Completed milestones|Workspace details|Next step|setup steps|Results|Tools/);
+      await expect(page.locator('[data-home-creative]')).not.toContainText(/AdBuilder E2E Realty|Completed milestones|Workspace details|Next step|setup steps|Results|Tools/);
       await bounds(page);
       const nav = page.getByRole('navigation', { name: 'Primary mobile navigation' });
       if (width < 768) {

@@ -5,7 +5,7 @@ import { PageHeading } from "@/components/page-heading";
 import { StatusPill } from "@/components/status-pill";
 import { requirePageSurfaceAccess } from "@/lib/auth/page-guards";
 import { loadOperatorCustomerDetail } from "@/lib/operator/customers";
-import { listManualPublishRequestsForWorkspace } from "@/lib/adstudio/manual-publish";
+import { listManualPublishRequestsForWorkspace } from "@/lib/adbuilder/manual-publish";
 import { listMetaPartnerAccessRequestsForWorkspace } from "@/lib/providers/meta-partner-access-requests";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 

@@ -1,4 +1,4 @@
--- Use Gemini 3.1 Flash Image for client-ready AdStudio renders. It supports
+-- Use Gemini 3.1 Flash Image for client-ready AdBuilder renders. It supports
 -- Blockwise's multi-reference clone request at materially lower cost, while
 -- the application keeps GPT Image 2 as a provider-diverse runtime fallback.
 update public.model_profile_versions v

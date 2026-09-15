@@ -85,7 +85,7 @@ export const home: HomeCopy = {
   },
   quickActions: [
     {
-      href: "/ad-studio/library",
+      href: "/ad-builder/library",
       title: "Ad Library",
       subtitle: "Browse your generated Feed and Story creatives.",
     },

@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
-const storageState = process.env.ADSTUDIO_E2E_STORAGE_STATE;
+const storageState = process.env.ADBUILDER_E2E_STORAGE_STATE;
 const controlledCanary = process.env.BLOCKWISE_CONTROLLED_CANARY === "1";
 const canRun = Boolean(process.env.PLAYWRIGHT_BASE_URL && storageState && existsSync(storageState));
 
@@ -10,7 +10,7 @@ test.use({
   serviceWorkers: "block",
   ignoreHTTPSErrors: controlledCanary,
   launchOptions: {
-    executablePath: process.env.ADSTUDIO_E2E_CHROMIUM,
+    executablePath: process.env.ADBUILDER_E2E_CHROMIUM,
     args: controlledCanary ? ["--host-resolver-rules=MAP blockwise.sale 127.0.0.1,EXCLUDE localhost"] : undefined,
   },
 });

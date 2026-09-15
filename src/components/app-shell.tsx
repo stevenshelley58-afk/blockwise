@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
-import { StudioRouteShell } from "@/components/adstudio/studio-route-shell";
+import { StudioRouteShell } from "@/components/adbuilder/studio-route-shell";
 import { TrialStatusSkeleton } from "@/components/trial-status-skeleton";
 import { TrialStatusCard } from "@/components/trial-status-pill";
 import { getRequestAuthContext } from "@/lib/auth/request-context";

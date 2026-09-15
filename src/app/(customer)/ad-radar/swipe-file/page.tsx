@@ -34,7 +34,7 @@ export default async function SwipeFilePage() {
             Saved inspiration
           </h1>
           <p className="mt-1 text-[13px] text-muted-foreground">
-            Saved competitor ads ready to review or use as Ad Studio inspiration.
+            Saved competitor ads ready to review or use as Ad Builder inspiration.
           </p>
         </div>
         <Link className={ghostButtonClass} href="/ad-radar">

@@ -15,7 +15,7 @@ const OUT_FILE = path.join(CACHE_DIR, "corpus-metadata.json");
 
 async function fetchGoogleFontsMetadata() {
   const response = await fetch("https://fonts.google.com/metadata/fonts", {
-    headers: { "User-Agent": "Mozilla/5.0 (compatible; BlockwiseAdStudioFontBuild/1.0)" },
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; BlockwiseAdBuilderFontBuild/1.0)" },
   });
   if (!response.ok) throw new Error(`fonts.google.com/metadata/fonts failed: ${response.status}`);
   const text = await response.text();

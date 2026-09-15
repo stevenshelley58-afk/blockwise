@@ -38,10 +38,10 @@ test("self-serve includes campaign drafting workflow", async ({ page }) => {
   await expect(page.getByText("Compliance Check")).toBeVisible();
 });
 
-test("ad studio exposes the full generation workflow", async ({ page }) => {
-  await page.goto("/ad-studio");
+test("ad builder exposes the full generation workflow", async ({ page }) => {
+  await page.goto("/ad-builder");
 
-  await expect(page.getByLabel("Ad Studio workspace")).toBeVisible();
+  await expect(page.getByLabel("Ad Builder workspace")).toBeVisible();
   await expect(page.getByRole("button", { name: /Templates/ }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: /Create new|Browse/ }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Publish" }).first()).toBeVisible();

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { recordCustomerActivationMilestone } from "@/lib/activation/customer-activation";
-import { normalizeAndValidateExtractionUrl } from "@/lib/adstudio/extraction-url";
+import { normalizeAndValidateExtractionUrl } from "@/lib/adbuilder/extraction-url";
 import { requireApiWorkspace } from "@/lib/auth/api-guards";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 

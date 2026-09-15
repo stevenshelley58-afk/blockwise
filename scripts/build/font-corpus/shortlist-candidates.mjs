@@ -35,7 +35,7 @@ const WEIGHT_BREAKPOINTS = [
   { maxRatio: Infinity, weight: 900 },
 ];
 
-// Every AdStudio gallery template's declared copy is English/Latin. Several
+// Every AdBuilder gallery template's declared copy is English/Latin. Several
 // popular Google Fonts families are variants hinted/optimized for a
 // specific non-Latin script but still ship a Latin subset (so they're
 // technically usable and can even score well on thickness/width) — e.g.

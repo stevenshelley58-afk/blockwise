@@ -1,10 +1,10 @@
-// Produces the authenticated Playwright storage state for the Ad Studio
+// Produces the authenticated Playwright storage state for the Ad Builder
 // real-loop e2e by driving the real /login page against the target deployment.
 //
 // Env: PLAYWRIGHT_BASE_URL (the deployment under test),
-//      ADSTUDIO_E2E_LOGIN_URL (optional Preview used only for authentication),
-//      ADSTUDIO_E2E_EMAIL, ADSTUDIO_E2E_PASSWORD,
-//      ADSTUDIO_E2E_STORAGE_STATE (default e2e/.auth/adstudio-test.storage-state.json).
+//      ADBUILDER_E2E_LOGIN_URL (optional Preview used only for authentication),
+//      ADBUILDER_E2E_EMAIL, ADBUILDER_E2E_PASSWORD,
+//      ADBUILDER_E2E_STORAGE_STATE (default e2e/.auth/adbuilder-test.storage-state.json).
 //
 // Note: if the deployment renders Cloudflare Turnstile on /login
 // (NEXT_PUBLIC_TURNSTILE_SITE_KEY set to a real key), headless login cannot
@@ -17,26 +17,26 @@ import { dirname } from "node:path";
 import { chromium } from "@playwright/test";
 
 const suppliedBaseUrl = process.env.PLAYWRIGHT_BASE_URL?.trim();
-const suppliedLoginBaseUrl = process.env.ADSTUDIO_E2E_LOGIN_URL?.trim() || suppliedBaseUrl;
-const email = process.env.ADSTUDIO_E2E_EMAIL?.trim();
-const password = process.env.ADSTUDIO_E2E_PASSWORD?.trim();
-const storageStatePath = process.env.ADSTUDIO_E2E_STORAGE_STATE?.trim() || "e2e/.auth/adstudio-test.storage-state.json";
+const suppliedLoginBaseUrl = process.env.ADBUILDER_E2E_LOGIN_URL?.trim() || suppliedBaseUrl;
+const email = process.env.ADBUILDER_E2E_EMAIL?.trim();
+const password = process.env.ADBUILDER_E2E_PASSWORD?.trim();
+const storageStatePath = process.env.ADBUILDER_E2E_STORAGE_STATE?.trim() || "e2e/.auth/adbuilder-test.storage-state.json";
 
 if (!suppliedBaseUrl) throw new Error("Set PLAYWRIGHT_BASE_URL to the deployment to log into.");
-if (!email || !password) throw new Error("Set ADSTUDIO_E2E_EMAIL and ADSTUDIO_E2E_PASSWORD.");
+if (!email || !password) throw new Error("Set ADBUILDER_E2E_EMAIL and ADBUILDER_E2E_PASSWORD.");
 
 const baseUrl = allowedBlockwiseDeploymentOrigin(suppliedBaseUrl, "PLAYWRIGHT_BASE_URL");
 const loginBaseUrl = allowedBlockwiseDeploymentOrigin(
   suppliedLoginBaseUrl,
-  "ADSTUDIO_E2E_LOGIN_URL",
+  "ADBUILDER_E2E_LOGIN_URL",
 );
 
-// ADSTUDIO_E2E_CHROMIUM lets sandboxes with a system chromium (but a different
+// ADBUILDER_E2E_CHROMIUM lets sandboxes with a system chromium (but a different
 // Playwright browser revision) run this without downloading browsers; the
 // proxy option honours sandbox egress proxies (no-op when unset, as in CI).
 const proxyServer = process.env.HTTPS_PROXY || process.env.https_proxy;
 const browser = await chromium.launch({
-  executablePath: process.env.ADSTUDIO_E2E_CHROMIUM || undefined,
+  executablePath: process.env.ADBUILDER_E2E_CHROMIUM || undefined,
   proxy: proxyServer ? { server: proxyServer } : undefined,
 });
 const context = await browser.newContext();

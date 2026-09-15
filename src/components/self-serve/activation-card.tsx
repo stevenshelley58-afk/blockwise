@@ -56,7 +56,7 @@ export function ActivationCard({ data }: { data: ActivationCardData }) {
   const completedMilestones = DISPLAY_MILESTONES.filter(([key]) => activation.milestones[key]);
   const isComplete = activation.currentStage === "complete";
   const ctaLabel = isComplete ? "Create an ad" : activation.nextAction;
-  const ctaHref = isComplete ? "/ad-studio" : activation.resumePath;
+  const ctaHref = isComplete ? "/ad-builder" : activation.resumePath;
 
   return (
     <section aria-labelledby="activation-heading" className="border-y border-(--line) py-4">

@@ -74,7 +74,7 @@ export function CommandMenu() {
         <CommandList>
           <CommandEmpty>{copy.empty}</CommandEmpty>
           <CommandGroup heading={copy.actionsGroup}>
-            <CommandItem onSelect={() => run(() => router.push("/ad-studio"))}>
+            <CommandItem onSelect={() => run(() => router.push("/ad-builder"))}>
               <Plus aria-hidden />
               {copy.createAd}
             </CommandItem>

@@ -1,12 +1,12 @@
 # Blockwise
 
-Blockwise is the customer product for frustrated, nontechnical real-estate agents who want more leads without Ads Manager or agency complexity. It turns Frank-built template packs into editable real-estate ads: a customer selects a template, supplies brand and property inputs, edits the result in AdStudio, saves Feed and Story renders, reviews the publish setup, and submits a gated Meta workflow. Consistent, useful ads support more lead opportunities; no linear volume or sales outcome is guaranteed.
+Blockwise is the customer product for frustrated, nontechnical real-estate agents who want more leads without Ads Manager or agency complexity. It turns Frank-built template packs into editable real-estate ads: a customer selects a template, supplies brand and property inputs, edits the result in AdBuilder, saves Feed and Story renders, reviews the publish setup, and submits a gated Meta workflow. Consistent, useful ads support more lead opportunities; no linear volume or sales outcome is guaranteed.
 
 Frank supplies the template-generation interface; Hermes executes generation and produces layered templates. Blockwise consumes those packs; the old flat-clone system is not part of the product.
 
 ## Product surfaces
 
-- Customer routes: `/ad-studio`, `/leads`, `/results`, `/settings`, and `/connect-meta`
+- Customer routes: `/ad-builder`, `/leads`, `/results`, `/settings`, and `/connect-meta`
 - Restricted operator routes: `/operator`, `/workforce`, and `/model-control`
 - Monitor/reporting: `/results` (`/monitor` redirects there)
 

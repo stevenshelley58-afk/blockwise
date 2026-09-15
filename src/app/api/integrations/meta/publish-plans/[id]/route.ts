@@ -17,7 +17,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const { id } = await Promise.resolve(context.params);
   const supabase = await createSupabaseServerClient();
   const access = await requireWorkspaceAccess(supabase, {
-    surface: "adstudio",
+    surface: "adbuilder",
     requestedWorkspaceId: request.nextUrl.searchParams.get("workspaceId"),
   });
 

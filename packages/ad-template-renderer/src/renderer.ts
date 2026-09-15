@@ -207,7 +207,7 @@ function registerTemplateFonts(template: AdTemplate, fontValues: Record<string, 
       continue;
     }
     const imported = fontValues[font.file] ?? fontValues[`font:${font.file}`];
-    const absolute = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "public", "fonts", "adstudio", fileName);
+    const absolute = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "public", "fonts", "adbuilder", fileName);
     if (!imported && !existsSync(absolute)) throw new Error("Missing declared template font: " + fileName);
     const registration = imported
       ? GlobalFonts.register(imported, alias)

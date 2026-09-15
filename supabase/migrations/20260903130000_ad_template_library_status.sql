@@ -1,4 +1,4 @@
--- Reversible customer-library quarantine for direct Ad Studio templates.
+-- Reversible customer-library quarantine for direct Ad Builder templates.
 -- Template JSON and asset rows remain unchanged and service-role visible;
 -- authenticated customers can read only explicitly active library entries.
 

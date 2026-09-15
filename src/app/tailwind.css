@@ -55,7 +55,7 @@
  * sidebar `<ul>`s kept their UA bullets and indent.
  *
  * This lives in the `preflight` layer, declared BELOW `legacy`, so the legacy
- * classes still used inside the customer surface (Ad Studio et al.) and every
+ * classes still used inside the customer surface (Ad Builder et al.) and every
  * Tailwind utility override it — exactly the contract real preflight has.
  */
 @layer preflight {

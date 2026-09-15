@@ -6,14 +6,14 @@ import { buildAuditTextValues, type AuditCopyContext } from "@/lib/audit/audit-a
 import {
   brandPackColoursToRoleMap,
   resolveBrandColourMap,
-} from "@/lib/adstudio/brand-colours";
-import { createCustomerAd, loadCustomerAd } from "@/lib/adstudio/create-customer-ad";
-import { parseCustomerImageRef } from "@/lib/adstudio/customer-image-ref";
-import { storeCustomerImageBytes } from "@/lib/adstudio/customer-image-storage";
-import { readJsonBody, requireAdStudioRequest } from "@/lib/adstudio/http";
-import { getTemplate } from "@/lib/adstudio/pack-gallery";
-import { resolveTemplateAssetValues } from "@/lib/adstudio/render-assets";
-import { saveAd, SaveError } from "@/lib/adstudio/save-ad";
+} from "@/lib/adbuilder/brand-colours";
+import { createCustomerAd, loadCustomerAd } from "@/lib/adbuilder/create-customer-ad";
+import { parseCustomerImageRef } from "@/lib/adbuilder/customer-image-ref";
+import { storeCustomerImageBytes } from "@/lib/adbuilder/customer-image-storage";
+import { readJsonBody, requireAdBuilderRequest } from "@/lib/adbuilder/http";
+import { getTemplate } from "@/lib/adbuilder/pack-gallery";
+import { resolveTemplateAssetValues } from "@/lib/adbuilder/render-assets";
+import { saveAd, SaveError } from "@/lib/adbuilder/save-ad";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { adDocumentSchema } from "../../../../../../packages/ad-template-contract/src/schema.ts";
@@ -59,11 +59,11 @@ function websiteHostOf(value: string | null): string | null {
  *
  * Saves the three anonymous audit previews into the caller's workspace as
  * real customer ads (revision 1 each). Authenticated: the caller must have
- * Ad Studio access to the workspace. Idempotent per audit id: replaying the
+ * Ad Builder access to the workspace. Idempotent per audit id: replaying the
  * same audit returns the same ad ids without creating duplicates.
  */
 export async function POST(request: NextRequest) {
-  const access = await requireAdStudioRequest(request);
+  const access = await requireAdBuilderRequest(request);
   if (!access.ok) return access.response;
   const { workspaceId } = access.access;
   const userSupabase: SupabaseClient = access.supabase;
@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
       const parsed = parseCustomerImageRef(stored.ref, input.workspaceId, input.adId);
       if (!parsed) return null;
 
-      const prepared = await service.rpc("adstudio_prepare_customer_image_upload", {
+      const prepared = await service.rpc("adbuilder_prepare_customer_image_upload", {
         p_workspace_id: input.workspaceId,
         p_ad_id: input.adId,
         p_object_path: parsed.path,
@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
       if (ready.status === "finalized") return { ref: stored.ref, bytes: stored.bytes };
       if (!ready.reservationId) return null;
 
-      const claimed = await service.rpc("adstudio_claim_customer_image_finalize", {
+      const claimed = await service.rpc("adbuilder_claim_customer_image_finalize", {
         p_reservation_id: ready.reservationId,
         p_workspace_id: input.workspaceId,
         p_ad_id: input.adId,
@@ -262,7 +262,7 @@ export async function POST(request: NextRequest) {
       });
       if (claimed.error || !asLedgerResult(claimed.data).ok) return null;
 
-      const finalized = await service.rpc("adstudio_finalize_customer_image_upload", {
+      const finalized = await service.rpc("adbuilder_finalize_customer_image_upload", {
         p_reservation_id: ready.reservationId,
         p_workspace_id: input.workspaceId,
         p_ad_id: input.adId,

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 /*
  * Fullscreen creative viewer.
  *
- * One overlay shared by Ad Radar results and the Ad Studio template gallery.
+ * One overlay shared by Ad Radar results and the Ad Builder template gallery.
  * It fills the viewport, fits the creative inside it with no cropping, and
  * never scrolls the page: the stage is a flex child with min-h-0 and the whole
  * surface is position:fixed with overscroll containment. Radix supplies the

@@ -27,22 +27,22 @@ export type PromptTestRunResult = {
 };
 
 const COPY_KEYS: PromptKey[] = [
-  "adstudio.copy.system",
-  "adstudio.copy.input_template",
-  "adstudio.copy.output_schema",
-  "adstudio.copy.compliance_rules",
+  "adbuilder.copy.system",
+  "adbuilder.copy.input_template",
+  "adbuilder.copy.output_schema",
+  "adbuilder.copy.compliance_rules",
 ];
 const IMAGE_KEYS: PromptKey[] = [
-  "adstudio.image.system",
-  "adstudio.image.input_template",
-  "adstudio.image.brand_rules",
-  "adstudio.image.negative_prompt",
-  "adstudio.image.aspect_ratio_rules",
+  "adbuilder.image.system",
+  "adbuilder.image.input_template",
+  "adbuilder.image.brand_rules",
+  "adbuilder.image.negative_prompt",
+  "adbuilder.image.aspect_ratio_rules",
 ];
 const BACKGROUND_KEYS: PromptKey[] = [
-  "adstudio.background.system",
-  "adstudio.background.input_template",
-  "adstudio.background.negative_prompt",
+  "adbuilder.background.system",
+  "adbuilder.background.input_template",
+  "adbuilder.background.negative_prompt",
 ];
 
 export function listPromptTestFixtures() {
@@ -148,8 +148,8 @@ function assembleFixturePrompt(fixture: PromptTestFixture, bundle: PromptBundle)
   });
 }
 
-function taskTypeForFixture(task: PromptTestFixtureTask): "adstudio.copy" | "adstudio.image" | "adstudio.background" {
-  if (task === "copy") return "adstudio.copy";
-  if (task === "image") return "adstudio.image";
-  return "adstudio.background";
+function taskTypeForFixture(task: PromptTestFixtureTask): "adbuilder.copy" | "adbuilder.image" | "adbuilder.background" {
+  if (task === "copy") return "adbuilder.copy";
+  if (task === "image") return "adbuilder.image";
+  return "adbuilder.background";
 }

@@ -355,19 +355,19 @@ function stageConfiguration(
 ): { nextAction: string; allowedActions: string[]; resumePath: string } {
   const map: Record<CustomerActivationStage, { nextAction: string; allowedActions: string[]; resumePath: string }> = {
     verify_email: { nextAction: "Verify your email", allowedActions: ["resend_verification"], resumePath: "/signup" },
-    confirm_country: { nextAction: "Confirm your country", allowedActions: ["confirm_country"], resumePath: "/ad-studio/brand" },
-    submit_website: { nextAction: "Add your business website", allowedActions: ["submit_website"], resumePath: "/ad-studio/brand" },
-    approve_brand_pack: { nextAction: "Review your Brand Pack", allowedActions: ["approve_brand_pack", "retry_brand_scan"], resumePath: "/ad-studio/brand" },
-    select_template: { nextAction: "Choose an ad template", allowedActions: ["select_template"], resumePath: "/ad-studio" },
-    generate_first_ad: { nextAction: "Create your first ad", allowedActions: ["generate"], resumePath: "/ad-studio" },
-    choose_meta_path: { nextAction: "Choose how to run your ad", allowedActions: ["connect_meta", "request_meta_help"], resumePath: "/ad-studio" },
+    confirm_country: { nextAction: "Confirm your country", allowedActions: ["confirm_country"], resumePath: "/ad-builder/brand" },
+    submit_website: { nextAction: "Add your business website", allowedActions: ["submit_website"], resumePath: "/ad-builder/brand" },
+    approve_brand_pack: { nextAction: "Review your Brand Pack", allowedActions: ["approve_brand_pack", "retry_brand_scan"], resumePath: "/ad-builder/brand" },
+    select_template: { nextAction: "Choose an ad template", allowedActions: ["select_template"], resumePath: "/ad-builder" },
+    generate_first_ad: { nextAction: "Create your first ad", allowedActions: ["generate"], resumePath: "/ad-builder" },
+    choose_meta_path: { nextAction: "Choose how to run your ad", allowedActions: ["connect_meta", "request_meta_help"], resumePath: "/ad-builder" },
     connect_meta: {
       nextAction: record.meta_help_path === "setup_guide" ? "Finish setting up Meta" : "Connect Meta",
       allowedActions: ["connect_meta", "book_onboarding"],
       resumePath: "/connect-meta",
     },
     complete_checkout: { nextAction: "Add a payment method", allowedActions: ["start_checkout"], resumePath: "/settings#billing" },
-    launch_first_campaign: { nextAction: "Run your first ad", allowedActions: ["publish"], resumePath: "/ad-studio" },
+    launch_first_campaign: { nextAction: "Run your first ad", allowedActions: ["publish"], resumePath: "/ad-builder" },
     confirm_first_invoice: { nextAction: "Confirming your subscription", allowedActions: ["reconcile_billing"], resumePath: "/settings#billing" },
     complete: { nextAction: "Open your workspace", allowedActions: ["generate", "publish", "invite_team", "book_onboarding"], resumePath: "/self-serve" },
   };
@@ -431,15 +431,15 @@ async function loadAuthoritativeRows(
       .eq("id", workspaceId)
       .single(),
     service
-      .from("adstudio_brand_kits")
+      .from("adbuilder_brand_kits")
       .select("source_url,review_status,created_at,updated_at")
       .eq("workspace_id", workspaceId),
     service
-      .from("adstudio_campaigns")
+      .from("adbuilder_campaigns")
       .select("id,template_key,created_at")
       .eq("workspace_id", workspaceId),
     service
-      .from("adstudio_creatives")
+      .from("adbuilder_creatives")
       .select("campaign_id,render_status,created_at")
       .eq("workspace_id", workspaceId),
     service

@@ -1,0 +1,169 @@
+import { workspaceMediaSrc } from "./image-src.ts";
+import { createAdBuilderMediaUrls } from "./media-urls.ts";
+import type { AdBuilderBrandKit } from "./types.ts";
+
+export const ADBUILDER_EMBEDDED_ASSET_LIMIT = 24;
+
+export type AdBuilderBrandAssetRow = {
+  id?: unknown;
+  asset_type?: unknown;
+  source_url?: unknown;
+  storage_path?: unknown;
+  metadata_json?: unknown;
+  created_at?: unknown;
+  width?: unknown;
+  height?: unknown;
+};
+
+export type AdBuilderMediaLibraryAsset = {
+  id: string;
+  src: string;
+  /** Matches `src` here: these rows are already resolved to durable sources. */
+  fullSrc: string;
+  label: string;
+  type: string;
+  role: "property" | "person" | "logo" | "background";
+  ratio: "Image";
+};
+
+export function mediaUrlForStoragePath(workspaceId: string, storagePath: string | null | undefined): string | null {
+  return workspaceMediaSrc(workspaceId, storagePath);
+}
+
+export function assetUrlForRow(workspaceId: string, row: AdBuilderBrandAssetRow): string | null {
+  const sourceUrl = typeof row.source_url === "string" ? row.source_url.trim() : "";
+  if (sourceUrl) return sourceUrl;
+  return mediaUrlForStoragePath(workspaceId, typeof row.storage_path === "string" ? row.storage_path : null);
+}
+
+export function mediaLibraryAssetForRow(
+  workspaceId: string,
+  row: AdBuilderBrandAssetRow,
+): AdBuilderMediaLibraryAsset | null {
+  const src = assetUrlForRow(workspaceId, row);
+  if (!src) return null;
+
+  const type = String(row.asset_type ?? "");
+  return {
+    id: String(row.id ?? src),
+    src,
+    fullSrc: src,
+    label: labelForAssetRow(row),
+    type,
+    role: roleForAssetType(type),
+    ratio: "Image",
+  };
+}
+
+export function applyBrandAssetRows(brandKit: AdBuilderBrandKit, rows: AdBuilderBrandAssetRow[]): AdBuilderBrandKit {
+  const next: AdBuilderBrandKit = {
+    ...brandKit,
+    logos: { ...brandKit.logos },
+    assets: {
+      headshots: [...brandKit.assets.headshots],
+      officeImages: [...brandKit.assets.officeImages],
+      listingImages: [...brandKit.assets.listingImages],
+      socialProofImages: [...brandKit.assets.socialProofImages],
+    },
+  };
+
+  for (const row of rows) {
+    const url = assetUrlForRow(brandKit.workspaceId, row);
+    if (!url) continue;
+
+    const type = String(row.asset_type ?? "").toLowerCase();
+    if (type === "logo" || type === "primary_logo") {
+      next.logos.primaryLogoUrl = url;
+    } else if (type === "headshot" || type === "agent_headshot") {
+      pushUnique(next.assets.headshots, url);
+    } else if (type === "office_image" || type === "team_image") {
+      pushUnique(next.assets.officeImages, url);
+    } else if (type === "listing_image" || type === "property_image" || type === "uploaded_asset") {
+      pushUnique(next.assets.listingImages, url);
+    } else if (type === "social_proof_image" || type === "testimonial_image") {
+      pushUnique(next.assets.socialProofImages, url);
+    }
+  }
+
+  return next;
+}
+
+export async function loadAdBuilderBrandAssetRows(
+  supabase: { from: (table: string) => any },
+  workspaceId: string,
+  brandKitId: string,
+  limit?: number,
+): Promise<AdBuilderBrandAssetRow[]> {
+  if (!workspaceId || !brandKitId) return [];
+  let query = supabase
+    .from("adbuilder_brand_assets")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("brand_kit_id", brandKitId)
+    .order("created_at", { ascending: false });
+  if (limit) query = query.limit(Math.max(1, limit));
+  const { data, error } = await query;
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function loadAdBuilderWorkspaceAssetRows(
+  supabase: { from: (table: string) => any },
+  workspaceId: string,
+): Promise<AdBuilderBrandAssetRow[]> {
+  if (!workspaceId) return [];
+  const { data, error } = await supabase
+    .from("adbuilder_brand_assets")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function loadAdBuilderWorkspaceLibraryAssets(
+  supabase: { from: (table: string) => any; storage: any },
+  workspaceId: string,
+): Promise<Array<{ id: string; url: string; label: string }>> {
+  const rows = await loadAdBuilderWorkspaceAssetRows(supabase, workspaceId);
+  const paths = rows.flatMap((row) => typeof row.storage_path === "string" && row.storage_path.trim() ? [row.storage_path.trim()] : []);
+  const signed = paths.length ? await createAdBuilderMediaUrls({ supabase, workspaceId, paths }) : {};
+  return rows.flatMap((row) => {
+    const path = typeof row.storage_path === "string" ? row.storage_path.trim() : "";
+    const url = signed[path]?.full ?? assetUrlForRow(workspaceId, row);
+    return url && path ? [{ id: String(row.id), url, label: labelForAssetRow(row) }] : [];
+  });
+}
+
+function roleForAssetType(assetType: string): AdBuilderMediaLibraryAsset["role"] {
+  const type = assetType.toLowerCase();
+  if (type === "logo" || type === "primary_logo") return "logo";
+  if (type === "headshot" || type === "agent_headshot") return "person";
+  if (type === "office_image" || type === "team_image") return "background";
+  return "property";
+}
+
+function labelForAssetRow(row: AdBuilderBrandAssetRow): string {
+  const metadata =
+    row.metadata_json && typeof row.metadata_json === "object" && !Array.isArray(row.metadata_json)
+      ? (row.metadata_json as Record<string, unknown>)
+      : {};
+  const fileName = typeof metadata.fileName === "string" ? metadata.fileName.trim() : "";
+  if (fileName) return fileName;
+
+  const storagePath = typeof row.storage_path === "string" ? row.storage_path.trim() : "";
+  if (storagePath) {
+    const tail = storagePath.split("/").pop() ?? "";
+    const name = tail.replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-/i, "");
+    if (name) return name;
+  }
+
+  const type = String(row.asset_type ?? "").replace(/_/g, " ").trim();
+  return type ? type.charAt(0).toUpperCase() + type.slice(1) : "Image";
+}
+
+function pushUnique(target: string[], value: string) {
+  if (!target.includes(value)) target.push(value);
+}

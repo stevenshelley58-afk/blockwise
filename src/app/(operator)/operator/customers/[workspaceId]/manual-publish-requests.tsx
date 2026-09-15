@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { StatusPill, type StatusTone } from "@/components/status-pill";
-import type { ManualPublishRequest, ManualPublishStatus } from "@/lib/adstudio/manual-publish";
+import type { ManualPublishRequest, ManualPublishStatus } from "@/lib/adbuilder/manual-publish";
 
 type PublishSummary = {
   target?: string | null;

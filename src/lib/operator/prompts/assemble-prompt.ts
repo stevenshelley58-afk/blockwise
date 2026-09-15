@@ -1,4 +1,4 @@
-import type { AdStudioBrandKit } from "../../adstudio/types.ts";
+import type { AdBuilderBrandKit } from "../../adbuilder/types.ts";
 
 import type { PromptBundle, PromptKey, PromptSection } from "./prompt-registry.ts";
 import { PROMPT_FALLBACKS } from "./prompt-registry.ts";
@@ -26,7 +26,7 @@ export type MetaCopyPromptInput = {
     neverSay?: string[];
     aiWritingGuidance?: { summary: string; fields: Record<string, string> };
   };
-  brandKit?: Partial<AdStudioBrandKit> | null;
+  brandKit?: Partial<AdBuilderBrandKit> | null;
   brief?: string;
   currentCopy?: CopyFieldsForPrompt;
   assistAction?: string;
@@ -41,7 +41,7 @@ export type ImagePromptInput = {
     styleTags?: string[];
     imageTreatment?: string;
   };
-  brandKit?: Partial<AdStudioBrandKit> | null;
+  brandKit?: Partial<AdBuilderBrandKit> | null;
   aspectRatio: string;
   stylePreset: string;
   referenceAssets: string[];
@@ -63,7 +63,7 @@ export type BackgroundPromptInput = {
     styleTags?: string[];
     imageTreatment?: string;
   };
-  brandKit?: Partial<AdStudioBrandKit> | null;
+  brandKit?: Partial<AdBuilderBrandKit> | null;
   runtime?: boolean;
 };
 
@@ -118,14 +118,14 @@ const ALLOWED_PLACEHOLDER_SET = new Set<string>(ALLOWED_PLACEHOLDERS);
 
 export function assembleMetaCopyPrompt(input: MetaCopyPromptInput): AssembledPrompt {
   const bundleKeys: PromptKey[] = [
-    "adstudio.copy.system",
-    "adstudio.copy.input_template",
-    "adstudio.copy.output_schema",
-    "adstudio.copy.compliance_rules",
+    "adbuilder.copy.system",
+    "adbuilder.copy.input_template",
+    "adbuilder.copy.output_schema",
+    "adbuilder.copy.compliance_rules",
   ];
   const values: PlaceholderValueMap = {
-    COMPLIANCE_RULES: sectionBody(input.bundle, "adstudio.copy.compliance_rules"),
-    OUTPUT_SCHEMA: sectionBody(input.bundle, "adstudio.copy.output_schema"),
+    COMPLIANCE_RULES: sectionBody(input.bundle, "adbuilder.copy.compliance_rules"),
+    OUTPUT_SCHEMA: sectionBody(input.bundle, "adbuilder.copy.output_schema"),
     BRAND_CONSTRAINTS: formatBrandConstraints(input.brandKit, {
       businessName: input.context.businessName,
       voice: input.context.voice,
@@ -153,11 +153,11 @@ export function assembleMetaCopyPrompt(input: MetaCopyPromptInput): AssembledPro
   };
   const system = [
     values.COMPLIANCE_RULES,
-    sectionBody(input.bundle, "adstudio.copy.system"),
+    sectionBody(input.bundle, "adbuilder.copy.system"),
     values.OUTPUT_SCHEMA,
   ].filter(Boolean).join("\n\n");
   const user = renderTemplateSection(
-    input.bundle["adstudio.copy.input_template"],
+    input.bundle["adbuilder.copy.input_template"],
     values,
   );
 
@@ -166,17 +166,17 @@ export function assembleMetaCopyPrompt(input: MetaCopyPromptInput): AssembledPro
 
 export function assembleImagePrompt(input: ImagePromptInput): AssembledPrompt {
   const bundleKeys: PromptKey[] = [
-    "adstudio.image.system",
-    "adstudio.image.input_template",
-    "adstudio.image.brand_rules",
-    "adstudio.image.negative_prompt",
-    "adstudio.image.aspect_ratio_rules",
+    "adbuilder.image.system",
+    "adbuilder.image.input_template",
+    "adbuilder.image.brand_rules",
+    "adbuilder.image.negative_prompt",
+    "adbuilder.image.aspect_ratio_rules",
   ];
   const values: PlaceholderValueMap = {
     COMPLIANCE_RULES: "",
     OUTPUT_SCHEMA: "",
     BRAND_CONSTRAINTS: [
-      sectionBody(input.bundle, "adstudio.image.brand_rules"),
+      sectionBody(input.bundle, "adbuilder.image.brand_rules"),
       formatBrandConstraints(input.brandKit, {
         palette: input.brand?.palette,
         styleTags: input.brand?.styleTags,
@@ -192,17 +192,17 @@ export function assembleImagePrompt(input: ImagePromptInput): AssembledPrompt {
       aspectRatio: input.aspectRatio,
       stylePreset: input.stylePreset,
     }),
-    NEGATIVE_PROMPT: sectionBody(input.bundle, "adstudio.image.negative_prompt"),
+    NEGATIVE_PROMPT: sectionBody(input.bundle, "adbuilder.image.negative_prompt"),
     ASPECT_RATIO_RULES: [
-      sectionBody(input.bundle, "adstudio.image.aspect_ratio_rules"),
+      sectionBody(input.bundle, "adbuilder.image.aspect_ratio_rules"),
       `Requested aspect ratio: ${input.aspectRatio}.`,
       `Style preset: ${input.stylePreset}.`,
     ].join("\n"),
     REFERENCE_ASSETS: formatReferenceAssetContext(input.referenceAssets),
   };
-  const system = sectionBody(input.bundle, "adstudio.image.system");
+  const system = sectionBody(input.bundle, "adbuilder.image.system");
   const user = renderTemplateSection(
-    input.bundle["adstudio.image.input_template"],
+    input.bundle["adbuilder.image.input_template"],
     values,
   );
 
@@ -211,9 +211,9 @@ export function assembleImagePrompt(input: ImagePromptInput): AssembledPrompt {
 
 export function assembleBackgroundPrompt(input: BackgroundPromptInput): AssembledPrompt {
   const bundleKeys: PromptKey[] = [
-    "adstudio.background.system",
-    "adstudio.background.input_template",
-    "adstudio.background.negative_prompt",
+    "adbuilder.background.system",
+    "adbuilder.background.input_template",
+    "adbuilder.background.negative_prompt",
   ];
   const values: PlaceholderValueMap = {
     COMPLIANCE_RULES: "",
@@ -240,13 +240,13 @@ export function assembleBackgroundPrompt(input: BackgroundPromptInput): Assemble
       input.format ? `Format: ${input.format}.` : "",
       input.campaign ? formatCampaignInput({ mode: "background", ...input.campaign }) : "",
     ].filter(Boolean).join("\n"),
-    NEGATIVE_PROMPT: sectionBody(input.bundle, "adstudio.background.negative_prompt"),
+    NEGATIVE_PROMPT: sectionBody(input.bundle, "adbuilder.background.negative_prompt"),
     ASPECT_RATIO_RULES: input.format ? `Use the creative format ${input.format} and leave safe space for overlaid ad copy.` : "",
     REFERENCE_ASSETS: "",
   };
-  const system = sectionBody(input.bundle, "adstudio.background.system");
+  const system = sectionBody(input.bundle, "adbuilder.background.system");
   const user = renderTemplateSection(
-    input.bundle["adstudio.background.input_template"],
+    input.bundle["adbuilder.background.input_template"],
     values,
   );
 
@@ -254,7 +254,7 @@ export function assembleBackgroundPrompt(input: BackgroundPromptInput): Assemble
 }
 
 export function formatBrandConstraints(
-  brandKit?: Partial<AdStudioBrandKit> | null,
+  brandKit?: Partial<AdBuilderBrandKit> | null,
   overrides: {
     businessName?: string;
     voice?: string;
@@ -471,7 +471,7 @@ function formatImageInput(input: { prompt: string; aspectRatio: string; stylePre
   ].join("\n");
 }
 
-function brandColours(brandKit?: Partial<AdStudioBrandKit> | null): string[] {
+function brandColours(brandKit?: Partial<AdBuilderBrandKit> | null): string[] {
   return [
     brandKit?.colours?.primary,
     brandKit?.colours?.secondary,

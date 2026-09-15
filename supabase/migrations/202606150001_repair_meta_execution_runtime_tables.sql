@@ -1,5 +1,5 @@
 -- Production drift repair: the historical execution-layer migration was marked
--- applied, but these runtime tables were missing after adstudio_exports was
+-- applied, but these runtime tables were missing after adbuilder_exports was
 -- archived. Keep the repair forward-only and avoid depending on archived tables.
 
 alter table public.provider_connections
@@ -11,8 +11,8 @@ alter table public.provider_connections
 create table if not exists public.meta_publish_plans (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null,
-  adstudio_campaign_id uuid not null,
-  adstudio_export_id uuid,
+  adbuilder_campaign_id uuid not null,
+  adbuilder_export_id uuid,
   campaign_id uuid,
   provider_connection_id uuid not null,
   approval_request_id uuid,
@@ -146,24 +146,24 @@ begin
       foreign key (workspace_id) references public.workspaces (id) on delete cascade;
   end if;
 
-  if to_regclass('public.adstudio_campaigns') is not null and not exists (
+  if to_regclass('public.adbuilder_campaigns') is not null and not exists (
     select 1 from pg_constraint
-    where conname = 'meta_publish_plans_adstudio_campaign_id_fkey'
+    where conname = 'meta_publish_plans_adbuilder_campaign_id_fkey'
       and conrelid = 'public.meta_publish_plans'::regclass
   ) then
     alter table public.meta_publish_plans
-      add constraint meta_publish_plans_adstudio_campaign_id_fkey
-      foreign key (adstudio_campaign_id) references public.adstudio_campaigns (id) on delete cascade;
+      add constraint meta_publish_plans_adbuilder_campaign_id_fkey
+      foreign key (adbuilder_campaign_id) references public.adbuilder_campaigns (id) on delete cascade;
   end if;
 
-  if to_regclass('public.adstudio_exports') is not null and not exists (
+  if to_regclass('public.adbuilder_exports') is not null and not exists (
     select 1 from pg_constraint
-    where conname = 'meta_publish_plans_adstudio_export_id_fkey'
+    where conname = 'meta_publish_plans_adbuilder_export_id_fkey'
       and conrelid = 'public.meta_publish_plans'::regclass
   ) then
     alter table public.meta_publish_plans
-      add constraint meta_publish_plans_adstudio_export_id_fkey
-      foreign key (adstudio_export_id) references public.adstudio_exports (id) on delete set null;
+      add constraint meta_publish_plans_adbuilder_export_id_fkey
+      foreign key (adbuilder_export_id) references public.adbuilder_exports (id) on delete set null;
   end if;
 
   if to_regclass('public.campaigns') is not null and not exists (

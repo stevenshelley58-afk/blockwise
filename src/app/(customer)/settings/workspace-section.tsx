@@ -130,7 +130,7 @@ export function WorkspaceSection({
           <div className="flex flex-wrap items-center gap-2">
             <Input className="min-w-0 flex-1" id="workspace-website" value={workspace.website} readOnly />
             <Button asChild variant="outline">
-              <Link href="/ad-studio/brand">Review Brand Pack</Link>
+              <Link href="/ad-builder/brand">Review Brand Pack</Link>
             </Button>
           </div>
           <div>

@@ -11,8 +11,8 @@ test("performance telemetry and database guards ship with the hot-path changes",
 
   assert.doesNotMatch(layout, /@vercel\/speed-insights\/next/);
   assert.doesNotMatch(layout, /<SpeedInsights \/>/);
-  assert.match(migration, /alter publication supabase_realtime add table public\.adstudio_creatives/);
-  assert.match(migration, /alter publication supabase_realtime add table public\.adstudio_creative_jobs/);
-  assert.match(migration, /owned_ad_performance_adstudio_campaign_idx/);
-  assert.match(migration, /owned_ad_performance_adstudio_creative_idx/);
+  assert.match(migration, /alter publication supabase_realtime add table public\.adbuilder_creatives/);
+  assert.match(migration, /alter publication supabase_realtime add table public\.adbuilder_creative_jobs/);
+  assert.match(migration, /owned_ad_performance_adbuilder_campaign_idx/);
+  assert.match(migration, /owned_ad_performance_adbuilder_creative_idx/);
 });

@@ -13,7 +13,7 @@ Start with the smallest owning layer:
    mobile bar to five configured items; additional destinations appear under
    the configured `plusMore`/“More” affordance. Reuse the existing command menu
    and mobile bottom navigation rather than adding a second metadata source.
-4. Reuse `src/components/ui/` and existing AdStudio components for customer UI.
+4. Reuse `src/components/ui/` and existing AdBuilder components for customer UI.
    Put workspace/provider reads and writes behind `src/lib`; preserve auth,
    RLS, and provider-token RPC rules. Keep the normal customer flow plain and
    hide campaign/ad-set/placement jargon behind an optional advanced path, while

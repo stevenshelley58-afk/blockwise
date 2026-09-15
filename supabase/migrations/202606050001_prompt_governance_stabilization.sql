@@ -2,34 +2,34 @@ update public.prompt_versions
 set metadata_json = coalesce(metadata_json, '{}'::jsonb) || jsonb_build_object(
   'section_type',
   case key
-    when 'adstudio.copy.system' then 'system'
-    when 'adstudio.copy.input_template' then 'input_template'
-    when 'adstudio.copy.output_schema' then 'output_schema'
-    when 'adstudio.copy.compliance_rules' then 'compliance_rules'
-    when 'adstudio.image.system' then 'system'
-    when 'adstudio.image.input_template' then 'input_template'
-    when 'adstudio.image.brand_rules' then 'brand_rules'
-    when 'adstudio.image.negative_prompt' then 'negative_prompt'
-    when 'adstudio.image.aspect_ratio_rules' then 'aspect_ratio_rules'
-    when 'adstudio.background.system' then 'system'
-    when 'adstudio.background.input_template' then 'input_template'
-    when 'adstudio.background.negative_prompt' then 'negative_prompt'
+    when 'adbuilder.copy.system' then 'system'
+    when 'adbuilder.copy.input_template' then 'input_template'
+    when 'adbuilder.copy.output_schema' then 'output_schema'
+    when 'adbuilder.copy.compliance_rules' then 'compliance_rules'
+    when 'adbuilder.image.system' then 'system'
+    when 'adbuilder.image.input_template' then 'input_template'
+    when 'adbuilder.image.brand_rules' then 'brand_rules'
+    when 'adbuilder.image.negative_prompt' then 'negative_prompt'
+    when 'adbuilder.image.aspect_ratio_rules' then 'aspect_ratio_rules'
+    when 'adbuilder.background.system' then 'system'
+    when 'adbuilder.background.input_template' then 'input_template'
+    when 'adbuilder.background.negative_prompt' then 'negative_prompt'
   end
 )
 where workspace_id is null
   and key in (
-    'adstudio.copy.system',
-    'adstudio.copy.input_template',
-    'adstudio.copy.output_schema',
-    'adstudio.copy.compliance_rules',
-    'adstudio.image.system',
-    'adstudio.image.input_template',
-    'adstudio.image.brand_rules',
-    'adstudio.image.negative_prompt',
-    'adstudio.image.aspect_ratio_rules',
-    'adstudio.background.system',
-    'adstudio.background.input_template',
-    'adstudio.background.negative_prompt'
+    'adbuilder.copy.system',
+    'adbuilder.copy.input_template',
+    'adbuilder.copy.output_schema',
+    'adbuilder.copy.compliance_rules',
+    'adbuilder.image.system',
+    'adbuilder.image.input_template',
+    'adbuilder.image.brand_rules',
+    'adbuilder.image.negative_prompt',
+    'adbuilder.image.aspect_ratio_rules',
+    'adbuilder.background.system',
+    'adbuilder.background.input_template',
+    'adbuilder.background.negative_prompt'
   );
 
 create or replace function public.create_global_prompt_draft(

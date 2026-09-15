@@ -17,7 +17,7 @@ export default function robots(): MetadataRoute.Robots {
           "/pwa",
           "/reset-password",
           "/forgot-password",
-          "/ad-studio",
+          "/ad-builder",
           "/property-check",
           "/leads",
           "/results",

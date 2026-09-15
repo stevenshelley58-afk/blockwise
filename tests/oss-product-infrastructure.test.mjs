@@ -301,10 +301,10 @@ test("OSS product build and reconciliation contracts avoid local secrets and est
 
 test("direct Hermes artifacts and customer saves use the self-hosted transaction boundary", async () => {
   const [migration, migrations, ingest, saver] = await Promise.all([
-    read("supabase/migrations/20260829010000_adstudio_transactional_writes.sql"),
+    read("supabase/migrations/20260829010000_adbuilder_transactional_writes.sql"),
     read("infra/product/product-migrations.txt"),
-    read("src/lib/adstudio/ingest-artifact.ts"),
-    read("src/lib/adstudio/save-ad.ts"),
+    read("src/lib/adbuilder/ingest-artifact.ts"),
+    read("src/lib/adbuilder/save-ad.ts"),
   ]);
   assert.match(migrations, /20260830020000_direct_template_artifact\.sql/);
   assert.match(migration, /create or replace function public\.commit_ad_revision/);

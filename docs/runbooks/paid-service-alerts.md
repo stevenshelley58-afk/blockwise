@@ -26,7 +26,7 @@ Two mechanisms:
 
 | Service | Signal | Limit compared against |
 |---|---|---|
-| OpenRouter (Hermes + Ad Studio) | `GET /api/v1/credits`: usage vs purchased credits, remaining balance, key validity | `OPENROUTER_MIN_CREDITS_USD` floor (default $5) + 80/95% of purchased credits |
+| OpenRouter (Hermes + Ad Builder) | `GET /api/v1/credits`: usage vs purchased credits, remaining balance, key validity | `OPENROUTER_MIN_CREDITS_USD` floor (default $5) + 80/95% of purchased credits |
 | OpenAI spend | `GET /v1/organization/costs` month-to-date | `OPENAI_MONTHLY_BUDGET_USD` (default $50) |
 | OpenAI API health | `GET /v1/models` with the runtime key | 401/403/5xx -> critical, 429 -> warn |
 | Hermes paid capture | Supabase `research.v_health.apify_mtd_spend_usd` + circuit state written by Hermes | `apify_monthly_cap_usd` runtime setting ($25); circuit open -> warn |

@@ -35,14 +35,14 @@ export const CREATIVE_SOURCE_WIDTHS: Readonly<Record<string, number>> = {
   "/hero/hero-tall.webp": 585,
   "/ads/ad-coastline.webp": 682,
   "/ads/ad-hillview.webp": 682,
-  "/adstudio-fixtures/meta-agent-intro-feed-037/property-photo.webp": 1672,
-  "/adstudio-thumbnails/meta/0899efc11fc68e177c731321421454f0001a393bbc8b0211dafad4a7f3b89347-preview.webp": 1024,
-  "/adstudio-thumbnails/meta/127c60b3d1e238b9289dbe501dba65f249fa99e96fd5be4bd8848733e089fd35-preview.webp": 1024,
-  "/adstudio-thumbnails/meta/1c119a3dae9089ca621e947afe16c7f5307748d3ea956a826750e61d078fe94c-preview.webp": 1080,
-  "/adstudio-thumbnails/meta/6b49016814ffdb9e64eb33943667efda84f3f55e0020d0fc00cbab4f121754d3-preview.webp": 1080,
-  "/adstudio-thumbnails/meta/8f909f4b8f396a6d3fa1a3940fccb64292ac3df511761d2d8b72b6b39f0ca8de-preview.webp": 1080,
-  "/adstudio-thumbnails/meta/eb4bce514070f6ce1566fc8fd2570755157d99eb50518e210739b276a6a1f370-preview.webp": 1080,
-  "/adstudio-thumbnails/meta/fdc9222b4d16c2666d7767372301545b54679819d1beb3359aef4c05170e59b0-preview.webp": 1080,
+  "/adbuilder-fixtures/meta-agent-intro-feed-037/property-photo.webp": 1672,
+  "/adbuilder-thumbnails/meta/0899efc11fc68e177c731321421454f0001a393bbc8b0211dafad4a7f3b89347-preview.webp": 1024,
+  "/adbuilder-thumbnails/meta/127c60b3d1e238b9289dbe501dba65f249fa99e96fd5be4bd8848733e089fd35-preview.webp": 1024,
+  "/adbuilder-thumbnails/meta/1c119a3dae9089ca621e947afe16c7f5307748d3ea956a826750e61d078fe94c-preview.webp": 1080,
+  "/adbuilder-thumbnails/meta/6b49016814ffdb9e64eb33943667efda84f3f55e0020d0fc00cbab4f121754d3-preview.webp": 1080,
+  "/adbuilder-thumbnails/meta/8f909f4b8f396a6d3fa1a3940fccb64292ac3df511761d2d8b72b6b39f0ca8de-preview.webp": 1080,
+  "/adbuilder-thumbnails/meta/eb4bce514070f6ce1566fc8fd2570755157d99eb50518e210739b276a6a1f370-preview.webp": 1080,
+  "/adbuilder-thumbnails/meta/fdc9222b4d16c2666d7767372301545b54679819d1beb3359aef4c05170e59b0-preview.webp": 1080,
 };
 
 /**

@@ -23,31 +23,31 @@
 -- 20260608214641_add_fk_covering_indexes_public_private.sql hit the same limit:
 -- it was applied out-of-band and uses plain CREATE INDEX inside a DO block.
 -- All 15 target tables are tiny (24 kB to 368 kB; the largest is
--- adstudio_provider_runs), so the ACCESS EXCLUSIVE lock from a plain CREATE
+-- adbuilder_provider_runs), so the ACCESS EXCLUSIVE lock from a plain CREATE
 -- INDEX is held for milliseconds. If any table grows large before apply, run
 -- that one index out-of-band with CONCURRENTLY instead.
 
--- adstudio_provider_runs
-create index if not exists adstudio_provider_runs_model_profile_version_id_fk_idx
-  on public.adstudio_provider_runs (model_profile_version_id);
-comment on index public.adstudio_provider_runs_model_profile_version_id_fk_idx is
-  'FK support for adstudio_provider_runs_model_profile_version_id_fkey lookups and parent delete/update checks.';
+-- adbuilder_provider_runs
+create index if not exists adbuilder_provider_runs_model_profile_version_id_fk_idx
+  on public.adbuilder_provider_runs (model_profile_version_id);
+comment on index public.adbuilder_provider_runs_model_profile_version_id_fk_idx is
+  'FK support for adbuilder_provider_runs_model_profile_version_id_fkey lookups and parent delete/update checks.';
 
-create index if not exists adstudio_provider_runs_pricing_snapshot_id_fk_idx
-  on public.adstudio_provider_runs (pricing_snapshot_id);
-comment on index public.adstudio_provider_runs_pricing_snapshot_id_fk_idx is
-  'FK support for adstudio_provider_runs_pricing_snapshot_id_fkey lookups and parent delete/update checks.';
+create index if not exists adbuilder_provider_runs_pricing_snapshot_id_fk_idx
+  on public.adbuilder_provider_runs (pricing_snapshot_id);
+comment on index public.adbuilder_provider_runs_pricing_snapshot_id_fk_idx is
+  'FK support for adbuilder_provider_runs_pricing_snapshot_id_fkey lookups and parent delete/update checks.';
 
--- adstudio_provider_run_attempts
-create index if not exists adstudio_provider_run_attempts_model_profile_version_id_fk_idx
-  on public.adstudio_provider_run_attempts (model_profile_version_id);
-comment on index public.adstudio_provider_run_attempts_model_profile_version_id_fk_idx is
-  'FK support for adstudio_provider_run_attempts_model_profile_version_id_fkey lookups and parent delete/update checks.';
+-- adbuilder_provider_run_attempts
+create index if not exists adbuilder_provider_run_attempts_model_profile_version_id_fk_idx
+  on public.adbuilder_provider_run_attempts (model_profile_version_id);
+comment on index public.adbuilder_provider_run_attempts_model_profile_version_id_fk_idx is
+  'FK support for adbuilder_provider_run_attempts_model_profile_version_id_fkey lookups and parent delete/update checks.';
 
-create index if not exists adstudio_provider_run_attempts_pricing_snapshot_id_fk_idx
-  on public.adstudio_provider_run_attempts (pricing_snapshot_id);
-comment on index public.adstudio_provider_run_attempts_pricing_snapshot_id_fk_idx is
-  'FK support for adstudio_provider_run_attempts_pricing_snapshot_id_fkey lookups and parent delete/update checks.';
+create index if not exists adbuilder_provider_run_attempts_pricing_snapshot_id_fk_idx
+  on public.adbuilder_provider_run_attempts (pricing_snapshot_id);
+comment on index public.adbuilder_provider_run_attempts_pricing_snapshot_id_fk_idx is
+  'FK support for adbuilder_provider_run_attempts_pricing_snapshot_id_fkey lookups and parent delete/update checks.';
 
 -- meta_publish_plans
 create index if not exists meta_publish_plans_customer_ad_id_fk_idx
@@ -66,17 +66,17 @@ create index if not exists property_checks_created_by_fk_idx
 comment on index public.property_checks_created_by_fk_idx is
   'FK support for property_checks_created_by_fkey lookups and parent delete/update checks.';
 
--- adstudio_generation_locks
-create index if not exists adstudio_generation_locks_job_id_fk_idx
-  on public.adstudio_generation_locks (job_id);
-comment on index public.adstudio_generation_locks_job_id_fk_idx is
-  'FK support for adstudio_generation_locks_job_id_fkey; existing index leads with workspace_id and is partial so it cannot serve a job_id lookup.';
+-- adbuilder_generation_locks
+create index if not exists adbuilder_generation_locks_job_id_fk_idx
+  on public.adbuilder_generation_locks (job_id);
+comment on index public.adbuilder_generation_locks_job_id_fk_idx is
+  'FK support for adbuilder_generation_locks_job_id_fkey; existing index leads with workspace_id and is partial so it cannot serve a job_id lookup.';
 
--- adstudio_creative_revisions
-create index if not exists adstudio_creative_revisions_created_by_fk_idx
-  on public.adstudio_creative_revisions (created_by);
-comment on index public.adstudio_creative_revisions_created_by_fk_idx is
-  'FK support for adstudio_creative_revisions_created_by_fkey lookups and parent delete/update checks.';
+-- adbuilder_creative_revisions
+create index if not exists adbuilder_creative_revisions_created_by_fk_idx
+  on public.adbuilder_creative_revisions (created_by);
+comment on index public.adbuilder_creative_revisions_created_by_fk_idx is
+  'FK support for adbuilder_creative_revisions_created_by_fkey lookups and parent delete/update checks.';
 
 -- workspace_credit_ledger
 create index if not exists workspace_credit_ledger_actor_profile_id_fk_idx
@@ -129,11 +129,11 @@ create index if not exists ad_publication_snapshots_revision_id_fk_idx
 comment on index public.ad_publication_snapshots_revision_id_fk_idx is
   'FK support for ad_publication_snapshots_revision_id_fkey; revision_id is only a trailing column of the existing unique index.';
 
--- adstudio_customer_image_uploads
-create index if not exists adstudio_customer_image_uploads_ad_id_fk_idx
-  on public.adstudio_customer_image_uploads (ad_id);
-comment on index public.adstudio_customer_image_uploads_ad_id_fk_idx is
-  'FK support for adstudio_customer_image_uploads_ad_id_fkey lookups and parent delete/update checks.';
+-- adbuilder_customer_image_uploads
+create index if not exists adbuilder_customer_image_uploads_ad_id_fk_idx
+  on public.adbuilder_customer_image_uploads (ad_id);
+comment on index public.adbuilder_customer_image_uploads_ad_id_fk_idx is
+  'FK support for adbuilder_customer_image_uploads_ad_id_fkey lookups and parent delete/update checks.';
 
 -- outreach_campaign_drafts
 create index if not exists outreach_campaign_drafts_area_snapshot_id_fk_idx

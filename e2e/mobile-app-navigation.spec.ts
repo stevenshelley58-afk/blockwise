@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
-const storageState = process.env.ADSTUDIO_E2E_STORAGE_STATE;
+const storageState = process.env.ADBUILDER_E2E_STORAGE_STATE;
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL;
 const controlledCanary = process.env.BLOCKWISE_CONTROLLED_CANARY === "1";
 const canRun = Boolean(baseUrl && storageState && existsSync(storageState));
@@ -11,11 +11,11 @@ test.use({
   serviceWorkers: "block",
   ignoreHTTPSErrors: controlledCanary,
   launchOptions: {
-    executablePath: process.env.ADSTUDIO_E2E_CHROMIUM,
+    executablePath: process.env.ADBUILDER_E2E_CHROMIUM,
     args: controlledCanary ? ["--host-resolver-rules=MAP blockwise.sale 127.0.0.1,EXCLUDE localhost"] : undefined,
   },
 });
-test.skip(!canRun, "Set PLAYWRIGHT_BASE_URL and ADSTUDIO_E2E_STORAGE_STATE.");
+test.skip(!canRun, "Set PLAYWRIGHT_BASE_URL and ADBUILDER_E2E_STORAGE_STATE.");
 
 async function consent(page: Page) {
   await page.addInitScript(() => localStorage.setItem("bw-consent", "essential"));
@@ -77,7 +77,7 @@ test.describe("customer mobile navigation regression", () => {
       await page.setViewportSize(viewport); await consent(page); await blockWrites(page);
       await page.goto(`/self-serve`); await expectNav(page, "Home"); await expectNoOverlap(page); await page.screenshot({ path: testInfo.outputPath(`home-${viewport.width}-top.png`) });
       await page.evaluate(() => scrollTo(0, document.body.scrollHeight)); await expectNav(page, "Home"); await expectNoOverlap(page); await page.screenshot({ path: testInfo.outputPath(`home-${viewport.width}-scrolled.png`) });
-      await page.goto(`/ad-studio`); await expectNav(page, "Ads"); await expectNoOverlap(page);
+      await page.goto(`/ad-builder`); await expectNav(page, "Ads"); await expectNoOverlap(page);
       await page.goto(`/results`); await expectNav(page, "Results");
       await page.goto(`/leads`); await expectNav(page, "Leads");
     });
@@ -85,9 +85,9 @@ test.describe("customer mobile navigation regression", () => {
 
   test("keeps Studio navigation through the Ads subtree and template entry", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 }); await consent(page); await blockWrites(page);
-    await page.goto(`/ad-studio`); await expectNav(page, "Ads");
+    await page.goto(`/ad-builder`); await expectNav(page, "Ads");
     await page.getByRole("link", { name: /new ad/i }).first().click();
-    await expect(page).toHaveURL(/\/ad-studio\/templates/); await expectNav(page);
+    await expect(page).toHaveURL(/\/ad-builder\/templates/); await expectNav(page);
     await expect(page.getByRole("heading", { name: "Choose a template" })).toBeVisible();
   });
 
@@ -117,13 +117,13 @@ test.describe("customer mobile navigation regression", () => {
 
   test("keeps editor tools and header within the viewport", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 }); await consent(page); await blockWrites(page);
-    await page.goto(`/ad-studio/ads/d6703a91-9fcf-4342-8d01-a4de1dc6d68a`);
+    await page.goto(`/ad-builder/ads/d6703a91-9fcf-4342-8d01-a4de1dc6d68a`);
     await expectNav(page); await expect(page.getByRole("button", { name: "Save" })).toBeVisible();
     const tools = page.getByRole("navigation", { name: "Editor tools" }).getByRole("button"); await expect(tools).toHaveCount(5);
     for (const label of ["Media", "Content", "Appearance", "Layers", "Preview"]) await expect(tools.filter({ hasText: label })).toHaveCount(1);
     await expectNoOverlap(page);
     const headerIntersections = await page.evaluate(() => {
-      const controls = [...document.querySelectorAll('[aria-label="Ad Studio editor"] header button, [aria-label="Ad Studio editor"] header input, [aria-label="Ad Studio editor"] header select')].filter((element) => { const style = getComputedStyle(element); return style.display !== "none" && style.visibility !== "hidden"; }).map(element => ({ label: element.getAttribute("aria-label") || element.textContent?.trim(), rect: element.getBoundingClientRect() }));
+      const controls = [...document.querySelectorAll('[aria-label="Ad Builder editor"] header button, [aria-label="Ad Builder editor"] header input, [aria-label="Ad Builder editor"] header select')].filter((element) => { const style = getComputedStyle(element); return style.display !== "none" && style.visibility !== "hidden"; }).map(element => ({ label: element.getAttribute("aria-label") || element.textContent?.trim(), rect: element.getBoundingClientRect() }));
       return controls.flatMap((control, index) => controls.slice(index + 1).map(other => ({ labels: [control.label, other.label], overlap: Math.min(control.rect.right, other.rect.right) - Math.max(control.rect.left, other.rect.left) > 1 && Math.min(control.rect.bottom, other.rect.bottom) - Math.max(control.rect.top, other.rect.top) > 1 })));
     });
     expect(headerIntersections.filter(item => item.overlap), JSON.stringify(headerIntersections)).toEqual([]);
@@ -131,7 +131,7 @@ test.describe("customer mobile navigation regression", () => {
 
   test("protects a dirty editor from an internal destination change", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 }); await consent(page); await blockWrites(page);
-    await page.goto(`/ad-studio/ads/d6703a91-9fcf-4342-8d01-a4de1dc6d68a`);
+    await page.goto(`/ad-builder/ads/d6703a91-9fcf-4342-8d01-a4de1dc6d68a`);
     await page.getByRole("navigation", { name: "Editor tools" }).getByRole("button", { name: "Content", exact: true }).click();
     const contentSheet = page.getByRole("dialog"); const textInput = contentSheet.locator('input[id^="creative-"]').first(); await expect(textInput).toBeVisible(); await textInput.fill("Unsaved mobile check");
     await page.keyboard.press("Escape"); await expect(contentSheet).toBeHidden();
@@ -146,7 +146,7 @@ test.describe("customer mobile navigation regression", () => {
 
   test("keeps the desktop shell available", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 }); await consent(page); await blockWrites(page);
-    await page.goto(`/ad-studio`); await expect(page.getByRole("heading", { name: "Ads", exact: true })).toBeVisible();
+    await page.goto(`/ad-builder`); await expect(page.getByRole("heading", { name: "Ads", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Templates", exact: true })).toBeVisible();
   });
 });

@@ -389,8 +389,8 @@ test("font.file stays authoritative for path declarations instead of falling bac
   };
 
   const basenameDeclared = await renderWithFont("manrope-400.woff2");
-  const pathDeclared = await renderWithFont("/fonts/adstudio/manrope-400.woff2");
-  const misleadingHostFamily = await renderWithFont("/fonts/adstudio/manrope-400.woff2", "Times New Roman");
+  const pathDeclared = await renderWithFont("/fonts/adbuilder/manrope-400.woff2");
+  const misleadingHostFamily = await renderWithFont("/fonts/adbuilder/manrope-400.woff2", "Times New Roman");
 
   assert.deepEqual(pathDeclared.png, basenameDeclared.png, "path-style font refs must resolve to the registered Manrope alias");
   assert.deepEqual(misleadingHostFamily.png, basenameDeclared.png, "font.file must not be replaced by an installed host family");

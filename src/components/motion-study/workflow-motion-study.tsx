@@ -273,9 +273,9 @@ export function WorkflowMotionStudy() {
           <h2><span>Lead generating ads for</span><span>Facebook &amp; Instagram</span></h2>
           <div><Button asChild size="lg"><a href={TRIAL_SIGNUP_URL}>Start free trial</a></Button><small>Free trial · No card required · Cancel anytime</small></div>
         </header>
-        <section className={styles.bwStudyFrame} aria-label="Ad Studio motion study">
+        <section className={styles.bwStudyFrame} aria-label="Ad Builder motion study">
           <header className={styles.bwStudyToolbar}>
-            <span className={styles.bwStudyTitle}><i aria-hidden="true" /> Ad Studio</span>
+            <span className={styles.bwStudyTitle}><i aria-hidden="true" /> Ad Builder</span>
             <div className={styles.bwStudySelector} role="group" aria-label="Motion study screen">
               {STUDY_STEPS.map((item) => (
                 <Button key={item.label} type="button" variant="ghost-pill" size="pill" arrow={null} aria-pressed={step === item.label} onClick={() => selectStep(item.label)}>

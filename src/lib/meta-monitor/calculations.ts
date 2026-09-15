@@ -67,7 +67,7 @@ const AD_VARIANT_TAG_PATTERN = /\|\s*bw:v=([a-z0-9]+);a=([a-z0-9-]+)(?:;t=([a-z0
 
 /**
  * Extracts the structured `| bw:v=<variant>;a=<angle>;t=<template>` suffix that
- * Ad Studio appends to Meta ad names at publish (see providers/meta-execution
+ * Ad Builder appends to Meta ad names at publish (see providers/meta-execution
  * buildAdVariantTagSuffix). Returns null for untagged ads.
  */
 export function parseAdVariantTags(adName: string | null | undefined): AdVariantTags | null {

@@ -70,7 +70,7 @@ export default async function SettingsPage() {
     supabase.from("workspaces").select("*").eq("id", access.workspaceId).maybeSingle(),
     listProviderConnections(supabase, access.workspaceId),
     supabase
-      .from("adstudio_brand_kits")
+      .from("adbuilder_brand_kits")
       .select("source_url, review_status")
       .eq("workspace_id", access.workspaceId)
       .order("updated_at", { ascending: false })

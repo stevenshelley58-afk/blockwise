@@ -3,9 +3,9 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
-  ADSTUDIO_MEDIA_URL_LIMIT,
+  ADBUILDER_MEDIA_URL_LIMIT,
   isWorkspaceMediaPath,
-} from "../src/lib/adstudio/media-urls.ts";
+} from "../src/lib/adbuilder/media-urls.ts";
 
 const read = (path: string) => readFileSync(path, "utf8");
 
@@ -42,7 +42,7 @@ test("browser read models are identity-scoped, age-bounded, and purged on sign-o
 
 
 test("bulk private media signing rejects cross-workspace paths and is request-bounded", () => {
-  assert.equal(ADSTUDIO_MEDIA_URL_LIMIT, 100);
+  assert.equal(ADBUILDER_MEDIA_URL_LIMIT, 100);
   assert.equal(isWorkspaceMediaPath("workspace-a", "workspace-a/assets/example.webp"), true);
   assert.equal(isWorkspaceMediaPath("workspace-a", "workspace-b/assets/example.webp"), false);
   assert.equal(isWorkspaceMediaPath("workspace-a", "workspace-a/../secret"), false);

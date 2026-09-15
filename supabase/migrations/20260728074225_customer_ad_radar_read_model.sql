@@ -223,8 +223,8 @@ grant all on public.infrastructure_cutovers to service_role;
 create table public.owned_ad_performance (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null references public.workspaces(id) on delete cascade,
-  adstudio_creative_id uuid references public.adstudio_creatives(id) on delete set null,
-  adstudio_campaign_id uuid references public.adstudio_campaigns(id) on delete set null,
+  adbuilder_creative_id uuid references public.adbuilder_creatives(id) on delete set null,
+  adbuilder_campaign_id uuid references public.adbuilder_campaigns(id) on delete set null,
   template_key text,
   observed_ad_id uuid,
   meta_ad_id text,
@@ -259,13 +259,13 @@ begin
   if to_regclass('research.owned_ad_performance') is not null then
     execute $copy$
       insert into public.owned_ad_performance (
-        id, workspace_id, adstudio_creative_id, adstudio_campaign_id, template_key,
+        id, workspace_id, adbuilder_creative_id, adbuilder_campaign_id, template_key,
         observed_ad_id, meta_ad_id, meta_adset_id, meta_campaign_id, impressions,
         clicks, leads, qualified_leads, spend_cents, ctr, cpl_cents,
         lead_quality_score, reported_at, source, raw_metrics, created_at, updated_at
       )
       select
-        id, workspace_id, adstudio_creative_id, adstudio_campaign_id, template_key,
+        id, workspace_id, adbuilder_creative_id, adbuilder_campaign_id, template_key,
         observed_ad_id, meta_ad_id, meta_adset_id, meta_campaign_id, impressions,
         clicks, leads, qualified_leads, spend_cents, ctr, cpl_cents,
         lead_quality_score, reported_at, source, raw_metrics, created_at, updated_at

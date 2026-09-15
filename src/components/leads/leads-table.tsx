@@ -300,7 +300,7 @@ export function LeadsTable({
           <p className="text-sm font-bold">{copy.empty.title}</p>
           <p className="mt-1 text-[12.5px] text-muted-foreground">{copy.empty.body}</p>
         </div>
-        <ButtonArrow href="/ad-studio" className="h-11 text-[13px]">
+        <ButtonArrow href="/ad-builder" className="h-11 text-[13px]">
           {niche.copy.home.states.needsFirstAd.ctaLabel}
         </ButtonArrow>
       </div>

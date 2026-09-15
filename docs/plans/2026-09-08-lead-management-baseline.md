@@ -32,7 +32,7 @@ rather than substituting a second CRM, per the plan instruction.
 
 | Role | Revision | Notes |
 | --- | --- | --- |
-| Serving (live) | `de606ac66fe917ce9c0dd7ba6a86ef3a37ab8ecd` | `fix(adstudio): decode storage object keys when discarding revisions`, 8 Sep 10:07 UTC. Reported by `https://blockwise.sale/api/health`. Image `blockwise-app:de606ac6...` |
+| Serving (live) | `de606ac66fe917ce9c0dd7ba6a86ef3a37ab8ecd` | `fix(adbuilder): decode storage object keys when discarding revisions`, 8 Sep 10:07 UTC. Reported by `https://blockwise.sale/api/health`. Image `blockwise-app:de606ac6...` |
 | Canonical checkout | `e39e5a4f43be2ef3431e31970f09d7e22bfb9b07` | Branch `release/remove-property-check-nav-v2`, `/projects/blockwise` |
 
 `git merge-base --is-ancestor de606ac6 e39e5a4f` is **false**. The live
@@ -40,7 +40,7 @@ revision is not on the canonical branch. This matches the release guide
 warning that canonical and serving diverge deliberately.
 
 Canonical working tree is dirty: `AGENTS.md` and `DESIGN.md` modified,
-`adstudio/` untracked. A correct task checkout must be chosen before edits.
+`adbuilder/` untracked. A correct task checkout must be chosen before edits.
 
 ## 3. Capture store and lead data
 
@@ -149,7 +149,7 @@ Email-adjacent work is in flight. The lead/CRM work must not collide with it.
    real memory, backup, DNS and operational cost. It needs an explicit go
    ahead and a resource decision.
 2. **Which checkout is the task base** for this work given the
-   live `de606ac6` / canonical `e39e5a4f` divergence, and how the AdStudio
+   live `de606ac6` / canonical `e39e5a4f` divergence, and how the AdBuilder
    work on live gets reconciled.
 3. **Whether the internal Frank inbox uses Mailflare** as the authorized
    conversation provider, or whether that workstream stays on hold.

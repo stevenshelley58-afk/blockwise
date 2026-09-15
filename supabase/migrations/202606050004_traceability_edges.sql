@@ -19,7 +19,7 @@ alter table public.agent_artifacts
 alter table public.lead_source_attribution
   add column if not exists correlation_id text,
   add column if not exists meta_publish_plan_id uuid,
-  add column if not exists adstudio_campaign_id uuid,
+  add column if not exists adbuilder_campaign_id uuid,
   add column if not exists approval_request_id uuid;
 
 do $$
@@ -39,18 +39,18 @@ begin
       on delete set null;
   end if;
 
-  if to_regclass('public.adstudio_campaigns') is not null
+  if to_regclass('public.adbuilder_campaigns') is not null
     and not exists (
       select 1
       from pg_constraint
-      where conname = 'lead_source_attribution_adstudio_campaign_id_fkey'
+      where conname = 'lead_source_attribution_adbuilder_campaign_id_fkey'
         and conrelid = 'public.lead_source_attribution'::regclass
     )
   then
     alter table public.lead_source_attribution
-      add constraint lead_source_attribution_adstudio_campaign_id_fkey
-      foreign key (adstudio_campaign_id)
-      references public.adstudio_campaigns (id)
+      add constraint lead_source_attribution_adbuilder_campaign_id_fkey
+      foreign key (adbuilder_campaign_id)
+      references public.adbuilder_campaigns (id)
       on delete set null;
   end if;
 

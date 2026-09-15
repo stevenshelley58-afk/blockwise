@@ -39,7 +39,7 @@ Management Standard Access feature). Output goes to
      account — impressions, reach, clicks, spend must be visible on screen.
      Sample/demo-labelled data is an automatic rejection; verify the
      workspace has a live Meta connection first.
-   - `pages_manage_ads` + `ads_management`: run the Ad Studio publish flow
+   - `pages_manage_ads` + `ads_management`: run the Ad Builder publish flow
      through the approval step, then show Meta Ads Manager in a second tab
      with the newly created campaign/ad set/ad in PAUSED state.
    - `leads_retrieval`: submit a test lead with Meta's Lead Ads Testing Tool
@@ -69,7 +69,7 @@ Management Standard Access feature). Output goes to
 
 1. Dry-run `node scripts/record-meta-app-review.mjs` against the review URL.
    It automates the in-product walkthrough (privacy page → data-deletion page
-   → Settings connect → Results → Leads → Ad Studio publish → Approvals) with
+   → Settings connect → Results → Leads → Ad Builder publish → Approvals) with
    on-screen captions naming each permission, and outputs an annotated MP4.
    Reuse its flow and captions.
 2. The script cannot record the facebook.com consent dialog or Ads Manager.

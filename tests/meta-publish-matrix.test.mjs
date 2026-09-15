@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const adapter = readFileSync("src/lib/adstudio/publish-adapter.ts", "utf8");
+const adapter = readFileSync("src/lib/adbuilder/publish-adapter.ts", "utf8");
 const execution = readFileSync("src/lib/providers/meta-execution.ts", "utf8");
-const route = readFileSync("src/app/api/adstudio/ads/[id]/publish/route.ts", "utf8");
+const route = readFileSync("src/app/api/adbuilder/ads/[id]/publish/route.ts", "utf8");
 
 test("publication matrix accepts saved Feed/Story variant selection", () => {
   assert.match(execution, /variantIds\?: Array<"feed" \| "story">/);

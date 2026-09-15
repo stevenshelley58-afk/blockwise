@@ -74,12 +74,12 @@ const nextConfig: NextConfig = {
   // Sharp resolves its native implementation at runtime. Vercel's trace can
   // otherwise omit the Linux libvips shared object from these Node functions.
   outputFileTracingIncludes: {
-    "/api/adstudio/ads/*/media": [
+    "/api/adbuilder/ads/*/media": [
       "./node_modules/sharp/**/*",
       "./node_modules/@img/sharp-linux-x64/**/*",
       "./node_modules/@img/sharp-libvips-linux-x64/**/*",
     ],
-    "/api/adstudio/customer-media": [
+    "/api/adbuilder/customer-media": [
       "./node_modules/sharp/**/*",
       "./node_modules/@img/sharp-linux-x64/**/*",
       "./node_modules/@img/sharp-libvips-linux-x64/**/*",
@@ -240,7 +240,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: "/adstudio-thumbnails/:path*",
+        source: "/adbuilder-thumbnails/:path*",
         headers: [
           {
             key: "Cache-Control",
@@ -249,11 +249,11 @@ const nextConfig: NextConfig = {
         ],
       },
       // Files under public/ are served with `max-age=0` by default, so every
-      // visit revalidated ~2.9 MB of hero imagery and the Ad Studio webfonts
+      // visit revalidated ~2.9 MB of hero imagery and the Ad Builder webfonts
       // even though they change only at release. These filenames are not
       // content-hashed, so roughly a day of freshness plus a week of background
       // revalidation keeps repeat views free without ever pinning a stale
-      // asset for long. (adstudio-thumbnails above IS content-hashed.)
+      // asset for long. (adbuilder-thumbnails above IS content-hashed.)
       // Three groups instead of one, with freshness offset by a couple of hours,
       // so the assets a visit loads together do not all expire on the same
       // second and revalidate as one burst.
@@ -266,7 +266,7 @@ const nextConfig: NextConfig = {
         headers: publicAssetCacheControl(93_600),
       },
       {
-        source: "/:dir(fonts|adstudio-samples|adstudio-fixtures)/:path*",
+        source: "/:dir(fonts|adbuilder-samples|adbuilder-fixtures)/:path*",
         headers: publicAssetCacheControl(100_800),
       },
     ];

@@ -1,6 +1,6 @@
 import type { AdTemplate, TextInput } from "../../../packages/ad-template-contract/src/types.ts";
-import { META_COPY_CONSTRAINTS, truncateAtWordBoundary } from "../adstudio/meta-copy-contract.ts";
-import { toMetaCta, type MetaCta } from "../adstudio/meta-cta.ts";
+import { META_COPY_CONSTRAINTS, truncateAtWordBoundary } from "../adbuilder/meta-copy-contract.ts";
+import { toMetaCta, type MetaCta } from "../adbuilder/meta-cta.ts";
 
 // ---------------------------------------------------------------------------
 // Audit funnel ad copy.

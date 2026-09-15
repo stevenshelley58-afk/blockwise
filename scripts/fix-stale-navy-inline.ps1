@@ -1,8 +1,8 @@
 $ErrorActionPreference = 'Stop'
 $files = @(
   'C:\Dev\Blockwise\src\components\trial-status-pill.tsx',
-  'C:\Dev\Blockwise\src\components\adstudio\ad-studio-workbench.tsx',
-  'C:\Dev\Blockwise\src\components\adstudio\panels\brand-panel.tsx',
+  'C:\Dev\Blockwise\src\components\adbuilder\ad-builder-workbench.tsx',
+  'C:\Dev\Blockwise\src\components\adbuilder\panels\brand-panel.tsx',
   'C:\Dev\Blockwise\src\app\(customer)\settings\settings-view.tsx'
 )
 foreach ($f in $files) {

@@ -135,7 +135,7 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
                     <div className="sr-concept-preview"><span>Your photo or logo</span><div><h2>{concept.headline}</h2><p>{concept.body}</p><b>{concept.cta}</b></div></div>
                     <p>{concept.rationale}</p>
                     <Button asChild size="lg" variant="outline" className="w-full">
-                      <GateLink href={gateHref(postcode, "remix")} intent="remix" postcode={postcode}>Make this yours in AdStudio</GateLink>
+                      <GateLink href={gateHref(postcode, "remix")} intent="remix" postcode={postcode}>Make this yours in AdBuilder</GateLink>
                     </Button>
                   </article>
                 ))}
@@ -162,7 +162,7 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
             <AuditGenerator postcode={postcode} suburb={suburb} />
 
             <section className="sr-cta-band">
-              <div><h2>{reportLabel} changes every week. Keep watching it.</h2><p>This report stays free. A free trial adds tools on top:</p><ul><li>Alerts when a new advertiser appears in {reportLabel}</li><li>Track each advertiser's launches and changes</li><li>Use an observed ad as an AdStudio starting point</li></ul></div>
+              <div><h2>{reportLabel} changes every week. Keep watching it.</h2><p>This report stays free. A free trial adds tools on top:</p><ul><li>Alerts when a new advertiser appears in {reportLabel}</li><li>Track each advertiser's launches and changes</li><li>Use an observed ad as an AdBuilder starting point</li></ul></div>
               <div className="sr-cta-actions"><Button asChild size="lg" variant="outline"><GateLink href={trialHref} intent="trial" postcode={postcode}>Start your free trial</GateLink></Button><button type="button" onClick={() => setEmailOpen(true)}>Or just email me this audit</button><small>14 days free · No credit card · Your audit stays free either way</small></div>
             </section>
           </>
@@ -184,7 +184,7 @@ function SectionHeading({ id, title, note }: { id: string; title: string; note: 
 function ReportAdCard({ ad, postcode, suburb, longestId, longestDays }: { ad: PublicAdRadarCard; postcode: string; suburb: string; longestId: string | null; longestDays: number }) {
   const media = ad.media[0];
   const initials = ad.pageName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
-  return <article className="sr-ad-card"><header>{ad.pageImageUrl ? <img src={ad.pageImageUrl} alt="" loading="lazy" /> : <span>{initials}</span>}<div><h3>{ad.pageName}</h3><p>{ad.adType || "Local advertiser"}</p></div><div className="sr-platforms">{ad.platforms.map((platform) => <b key={platform}>{platform.slice(0, 2).toUpperCase()}</b>)}</div></header><div className="sr-ad-media">{media ? (media.kind === "video" ? <video src={media.url} poster={media.posterUrl ?? undefined} controls playsInline preload="none" aria-label={`Video ad from ${ad.pageName}`} /> : <img src={media.url} alt={`Ad creative from ${ad.pageName}`} loading="lazy" />) : <div><span>Creative unavailable</span></div>}{ad.id === longestId ? <em>⏱ {longestDays} days · longest in {suburb}</em> : null}</div><div className="sr-ad-copy"><h3>{ad.headline || ad.description || "Observed local ad"}</h3><p>{ad.body || ad.description || "Copy was not available."}</p><footer><span className="sr-active-dot" />{ad.durationLabel || "Recently observed"}<b>{ad.destinationDomain || "Destination unavailable"}</b></footer></div><div className="sr-ad-actions"><GateLink href={gateHref(postcode, "track")} intent="track" postcode={postcode}>Track advertiser</GateLink><GateLink href={gateHref(postcode, "remix")} intent="remix" postcode={postcode}>Remix in AdStudio</GateLink></div></article>;
+  return <article className="sr-ad-card"><header>{ad.pageImageUrl ? <img src={ad.pageImageUrl} alt="" loading="lazy" /> : <span>{initials}</span>}<div><h3>{ad.pageName}</h3><p>{ad.adType || "Local advertiser"}</p></div><div className="sr-platforms">{ad.platforms.map((platform) => <b key={platform}>{platform.slice(0, 2).toUpperCase()}</b>)}</div></header><div className="sr-ad-media">{media ? (media.kind === "video" ? <video src={media.url} poster={media.posterUrl ?? undefined} controls playsInline preload="none" aria-label={`Video ad from ${ad.pageName}`} /> : <img src={media.url} alt={`Ad creative from ${ad.pageName}`} loading="lazy" />) : <div><span>Creative unavailable</span></div>}{ad.id === longestId ? <em>⏱ {longestDays} days · longest in {suburb}</em> : null}</div><div className="sr-ad-copy"><h3>{ad.headline || ad.description || "Observed local ad"}</h3><p>{ad.body || ad.description || "Copy was not available."}</p><footer><span className="sr-active-dot" />{ad.durationLabel || "Recently observed"}<b>{ad.destinationDomain || "Destination unavailable"}</b></footer></div><div className="sr-ad-actions"><GateLink href={gateHref(postcode, "track")} intent="track" postcode={postcode}>Track advertiser</GateLink><GateLink href={gateHref(postcode, "remix")} intent="remix" postcode={postcode}>Remix in AdBuilder</GateLink></div></article>;
 }
 
 function EmptyState({ suburb, postcode, nearby, trialHref }: { suburb: string; postcode: string; nearby: NearbyArea[]; trialHref: string }) {
@@ -278,7 +278,7 @@ function AuditGenerator({ postcode, suburb }: { postcode: string; suburb: string
         return;
       }
       fireSafe("audit_claimed", { postcode });
-      window.location.href = "/ad-studio";
+      window.location.href = "/ad-builder";
     } catch {
       setError("We could not save these ads. Check your connection and try again.");
     } finally {
@@ -307,11 +307,11 @@ function AuditGenerator({ postcode, suburb }: { postcode: string; suburb: string
           ))}
           <div className="sr-cta-block">
             <Button size="lg" variant="outline" type="button" onClick={handleClaim} disabled={claiming}>{claiming ? "Saving…" : "Free trial — run these 3 ads today in under 5 mins"}</Button>
-            <p className="sr-note">No credit card required. Ads saved to your Ad Studio library.</p>
+            <p className="sr-note">No credit card required. Ads saved to your Ad Builder library.</p>
           </div>
           <div className="sr-pricing-block">
             <h4>Want to run them yourself?</h4>
-            <p>Blockwise Ad Studio starts with a 14-day free trial. <Link href="/pricing">See pricing</Link>.</p>
+            <p>Blockwise Ad Builder starts with a 14-day free trial. <Link href="/pricing">See pricing</Link>.</p>
           </div>
         </div>
       ) : null}

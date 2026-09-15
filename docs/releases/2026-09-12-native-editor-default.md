@@ -14,7 +14,7 @@ Impeccable distill/layout guidance: retain the approved desktop secondary left t
 
 - Production build and TypeScript passed.
 - Root suite: 1,031 passed.
-- Focused Ad Studio suite: 159 passed.
+- Focused Ad Builder suite: 159 passed.
 - Package suites passed.
 - Actual React launcher browser harness passed automatic POST, StrictMode duplicate guard, error, retry, redirect and reopen.
 - Host browser harness passed desktop 1440px, mobile 390px and 320px, footer absence, Photos, Words, explicit AI proposal application, native edit roundtrip, save failure/retry/reopen and review navigation.
@@ -24,4 +24,4 @@ Impeccable distill/layout guidance: retain the approved desktop secondary left t
 
 ## Template evidence
 
-The read-only all-template harness uses current active template rows, declaration-checked real storage assets, bundled/declared fonts, the actual native bridge, both full-sized PNG exports, and saved-scene reopen comparison. Observed complete inventory verification: 61 templates passed the full batch and the corrected coastal template passed a targeted rerun, covering all 62 current active templates, with 124 full-sized Feed/Story PNGs. Every declared font loaded and all 124 exports were pixel-identical after reopening their saved native scenes. Reports, images and visual contact sheets are retained at /root/work/adstudio-templates-release on the VPS. Earlier incomplete harness attempts are not acceptance evidence. It does not mutate template or customer rows.
+The read-only all-template harness uses current active template rows, declaration-checked real storage assets, bundled/declared fonts, the actual native bridge, both full-sized PNG exports, and saved-scene reopen comparison. Observed complete inventory verification: 61 templates passed the full batch and the corrected coastal template passed a targeted rerun, covering all 62 current active templates, with 124 full-sized Feed/Story PNGs. Every declared font loaded and all 124 exports were pixel-identical after reopening their saved native scenes. Reports, images and visual contact sheets are retained at /root/work/adbuilder-templates-release on the VPS. Earlier incomplete harness attempts are not acceptance evidence. It does not mutate template or customer rows.

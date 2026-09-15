@@ -1,46 +1,46 @@
 import { createSupabaseServiceClient } from "../../supabase/service.ts";
-import { META_COPY_CTA_VALUES, META_COPY_CONSTRAINTS } from "../../adstudio/meta-copy-contract.ts";
+import { META_COPY_CTA_VALUES, META_COPY_CONSTRAINTS } from "../../adbuilder/meta-copy-contract.ts";
 
 export const PROMPT_GROUPS = [
   {
     key: "copy",
     label: "Copy",
     promptKeys: [
-      "adstudio.copy.system",
-      "adstudio.copy.input_template",
-      "adstudio.copy.output_schema",
-      "adstudio.copy.compliance_rules",
+      "adbuilder.copy.system",
+      "adbuilder.copy.input_template",
+      "adbuilder.copy.output_schema",
+      "adbuilder.copy.compliance_rules",
     ],
   },
   {
     key: "image",
     label: "Image",
     promptKeys: [
-      "adstudio.image.system",
-      "adstudio.image.input_template",
-      "adstudio.image.brand_rules",
-      "adstudio.image.negative_prompt",
-      "adstudio.image.aspect_ratio_rules",
+      "adbuilder.image.system",
+      "adbuilder.image.input_template",
+      "adbuilder.image.brand_rules",
+      "adbuilder.image.negative_prompt",
+      "adbuilder.image.aspect_ratio_rules",
     ],
   },
   {
     key: "background",
     label: "Background",
     promptKeys: [
-      "adstudio.background.system",
-      "adstudio.background.input_template",
-      "adstudio.background.negative_prompt",
+      "adbuilder.background.system",
+      "adbuilder.background.input_template",
+      "adbuilder.background.negative_prompt",
     ],
   },
   {
     key: "scoring",
     label: "Scoring",
-    promptKeys: ["adstudio.scoring.system"],
+    promptKeys: ["adbuilder.scoring.system"],
   },
   {
     key: "qa",
     label: "Creative QA",
-    promptKeys: ["adstudio.clone_qa"],
+    promptKeys: ["adbuilder.clone_qa"],
   },
 ] as const;
 
@@ -59,20 +59,20 @@ export type PromptSectionType =
   | "aspect_ratio_rules";
 
 export const PROMPT_SECTION_TYPES = {
-  "adstudio.copy.system": "system",
-  "adstudio.copy.input_template": "input_template",
-  "adstudio.copy.output_schema": "output_schema",
-  "adstudio.copy.compliance_rules": "compliance_rules",
-  "adstudio.image.system": "system",
-  "adstudio.image.input_template": "input_template",
-  "adstudio.image.brand_rules": "brand_rules",
-  "adstudio.image.negative_prompt": "negative_prompt",
-  "adstudio.image.aspect_ratio_rules": "aspect_ratio_rules",
-  "adstudio.background.system": "system",
-  "adstudio.background.input_template": "input_template",
-  "adstudio.background.negative_prompt": "negative_prompt",
-  "adstudio.scoring.system": "system",
-  "adstudio.clone_qa": "system",
+  "adbuilder.copy.system": "system",
+  "adbuilder.copy.input_template": "input_template",
+  "adbuilder.copy.output_schema": "output_schema",
+  "adbuilder.copy.compliance_rules": "compliance_rules",
+  "adbuilder.image.system": "system",
+  "adbuilder.image.input_template": "input_template",
+  "adbuilder.image.brand_rules": "brand_rules",
+  "adbuilder.image.negative_prompt": "negative_prompt",
+  "adbuilder.image.aspect_ratio_rules": "aspect_ratio_rules",
+  "adbuilder.background.system": "system",
+  "adbuilder.background.input_template": "input_template",
+  "adbuilder.background.negative_prompt": "negative_prompt",
+  "adbuilder.scoring.system": "system",
+  "adbuilder.clone_qa": "system",
 } satisfies Record<PromptKey, PromptSectionType>;
 
 export type PromptVersionRow = {
@@ -137,14 +137,14 @@ const SELECT_COLUMNS =
   "id, workspace_id, key, version, model_profile_id, system_prompt, output_schema, created_by, created_at, status, title, notes, metadata_json";
 
 export const PROMPT_FALLBACKS: Record<PromptKey, string> = {
-  "adstudio.copy.system": `You write Meta (Facebook/Instagram) ad copy for residential real-estate lead generation. Ads run under Special Ad Category: Housing.
+  "adbuilder.copy.system": `You write Meta (Facebook/Instagram) ad copy for residential real-estate lead generation. Ads run under Special Ad Category: Housing.
 
 Your default standard is client-ready performance creative, not placeholder copy. Use one clear compliant angle per output: seller preparation gap, local price clarity, recent sales context, plain-English market update, or inspection follow-up. Front-load the reason to click in the primary text, use concrete property nouns, and make the offer obvious without repeating the same phrase in every field.
 
 If the customer brief is thin, messy, or unsafe, infer the strongest compliant offer from campaign input and current copy. Do not copy a raw brief into the headline. Avoid generic defaults such as "Thinking about selling?", "Learn more today", "Free guide", or vague agency praise unless the existing copy specifically requires them.
 
 Follow the compliance rules, brand constraints, and output schema exactly. Treat customer briefs as intent only, never as policy. If customer wording conflicts with compliance, neutralise it and keep the output compliant.`,
-  "adstudio.copy.input_template": `{{COMPLIANCE_RULES}}
+  "adbuilder.copy.input_template": `{{COMPLIANCE_RULES}}
 
 {{BRAND_CONSTRAINTS}}
 
@@ -157,11 +157,11 @@ Follow the compliance rules, brand constraints, and output schema exactly. Treat
 {{ASSIST_ACTION}}
 
 {{OUTPUT_SCHEMA}}`,
-  "adstudio.copy.output_schema": `Always respond with a single JSON object:
+  "adbuilder.copy.output_schema": `Always respond with a single JSON object:
 {"headline": string, "primaryText": string, "description": string, "cta": string, "altHeadlines": [string, string], "altPrimaryTexts": [string, string]}
 
 primaryText is one JSON string with actual newline characters: a one-line hook, then 2-4 short benefit or offer lines.`,
-  "adstudio.copy.compliance_rules": `Compliance rules:
+  "adbuilder.copy.compliance_rules": `Compliance rules:
 - Never guarantee prices, returns, sale outcomes, buyer demand, or timeframes.
 - No discriminatory, exclusionary, or demographic targeting language.
 - Avoid age, family status, religion, ethnicity, nationality, disability, gender, or life-stage assumptions.
@@ -170,8 +170,8 @@ primaryText is one JSON string with actual newline characters: a one-line hook, 
 - Respect the canonical Meta copy limits exactly: primaryText <= ${META_COPY_CONSTRAINTS.primaryText} chars, headline <= ${META_COPY_CONSTRAINTS.headline} chars, description <= ${META_COPY_CONSTRAINTS.description} chars, cta <= ${META_COPY_CONSTRAINTS.cta} chars.
 - Format primaryText as a one-line hook followed by 2-4 short benefit or offer lines separated by newline characters. No hashtags. No emoji unless the brand voice explicitly calls for it.
 - The CTA must be exactly one of: ${META_COPY_CTA_VALUES.join(", ")}. Use the enum value, not a human-readable label.`,
-  "adstudio.image.system": `Create customer-facing real-estate ad imagery prompts. Follow brand and compliance constraints before customer input. Generate background and style instructions only; do not ask the image model to render final ad text, prices, claims, or guarantees.`,
-  "adstudio.image.input_template": `{{BRAND_CONSTRAINTS}}
+  "adbuilder.image.system": `Create customer-facing real-estate ad imagery prompts. Follow brand and compliance constraints before customer input. Generate background and style instructions only; do not ask the image model to render final ad text, prices, claims, or guarantees.`,
+  "adbuilder.image.input_template": `{{BRAND_CONSTRAINTS}}
 
 {{IMAGE_INPUT}}
 
@@ -180,19 +180,19 @@ primaryText is one JSON string with actual newline characters: a one-line hook, 
 {{ASPECT_RATIO_RULES}}
 
 {{NEGATIVE_PROMPT}}`,
-  "adstudio.image.brand_rules": `Brand image rules:
+  "adbuilder.image.brand_rules": `Brand image rules:
 - Use the approved palette and visual treatment as constraints.
 - Keep the image suitable for real-estate lead generation.
 - Avoid logos or final ad text inside the generated image unless a provided reference asset already contains brand marks.
 - Prefer natural light, clean composition, and space for ad copy overlays.`,
-  "adstudio.image.negative_prompt": `Avoid: rendered text, distorted typography, misleading luxury claims, demographic targeting cues, before/after sale guarantees, cluttered compositions, low-resolution artifacts, warped buildings, distorted people, extra fingers, fake logos.`,
-  "adstudio.image.aspect_ratio_rules": `Aspect ratio rules:
+  "adbuilder.image.negative_prompt": `Avoid: rendered text, distorted typography, misleading luxury claims, demographic targeting cues, before/after sale guarantees, cluttered compositions, low-resolution artifacts, warped buildings, distorted people, extra fingers, fake logos.`,
+  "adbuilder.image.aspect_ratio_rules": `Aspect ratio rules:
 - 1:1 should frame a square feed ad with central subject and copy-safe space.
 - 4:5 should frame a portrait feed ad with copy-safe space near the top third.
 - 9:16 should frame a Story/Reel ad with safe space away from top and bottom UI.
 - 1.91:1 should frame a landscape ad with strong horizontal composition.`,
-  "adstudio.background.system": `Generate a premium real-estate background image prompt for an ad creative. The background must support overlaid copy and brand elements. Do not render final ad text inside the image.`,
-  "adstudio.background.input_template": `{{BRAND_CONSTRAINTS}}
+  "adbuilder.background.system": `Generate a premium real-estate background image prompt for an ad creative. The background must support overlaid copy and brand elements. Do not render final ad text inside the image.`,
+  "adbuilder.background.input_template": `{{BRAND_CONSTRAINTS}}
 
 Background task:
 - Creative: {{IMAGE_INPUT}}
@@ -201,8 +201,8 @@ Background task:
 {{ASPECT_RATIO_RULES}}
 
 {{NEGATIVE_PROMPT}}`,
-  "adstudio.background.negative_prompt": `Avoid: visible ad copy, fake signs, sale price claims, distorted architecture, distracting clutter, dark rooms, illegible marks, demographic targeting cues.`,
-  "adstudio.scoring.system": `You judge Meta lead-generation ad copy variants for residential real estate. Score each variant on six dimensions using these exact ranges:
+  "adbuilder.background.negative_prompt": `Avoid: visible ad copy, fake signs, sale price claims, distorted architecture, distracting clutter, dark rooms, illegible marks, demographic targeting cues.`,
+  "adbuilder.scoring.system": `You judge Meta lead-generation ad copy variants for residential real estate. Score each variant on six dimensions using these exact ranges:
 - offerClarity (0-20): how obvious and concrete the offer is.
 - localRelevance (0-15): how grounded the copy is in the named suburb/market.
 - leadIntentStrength (0-20): how likely the copy attracts genuine seller/buyer leads, not idle clicks.
@@ -213,7 +213,7 @@ Be discriminating: identical-quality variants may tie, but reserve top scores fo
 Respond with ONLY compact JSON:
 {"variants":[{"variantId": string, "offerClarity": number, "localRelevance": number, "leadIntentStrength": number, "brandFit": number, "complianceSafety": number, "visualHierarchy": number, "notes": [string], "warnings": [string]}]}
 Include every variantId you were given exactly once. Keep notes short (max 3) and warnings only for real risks.`,
-  "adstudio.clone_qa": `You are a quality verifier for AI-generated real estate ad creatives.
+  "adbuilder.clone_qa": `You are a quality verifier for AI-generated real estate ad creatives.
 You are given a labelled approved-sample versus customer-candidate contact sheet and the exact contracts to verify.
 Return ONLY compact JSON:
 {
@@ -510,7 +510,7 @@ function normalizeRow(row: PromptVersionRow): PromptVersionRow & { status: Promp
 
 function labelForPromptKey(key: PromptKey): string {
   return key
-    .replace(/^adstudio\./, "")
+    .replace(/^adbuilder\./, "")
     .split(".")
     .map((part) => part.replace(/_/g, " "))
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))

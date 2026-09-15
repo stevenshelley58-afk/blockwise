@@ -13,7 +13,7 @@ const ignoredSegments = new Set([
   "playwright-report", "test-results", "_archive",
 ]);
 
-// Phase 1 — AdStudio clean-rebuild: must not contain any legacy clone identifiers.
+// Phase 1 — AdBuilder clean-rebuild: must not contain any legacy clone identifiers.
 checkLegacyCloneIdentifiers();
 // Existing checks (kept from pre-rebuild verifier).
 checkLegacyAdFirstReferences();
@@ -32,7 +32,7 @@ if (failures.length > 0) {
 console.log("Hard-reset static verification passed.");
 
 // ---------------------------------------------------------------------------
-// Phase 1: AdStudio clean-rebuild — zero legacy clone identifiers
+// Phase 1: AdBuilder clean-rebuild — zero legacy clone identifiers
 // ---------------------------------------------------------------------------
 
 function checkLegacyCloneIdentifiers() {
@@ -40,80 +40,80 @@ function checkLegacyCloneIdentifiers() {
     "reference_clone", "reference-clone",
     "buildCloneImageRequest", "buildTargetedEditRequest",
     "template_clone_image", "templateClone", "cloneQa",
-    "adstudio/clones",
-    "AD_STUDIO_TEMPLATES", "RESOLVABLE_AD_STUDIO_TEMPLATES",
-    "adstudio.generate.template",
+    "adbuilder/clones",
+    "AD_BUILDER_TEMPLATES", "RESOLVABLE_AD_BUILDER_TEMPLATES",
+    "adbuilder.generate.template",
   ];
 
   const legacyPaths = [
-    "src/lib/adstudio/template-gallery",
-    "src/lib/adstudio/reference-clone.ts",
-    "src/lib/adstudio/clone-generation.ts",
-    "src/lib/adstudio/clone-campaign.ts",
-    "src/lib/adstudio/clone-creative.ts",
-    "src/lib/adstudio/clone-regions.ts",
-    "src/lib/adstudio/region-edit.ts",
-    "src/lib/adstudio/rasterize-reference.ts",
-    "src/lib/adstudio/generate-template-campaign.ts",
-    "src/lib/adstudio/template-resolver.ts",
-    "src/lib/adstudio/template-preview.ts",
-    "src/lib/adstudio/creative-preview.ts",
-    "src/lib/adstudio/creative-export.ts",
-    "src/lib/adstudio/export-package.ts",
-    "src/lib/adstudio/export-render-storage.ts",
-    "src/lib/adstudio/generated-media.ts",
-    "src/lib/adstudio/generation-credits.ts",
-    "src/lib/adstudio/generation-error.ts",
-    "src/lib/adstudio/generation-lock.ts",
-    // NOTE: `public/adstudio-samples` is NOT in the legacy list — it is the
+    "src/lib/adbuilder/template-gallery",
+    "src/lib/adbuilder/reference-clone.ts",
+    "src/lib/adbuilder/clone-generation.ts",
+    "src/lib/adbuilder/clone-campaign.ts",
+    "src/lib/adbuilder/clone-creative.ts",
+    "src/lib/adbuilder/clone-regions.ts",
+    "src/lib/adbuilder/region-edit.ts",
+    "src/lib/adbuilder/rasterize-reference.ts",
+    "src/lib/adbuilder/generate-template-campaign.ts",
+    "src/lib/adbuilder/template-resolver.ts",
+    "src/lib/adbuilder/template-preview.ts",
+    "src/lib/adbuilder/creative-preview.ts",
+    "src/lib/adbuilder/creative-export.ts",
+    "src/lib/adbuilder/export-package.ts",
+    "src/lib/adbuilder/export-render-storage.ts",
+    "src/lib/adbuilder/generated-media.ts",
+    "src/lib/adbuilder/generation-credits.ts",
+    "src/lib/adbuilder/generation-error.ts",
+    "src/lib/adbuilder/generation-lock.ts",
+    // NOTE: `public/adbuilder-samples` is NOT in the legacy list — it is the
     // committed, versioned subject-invariance fixture corpus (real-photo +
     // procedural fixtures), a hard dependency of the canonical gate. The
     // pre-rebuild "samples" residue was removed in Phase 1; the path was
     // re-occupied deliberately by the fixture corpus and is referenced by
-    "src/lib/adstudio/live-workflow.ts",
-    "src/lib/adstudio/offers.ts",
-    "src/lib/adstudio/platform-rules.ts",
-    "src/lib/adstudio/scoring.ts",
-    "src/lib/adstudio/templates.ts",
-    "src/lib/adstudio/template-display.ts",
-    "src/lib/adstudio/readiness.ts",
-    "src/lib/adstudio/job-status.ts",
-    "src/lib/adstudio/clone-candidate-audit.ts",
-    "src/lib/adstudio/clone-quality-gate.ts",
-    "src/lib/adstudio/empty-campaign.ts",
-    "src/lib/adstudio/first-ad-input.ts",
-    "src/lib/adstudio/load-live-bundle.ts",
-    "src/lib/adstudio/layer-derivation.ts",
-    "src/lib/adstudio/magic-layers-config.mjs",
-    "src/lib/adstudio/outpaint-layout.ts",
-    "src/lib/adstudio/resolve-image-for-model.ts",
-    "src/lib/adstudio/smart-crop.ts",
-    "src/lib/adstudio/text-layers.ts",
-    "src/lib/adstudio/text-layer-state.ts",
-    "src/lib/adstudio/creative-library.ts",
-    "src/lib/adstudio/creative-revisions.ts",
-    "scripts/adstudio/create-template.mjs",
-    "scripts/adstudio/local-template-adapter.mjs",
-    "scripts/build/rasterize-adstudio-samples.mjs",
-    "scripts/verify/adstudio-templates.mjs",
-    "hermes/skills/adstudio-template-builder/SKILL.md",
-    ".github/codex/prompts/adstudio-template-integrator.md",
-    "mockups/qwen-adstudio-full-process-20260722",
-    "src/app/api/adstudio/jobs",
-    "src/app/api/adstudio/creatives/[id]/edit",
-    "src/app/api/adstudio/campaigns/route.ts",
-    "src/app/api/adstudio/campaigns/[id]/draft",
-    "src/app/api/adstudio/export-packages",
-    "src/components/adstudio/ad-studio-workbench.tsx",
-    "src/components/adstudio/new-ad-dialog.tsx",
-    "src/components/adstudio/canvas/in-place-ad-editor.tsx",
+    "src/lib/adbuilder/live-workflow.ts",
+    "src/lib/adbuilder/offers.ts",
+    "src/lib/adbuilder/platform-rules.ts",
+    "src/lib/adbuilder/scoring.ts",
+    "src/lib/adbuilder/templates.ts",
+    "src/lib/adbuilder/template-display.ts",
+    "src/lib/adbuilder/readiness.ts",
+    "src/lib/adbuilder/job-status.ts",
+    "src/lib/adbuilder/clone-candidate-audit.ts",
+    "src/lib/adbuilder/clone-quality-gate.ts",
+    "src/lib/adbuilder/empty-campaign.ts",
+    "src/lib/adbuilder/first-ad-input.ts",
+    "src/lib/adbuilder/load-live-bundle.ts",
+    "src/lib/adbuilder/layer-derivation.ts",
+    "src/lib/adbuilder/magic-layers-config.mjs",
+    "src/lib/adbuilder/outpaint-layout.ts",
+    "src/lib/adbuilder/resolve-image-for-model.ts",
+    "src/lib/adbuilder/smart-crop.ts",
+    "src/lib/adbuilder/text-layers.ts",
+    "src/lib/adbuilder/text-layer-state.ts",
+    "src/lib/adbuilder/creative-library.ts",
+    "src/lib/adbuilder/creative-revisions.ts",
+    "scripts/adbuilder/create-template.mjs",
+    "scripts/adbuilder/local-template-adapter.mjs",
+    "scripts/build/rasterize-adbuilder-samples.mjs",
+    "scripts/verify/adbuilder-templates.mjs",
+    "hermes/skills/adbuilder-template-builder/SKILL.md",
+    ".github/codex/prompts/adbuilder-template-integrator.md",
+    "mockups/qwen-adbuilder-full-process-20260722",
+    "src/app/api/adbuilder/jobs",
+    "src/app/api/adbuilder/creatives/[id]/edit",
+    "src/app/api/adbuilder/campaigns/route.ts",
+    "src/app/api/adbuilder/campaigns/[id]/draft",
+    "src/app/api/adbuilder/export-packages",
+    "src/components/adbuilder/ad-builder-workbench.tsx",
+    "src/components/adbuilder/new-ad-dialog.tsx",
+    "src/components/adbuilder/canvas/in-place-ad-editor.tsx",
     "src/app/api/operator/template-trace",
   ];
 
   for (const legacyPath of legacyPaths) {
     const full = join(root, ...legacyPath.split("/"));
     if (existsSync(full)) {
-      failures.push(`Legacy AdStudio path still exists: ${display(full)}`);
+      failures.push(`Legacy AdBuilder path still exists: ${display(full)}`);
     }
   }
 

@@ -1043,29 +1043,29 @@ select
   ),
   (
     select min(b.created_at)
-    from public.adstudio_brand_kits b
+    from public.adbuilder_brand_kits b
     where b.workspace_id = w.id
       and nullif(btrim(b.source_url), '') is not null
   ),
   (
     select min(b.updated_at)
-    from public.adstudio_brand_kits b
+    from public.adbuilder_brand_kits b
     where b.workspace_id = w.id
       and b.review_status = 'approved'
   ),
   (
     select min(c.created_at)
-    from public.adstudio_campaigns c
+    from public.adbuilder_campaigns c
     where c.workspace_id = w.id
       and c.template_key is not null
   ),
   (
     select min(c.created_at)
-    from public.adstudio_campaigns c
+    from public.adbuilder_campaigns c
     where c.workspace_id = w.id
       and exists (
         select 1
-        from public.adstudio_creatives cr
+        from public.adbuilder_creatives cr
         where cr.workspace_id = w.id
           and cr.campaign_id = c.id
           and cr.render_status = 'rendered'

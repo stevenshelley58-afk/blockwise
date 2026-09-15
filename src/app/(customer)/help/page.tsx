@@ -119,7 +119,7 @@ export default async function HelpPage() {
             colour by hand. The rest can be edited later without rescanning.
           </p>
           <Button variant="outline" className="mt-3 min-h-11" asChild>
-            <Link href="/ad-studio/brand">Open Brand Pack</Link>
+            <Link href="/ad-builder/brand">Open Brand Pack</Link>
           </Button>
         </Topic>
 
@@ -129,12 +129,12 @@ export default async function HelpPage() {
         >
           <p className="text-[13px] text-muted-foreground">
             Choose a template pack, add your listing photos and text, then edit
-            in Ad Studio. Save the revision when the Feed and Story previews
+            in Ad Builder. Save the revision when the Feed and Story previews
             look right. Publishing stays gated until Meta access is verified, so
             nothing goes live by accident.
           </p>
           <Button variant="outline" className="mt-3 min-h-11" asChild>
-            <Link href="/ad-studio">Open Ad Studio</Link>
+            <Link href="/ad-builder">Open Ad Builder</Link>
           </Button>
         </Topic>
 

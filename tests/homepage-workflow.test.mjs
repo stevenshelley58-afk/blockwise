@@ -89,7 +89,7 @@ test("the field writes the ad headline onto the image", () => {
   assert.match(styles, /\.hc-story-ad-headline \{[^}]*text-transform: uppercase/);
   // The demo creative is a pack render with no text on the artwork, so the
   // headline the visitor writes is the only headline on the ad.
-  assert.match(content, /image: "\/adstudio-fixtures\/meta-agent-intro-feed-037\/property-photo\.webp"/);
+  assert.match(content, /image: "\/adbuilder-fixtures\/meta-agent-intro-feed-037\/property-photo\.webp"/);
   assert.doesNotMatch(content, /f1eef3fb49b782ab7666cd14a7f793151f5fd439c724085ce68996e9ebb24f78/);
   // Set on the image like real ad type: display type on a scrim, no panel.
   assert.match(styles, /\.hc-story-ad-headline \{[^}]*color: #fff/);

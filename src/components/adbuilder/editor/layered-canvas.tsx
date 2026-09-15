@@ -1,0 +1,670 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import type { Canvas as FabricCanvas, FabricObject } from "fabric";
+import type { CanonicalPreviewState } from "./canonical-preview";
+
+import type {
+  ImageSlotLayer,
+  Layout,
+  LayoutLayer,
+  Rect,
+  AdTemplate,
+} from "../../../../packages/ad-template-contract/src/types";
+import {
+  MINIMUM_MULTILINE_LINE_HEIGHT,
+  MINIMUM_TEXT_SIZE_PX,
+  PLACEMENT_DIMENSIONS,
+} from "../../../../packages/ad-template-contract/src/types";
+import {
+  measureTrackedTextWidth,
+  prepareTextLayout,
+  segmentGraphemes,
+} from "@blockwise/ad-template-renderer/text-layout";
+import { templateAssetProxyUrl } from "@/lib/adbuilder/pack-gallery";
+import { cn } from "@/lib/utils";
+import {
+  effectiveTextFontSize,
+  fabricCircleGeometry,
+  fabricLinePathData,
+  fabricIconPathData,
+  fabricPathPosition,
+  fabricRectGeometry,
+  imageMaskRadius,
+  resolveIconShape,
+  resolveGeometry,
+} from "./layer-geometry";
+
+type LayerTarget = { layer: LayoutLayer; object: FabricObject };
+
+const loadedFontFaces = new Map<string, Promise<void>>();
+
+export function templateFontFamily(templateId: string, file: string): string {
+  return `Blockwise_${encodeURIComponent(templateId)}_${encodeURIComponent(file)}`;
+}
+
+export function ensureTemplateFont(templateId: string, existingAdId: string, assets: AdTemplate["assets"], font: { file: string }): Promise<void> {
+  const family = templateFontFamily(templateId, font.file);
+  const declaration = Object.entries(assets).find(([, asset]) => asset.fileName === font.file);
+  const assetKey = declaration?.[0] ?? null;
+  const fontUrl = assetKey
+    ? templateAssetProxyUrl(templateId, assetKey, existingAdId)
+    : `/fonts/adbuilder/${font.file.split("/").pop()}`;
+  if (!fontUrl) throw new Error(`Font asset route is invalid for ${font.file}`);
+  const cacheKey = `${templateId}:${assetKey ?? fontUrl}:${font.file}`;
+  const existing = loadedFontFaces.get(cacheKey);
+  if (existing) return existing;
+  const task = typeof document === "undefined" || typeof FontFace === "undefined"
+    ? Promise.resolve()
+    : new FontFace(family, `url(${fontUrl})`).load().then(face => {
+      document.fonts.add(face);
+    }).catch(() => {
+      loadedFontFaces.delete(cacheKey);
+      throw new Error(`Font ${font.file} could not be loaded from the template asset.`);
+    });
+  loadedFontFaces.set(cacheKey, task);
+  return task;
+}
+
+export interface LayeredCanvasProps {
+  templateId: string;
+  /** Saved-ad identity used to authorize withdrawn template assets. */
+  existingAdId: string;
+  assets: AdTemplate["assets"];
+  layout: Layout;
+  colours: AdTemplate["semanticColours"];
+  imageValues?: Record<string, string | null | undefined>;
+  textValues?: Record<string, string | null | undefined>;
+  cropOverrides?: Record<string, Rect | null | undefined>;
+  selectedLayerId?: string | null;
+  onSelect?: (layerId: string) => void;
+  onCropImage?: (layer: ImageSlotLayer) => void;
+  onError?: (message: string) => void;
+  canonicalPreview?: CanonicalPreviewState;
+  className?: string;
+}
+
+/**
+ * Fabric is the headless interaction engine only. Blockwise owns every visible
+ * control and style; this canvas paints the signed pack's real ordered layers
+ * and provides hit-testing without exposing a second editor UI.
+ */
+export function LayeredCanvas({
+  templateId,
+  existingAdId,
+  assets,
+  layout,
+  colours,
+  imageValues = {},
+  textValues = {},
+  cropOverrides = {},
+  selectedLayerId,
+  onSelect,
+  onCropImage,
+  onError,
+  canonicalPreview,
+  className,
+}: LayeredCanvasProps) {
+  const elementRef = useRef<HTMLCanvasElement | null>(null);
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const fabricRef = useRef<FabricCanvas | null>(null);
+  const layerTargetsRef = useRef(new Map<string, LayerTarget>());
+  const targetIdsRef = useRef(new Map<FabricObject, string>());
+  const renderVersionRef = useRef(0);
+  const onSelectRef = useRef(onSelect);
+  const onCropRef = useRef(onCropImage);
+  const layoutRef = useRef(layout);
+  const [ready, setReady] = useState(false);
+
+  onSelectRef.current = onSelect;
+  onCropRef.current = onCropImage;
+  layoutRef.current = layout;
+
+  useEffect(() => {
+    let cancelled = false;
+    let canvas: FabricCanvas | null = null;
+    void import("fabric").then(({ Canvas }) => {
+      if (cancelled || !elementRef.current) return;
+      canvas = new Canvas(elementRef.current, {
+        preserveObjectStacking: true,
+        selection: false,
+        renderOnAddRemove: false,
+      });
+      fabricRef.current = canvas;
+      canvas.on("mouse:down", event => {
+        const target = event.target;
+        if (!target) return;
+        const layerId = targetIdsRef.current.get(target);
+        if (!layerId) return;
+        onSelectRef.current?.(layerId);
+        const layer = layoutRef.current.layers.find(item => item.layerId === layerId);
+        if (layer?.type === "image_slot") onCropRef.current?.(layer);
+      });
+      setReady(true);
+    });
+    return () => {
+      cancelled = true;
+      renderVersionRef.current += 1;
+      fabricRef.current = null;
+      setReady(false);
+      void canvas?.dispose();
+    };
+  }, []);
+
+  useEffect(() => {
+    const canvas = fabricRef.current;
+    const host = hostRef.current;
+    if (!ready || !canvas || !host) return;
+    const dims = PLACEMENT_DIMENSIONS[layout.placement];
+    const resize = () => {
+      const width = Math.max(1, host.clientWidth);
+      const height = Math.max(1, host.clientHeight);
+      // Fabric's backing store stays in pack coordinates so objects and hit
+      // testing remain aligned. Only the CSS box follows the responsive host.
+      canvas.setDimensions({ width: dims.width, height: dims.height });
+      canvas.setDimensions({ width, height }, { cssOnly: true });
+      canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+      canvas.requestRenderAll();
+    };
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(host);
+    return () => observer.disconnect();
+  }, [layout.placement, ready]);
+
+  useEffect(() => {
+    const canvas = fabricRef.current;
+    if (!ready || !canvas) return;
+    const version = ++renderVersionRef.current;
+    const render = async () => {
+      const fabric = await import("fabric");
+      if (renderVersionRef.current !== version || fabricRef.current !== canvas) return;
+      canvas.discardActiveObject();
+      canvas.clear();
+      canvas.backgroundColor = colours.background ?? "#ffffff";
+      layerTargetsRef.current = new Map();
+      targetIdsRef.current = new Map();
+
+      for (const layer of layout.layers) {
+        if (renderVersionRef.current !== version) return;
+        const object = await createLayerObject({
+          fabric,
+          templateId,
+          existingAdId,
+          assets,
+          placement: layout.placement,
+          layer,
+          colours,
+          imageValues,
+          textValues,
+          cropOverrides,
+        });
+        if (!object || renderVersionRef.current !== version) continue;
+        applyFabricAppearance(object, layer, fabric, colours, resolveGeometry(layer.geometry, PLACEMENT_DIMENSIONS[layout.placement]));
+        canvas.add(object);
+        layerTargetsRef.current.set(layer.layerId, { layer, object });
+        targetIdsRef.current.set(object, layer.layerId);
+      }
+      const selected = selectedLayerId ? layerTargetsRef.current.get(selectedLayerId)?.object : null;
+      if (selected?.selectable) canvas.setActiveObject(selected);
+      canvas.requestRenderAll();
+    };
+    void render().catch(error => { onError?.(error instanceof Error ? error.message : "The template preview could not be rendered."); });
+    return () => {
+      renderVersionRef.current += 1;
+    };
+  }, [colours, cropOverrides, existingAdId, imageValues, layout, templateId, ready, selectedLayerId, textValues, onError]);
+
+  useEffect(() => {
+    const canvas = fabricRef.current;
+    if (!ready || !canvas) return;
+    const target = selectedLayerId ? layerTargetsRef.current.get(selectedLayerId)?.object : null;
+    if (target?.selectable) canvas.setActiveObject(target);
+    else canvas.discardActiveObject();
+    canvas.requestRenderAll();
+  }, [ready, selectedLayerId]);
+
+  // The clicked area is marked with a green wash drawn over the pack geometry —
+  // the same rect the server renderer uses. It sits above the canonical server
+  // preview (z-10) and below Fabric's pointer layer (z-20), so a click still
+  // selects and the mark stays visible in every preview mode.
+  const selectionDimensions = PLACEMENT_DIMENSIONS[layout.placement];
+  const selectedLayer = selectedLayerId ? layout.layers.find(layer => layer.layerId === selectedLayerId) ?? null : null;
+  const selectionGeometry = selectedLayer ? resolveGeometry(selectedLayer.geometry, selectionDimensions) : null;
+
+  return (
+    <div ref={hostRef} className={cn("relative isolate h-full w-full overflow-hidden bg-white [&_.upper-canvas]:z-20", className)}>
+      <div className="sr-only" aria-live="polite">{selectedLayer ? `Editing layer: ${selectedLayer.layerId}` : "No layer selected"}</div>
+      {!ready && <div className="absolute inset-0 animate-pulse bg-muted" aria-hidden="true" />}
+      <canvas
+        ref={elementRef}
+        role="img"
+        aria-label={`${layout.placement === "feed" ? "Feed" : "Story"} layered ad preview`}
+      />
+      {selectionGeometry ? (
+        <div
+          aria-hidden="true"
+          data-editor-selection={selectedLayer?.layerId}
+          className="pointer-events-none absolute z-[15] rounded-[3px] border-2 border-success bg-success/15 transition-[left,top,width,height] duration-150 ease-out motion-reduce:transition-none"
+          style={{
+            left: `${(selectionGeometry.x / selectionDimensions.width) * 100}%`,
+            top: `${(selectionGeometry.y / selectionDimensions.height) * 100}%`,
+            width: `${(selectionGeometry.width / selectionDimensions.width) * 100}%`,
+            height: `${(selectionGeometry.height / selectionDimensions.height) * 100}%`,
+            transform: selectedLayer?.effects?.rotationDegrees ? `rotate(${selectedLayer.effects.rotationDegrees}deg)` : undefined,
+          }}
+        />
+      ) : null}
+      {/* Any frame the editor holds is shown, including while the next one
+          renders: swapping the source is the only visible change. */}
+      {canonicalPreview?.url ? (
+        <img
+          src={canonicalPreview.url}
+          alt={(layout.placement === "feed" ? "Feed" : "Story") + " canonical server preview"}
+          className="pointer-events-none absolute inset-0 z-10 h-full w-full object-contain"
+        />
+      ) : null}
+      {canonicalPreview?.status === "pending" ? (
+        <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border border-white/20 bg-black/75 px-3 py-1.5 text-[11px] font-semibold text-white" role="status">
+          Updating server preview…
+        </div>
+      ) : null}
+      {canonicalPreview?.status === "error" ? (
+        <div className="pointer-events-none absolute inset-x-3 top-3 z-20 rounded-(--r-ctl) border border-destructive/40 bg-destructive/90 px-3 py-2 text-[11px] font-semibold text-white" role="status">
+          {canonicalPreview.error ?? "Server preview unavailable. Editing remains available."}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+async function createLayerObject({
+  fabric,
+  templateId,
+  existingAdId,
+  assets,
+  placement,
+  layer,
+  colours,
+  imageValues,
+  textValues,
+  cropOverrides,
+}: {
+  fabric: typeof import("fabric");
+  templateId: string;
+  existingAdId: string;
+  assets: AdTemplate["assets"];
+  placement: Layout["placement"];
+  layer: LayoutLayer;
+  colours: AdTemplate["semanticColours"];
+  imageValues: Record<string, string | null | undefined>;
+  textValues: Record<string, string | null | undefined>;
+  cropOverrides: Record<string, Rect | null | undefined>;
+}): Promise<FabricObject | null> {
+  // Packs may author geometry as normalized ratios. Keep the editor's Fabric
+  // scene in the same logical coordinates as the server renderer, regardless
+  // of whether a signed pack used pixels or ratios for this placement.
+  const geometry = resolveGeometry(layer.geometry, PLACEMENT_DIMENSIONS[placement]);
+  const passive = { selectable: false, evented: false, objectCaching: true } as const;
+  const interactive = {
+    selectable: true,
+    evented: true,
+    lockMovementX: true,
+    lockMovementY: true,
+    lockRotation: true,
+    lockScalingX: true,
+    lockScalingY: true,
+    hasControls: false,
+    // LayeredCanvas paints the green selection wash over the pack geometry, so
+    // Fabric's own active-object border stays off rather than drawing a second,
+    // competing outline.
+    hasBorders: false,
+    padding: 2,
+    hoverCursor: "pointer",
+    moveCursor: "pointer",
+    objectCaching: true,
+  } as const;
+  const fill = (role: keyof AdTemplate["semanticColours"]) => colours[role] ?? "#d3d7df";
+
+  if (layer.type === "plate") {
+    const assetUrl = layer.assetKey ? templateAssetProxyUrl(templateId, layer.assetKey, existingAdId) : null;
+    if (assetUrl) {
+      try {
+        const image = await fabric.FabricImage.fromURL(assetUrl);
+        fitImageToGeometry(image, geometry);
+        image.set(passive);
+        return image;
+      } catch {
+        // A verified asset route can still be temporarily unavailable; retain a
+        // truthful, neutral plate rather than substituting remote source pixels.
+      }
+    }
+    return new fabric.Rect({ ...fabricRectGeometry(geometry), fill: fill(layer.colourRole), ...passive });
+  }
+
+  if (layer.type === "overlay_patch") {
+    return new fabric.Rect({
+      ...fabricRectGeometry(geometry),
+      fill: fill(layer.colourRole),
+      opacity: Math.max(0, Math.min(1, layer.opacity)),
+      ...passive,
+    });
+  }
+
+  if (layer.type === "text") {
+    const rawSource = textValues[layer.inputKey] ?? "";
+    if (!rawSource) return null;
+    if (layer.maxLines > 1 && layer.lineHeight < MINIMUM_MULTILINE_LINE_HEIGHT) {
+      throw new Error(`${placement} text layer ${layer.layerId} must use lineHeight at least ${MINIMUM_MULTILINE_LINE_HEIGHT}`);
+    }
+    const source = layer.case === "upper" ? rawSource.toUpperCase() : layer.case === "lower" ? rawSource.toLowerCase() : rawSource;
+    if (layer.overflowBehaviour === "refuse" && source.length > layer.maxCharacters) return null;
+    const text = source.slice(0, layer.maxCharacters);
+    await ensureTemplateFont(templateId, existingAdId, assets, layer.font);
+    const baseFontSize = effectiveTextFontSize(layer, geometry);
+    const readabilityFloor = MINIMUM_TEXT_SIZE_PX[placement];
+    if (baseFontSize < readabilityFloor) {
+      throw new Error(`${placement} text layer ${layer.layerId} is below the ${readabilityFloor}px readability floor`);
+    }
+    const strokePadding = (layer.effects?.stroke?.width ?? 0) / 2;
+    const shadow = layer.effects?.shadow;
+    const shadowPadding = shadow
+      ? shadow.blur + Math.max(Math.abs(shadow.offsetX), Math.abs(shadow.offsetY))
+      : 0;
+    const effectPadding = Math.ceil(Math.max(strokePadding, shadowPadding));
+    const textCanvas = document.createElement("canvas");
+    textCanvas.width = Math.max(1, Math.ceil(geometry.width + effectPadding * 2));
+    textCanvas.height = Math.max(1, Math.ceil(geometry.height + effectPadding * 2));
+    const insetX = (textCanvas.width - geometry.width) / 2;
+    const insetY = (textCanvas.height - geometry.height) / 2;
+    const context = textCanvas.getContext("2d");
+    if (!context) throw new Error("The browser could not create a text preview canvas.");
+    const family = templateFontFamily(templateId, layer.font.file);
+    const fontDeclaration = (fontSize: number) =>
+      `${layer.italic ? "italic " : ""}${layer.fontWeight ? `${layer.fontWeight} ` : ""}${fontSize}px "${family}"`;
+    const measure = (value: string, fontSize: number) => {
+      context.font = fontDeclaration(fontSize);
+      const metrics = context.measureText(value || "M");
+      return {
+        width: metrics.width,
+        ascent: Number.isFinite(metrics.actualBoundingBoxAscent) ? metrics.actualBoundingBoxAscent : fontSize * 0.8,
+        descent: Number.isFinite(metrics.actualBoundingBoxDescent) ? metrics.actualBoundingBoxDescent : fontSize * 0.2,
+      };
+    };
+    const overflowBehaviour = (layer.overflowBehaviour as string) === "shrink"
+      ? "scale_down"
+      : layer.overflowBehaviour;
+    const prepared = prepareTextLayout({
+      text, width: geometry.width, height: geometry.height, baseFontSize,
+      readabilityFloor, maxLines: layer.maxLines, lineHeight: layer.lineHeight,
+      trackingPixels: layer.tracking, overflowBehaviour, measure,
+    });
+    if (prepared.kind === "skip") return null;
+    if (prepared.kind === "unfit") {
+      throw new Error(`${placement} text layer ${layer.layerId} cannot fit at the ${readabilityFloor}px readability floor`);
+    }
+    context.font = fontDeclaration(prepared.fontSize);
+    context.fillStyle = fill(layer.colourRole);
+    context.textAlign = layer.alignment;
+    context.textBaseline = "alphabetic";
+    if (layer.effects?.shadow) {
+      const shadow = layer.effects.shadow;
+      context.shadowColor = colourWithOpacity(colours[shadow.colourRole] ?? "#000000", shadow.opacity);
+      context.shadowBlur = shadow.blur;
+      context.shadowOffsetX = shadow.offsetX;
+      context.shadowOffsetY = shadow.offsetY;
+    }
+    const x = insetX + (layer.alignment === "center" ? geometry.width / 2
+      : layer.alignment === "right" ? geometry.width : 0);
+    prepared.lines.forEach((line, index) => drawBrowserTrackedText(
+      context, line, x, insetY + prepared.ascent + index * prepared.fontSize * layer.lineHeight,
+      prepared.fontSize, prepared.trackingPixels, layer.alignment,
+    ));
+    if (layer.effects?.stroke) {
+      context.strokeStyle = colourWithOpacity(colours[layer.effects.stroke.colourRole] ?? "#000000", layer.effects.stroke.opacity);
+      context.lineWidth = layer.effects.stroke.width;
+      prepared.lines.forEach((line, index) => drawBrowserTrackedText(
+        context, line, x, insetY + prepared.ascent + index * prepared.fontSize * layer.lineHeight,
+        prepared.fontSize, prepared.trackingPixels, layer.alignment, true,
+      ));
+    }
+    return new fabric.FabricImage(textCanvas, {
+      left: geometry.x - insetX,
+      top: geometry.y - insetY,
+      originX: "left",
+      originY: "top",
+      ...interactive,
+    });
+  }
+
+  if (layer.type === "vector") {
+    const colour = fill(layer.colourRole);
+    if (layer.shape === "line") {
+      const path = new fabric.Path(fabricLinePathData(geometry.width, geometry.height), { fill: "", stroke: colour, strokeWidth: 2, ...interactive });
+      path.set(fabricPathPosition(path, geometry));
+      return path;
+    }
+    if (layer.shape === "wave") {
+      const path = new fabric.Path(`M 0 ${geometry.height / 2} C ${geometry.width * .25} ${-geometry.height / 2} ${geometry.width * .75} ${geometry.height * 1.5} ${geometry.width} ${geometry.height / 2}`, { fill: "", stroke: colour, strokeWidth: 2, ...interactive });
+      path.set(fabricPathPosition(path, geometry));
+      return path;
+    }
+    if (layer.shape === "notched") {
+      const w = geometry.width, h = geometry.height, n = Math.min(w, h) * .2;
+      const polygon = new fabric.Polygon([{ x: 0, y: 0 }, { x: w - n, y: 0 }, { x: w, y: n }, { x: w, y: h }, { x: n, y: h }, { x: 0, y: h - n }], { fill: colour, ...interactive });
+      polygon.set(fabricPathPosition(polygon, geometry));
+      return polygon;
+    }
+    if (layer.shape === "ring") return new fabric.Circle({ left: geometry.x + geometry.width / 2, top: geometry.y + geometry.height / 2, originX: "center", originY: "center", radius: Math.min(geometry.width, geometry.height) / 2, fill: "", stroke: colour, strokeWidth: Math.max(2, Math.min(geometry.width, geometry.height) * .08), opacity: layer.opacity ?? 1, ...interactive });
+    const radius = layer.shape === "pill" ? Math.min(geometry.width, geometry.height) / 2 : layer.cornerRadius ?? (layer.shape === "rounded" ? Math.min(16, geometry.width / 4, geometry.height / 4) : 0);
+    if (layer.shape === "circle") {
+      return new fabric.Circle({ ...fabricCircleGeometry(geometry), fill: colour, opacity: layer.opacity ?? 1, ...interactive });
+    }
+    return new fabric.Rect({ ...fabricRectGeometry(geometry), rx: radius, ry: radius, fill: colour, opacity: layer.opacity ?? 1, ...interactive });
+  }
+
+  if (layer.type === "icon") {
+    const w = geometry.width, h = geometry.height;
+    const iconShape = resolveIconShape(layer.icon);
+    if (!iconShape) return null;
+    const iconPath = fabricIconPathData(layer.icon, w, h);
+    if (!iconPath) return null;
+    const path = new fabric.Path(iconPath, { fill: "", stroke: fill(layer.colourRole), strokeWidth: Math.max(2, Math.min(w, h) * .1), ...interactive });
+    path.set(fabricPathPosition(path, geometry));
+    return path;
+  }
+
+  const src = (layer.type === "image_slot" || layer.type === "logo") ? imageValues[layer.inputKey] ?? null : null;
+  if (src) {
+    try {
+      const image = await fabric.FabricImage.fromURL(src);
+      if (layer.type === "image_slot") {
+        cropImageToGeometry(image, geometry, cropOverrides[layer.inputKey] ?? layer.defaultCrop);
+        image.clipPath = maskForSlot(fabric, layer, geometry);
+      } else {
+        fitImageToGeometry(image, geometry);
+      }
+      image.set(interactive);
+      return image;
+    } catch {
+      // The authenticated image may have expired during a navigation. The
+      // placeholder remains selectable so the customer can replace it.
+    }
+  }
+
+  if (layer.type === "image_slot" || layer.type === "logo") {
+    if (layer.type === "logo") {
+      return new fabric.Rect({ ...fabricRectGeometry(geometry), rx: Math.min(12, geometry.height / 3), ry: Math.min(12, geometry.height / 3), fill: "#f1f2f4", stroke: "#d3d7df", strokeWidth: 2, ...interactive });
+    }
+    const radius = layer.mask === "rounded_rect" ? layer.cornerRadius ?? imageMaskRadius(geometry) : 0;
+    if (layer.mask === "circle") {
+      return new fabric.Circle({
+        ...fabricCircleGeometry(geometry),
+        fill: "#f1f2f4",
+        stroke: "#d3d7df",
+        strokeWidth: 2,
+        ...interactive,
+      });
+    }
+    return new fabric.Rect({
+      ...fabricRectGeometry(geometry),
+      rx: radius,
+      ry: radius,
+      fill: "#f1f2f4",
+      stroke: "#d3d7df",
+      strokeWidth: 2,
+      ...interactive,
+    });
+  }
+
+  return new fabric.Rect({
+    ...fabricRectGeometry(geometry),
+    rx: Math.min(16, geometry.width / 4, geometry.height / 4),
+    ry: Math.min(16, geometry.width / 4, geometry.height / 4),
+    fill: fill("primary"),
+    ...interactive,
+  });
+}
+
+function fitImageToGeometry(image: import("fabric").FabricImage, geometry: Rect) {
+  const width = Math.max(1, image.width);
+  const height = Math.max(1, image.height);
+  image.set({
+    left: geometry.x,
+    top: geometry.y,
+    originX: "left",
+    originY: "top",
+    scaleX: geometry.width / width,
+    scaleY: geometry.height / height,
+  });
+}
+
+function drawBrowserTrackedText(
+  context: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  fontSize: number,
+  trackingPixels: number,
+  alignment: CanvasTextAlign,
+  stroke = false,
+) {
+  if (!text) return;
+  if (trackingPixels === 0) {
+    if (stroke) context.strokeText(text, x, y);
+    else context.fillText(text, x, y);
+    return;
+  }
+  const glyphs = segmentGraphemes(text);
+  const measure = (value: string) => {
+    const metrics = context.measureText(value || "M");
+    return { width: metrics.width, ascent: 0, descent: 0 };
+  };
+  const width = measureTrackedTextWidth(measure, text, fontSize, trackingPixels);
+  let cursor = alignment === "left" ? x : alignment === "right" ? x - width : x - width / 2;
+  const previousAlignment = context.textAlign;
+  context.textAlign = "left";
+  for (const glyph of glyphs) {
+    if (stroke) context.strokeText(glyph, cursor, y);
+    else context.fillText(glyph, cursor, y);
+    cursor += context.measureText(glyph).width + trackingPixels;
+  }
+  context.textAlign = previousAlignment;
+}
+
+function applyFabricAppearance(
+  object: FabricObject,
+  layer: LayoutLayer,
+  fabric: typeof import("fabric"),
+  colours: AdTemplate["semanticColours"],
+  geometry: Rect,
+) {
+  const effects = layer.effects;
+  const opacity = "opacity" in layer && typeof layer.opacity === "number" ? layer.opacity : 1;
+  object.set({
+    opacity,
+    globalCompositeOperation: effects?.blendMode ?? "source-over",
+  });
+  if (effects?.rotationDegrees) {
+    const centre = object.getCenterPoint();
+    object.set({ originX: "center", originY: "center", left: centre.x, top: centre.y, angle: effects.rotationDegrees });
+  } else {
+    object.set("angle", 0);
+  }
+  if (effects?.shadow && layer.type !== "text") {
+    object.set("shadow", new fabric.Shadow({
+      color: colourWithOpacity(colours[effects.shadow.colourRole] ?? "#000000", effects.shadow.opacity),
+      blur: effects.shadow.blur,
+      offsetX: effects.shadow.offsetX,
+      offsetY: effects.shadow.offsetY,
+    }));
+  }
+  if (effects?.stroke && layer.type !== "text") object.set({
+    stroke: colourWithOpacity(colours[effects.stroke.colourRole] ?? "#000000", effects.stroke.opacity),
+    strokeWidth: effects.stroke.width,
+  });
+  if ("fill" in layer && layer.fill && !(object instanceof fabric.FabricImage)) {
+    const radians = layer.fill.angleDegrees * Math.PI / 180;
+    const length = Math.abs(geometry.width * Math.cos(radians)) + Math.abs(geometry.height * Math.sin(radians));
+    const cx = geometry.width / 2;
+    const cy = geometry.height / 2;
+    const dx = Math.cos(radians) * length / 2;
+    const dy = Math.sin(radians) * length / 2;
+    object.set("fill", new fabric.Gradient({
+      type: "linear",
+      gradientUnits: "pixels",
+      coords: { x1: cx - dx, y1: cy - dy, x2: cx + dx, y2: cy + dy },
+      colorStops: layer.fill.stops.map((stop) => ({ offset: stop.offset, color: colourWithOpacity(colours[stop.colourRole] ?? "#000000", stop.opacity) })),
+    }));
+  }
+}
+
+function colourWithOpacity(colour: string, opacity: number): string {
+  const match = /^#([0-9a-f]{6})$/i.exec(colour.trim());
+  if (!match) return colour;
+  const value = Number.parseInt(match[1]!, 16);
+  return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${Math.min(1, Math.max(0, opacity))})`;
+}
+
+function cropImageToGeometry(image: import("fabric").FabricImage, geometry: Rect, rawCrop: Rect) {
+  const element = image.getElement() as HTMLImageElement;
+  const sourceWidth = Math.max(1, element.naturalWidth || image.width);
+  const sourceHeight = Math.max(1, element.naturalHeight || image.height);
+  const crop = normalizedCrop(rawCrop);
+  const cropWidth = Math.max(1, crop.width * sourceWidth);
+  const cropHeight = Math.max(1, crop.height * sourceHeight);
+  image.set({
+    left: geometry.x,
+    top: geometry.y,
+    originX: "left",
+    originY: "top",
+    cropX: crop.x * sourceWidth,
+    cropY: crop.y * sourceHeight,
+    width: cropWidth,
+    height: cropHeight,
+    scaleX: geometry.width / cropWidth,
+    scaleY: geometry.height / cropHeight,
+  });
+}
+
+function normalizedCrop(crop: Rect): Rect {
+  const x = Math.max(0, Math.min(1, crop.x));
+  const y = Math.max(0, Math.min(1, crop.y));
+  return {
+    x,
+    y,
+    width: Math.max(0.01, Math.min(1 - x, crop.width)),
+    height: Math.max(0.01, Math.min(1 - y, crop.height)),
+  };
+}
+
+function maskForSlot(fabric: typeof import("fabric"), layer: ImageSlotLayer, geometry: Rect) {
+  if (layer.mask === "circle") {
+    return new fabric.Circle({
+      ...fabricCircleGeometry(geometry),
+      absolutePositioned: true,
+    });
+  }
+  const radius = layer.mask === "rounded_rect" ? layer.cornerRadius ?? imageMaskRadius(geometry) : 0;
+  return new fabric.Rect({ ...fabricRectGeometry(geometry), rx: radius, ry: radius, absolutePositioned: true });
+}

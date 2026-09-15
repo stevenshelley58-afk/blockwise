@@ -72,7 +72,7 @@ test("operator prompt preview surfaces avoid stale Phase 1 test copy", () => {
 
 test("unified shell keeps operator console out of the customer app", () => {
   const appShell = readFileSync("src/components/app-shell.tsx", "utf8");
-  const routeShell = readFileSync("src/components/adstudio/studio-route-shell.tsx", "utf8");
+  const routeShell = readFileSync("src/components/adbuilder/studio-route-shell.tsx", "utf8");
 
   assert.match(appShell, /<StudioRouteShell/);
   assert.doesNotMatch(appShell, /RouteAwareLegacyShell/);

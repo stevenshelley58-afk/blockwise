@@ -67,7 +67,7 @@ as $$
       case q.kind
         when 'publish.meta.execute' then 0
         when 'publish.meta.mutate' then 0
-        when 'adstudio.generate.template' then 1
+        when 'adbuilder.generate.template' then 1
         when 'deliver.lead' then 2
         when 'sync.meta.leads' then 3
         when 'reporting.refresh' then 4
@@ -96,7 +96,7 @@ create index if not exists job_queue_customer_priority_claim_idx
     (case kind
       when 'publish.meta.execute' then 0
       when 'publish.meta.mutate' then 0
-      when 'adstudio.generate.template' then 1
+      when 'adbuilder.generate.template' then 1
       when 'deliver.lead' then 2
       when 'sync.meta.leads' then 3
       when 'reporting.refresh' then 4
@@ -117,7 +117,7 @@ set search_path = ''
 as $$
 declare
   v_job public.job_queue%rowtype;
-  v_creative_job public.adstudio_creative_jobs%rowtype;
+  v_creative_job public.adbuilder_creative_jobs%rowtype;
   v_reservation jsonb;
   v_count int := 0;
   v_backoff interval;
@@ -169,9 +169,9 @@ begin
         where p.workspace_id = v_job.workspace_id
           and p.id::text = nullif(v_job.payload ->> 'planId', '')
           and p.status in ('approved', 'publishing');
-      elsif v_job.kind = 'adstudio.generate.template' then
+      elsif v_job.kind = 'adbuilder.generate.template' then
         select c.* into v_creative_job
-        from public.adstudio_creative_jobs as c
+        from public.adbuilder_creative_jobs as c
         where c.workspace_id = v_job.workspace_id
           and c.id::text = nullif(v_job.payload ->> 'creativeJobId', '')
         for update;
@@ -191,7 +191,7 @@ begin
             );
           end if;
 
-          update public.adstudio_creative_jobs
+          update public.adbuilder_creative_jobs
           set status = 'failed', error = v_error, updated_at = now()
           where workspace_id = v_job.workspace_id and id = v_creative_job.id;
         end if;
@@ -216,21 +216,21 @@ $$;
 -- recovery queue row wins; only work abandoned for a full day is closed.
 do $$
 declare
-  v_creative public.adstudio_creative_jobs%rowtype;
+  v_creative public.adbuilder_creative_jobs%rowtype;
   v_reservation jsonb;
   v_outstanding int;
   v_repaired bigint := 0;
 begin
   for v_creative in
     select c.*
-    from public.adstudio_creative_jobs as c
+    from public.adbuilder_creative_jobs as c
     where c.status in ('queued', 'running')
       and c.updated_at < now() - interval '24 hours'
       and not exists (
         select 1
         from public.job_queue as q
         where q.workspace_id = c.workspace_id
-          and q.kind = 'adstudio.generate.template'
+          and q.kind = 'adbuilder.generate.template'
           and q.payload ->> 'creativeJobId' = c.id::text
           and q.status in ('pending', 'processing')
       )
@@ -257,7 +257,7 @@ begin
       );
     end if;
 
-    update public.adstudio_creative_jobs
+    update public.adbuilder_creative_jobs
     set status = 'failed',
         error = 'Generation was abandoned before launch hardening. Your reserved credits were released where applicable; create the ad again.',
         updated_at = now()
@@ -265,7 +265,7 @@ begin
     v_repaired := v_repaired + 1;
   end loop;
 
-  raise notice 'Repaired % abandoned AdStudio creative job(s).', v_repaired;
+  raise notice 'Repaired % abandoned AdBuilder creative job(s).', v_repaired;
 end;
 $$;
 
