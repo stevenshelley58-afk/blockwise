@@ -25,7 +25,7 @@ export const FAQ_DATA = [
   },
   {
     q: "What do I get before paying?",
-    a: "You can create three complete Feed + Story ads without a card, and one live trial campaign is included before you subscribe. You approve the campaign's budget and end date with Meta before it starts — free means no Blockwise subscription fee, not free advertising.",
+    a: "You can create and download three complete Feed + Story ads without a card. Publishing an ad needs a card and starts a 7-day Blockwise trial. Free means no Blockwise subscription fee, not free advertising: Meta charges ad spend separately.",
   },
   {
     q: "What is included after I subscribe?",
@@ -33,7 +33,7 @@ export const FAQ_DATA = [
   },
   {
     q: "When does the Ad studio subscription start?",
-    a: "Only when you choose to subscribe. Checkout collects a card and starts A$249 monthly until cancelled. There is no introductory price and no automatic charge at the end of the trial.",
+    a: "Publishing an ad starts it. Checkout collects a card and starts a 7-day Blockwise trial. After the trial, Ad studio renews at A$249 monthly until cancelled, with no introductory price. Cancel before the trial ends and you are not charged.",
   },
   {
     q: "Do unused render credits roll over?",

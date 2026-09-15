@@ -14,7 +14,7 @@ const PLAN_SUMMARY = [
     price: "A$0",
     billing: "No Blockwise subscription fee",
     bestFor: "Trying Blockwise",
-    outcome: "Create your first ads. No card needed.",
+    outcome: "Create and download your first ads. No card needed.",
     features: [
       "Three Feed + Story ads",
       "One trial campaign",
@@ -78,7 +78,7 @@ const DETAIL_SECTIONS = [
     kicker: "Free",
     title: "Try it free.",
     intro:
-      "Make three Feed + Story ads and try one campaign. Your 14 days start when your first ad runs on Meta.",
+      "Make three Feed + Story ads and download them. Publishing an ad needs a card and starts a 7-day trial.",
     rows: [
       [
         "After the trial",

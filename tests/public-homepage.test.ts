@@ -288,13 +288,13 @@ test("public marketing copy states the approved progressive offer", () => {
   // said "Nothing spends until you approve" and "Approve every ad before it
   // goes live". Restore an approval statement here if that copy comes back.
   assert.match(home, /Meta ad spend is paid separately to Meta/i);
-  assert.match(home, /Starting free does not auto-charge you/i);
-  assert.match(home, /No card is required/i);
-  assert.match(home, /you only pay if you choose a paid plan/i);
+  assert.match(home, /No card to create or download/i);
+  assert.match(home, /Creating and downloading an ad needs no card/i);
+  assert.match(home, /Publishing needs a card and starts a 7-day trial/i);
   assert.match(home, /three Feed and Story packs/i);
   assert.ok(pricing.includes("Start free. Manage your own ads, or let us help."));
   assert.match(pricingMarket, /no card/i);
-  assert.match(pricingMarket, /14 days start when your first ad runs on Meta/i);
+  assert.match(pricingMarket, /Publishing an ad needs a card and starts a 7-day trial/i);
   assert.ok(pricingMarket.includes("Ad spend is paid separately to Meta."));
   assert.doesNotMatch(combined, /\$799/);
   assert.doesNotMatch(combined, /Launch from Blockwise/);
@@ -305,9 +305,10 @@ test("public marketing copy states the approved progressive offer", () => {
 test("homepage FAQ discloses billing triggers, credit expiry, cancellation, and managed scope", () => {
   const faq = readFileSync("src/components/home-landing/data.ts", "utf8");
 
-  assert.match(faq, /Only when you choose to subscribe/i);
+  assert.match(faq, /Publishing an ad starts it/i);
   assert.match(faq, /A\$249 monthly until cancelled/i);
-  assert.match(faq, /no introductory price and no automatic charge at the end of the trial/i);
+  assert.match(faq, /no introductory price/i);
+  assert.match(faq, /Cancel before the trial ends and you are not charged/i);
 
   assert.match(faq, /Credits expire at the end of that period/i);
   assert.match(faq, /do not roll over or transfer/i);

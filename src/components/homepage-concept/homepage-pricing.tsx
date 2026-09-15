@@ -11,8 +11,8 @@ export function HomepagePricing() {
       <div className="hc-shell">
         <div className="hp-pricing-heading">
           <h2 id="hp-pricing-heading">Start free. Sign up when you&rsquo;re ready.</h2>
-          <p>Three Feed and Story packs published to your Meta ad account. Yours to keep,
-            no card is needed. 7 days of your personal Blockwise dashboard.</p>
+          <p>Three Feed and Story packs to create, edit and download. Yours to keep, and no card is
+            needed to create or download one. Publishing an ad needs a card and starts a 7-day trial.</p>
         </div>
         <div className="hp-pricing-grid">
           {HOMEPAGE_PLANS.map((plan) => (

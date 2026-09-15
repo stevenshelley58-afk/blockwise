@@ -213,7 +213,7 @@ export function WorkflowMotionStudy() {
     <header className={styles.bwStudyIntro}>
       <h2><span>Build lead ads.</span><span>Skip Ads Manager.</span></h2>
       <p>Get from a proven template to an on-brand lead ad, ready to review in one clear flow.</p>
-      <div><Button asChild size="lg"><a href={TRIAL_SIGNUP_URL}>Start free trial</a></Button><small>Free trial · No card required · Cancel anytime</small></div>
+      <div><Button asChild size="lg"><a href={TRIAL_SIGNUP_URL}>Start free trial</a></Button><small>Free to create · No card to download · Cancel anytime</small></div>
     </header>
     <section className={styles.bwStudyFrame} aria-label="Ad Builder motion study">
       <header className={styles.bwStudyToolbar}>

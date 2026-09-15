@@ -163,7 +163,7 @@ export function SuburbReportClient(props: SuburbReportClientProps) {
 
             <section className="sr-cta-band">
               <div><h2>{reportLabel} changes every week. Keep watching it.</h2><p>This report stays free. A free trial adds tools on top:</p><ul><li>Alerts when a new advertiser appears in {reportLabel}</li><li>Track each advertiser's launches and changes</li><li>Use an observed ad as an AdBuilder starting point</li></ul></div>
-              <div className="sr-cta-actions"><Button asChild size="lg" variant="outline"><GateLink href={trialHref} intent="trial" postcode={postcode}>Start your free trial</GateLink></Button><button type="button" onClick={() => setEmailOpen(true)}>Or just email me this audit</button><small>14 days free · No credit card · Your audit stays free either way</small></div>
+              <div className="sr-cta-actions"><Button asChild size="lg" variant="outline"><GateLink href={trialHref} intent="trial" postcode={postcode}>Start your free trial</GateLink></Button><button type="button" onClick={() => setEmailOpen(true)}>Or just email me this audit</button><small>Free to create · No card to download · Your audit stays free either way</small></div>
             </section>
           </>
         )}
@@ -307,7 +307,7 @@ function AuditGenerator({ postcode, suburb }: { postcode: string; suburb: string
           ))}
           <div className="sr-cta-block">
             <Button size="lg" variant="outline" type="button" onClick={handleClaim} disabled={claiming}>{claiming ? "Saving…" : "Free trial — run these 3 ads today in under 5 mins"}</Button>
-            <p className="sr-note">No credit card required. Ads saved to your Ad Builder library.</p>
+            <p className="sr-note">No card required to create or download. Ads are saved to your Ad Builder library.</p>
           </div>
           <div className="sr-pricing-block">
             <h4>Want to run them yourself?</h4>

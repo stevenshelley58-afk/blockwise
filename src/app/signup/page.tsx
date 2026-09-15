@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Start free",
-  description: "Create your first three real estate ads with Blockwise. Email only, no password and no card required.",
+  description: "Create your first three real estate ads with Blockwise. Email only, no password, and no card to create or download.",
   alternates: { canonical: "/signup" },
   openGraph: {
     type: "website",

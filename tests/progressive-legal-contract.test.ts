@@ -13,14 +13,18 @@ function includesCopy(source: string, copy: string) {
   );
 }
 
-test("Terms state the exact ad-studio trigger, credit, seat, and Meta-spend rules", () => {
+test("Terms state the exact Ad studio trigger, credit, seat, and Meta-spend rules", () => {
   for (const required of [
     "three complete Feed and Story ad packs",
-    "one live trial campaign",
-    "The trial never charges you automatically",
-    "start when Meta first reports actual delivery",
-    "A$249 per month, recurring until you cancel",
+    "Publishing through Blockwise needs a card and starts a seven-day Blockwise",
+    "The first charge is A$0.00",
+    "The seven days run from the moment Checkout completes",
+    "We email you 24 hours before the trial ends",
+    "renews automatically at A$249 per month until you cancel",
     "no introductory price",
+    "download your finished ad",
+    "run them yourself in your own Meta ad account",
+    "appears on your card",
     "100 render credits per billing period",
     "Credits expire at the end of the",
     "do not roll over or transfer",

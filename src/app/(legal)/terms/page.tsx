@@ -12,7 +12,7 @@ export default function TermsOfServicePage() {
   return (
     <>
       <p style={{ color: "var(--muted)", fontSize: 13, textTransform: "uppercase", letterSpacing: 0.5 }}>
-        Last updated: 7 September 2026
+        Last updated: 15 September 2026
       </p>
       <h1 style={{ fontSize: 36, margin: "8px 0 24px", fontWeight: 600 }}>Terms of Service</h1>
 
@@ -75,34 +75,37 @@ export default function TermsOfServicePage() {
         5. Ad studio trial, credits, and billing
       </h2>
       <p>
-        The Ad studio trial includes three complete Feed and Story ad packs and one live trial
-        campaign. A complete pack uses two render credits. You do not need a card to create,
-        review, or edit those ads, and no payment method or Stripe subscription is required to
-        start. The trial never charges you automatically and never converts to a paid subscription
-        by itself.
-        Your 14 days of app access start when Meta first reports actual delivery of your trial
-        campaign &mdash; not at signup, publishing, or approval. You approve the trial campaign's
-        advertising budget and end date with Meta before it starts, and Blockwise never extends
-        that budget or end date to fill the trial; the trial being free means no Blockwise
-        subscription fee, not free advertising. One trial is allowed per business, brand, and Meta
-        ad account. When the trial ends, further trial use stops without charge; your saved ad
-        designs and leads remain available. Failed or cancelled provider work is refunded to the
-        applicable credit balance.
+        <strong>Creating and downloading an ad never needs a card.</strong> A new workspace starts
+        with six render credits, which is three complete Feed and Story ad packs. A complete pack
+        uses two render credits. Those credits are granted once your email address is verified and
+        are yours to use whether or not you ever start a subscription. Creating, editing, saving,
+        and downloading an ad are not the trial and never start a subscription or a charge.
       </p>
       <p>
-        When you choose to subscribe, the workspace owner or an admin starts Stripe-hosted
-        Checkout, which collects a reusable payment method and starts the paid subscription. Your
-        Blockwise subscription is A$249 per month, recurring until you cancel, with no
-        introductory price. Prices include GST where Blockwise is required to collect it.
+        <strong>Publishing through Blockwise needs a card and starts a seven-day Blockwise
+        trial.</strong> Your card is saved when you complete Checkout and is not charged until the
+        trial ends. The first charge is A$0.00. The trial covers the Blockwise subscription only.
+        The seven days run from the moment Checkout completes, not from signup, publishing, or
+        approval. One trial is allowed per workspace.
       </p>
       <p>
-        A paid Ad studio subscription grants 100 render credits per billing period &mdash; 50
+        We email you 24 hours before the trial ends. After the trial, your Blockwise Ad studio
+        subscription renews automatically at A$249 per month until you cancel, with no introductory
+        price. If you cancel before the trial ends, you are not charged.
+      </p>
+      <p>
+        <strong>You do not have to start a subscription.</strong> You can download your finished ad
+        files and run them yourself in your own Meta ad account instead. Downloading needs no card,
+        is not the trial, and never starts a subscription or a charge.
+      </p>
+      <p>
+        A paid Ad studio subscription grants 100 render credits per billing period, which is 50
         complete Feed and Story ad packs. Ordinary text edits, fixes, and repeat downloads use no
-        credits. A Feed render,
-        Story render, AI image regeneration, or AI image edit uses one credit. Deterministic copy
-        edits and deterministic text-layer patches use no credit. Credits expire at the end of the
-        billing period and do not roll over or transfer. Inviting a team member does not add
-        credits.
+        credits. A Feed render, a Story render, AI image regeneration, or AI image edit uses one
+        credit. Deterministic copy edits and deterministic text-layer patches use no credit.
+        Credits expire at the end of the billing period and do not roll over or transfer. Inviting a
+        team member does not add credits. Failed or cancelled provider work is refunded to the
+        applicable credit balance.
       </p>
       <p>
         One Ad studio subscription is for one workspace, one Brand Pack and primary website, one
@@ -111,8 +114,17 @@ export default function TermsOfServicePage() {
         workspace or a managed or agency agreement.
       </p>
       <p>
+        You can cancel at any time from Settings under billing, which opens the Stripe billing
+        portal. Cancelling stops future renewals. If you cancel during the trial you are not
+        charged, and access continues until the trial ends. If you cancel after the trial, access
+        continues until the end of the period you have already paid for. Prices include GST where
+        Blockwise is required to collect it. Your Blockwise subscription appears on your card
+        statement as BLOCKWISE.
+      </p>
+      <p>
         Meta bills advertising spend directly to your connected ad account. Meta spend is not
-        included in the Blockwise subscription, marked up by Blockwise, or funded by Blockwise.
+        included in the Blockwise subscription, marked up by Blockwise, or funded by Blockwise, and
+        Meta charges it during your trial as well.
       </p>
 
       <h2 style={{ fontSize: 22, marginTop: 32, fontWeight: 600 }}>

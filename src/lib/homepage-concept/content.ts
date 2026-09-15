@@ -156,8 +156,8 @@ export const FAQ_GROUPS = [
     { question: "How does managed start?", answer: "We agree the scope and price before anything starts.", links: [{ label: "Managed setup", href: MANAGED_SETUP_HREF }, { label: `Email ${CONTACT_EMAIL}`, href: CONTACT_HREF }] },
   ] },
   { heading: "Plans", faqs: [
-    { question: "What does the free option include?", answer: "Three Feed and Story packs. No card is needed." },
-    { question: "What happens after the free allowance?", answer: "Saved designs and leads stay available. You only pay Blockwise if you choose a paid plan." },
+    { question: "What does the free option include?", answer: "Three Feed and Story packs to create and download. Creating and downloading an ad needs no card." },
+    { question: "What happens after the free allowance?", answer: "Saved designs, downloaded files and leads stay available. You can keep using the free allowance to create and download ads." },
   ] },
   { heading: "Costs", faqs: [
     { question: "What does Ad studio cost?", answer: "A$249 per month until cancelled. Meta ad spend is separate." },
@@ -165,7 +165,7 @@ export const FAQ_GROUPS = [
     { question: "How are taxes and extras handled?", answer: "GST is included where required. Extra brands, accounts or campaigns are quoted separately." },
   ] },
   { heading: "Billing", faqs: [
-    { question: "Will the free option charge my card?", answer: "No. You only pay Blockwise if you choose a paid plan." },
+    { question: "Will creating an ad charge my card?", answer: "No. Creating, editing, saving and downloading an ad never charges you. Publishing an ad needs a card and starts a 7-day trial, which renews at A$249 per month until you cancel." },
     { question: "How do I cancel Ad studio?", answer: "Cancel in billing settings or the Stripe portal to stop renewals. Paid access and remaining credits last until the billing period ends." },
   ] },
   { heading: "Ownership and support", faqs: [

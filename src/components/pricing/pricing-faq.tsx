@@ -51,7 +51,7 @@ const FAQ_GROUPS = [
     questions: [
       {
         q: "Will the free trial charge my card?",
-        a: "No card needed. You only pay Blockwise if you choose a paid plan.",
+        a: "No card is needed to create, edit, save or download an ad. Publishing an ad needs a card and starts a 7-day trial, which renews at A$249 per month until you cancel.",
       },
       {
         q: "How do I cancel Ad studio?",
