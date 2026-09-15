@@ -95,7 +95,11 @@ describe("customer Ad Builder workbench contract", () => {
     assert.match(home, /timeZone/);
     assert.match(home, /resolveTimeZone\(auth\.claims\?\.user_metadata\?\.timezone, access\.region\)/);
     assert.match(home, /dateLocale = access\.region === "US" \? "en-US" : "en-AU"/);
-    assert.match(command, /<Link[^>]*>Edit<\/Link>/);
+    // The whole row is the way into the ad, and Review is the one secondary
+    // action beside it. There is no separate Edit control: two ways into the
+    // same place made this page read as a list of buttons.
+    assert.match(command, /<Link href=\{editorHref\} className="group flex min-w-0 flex-1/);
+    assert.doesNotMatch(command, />Edit<\/Link>/);
     assert.match(command, /<Link[^>]*>Review<\/Link>/);
   });
 

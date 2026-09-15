@@ -102,7 +102,7 @@ Generated from the rules review on 2026-09-11. 41 rules, consolidated from 28 so
 ## Ad Builder theme
 
 - **Ad Builder is the dark theme of the main app.** It is not a separate design system. It uses the same type roles, spacing scale, shape roles, controls, state behaviour and action hierarchy as the light app; only the colour roles change. Anything that differs beyond colour is a bug, not a theme.
-- **The dark scope covers the whole surrounding interface.** The shell, navigation, menus, sheets, dropdowns, dialogs and every portaled overlay, not just the sidebar. Radix portals to `document.body`, so the scope is mirrored onto the document root; a scope that only wrapped the shell would leave every overlay in the light palette.
+- **The dark scope is the Ad Builder rail and its mobile header.** The canvas, the dialogs, the sheets and every portaled overlay are the light theme. The rail is dark so the builder reads as a tool inside the app, not a second app.
 - **Dark roles live in one block.** `[data-theme="studio-dark"]` in src/app/theme-monochrome.css. The block restates the `--ui-*` bridge aliases as well as the raw roles, because a custom property's `var()` is substituted on the element that declares it; without the restatement the scope silently keeps light values for everything built from the bridge. See docs/design/design-system.md.
 - **A scrim stays dark in both themes.** Overlays and media viewers use `--ui-scrim`, never `--ink`, which inverts.
 - **Do not theme the isolated editor's interior.** The Vue/Fabric editor's canvas controls and toolbar are upstream code inside a style-isolated frame.

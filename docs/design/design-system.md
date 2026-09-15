@@ -280,14 +280,15 @@ a bug, not a theme.
 ### How the scope works
 
 The dark roles live in `[data-theme="studio-dark"]` in `src/app/theme-monochrome.css`.
-Two writes put that attribute on the DOM:
+One write puts that attribute on the DOM:
 
-1. `src/components/adbuilder/studio-shell.tsx` sets it on the shell's own root element,
-   so the subtree is correct in the server-rendered first paint and does not flash
-   light.
-2. The same component mirrors it onto `document.documentElement` from a refcounted
-   client effect, and restores the previous value on the last unmount. This is what
-   makes portaled overlays dark: they mount on `body`, outside the shell's element.
+1. `src/components/adbuilder/studio-shell.tsx` sets it on the rail element and on the
+   mobile header, so those subtrees are correct in the server-rendered first paint and
+   do not flash light. Nothing else in Ad Builder carries it.
+
+The attribute is deliberately **not** mirrored onto `document.documentElement`. The
+canvas, the dialogs, the sheets and every portaled overlay are the light theme; the
+rail is dark so the builder reads as a tool inside the app rather than a second app.
 
 ### The `--ui-*` restatement is load-bearing
 
@@ -305,10 +306,16 @@ partial and quiet, which is the worst kind.
 
 ### What the dark theme must cover
 
-The complete surrounding interface, not just the sidebar: shell, navigation, menus,
-sheets, dropdowns, dialogs and every portaled overlay. The surface stack reads
-deliberately: the canvas stage is `--bg` (deepest), the chrome panels are `--surface`,
-and grouped content is `--surface-subtle`.
+The Ad Builder rail and its mobile header, and nothing else. The rail is `--surface`,
+one step up from the light canvas, with `--line` on its outer edge so the seam is
+deliberate. Everything inside it resolves through the same roles as the light app:
+`bg-(--surface)`, `text-(--ink)`, `text-(--muted)`, `border-(--line)`, `ring-ring`,
+`bg-cta` and `bg-success`.
+
+The canvas, the dialogs, the sheets and every portaled overlay are the light theme.
+Inside the rail the surface stack still reads deliberately: `--surface` for the chrome
+panel, `--surface-subtle` for grouped content, and `--bg` for anything that must sit
+deeper than the rail.
 
 ## States
 

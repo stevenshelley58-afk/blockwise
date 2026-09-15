@@ -7,12 +7,14 @@ import {
   Library,
   LayoutTemplate,
   Palette,
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { MobileBottomNav } from "@/components/app/mobile-bottom-nav";
 import { BlockwiseLogo } from "@/components/blockwise-logo";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type StudioShellProps = {
@@ -38,46 +40,21 @@ function activePath(pathname: string, href: string, exact?: boolean) {
 }
 
 /*
- * Ad Builder is the dark theme of this same app, not a second design system, so
- * the theme is the shared `[data-theme="studio-dark"]` token block — nothing
- * here re-declares a colour.
+ * Ad Builder is a light product with a dark rail, not a second app.
  *
- * The attribute is written in two places for two different reasons:
+ * The `data-theme="studio-dark"` attribute is scoped to the rail and to the
+ * mobile header, and to nothing else. That works because the block in
+ * theme-monochrome.css restates the `--ui-*` bridge aliases as well as the raw
+ * roles: a custom property's `var()` is substituted on the element that declares
+ * it, so a NESTED scope only reaches `bg-(--surface)`, `text-(--ink)`,
+ * `border-(--line)`, `ring-ring`, `bg-cta` and `bg-success` if it re-declares
+ * the aliases too. It does.
  *
- *  1. On the shell's own <div> (below), so the tree is already correct in the
- *     server-rendered HTML and there is no flash of light before hydration.
- *  2. On <html>, from this effect, because Radix portals Sheet / Dialog /
- *     AlertDialog / Select / Popover / DropdownMenu to document.body — outside
- *     the shell's <div> — and a scope that only wrapped the shell would leave
- *     every overlay rendering in the light palette.
- *
- * The mount count and the saved previous value are module-scoped on purpose:
- * during a route transition two Studio surfaces can be mounted at the same
- * time, and the second one's cleanup must not undo the first one's attribute.
- * The first mount in records what the app had and sets the theme; only the last
- * unmount restores it, so leaving Ad Builder returns the app to light and the
- * handover in between never flickers.
+ * The attribute is deliberately NOT mirrored onto <html> and NOT set on this
+ * component's own <div>. The canvas, the dialogs, the sheets and every portaled
+ * overlay are the light theme; the rail is dark so the builder reads as a tool
+ * inside the app rather than a second product. See DESIGN.md "Ad Builder theme".
  */
-let studioThemeMounts = 0;
-let studioThemePrevious: string | null = null;
-
-function useStudioDarkThemeOnDocument() {
-  useEffect(() => {
-    const root = document.documentElement;
-    if (studioThemeMounts === 0) {
-      studioThemePrevious = root.getAttribute("data-theme");
-      root.setAttribute("data-theme", "studio-dark");
-    }
-    studioThemeMounts += 1;
-    return () => {
-      studioThemeMounts -= 1;
-      if (studioThemeMounts > 0) return;
-      if (studioThemePrevious === null) root.removeAttribute("data-theme");
-      else root.setAttribute("data-theme", studioThemePrevious);
-      studioThemePrevious = null;
-    };
-  }, []);
-}
 
 export function StudioShell({
   children,
@@ -87,7 +64,6 @@ export function StudioShell({
   metaConnectionStatus,
 }: StudioShellProps) {
   const pathname = usePathname() ?? "/ad-builder";
-  useStudioDarkThemeOnDocument();
   const contextual = pathname.startsWith("/ad-builder/ads/");
   const connectionLabel =
     metaConnectionStatus === "connected"
@@ -99,29 +75,31 @@ export function StudioShell({
           : "Meta not connected";
   return (
     <div
-      data-theme="studio-dark"
       className={cn("tw flex bg-background text-foreground", contextual ? "h-dvh overflow-hidden" : "min-h-dvh")}
     >
       <aside
-        className="hidden w-[220px] shrink-0 flex-col bg-(--surface) text-(--muted) md:flex"
+        data-theme="studio-dark"
+        className="hidden w-[220px] shrink-0 flex-col border-r border-(--line) bg-(--surface) text-(--muted) md:flex"
         aria-label="Ad Builder navigation"
       >
-        <div className="flex items-center gap-3 px-5 py-7">
+        <div className="p-3">
           <Link
             href="/ad-studio"
-            aria-label="Back to Blockwise"
-            className="grid size-9 shrink-0 place-items-center rounded-xl bg-transparent text-(--ink) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Blockwise home"
+            className="inline-flex items-center rounded-(--r-ctl) text-(--brand-ink) transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <BlockwiseLogo tokens showWordmark={false} />
+            <BlockwiseLogo tokens />
           </Link>
-          <div>
-            <p className="font-display text-[15.5px] font-extrabold leading-tight">
-              Ad Builder
-            </p>
-            <p className="text-[11px] text-(--muted)">by Blockwise</p>
-          </div>
         </div>
-        <nav className="grid gap-1 px-3" aria-label="Studio destinations">
+        <div className="px-3 pt-1">
+          <Button asChild className="w-full justify-start">
+            <Link href="/ad-builder/templates" aria-label="Create a new ad from a reviewed template">
+              <Plus className="size-4" aria-hidden />
+              New ad
+            </Link>
+          </Button>
+        </div>
+        <nav className="mt-2 grid gap-1 px-3" aria-label="Studio destinations">
           {items.map(({ href, label, icon: Icon, exact, matches }) => {
             const active = matches
               ? matches.some(match => activePath(pathname, match))
@@ -175,7 +153,10 @@ export function StudioShell({
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         {!contextual ? (
-          <header className="flex min-h-14 items-center border-b border-(--line) bg-(--surface) px-4 text-(--muted) md:hidden">
+          <header
+            data-theme="studio-dark"
+            className="flex min-h-14 items-center border-b border-(--line) bg-(--surface) px-4 text-(--muted) md:hidden"
+          >
             <Link
               href="/ad-studio"
               className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-1 text-[12px] font-semibold text-(--ink) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
